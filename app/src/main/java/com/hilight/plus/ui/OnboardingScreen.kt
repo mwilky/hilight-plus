@@ -85,7 +85,9 @@ fun OnboardingScreen(controller: LightController, onComplete: () -> Unit) {
                     },
                     icon = Icons.Rounded.Warning,
                     statusText = "Conflict Detected",
-                    isPositive = false,
+                    accentColor = MaterialTheme.colorScheme.error,
+                    containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
                     isWarning = true,
                     trailingAction = {
                         Button(
@@ -153,7 +155,9 @@ fun OnboardingScreen(controller: LightController, onComplete: () -> Unit) {
                     ShizukuBridge.State.NOT_INSTALLED -> "Not Installed"
                     else -> "Disconnected"
                 },
-                isPositive = isShizukuConnected,
+                accentColor = if (isShizukuConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                containerColor = if (isShizukuConnected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f),
+                contentColor = if (isShizukuConnected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer,
                 trailingAction = {
                     when (shizukuState) {
                         ShizukuBridge.State.CONNECTED -> {

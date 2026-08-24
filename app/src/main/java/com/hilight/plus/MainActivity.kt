@@ -20,6 +20,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -56,6 +57,7 @@ class MainActivity : ComponentActivity() {
                     owner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                         while (true) {
                             controller.refreshStatus()
+                            NativeHiLightDetector.check(this@MainActivity)
                             delay(1500)
                         }
                     }
@@ -216,7 +218,7 @@ private fun DashboardScreen(controller: LightController, onResetAll: () -> Unit)
                 color = MaterialTheme.colorScheme.primary
             )
 
-            // 1. Shizuku Privileged Access Status Card
+            // 1. Shizuku Privileged Access Status Card (Vibrant Teal / Primary Tonal)
             val isShizukuConnected = shizukuState == ShizukuBridge.State.CONNECTED
             ExpressiveStatusCard(
                 title = "Shizuku Privileged Access",
@@ -237,7 +239,9 @@ private fun DashboardScreen(controller: LightController, onResetAll: () -> Unit)
                     ShizukuBridge.State.NOT_INSTALLED -> "Not Installed"
                     else -> "Disconnected"
                 },
-                isPositive = isShizukuConnected,
+                accentColor = if (isShizukuConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                containerColor = if (isShizukuConnected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f),
+                contentColor = if (isShizukuConnected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer,
                 trailingAction = {
                     when (shizukuState) {
                         ShizukuBridge.State.CONNECTED -> {
@@ -269,8 +273,12 @@ private fun DashboardScreen(controller: LightController, onResetAll: () -> Unit)
                 }
             )
 
-            // 2. Native Pixel HiLight Status & Conflict Card
+            // 2. Native Pixel HiLight Status & Conflict Card (Vibrant Amber/Gold / Secondary Tonal)
             val isNativeConflict = stockState.anyActive
+            val stockAccent = if (isNativeConflict) MaterialTheme.colorScheme.error else Color(0xFF388E3C) // Emerald Green when clear
+            val stockContainer = if (isNativeConflict) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
+            val stockContent = if (isNativeConflict) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer
+
             ExpressiveStatusCard(
                 title = "Stock HiLight Integration",
                 subtitle = when {
@@ -281,7 +289,9 @@ private fun DashboardScreen(controller: LightController, onResetAll: () -> Unit)
                 },
                 icon = if (isNativeConflict) Icons.Rounded.Warning else Icons.Rounded.CheckCircle,
                 statusText = if (isNativeConflict) "Conflict Active" else "Optimized",
-                isPositive = !isNativeConflict,
+                accentColor = stockAccent,
+                containerColor = stockContainer,
+                contentColor = stockContent,
                 isWarning = isNativeConflict,
                 trailingAction = {
                     if (isNativeConflict) {
@@ -298,7 +308,7 @@ private fun DashboardScreen(controller: LightController, onResetAll: () -> Unit)
                 }
             )
 
-            // 3. Android Telephony & Contacts Permissions Card
+            // 3. Android Telephony & Contacts Permissions Card (Vibrant Purple/Tertiary Tonal)
             val hasAllPerms = isPhoneGranted && isContactsGranted
             val permsStatusText = when {
                 hasAllPerms -> "Granted"
@@ -313,12 +323,18 @@ private fun DashboardScreen(controller: LightController, onResetAll: () -> Unit)
                 else -> "Contacts permission is missing. The app cannot look up names and custom caller lighting rules."
             }
 
+            val permsAccent = if (hasAllPerms) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
+            val permsContainer = if (hasAllPerms) MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.45f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f)
+            val permsContent = if (hasAllPerms) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onErrorContainer
+
             ExpressiveStatusCard(
                 title = "Call Telephony & Contacts",
                 subtitle = permsDesc,
                 icon = if (hasAllPerms) Icons.Rounded.ContactPhone else Icons.Rounded.PermPhoneMsg,
                 statusText = permsStatusText,
-                isPositive = hasAllPerms,
+                accentColor = permsAccent,
+                containerColor = permsContainer,
+                contentColor = permsContent,
                 isWarning = !hasAllPerms,
                 trailingAction = {
                     if (!hasAllPerms) {
