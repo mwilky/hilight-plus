@@ -11,7 +11,7 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -690,7 +690,6 @@ private fun ContactRuleDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .animateContentSize(animationSpec = tween(300, easing = FastOutSlowInEasing))
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
@@ -738,11 +737,11 @@ private fun ContactRuleDialog(
                     }
                 }
 
-                // Smooth expansion/collapse animation for color palette
+                // Crisp, snappy expansion/collapse animation for color palette
                 AnimatedVisibility(
                     visible = selectedPattern != PatternMode.RAINBOW,
-                    enter = expandVertically(animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeIn(animationSpec = tween(300)),
-                    exit = shrinkVertically(animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeOut(animationSpec = tween(300))
+                    enter = expandVertically(animationSpec = tween(150, easing = FastOutSlowInEasing)) + fadeIn(animationSpec = tween(150)),
+                    exit = shrinkVertically(animationSpec = tween(120, easing = FastOutLinearInEasing)) + fadeOut(animationSpec = tween(100))
                 ) {
                     Column(
                         modifier = Modifier
@@ -852,7 +851,6 @@ private fun PatternColorConfigDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .animateContentSize(animationSpec = tween(300, easing = FastOutSlowInEasing))
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
@@ -900,11 +898,11 @@ private fun PatternColorConfigDialog(
                     }
                 }
 
-                // Smooth expansion/collapse animation for color palette
+                // Crisp, snappy expansion/collapse animation for color palette
                 AnimatedVisibility(
                     visible = selectedPattern != PatternMode.RAINBOW,
-                    enter = expandVertically(animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeIn(animationSpec = tween(300)),
-                    exit = shrinkVertically(animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeOut(animationSpec = tween(300))
+                    enter = expandVertically(animationSpec = tween(150, easing = FastOutSlowInEasing)) + fadeIn(animationSpec = tween(150)),
+                    exit = shrinkVertically(animationSpec = tween(120, easing = FastOutLinearInEasing)) + fadeOut(animationSpec = tween(100))
                 ) {
                     Column(
                         modifier = Modifier
