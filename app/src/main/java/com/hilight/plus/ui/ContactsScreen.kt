@@ -342,6 +342,7 @@ fun ContactsScreen(controller: LightController) {
                         subtitle = "Saved contacts with no custom rule",
                         pattern = otherContactsPattern,
                         color = otherContactsColor,
+                        renderer = renderer,
                         onEdit = { isConfiguringOtherContacts = true },
                         onPreview = {
                             activePreviewingRuleId = "other_contacts"
@@ -381,6 +382,7 @@ fun ContactsScreen(controller: LightController) {
                         subtitle = "Unsaved or hidden caller numbers",
                         pattern = unknownNumbersPattern,
                         color = unknownNumbersColor,
+                        renderer = renderer,
                         onEdit = { isConfiguringUnknownNumbers = true },
                         onPreview = {
                             activePreviewingRuleId = "unknown_numbers"
@@ -449,6 +451,7 @@ fun ContactsScreen(controller: LightController) {
                     items(contactRules, key = { it.id }) { rule ->
                         ContactRuleItem(
                             rule = rule,
+                            renderer = renderer,
                             onToggle = { isEnabled ->
                                 scope.launch {
                                     controller.store.saveContactRule(rule.copy(isEnabled = isEnabled))
@@ -556,6 +559,7 @@ private fun CallerCategoryCard(
     subtitle: String,
     pattern: PatternMode,
     color: Long,
+    renderer: PatternRenderer,
     onEdit: () -> Unit,
     onPreview: () -> Unit
 ) {
@@ -575,7 +579,7 @@ private fun CallerCategoryCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                ColorOrRainbowCircle(pattern = pattern, color = color, size = 34.dp)
+                MiniRuleAnimationIcon(pattern = pattern, color = color, renderer = renderer, size = 36.dp)
 
                 Column {
                     Text(
@@ -584,7 +588,7 @@ private fun CallerCategoryCard(
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "$subtitle · ${pattern.displayName}",
+                        text = "$subtitle · Pattern: ${pattern.displayName}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -606,6 +610,7 @@ private fun CallerCategoryCard(
 @Composable
 private fun ContactRuleItem(
     rule: ContactRule,
+    renderer: PatternRenderer,
     onToggle: (Boolean) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -627,7 +632,7 @@ private fun ContactRuleItem(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                ColorOrRainbowCircle(pattern = rule.pattern, color = rule.color, size = 34.dp)
+                MiniRuleAnimationIcon(pattern = rule.pattern, color = rule.color, renderer = renderer, size = 36.dp)
 
                 Column {
                     Text(
@@ -636,7 +641,7 @@ private fun ContactRuleItem(
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "${rule.phoneNumber} · ${rule.pattern.displayName}",
+                        text = "${rule.phoneNumber} · Pattern: ${rule.pattern.displayName}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -662,38 +667,48 @@ private fun ContactRuleItem(
     }
 }
 
+/**
+ * Animated mini icon showing the dynamic pattern animation directly in the contact card row.
+ */
 @Composable
-private fun ColorOrRainbowCircle(
+private fun MiniRuleAnimationIcon(
     pattern: PatternMode,
     color: Long,
+    renderer: PatternRenderer,
     size: androidx.compose.ui.unit.Dp
 ) {
-    val rainbowBrush = remember {
-        Brush.sweepGradient(
-            listOf(
-                Color.Red,
-                Color.Yellow,
-                Color.Green,
-                Color.Cyan,
-                Color.Blue,
-                Color.Magenta,
-                Color.Red
+    var miniFrames by remember { mutableStateOf(IntArray(8) { 0x00000000 }) }
+
+    LaunchedEffect(pattern, color) {
+        val startMs = System.currentTimeMillis()
+        val speed = when (pattern) {
+            PatternMode.BREATHE -> 2000L
+            PatternMode.WAVE -> 1200L
+            PatternMode.COMET -> 1000L
+            PatternMode.RAINBOW -> 2800L
+            PatternMode.PULSE -> 850L
+            else -> 1000L
+        }
+        while (isActive) {
+            val elapsed = System.currentTimeMillis() - startMs
+            miniFrames = renderer.renderFrame(
+                pattern = pattern.id,
+                colorLong = color,
+                brightness = 1.0f,
+                speedMs = speed,
+                elapsedTimeMs = elapsed,
+                ledCount = 8
             )
-        )
+            delay(33)
+        }
     }
 
-    Box(
+    DiffusedRingPreview(
+        frames = miniFrames,
         modifier = Modifier
             .size(size)
-            .clip(CircleShape)
-            .then(
-                if (pattern == PatternMode.RAINBOW) {
-                    Modifier.background(rainbowBrush)
-                } else {
-                    Modifier.background(Color(color))
-                }
-            )
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+            .clip(CircleShape),
+        size = size
     )
 }
 

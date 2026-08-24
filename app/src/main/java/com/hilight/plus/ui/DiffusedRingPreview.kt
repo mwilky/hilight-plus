@@ -2,7 +2,6 @@ package com.hilight.plus.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -72,18 +71,21 @@ fun DiffusedRingPreview(
                 )
 
                 val c = frames.getOrElse(i) { 0x00000000 }
-                val isLit = (c ushr 24) > 0 && ((c and 0x00FFFFFF) != 0)
+                val alpha = (c ushr 24) and 0xFF
+                val rgb = c and 0x00FFFFFF
 
-                if (isLit) {
+                // Only render glow if the color has non-black luminance
+                if (alpha > 0 && rgb > 0x050505) {
                     val ledColor = Color(c)
+                    val intensity = (alpha / 255f)
 
                     // Outer soft diffusion flare
                     drawCircle(
                         brush = Brush.radialGradient(
                             colors = listOf(
-                                ledColor.copy(alpha = 0.95f),
-                                ledColor.copy(alpha = 0.60f),
-                                ledColor.copy(alpha = 0.20f),
+                                ledColor.copy(alpha = 0.95f * intensity),
+                                ledColor.copy(alpha = 0.55f * intensity),
+                                ledColor.copy(alpha = 0.15f * intensity),
                                 Color.Transparent
                             ),
                             center = spotCenter,
@@ -93,12 +95,12 @@ fun DiffusedRingPreview(
                         center = spotCenter
                     )
 
-                    // High-intensity core emitter
+                    // High-intensity core emitter with alpha scaling
                     drawCircle(
                         brush = Brush.radialGradient(
                             colors = listOf(
-                                Color.White.copy(alpha = 0.90f),
-                                ledColor.copy(alpha = 0.95f)
+                                Color.White.copy(alpha = 0.70f * intensity),
+                                ledColor.copy(alpha = 0.95f * intensity)
                             ),
                             center = spotCenter,
                             radius = spotRadius * 0.45f

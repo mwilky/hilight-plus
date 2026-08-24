@@ -26,7 +26,7 @@ class PatternRenderer {
 
         when (pattern.lowercase()) {
             "off" -> {
-                // All zeros
+                frame.fill(0x00000000)
             }
 
             "solid" -> {
@@ -44,18 +44,18 @@ class PatternRenderer {
             }
 
             "pulse" -> {
-                // Smooth exponential attack and decay without sharp steps
+                // Smooth rhythmic pulse that fades completely to 0 at the end of each period
                 val phase = (elapsedTimeMs % speed) / speed.toDouble()
-                val k = if (phase < 0.25) {
-                    // Smooth quadratic ramp up
-                    val t = phase / 0.25
+                val k = if (phase < 0.30) {
+                    val t = phase / 0.30
                     t * t
-                } else {
-                    // Smooth cosine decay to zero
-                    val t = (phase - 0.25) / 0.75
+                } else if (phase < 0.85) {
+                    val t = (phase - 0.30) / 0.55
                     (1.0 + cos(t * PI)) / 2.0
+                } else {
+                    0.0 // True dark rest interval between pulses
                 }
-                val c = scaleColor(baseColor, k * clampedBrightness)
+                val c = if (k > 0.001) scaleColor(baseColor, k * clampedBrightness) else 0x00000000
                 frame.fill(c)
             }
 
@@ -82,7 +82,7 @@ class PatternRenderer {
                     } else {
                         0.0
                     }
-                    frame[i] = scaleColor(baseColor, k * k * clampedBrightness)
+                    frame[i] = if (k > 0.01) scaleColor(baseColor, k * k * clampedBrightness) else 0x00000000
                 }
             }
 
@@ -112,7 +112,7 @@ class PatternRenderer {
 
     private fun scaleColor(color: Int, factor: Double): Int {
         val k = factor.coerceIn(0.0, 1.0)
-        val a = (color ushr 24) and 0xFF
+        val a = (255 * k).toInt().coerceIn(0, 255)
         val r = (((color ushr 16) and 0xFF) * k).toInt().coerceIn(0, 255)
         val g = (((color ushr 8) and 0xFF) * k).toInt().coerceIn(0, 255)
         val b = ((color and 0xFF) * k).toInt().coerceIn(0, 255)
