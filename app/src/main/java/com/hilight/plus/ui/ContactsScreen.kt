@@ -49,7 +49,6 @@ import com.hilight.plus.ContactRule
 import com.hilight.plus.LightController
 import com.hilight.plus.PatternMode
 import com.hilight.plus.core.PatternRenderer
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -112,51 +111,6 @@ fun ContactsScreen(controller: LightController) {
             isPhoneGranted = hasPhonePermission()
             isContactsGranted = hasContactsPermission()
             permanentlyDenied = isPermanentlyDenied()
-        }
-    }
-
-    // Interactive ongoing preview state
-    var livePreviewFrames by remember { mutableStateOf(IntArray(8) { 0x00000000 }) }
-    var activePreviewingRuleId by remember { mutableStateOf<String?>(null) }
-    var previewJob by remember { mutableStateOf<Job?>(null) }
-
-    fun stopOngoingPreview() {
-        previewJob?.cancel()
-        previewJob = null
-        activePreviewingRuleId = null
-        livePreviewFrames = IntArray(8) { 0x00000000 }
-    }
-
-    fun startOngoingPreview(ruleId: String, pattern: PatternMode, color: Long) {
-        if (activePreviewingRuleId == ruleId) {
-            stopOngoingPreview()
-            return
-        }
-        stopOngoingPreview()
-        activePreviewingRuleId = ruleId
-
-        previewJob = scope.launch {
-            val startMs = System.currentTimeMillis()
-            val speed = when (pattern) {
-                PatternMode.BREATHE -> 2000L
-                PatternMode.WAVE -> 1200L
-                PatternMode.COMET -> 1000L
-                PatternMode.RAINBOW -> 1200L
-                PatternMode.PULSE -> 850L
-                else -> 1000L
-            }
-            while (isActive) {
-                val elapsed = System.currentTimeMillis() - startMs
-                livePreviewFrames = renderer.renderFrame(
-                    pattern = pattern.id,
-                    colorLong = color,
-                    brightness = 1.0f,
-                    speedMs = speed,
-                    elapsedTimeMs = elapsed,
-                    ledCount = 8
-                )
-                delay(16)
-            }
         }
     }
 
@@ -352,36 +306,6 @@ fun ContactsScreen(controller: LightController) {
             }
 
             if (isCallLightsEnabled) {
-                // Live On-Screen Ring Preview Header Card
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Text(
-                                text = if (activePreviewingRuleId != null) "Previewing Animation" else "Call Illumination Preview",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-
-                            DiffusedRingPreview(
-                                frames = livePreviewFrames,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(110.dp),
-                                size = 90.dp
-                            )
-                        }
-                    }
-                }
-
                 // Default Setting: All Other Contacts Card
                 item {
                     CallerCategoryCard(
@@ -391,14 +315,10 @@ fun ContactsScreen(controller: LightController) {
                         color = otherContactsColor,
                         renderer = renderer,
                         isEnabled = isOtherContactsEnabled,
-                        isPlaying = activePreviewingRuleId == "other_contacts",
                         onToggle = { enabled ->
                             scope.launch { controller.store.setOtherContactsEnabled(enabled) }
                         },
-                        onEdit = { isConfiguringOtherContacts = true },
-                        onTogglePreview = {
-                            startOngoingPreview("other_contacts", otherContactsPattern, otherContactsColor)
-                        }
+                        onEdit = { isConfiguringOtherContacts = true }
                     )
                 }
 
@@ -411,14 +331,10 @@ fun ContactsScreen(controller: LightController) {
                         color = unknownNumbersColor,
                         renderer = renderer,
                         isEnabled = isUnknownNumbersEnabled,
-                        isPlaying = activePreviewingRuleId == "unknown_numbers",
                         onToggle = { enabled ->
                             scope.launch { controller.store.setUnknownNumbersEnabled(enabled) }
                         },
-                        onEdit = { isConfiguringUnknownNumbers = true },
-                        onTogglePreview = {
-                            startOngoingPreview("unknown_numbers", unknownNumbersPattern, unknownNumbersColor)
-                        }
+                        onEdit = { isConfiguringUnknownNumbers = true }
                     )
                 }
 
@@ -459,7 +375,6 @@ fun ContactsScreen(controller: LightController) {
                         ContactRuleItem(
                             rule = rule,
                             renderer = renderer,
-                            isPlaying = activePreviewingRuleId == rule.id,
                             onToggle = { isEnabled ->
                                 scope.launch {
                                     controller.store.saveContactRule(rule.copy(isEnabled = isEnabled))
@@ -467,13 +382,9 @@ fun ContactsScreen(controller: LightController) {
                             },
                             onEdit = { ruleBeingEdited = rule },
                             onDelete = {
-                                if (activePreviewingRuleId == rule.id) stopOngoingPreview()
                                 scope.launch {
                                     controller.store.deleteContactRule(rule.id)
                                 }
-                            },
-                            onTogglePreview = {
-                                startOngoingPreview(rule.id, rule.pattern, rule.color)
                             }
                         )
                     }
@@ -545,10 +456,8 @@ private fun CallerCategoryCard(
     color: Long,
     renderer: PatternRenderer,
     isEnabled: Boolean,
-    isPlaying: Boolean,
     onToggle: (Boolean) -> Unit,
-    onEdit: () -> Unit,
-    onTogglePreview: () -> Unit
+    onEdit: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -588,20 +497,6 @@ private fun CallerCategoryCard(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onTogglePreview) {
-                    if (isPlaying) {
-                        Icon(
-                            Icons.Rounded.Stop,
-                            contentDescription = "Stop preview",
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    } else {
-                        Icon(
-                            Icons.Rounded.PlayArrow,
-                            contentDescription = "Preview alert"
-                        )
-                    }
-                }
                 IconButton(onClick = onEdit) {
                     Icon(Icons.Rounded.Edit, contentDescription = "Edit rule")
                 }
@@ -618,11 +513,9 @@ private fun CallerCategoryCard(
 private fun ContactRuleItem(
     rule: ContactRule,
     renderer: PatternRenderer,
-    isPlaying: Boolean,
     onToggle: (Boolean) -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit,
-    onTogglePreview: () -> Unit
+    onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -662,20 +555,6 @@ private fun ContactRuleItem(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onTogglePreview) {
-                    if (isPlaying) {
-                        Icon(
-                            Icons.Rounded.Stop,
-                            contentDescription = "Stop preview",
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    } else {
-                        Icon(
-                            Icons.Rounded.PlayArrow,
-                            contentDescription = "Preview alert"
-                        )
-                    }
-                }
                 IconButton(onClick = onEdit) {
                     Icon(Icons.Rounded.Edit, contentDescription = "Edit rule")
                 }
@@ -902,14 +781,8 @@ private fun PatternColorConfigDialog(
     var dialogPreviewFrames by remember { mutableStateOf(IntArray(8) { 0x00000000 }) }
 
     val palette = listOf(
-        0xFF4285F4, // Google Blue
-        0xFFEA4335, // Google Red
-        0xFFFBBC05, // Google Yellow
-        0xFF34A853, // Google Green
-        0xFFFF007F, // Neon Pink
-        0xFF8A2BE2, // Purple
-        0xFF00E5FF, // Cyan
-        0xFFFFFFFF  // Pure White
+        0xFF4285F4, 0xFFEA4335, 0xFFFBBC05, 0xFF34A853,
+        0xFFFF007F, 0xFF8A2BE2, 0xFF00E5FF, 0xFFFFFFFF
     )
 
     LaunchedEffect(selectedPattern, selectedColor) {
