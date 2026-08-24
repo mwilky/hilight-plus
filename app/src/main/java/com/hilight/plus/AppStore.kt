@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import org.json.JSONArray
-import org.json.JSONObject
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "hilight_plus_settings")
 
@@ -27,10 +26,15 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_SPEED_MS = longPreferencesKey("speed_ms")
         private val KEY_AUTO_OFF_SEC = intPreferencesKey("auto_off_sec")
 
-        // Contact Calling Settings
+        // Contact Calling Settings: All Other Contacts
         private val KEY_CALL_LIGHTS_ENABLED = booleanPreferencesKey("call_lights_enabled")
-        private val KEY_DEFAULT_CALL_COLOR = longPreferencesKey("default_call_color")
-        private val KEY_DEFAULT_CALL_PATTERN = stringPreferencesKey("default_call_pattern")
+        private val KEY_OTHER_CONTACTS_COLOR = longPreferencesKey("other_contacts_color")
+        private val KEY_OTHER_CONTACTS_PATTERN = stringPreferencesKey("other_contacts_pattern")
+
+        // Contact Calling Settings: Unknown / Private Numbers
+        private val KEY_UNKNOWN_NUMBERS_COLOR = longPreferencesKey("unknown_numbers_color")
+        private val KEY_UNKNOWN_NUMBERS_PATTERN = stringPreferencesKey("unknown_numbers_pattern")
+
         private val KEY_CONTACT_RULES_JSON = stringPreferencesKey("contact_rules_json")
 
         @Volatile
@@ -63,17 +67,28 @@ class AppStore private constructor(private val appContext: Context) {
     val autoOffSeconds: Flow<Int> = appContext.dataStore.data
         .map { it[KEY_AUTO_OFF_SEC] ?: 60 }
 
-    // --- Contact Calling Settings Flows ---
+    // --- Contact Calling Settings: All Other Contacts ---
 
     val isCallLightsEnabled: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_CALL_LIGHTS_ENABLED] ?: true }
 
-    val defaultCallColor: Flow<Long> = appContext.dataStore.data
-        .map { it[KEY_DEFAULT_CALL_COLOR] ?: 0xFF4285F4 }
+    val otherContactsColor: Flow<Long> = appContext.dataStore.data
+        .map { it[KEY_OTHER_CONTACTS_COLOR] ?: 0xFF4285F4 }
 
-    val defaultCallPattern: Flow<PatternMode> = appContext.dataStore.data
+    val otherContactsPattern: Flow<PatternMode> = appContext.dataStore.data
         .map { prefs ->
-            val name = prefs[KEY_DEFAULT_CALL_PATTERN] ?: PatternMode.PULSE.name
+            val name = prefs[KEY_OTHER_CONTACTS_PATTERN] ?: PatternMode.PULSE.name
+            runCatching { PatternMode.valueOf(name) }.getOrDefault(PatternMode.PULSE)
+        }
+
+    // --- Contact Calling Settings: Unknown / Private Numbers ---
+
+    val unknownNumbersColor: Flow<Long> = appContext.dataStore.data
+        .map { it[KEY_UNKNOWN_NUMBERS_COLOR] ?: 0xFFFBBC05 } // Google Yellow as default for unknown
+
+    val unknownNumbersPattern: Flow<PatternMode> = appContext.dataStore.data
+        .map { prefs ->
+            val name = prefs[KEY_UNKNOWN_NUMBERS_PATTERN] ?: PatternMode.PULSE.name
             runCatching { PatternMode.valueOf(name) }.getOrDefault(PatternMode.PULSE)
         }
 
@@ -117,12 +132,20 @@ class AppStore private constructor(private val appContext: Context) {
         appContext.dataStore.edit { it[KEY_CALL_LIGHTS_ENABLED] = enabled }
     }
 
-    suspend fun setDefaultCallColor(color: Long) {
-        appContext.dataStore.edit { it[KEY_DEFAULT_CALL_COLOR] = color }
+    suspend fun setOtherContactsColor(color: Long) {
+        appContext.dataStore.edit { it[KEY_OTHER_CONTACTS_COLOR] = color }
     }
 
-    suspend fun setDefaultCallPattern(pattern: PatternMode) {
-        appContext.dataStore.edit { it[KEY_DEFAULT_CALL_PATTERN] = pattern.name }
+    suspend fun setOtherContactsPattern(pattern: PatternMode) {
+        appContext.dataStore.edit { it[KEY_OTHER_CONTACTS_PATTERN] = pattern.name }
+    }
+
+    suspend fun setUnknownNumbersColor(color: Long) {
+        appContext.dataStore.edit { it[KEY_UNKNOWN_NUMBERS_COLOR] = color }
+    }
+
+    suspend fun setUnknownNumbersPattern(pattern: PatternMode) {
+        appContext.dataStore.edit { it[KEY_UNKNOWN_NUMBERS_PATTERN] = pattern.name }
     }
 
     suspend fun saveContactRule(rule: ContactRule) {

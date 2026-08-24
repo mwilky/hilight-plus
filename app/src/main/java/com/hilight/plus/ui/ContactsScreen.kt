@@ -10,6 +10,7 @@ import android.provider.ContactsContract
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,6 +27,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -53,12 +55,20 @@ fun ContactsScreen(controller: LightController) {
     val renderer = remember { PatternRenderer() }
 
     val isCallLightsEnabled by controller.store.isCallLightsEnabled.collectAsStateWithLifecycle(initialValue = true)
-    val defaultCallColor by controller.store.defaultCallColor.collectAsStateWithLifecycle(initialValue = 0xFF4285F4)
-    val defaultCallPattern by controller.store.defaultCallPattern.collectAsStateWithLifecycle(initialValue = PatternMode.PULSE)
+
+    // Other Contacts Settings
+    val otherContactsColor by controller.store.otherContactsColor.collectAsStateWithLifecycle(initialValue = 0xFF4285F4)
+    val otherContactsPattern by controller.store.otherContactsPattern.collectAsStateWithLifecycle(initialValue = PatternMode.PULSE)
+
+    // Unknown Numbers Settings
+    val unknownNumbersColor by controller.store.unknownNumbersColor.collectAsStateWithLifecycle(initialValue = 0xFFFBBC05)
+    val unknownNumbersPattern by controller.store.unknownNumbersPattern.collectAsStateWithLifecycle(initialValue = PatternMode.PULSE)
+
     val contactRules by controller.store.contactRules.collectAsStateWithLifecycle(initialValue = emptyList())
 
     var ruleBeingEdited by remember { mutableStateOf<ContactRule?>(null) }
-    var isConfiguringDefault by remember { mutableStateOf(false) }
+    var isConfiguringOtherContacts by remember { mutableStateOf(false) }
+    var isConfiguringUnknownNumbers by remember { mutableStateOf(false) }
 
     // Telephony & Contact Specific Permission Checks
     fun hasPhonePermission(): Boolean =
@@ -77,7 +87,6 @@ fun ContactsScreen(controller: LightController) {
         return list.toTypedArray()
     }
 
-    // Check if missing permissions are permanently blocked in settings
     fun isPermanentlyDenied(): Boolean {
         val activity = context as? Activity ?: return false
         val missing = checkMissingPermissions()
@@ -87,7 +96,6 @@ fun ContactsScreen(controller: LightController) {
 
     var permanentlyDenied by remember { mutableStateOf(isPermanentlyDenied()) }
 
-    // Live refresh when returning to foreground
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -97,7 +105,6 @@ fun ContactsScreen(controller: LightController) {
         }
     }
 
-    // On-screen preview state for the main list
     var livePreviewFrames by remember { mutableStateOf(IntArray(8) { 0x00000000 }) }
     var activePreviewingRuleId by remember { mutableStateOf<String?>(null) }
 
@@ -111,7 +118,7 @@ fun ContactsScreen(controller: LightController) {
                     id = UUID.randomUUID().toString(),
                     name = contactInfo.first,
                     phoneNumber = contactInfo.second,
-                    color = 0xFFEA4335, // Google Red as starter
+                    color = 0xFFEA4335,
                     pattern = PatternMode.PULSE
                 )
             }
@@ -323,76 +330,66 @@ fun ContactsScreen(controller: LightController) {
                     }
                 }
 
-                // Default / Fallback Call Illumination Rule Card
+                // Default Setting: All Other Contacts Card
                 item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column {
-                                    Text(
-                                        text = "All Other / Unknown Callers",
-                                        style = MaterialTheme.typography.titleMedium
+                    CallerCategoryCard(
+                        title = "All Other Contacts",
+                        subtitle = "Saved contacts with no custom rule",
+                        pattern = otherContactsPattern,
+                        color = otherContactsColor,
+                        onEdit = { isConfiguringOtherContacts = true },
+                        onPreview = {
+                            activePreviewingRuleId = "other_contacts"
+                            scope.launch {
+                                val startMs = System.currentTimeMillis()
+                                while (isActive && System.currentTimeMillis() - startMs < 3000L) {
+                                    val elapsed = System.currentTimeMillis() - startMs
+                                    livePreviewFrames = renderer.renderFrame(
+                                        pattern = otherContactsPattern.id,
+                                        colorLong = otherContactsColor,
+                                        brightness = 1.0f,
+                                        speedMs = 800L,
+                                        elapsedTimeMs = elapsed,
+                                        ledCount = 8
                                     )
-                                    Text(
-                                        text = "Pattern: ${defaultCallPattern.displayName}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                    delay(33)
                                 }
-
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(28.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(defaultCallColor))
-                                    )
-
-                                    IconButton(
-                                        onClick = {
-                                            activePreviewingRuleId = "default"
-                                            scope.launch {
-                                                val startMs = System.currentTimeMillis()
-                                                while (isActive && System.currentTimeMillis() - startMs < 3000L) {
-                                                    val elapsed = System.currentTimeMillis() - startMs
-                                                    livePreviewFrames = renderer.renderFrame(
-                                                        pattern = defaultCallPattern.id,
-                                                        colorLong = defaultCallColor,
-                                                        brightness = 1.0f,
-                                                        speedMs = 800L,
-                                                        elapsedTimeMs = elapsed,
-                                                        ledCount = 8
-                                                    )
-                                                    delay(33)
-                                                }
-                                                livePreviewFrames = IntArray(8) { 0x00000000 }
-                                                activePreviewingRuleId = null
-                                            }
-                                        }
-                                    ) {
-                                        Icon(Icons.Rounded.PlayArrow, contentDescription = "Preview default")
-                                    }
-
-                                    IconButton(onClick = { isConfiguringDefault = true }) {
-                                        Icon(Icons.Rounded.Edit, contentDescription = "Edit default")
-                                    }
-                                }
+                                livePreviewFrames = IntArray(8) { 0x00000000 }
+                                activePreviewingRuleId = null
                             }
                         }
-                    }
+                    )
+                }
+
+                // Default Setting: Unknown / Private Numbers Card
+                item {
+                    CallerCategoryCard(
+                        title = "Unknown & Private Numbers",
+                        subtitle = "Unsaved or hidden caller numbers",
+                        pattern = unknownNumbersPattern,
+                        color = unknownNumbersColor,
+                        onEdit = { isConfiguringUnknownNumbers = true },
+                        onPreview = {
+                            activePreviewingRuleId = "unknown_numbers"
+                            scope.launch {
+                                val startMs = System.currentTimeMillis()
+                                while (isActive && System.currentTimeMillis() - startMs < 3000L) {
+                                    val elapsed = System.currentTimeMillis() - startMs
+                                    livePreviewFrames = renderer.renderFrame(
+                                        pattern = unknownNumbersPattern.id,
+                                        colorLong = unknownNumbersColor,
+                                        brightness = 1.0f,
+                                        speedMs = 800L,
+                                        elapsedTimeMs = elapsed,
+                                        ledCount = 8
+                                    )
+                                    delay(33)
+                                }
+                                livePreviewFrames = IntArray(8) { 0x00000000 }
+                                activePreviewingRuleId = null
+                            }
+                        }
+                    )
                 }
 
                 // Header for Custom Rules
@@ -485,21 +482,95 @@ fun ContactsScreen(controller: LightController) {
         )
     }
 
-    // Default Call Style Customizer Dialog
-    if (isConfiguringDefault) {
-        DefaultCallRuleDialog(
-            initialPattern = defaultCallPattern,
-            initialColor = defaultCallColor,
+    // All Other Contacts Dialog
+    if (isConfiguringOtherContacts) {
+        PatternColorConfigDialog(
+            title = "All Other Contacts",
+            description = "Applied to incoming calls from saved contacts without a specific custom rule.",
+            initialPattern = otherContactsPattern,
+            initialColor = otherContactsColor,
             renderer = renderer,
-            onDismiss = { isConfiguringDefault = false },
+            onDismiss = { isConfiguringOtherContacts = false },
             onSave = { pattern, color ->
                 scope.launch {
-                    controller.store.setDefaultCallPattern(pattern)
-                    controller.store.setDefaultCallColor(color)
-                    isConfiguringDefault = false
+                    controller.store.setOtherContactsPattern(pattern)
+                    controller.store.setOtherContactsColor(color)
+                    isConfiguringOtherContacts = false
                 }
             }
         )
+    }
+
+    // Unknown Numbers Dialog
+    if (isConfiguringUnknownNumbers) {
+        PatternColorConfigDialog(
+            title = "Unknown & Private Numbers",
+            description = "Applied to incoming calls from unsaved or hidden caller numbers.",
+            initialPattern = unknownNumbersPattern,
+            initialColor = unknownNumbersColor,
+            renderer = renderer,
+            onDismiss = { isConfiguringUnknownNumbers = false },
+            onSave = { pattern, color ->
+                scope.launch {
+                    controller.store.setUnknownNumbersPattern(pattern)
+                    controller.store.setUnknownNumbersColor(color)
+                    isConfiguringUnknownNumbers = false
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun CallerCategoryCard(
+    title: String,
+    subtitle: String,
+    pattern: PatternMode,
+    color: Long,
+    onEdit: () -> Unit,
+    onPreview: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ColorOrRainbowCircle(pattern = pattern, color = color, size = 34.dp)
+
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "$subtitle · ${pattern.displayName}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onPreview) {
+                    Icon(Icons.Rounded.PlayArrow, contentDescription = "Preview alert")
+                }
+                IconButton(onClick = onEdit) {
+                    Icon(Icons.Rounded.Edit, contentDescription = "Edit rule")
+                }
+            }
+        }
     }
 }
 
@@ -527,13 +598,7 @@ private fun ContactRuleItem(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .background(Color(rule.color))
-                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                )
+                ColorOrRainbowCircle(pattern = rule.pattern, color = rule.color, size = 34.dp)
 
                 Column {
                     Text(
@@ -569,6 +634,41 @@ private fun ContactRuleItem(
 }
 
 @Composable
+private fun ColorOrRainbowCircle(
+    pattern: PatternMode,
+    color: Long,
+    size: androidx.compose.ui.unit.Dp
+) {
+    val rainbowBrush = remember {
+        Brush.sweepGradient(
+            listOf(
+                Color.Red,
+                Color.Yellow,
+                Color.Green,
+                Color.Cyan,
+                Color.Blue,
+                Color.Magenta,
+                Color.Red
+            )
+        )
+    }
+
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(CircleShape)
+            .then(
+                if (pattern == PatternMode.RAINBOW) {
+                    Modifier.background(rainbowBrush)
+                } else {
+                    Modifier.background(Color(color))
+                }
+            )
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+    )
+}
+
+@Composable
 private fun ContactRuleDialog(
     initialRule: ContactRule,
     renderer: PatternRenderer,
@@ -590,7 +690,6 @@ private fun ContactRuleDialog(
         0xFFFFFFFF  // Pure White
     )
 
-    // Continuous live diffused animation preview inside dialog
     LaunchedEffect(selectedPattern, selectedColor) {
         val startMs = System.currentTimeMillis()
         while (isActive) {
@@ -618,7 +717,7 @@ private fun ContactRuleDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                // On-Screen Diffused Ring Preview inside Dialog
+                // Live Preview Ring inside Dialog
                 DiffusedRingPreview(
                     frames = dialogPreviewFrames,
                     modifier = Modifier
@@ -628,37 +727,10 @@ private fun ContactRuleDialog(
                 )
 
                 Text(
-                    text = "Select Alert Color",
-                    style = MaterialTheme.typography.labelLarge
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    palette.forEach { c ->
-                        val isSelected = selectedColor == c
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(Color(c))
-                                .border(
-                                    width = if (isSelected) 3.dp else 1.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                                    shape = CircleShape
-                                )
-                                .clickable { selectedColor = c }
-                        )
-                    }
-                }
-
-                Text(
                     text = "Select Ring Animation",
                     style = MaterialTheme.typography.labelLarge
                 )
 
-                // Horizontally Scrollable Patterns
                 val patterns = listOf(
                     PatternMode.PULSE,
                     PatternMode.BREATHE,
@@ -680,6 +752,37 @@ private fun ContactRuleDialog(
                             onClick = { selectedPattern = p },
                             label = { Text(p.displayName) }
                         )
+                    }
+                }
+
+                // Hide color picker when Rainbow is selected
+                AnimatedVisibility(visible = selectedPattern != PatternMode.RAINBOW) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "Select Alert Color",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            palette.forEach { c ->
+                                val isSelected = selectedColor == c
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(c))
+                                        .border(
+                                            width = if (isSelected) 3.dp else 1.dp,
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                                            shape = CircleShape
+                                        )
+                                        .clickable { selectedColor = c }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -702,7 +805,9 @@ private fun ContactRuleDialog(
 }
 
 @Composable
-private fun DefaultCallRuleDialog(
+private fun PatternColorConfigDialog(
+    title: String,
+    description: String,
     initialPattern: PatternMode,
     initialColor: Long,
     renderer: PatternRenderer,
@@ -718,7 +823,6 @@ private fun DefaultCallRuleDialog(
         0xFFFF007F, 0xFF8A2BE2, 0xFF00E5FF, 0xFFFFFFFF
     )
 
-    // Continuous live diffused animation preview inside dialog
     LaunchedEffect(selectedPattern, selectedColor) {
         val startMs = System.currentTimeMillis()
         while (isActive) {
@@ -737,16 +841,16 @@ private fun DefaultCallRuleDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Default Caller Illumination") },
+        title = { Text(title) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text(
-                    text = "Applied to incoming calls from non-customized numbers.",
+                    text = description,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                // On-Screen Diffused Ring Preview inside Dialog
+                // Live Preview Ring inside Dialog
                 DiffusedRingPreview(
                     frames = dialogPreviewFrames,
                     modifier = Modifier
@@ -756,37 +860,10 @@ private fun DefaultCallRuleDialog(
                 )
 
                 Text(
-                    text = "Select Color",
-                    style = MaterialTheme.typography.labelLarge
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    palette.forEach { c ->
-                        val isSelected = selectedColor == c
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(Color(c))
-                                .border(
-                                    width = if (isSelected) 3.dp else 1.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                                    shape = CircleShape
-                                )
-                                .clickable { selectedColor = c }
-                        )
-                    }
-                }
-
-                Text(
                     text = "Select Pattern",
                     style = MaterialTheme.typography.labelLarge
                 )
 
-                // Horizontally Scrollable Patterns
                 val patterns = listOf(
                     PatternMode.PULSE,
                     PatternMode.BREATHE,
@@ -808,6 +885,37 @@ private fun DefaultCallRuleDialog(
                             onClick = { selectedPattern = p },
                             label = { Text(p.displayName) }
                         )
+                    }
+                }
+
+                // Hide color picker when Rainbow is selected
+                AnimatedVisibility(visible = selectedPattern != PatternMode.RAINBOW) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "Select Color",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            palette.forEach { c ->
+                                val isSelected = selectedColor == c
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(c))
+                                        .border(
+                                            width = if (isSelected) 3.dp else 1.dp,
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                                            shape = CircleShape
+                                        )
+                                        .clickable { selectedColor = c }
+                                )
+                            }
+                        }
                     }
                 }
             }

@@ -35,24 +35,24 @@ class IncomingCallWatcher : BroadcastReceiver() {
             when (stateStr) {
                 TelephonyManager.EXTRA_STATE_RINGING -> {
                     Log.i(TAG, "Incoming call ringing: $incomingNumber")
-                    val matchedRule = if (incomingNumber.isNotBlank()) {
-                        store.findRuleForPhoneNumber(incomingNumber)
-                    } else null
 
-                    if (matchedRule != null && matchedRule.isEnabled) {
-                        Log.i(TAG, "Matched custom rule for ${matchedRule.name}: ${matchedRule.pattern}")
-                        controller.startIncomingCallAlert(
-                            pattern = matchedRule.pattern,
-                            color = matchedRule.color
-                        )
+                    if (incomingNumber.isBlank() || incomingNumber.equals("private", ignoreCase = true) || incomingNumber.equals("unknown", ignoreCase = true)) {
+                        // Unknown / Private number
+                        val pattern = store.unknownNumbersPattern.first()
+                        val color = store.unknownNumbersColor.first()
+                        Log.i(TAG, "Triggering unknown/private caller lighting: $pattern")
+                        controller.startIncomingCallAlert(pattern = pattern, color = color)
                     } else {
-                        val defaultPattern = store.defaultCallPattern.first()
-                        val defaultColor = store.defaultCallColor.first()
-                        Log.i(TAG, "Using default call lighting: $defaultPattern")
-                        controller.startIncomingCallAlert(
-                            pattern = defaultPattern,
-                            color = defaultColor
-                        )
+                        val matchedRule = store.findRuleForPhoneNumber(incomingNumber)
+                        if (matchedRule != null && matchedRule.isEnabled) {
+                            Log.i(TAG, "Matched custom rule for ${matchedRule.name}: ${matchedRule.pattern}")
+                            controller.startIncomingCallAlert(pattern = matchedRule.pattern, color = matchedRule.color)
+                        } else {
+                            val otherContactsPattern = store.otherContactsPattern.first()
+                            val otherContactsColor = store.otherContactsColor.first()
+                            Log.i(TAG, "Using other contacts default lighting: $otherContactsPattern")
+                            controller.startIncomingCallAlert(pattern = otherContactsPattern, color = otherContactsColor)
+                        }
                     }
                 }
 
