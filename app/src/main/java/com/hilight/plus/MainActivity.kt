@@ -33,6 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.hilight.plus.ui.ContactsScreen
 import com.hilight.plus.ui.ExpressiveStatusCard
+import com.hilight.plus.ui.GeminiScreen
 import com.hilight.plus.ui.HiLightPlusTheme
 import com.hilight.plus.ui.OnboardingScreen
 import kotlinx.coroutines.delay
@@ -110,7 +111,8 @@ class MainActivity : ComponentActivity() {
 
 private enum class NavTab(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     DASHBOARD("Dashboard", Icons.Rounded.Dashboard),
-    CONTACTS("Calls", Icons.Rounded.PhoneInTalk)
+    CALLS("Calls", Icons.Rounded.PhoneInTalk),
+    GEMINI("Gemini", Icons.Rounded.Assistant)
 }
 
 @Composable
@@ -134,7 +136,8 @@ private fun MainAppNavigation(controller: LightController, onResetAll: () -> Uni
         Box(modifier = Modifier.padding(padding)) {
             when (selectedTab) {
                 NavTab.DASHBOARD -> DashboardScreen(controller = controller, onResetAll = onResetAll)
-                NavTab.CONTACTS -> ContactsScreen(controller = controller)
+                NavTab.CALLS -> ContactsScreen(controller = controller)
+                NavTab.GEMINI -> GeminiScreen(controller = controller)
             }
         }
     }
@@ -212,6 +215,13 @@ private fun DashboardScreen(controller: LightController, onResetAll: () -> Unit)
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            Text(
+                text = "System Diagnostics & Status",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
             // 1. Shizuku Privileged Access Status Card
             val isShizukuConnected = shizukuState == ShizukuBridge.State.CONNECTED
             ExpressiveStatusCard(

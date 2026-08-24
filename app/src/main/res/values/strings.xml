@@ -20,4 +20,6 @@
     <string name="main_test_card_desc">Pick a color and tap \'Test Device\' to illuminate the 8 rear LEDs, or \'Preview\' to watch on your screen.</string>
     <string name="main_test_btn">Test Device</string>
     <string name="main_reset_onboarding">Reset Onboarding &amp; Permissions</string>
+
+    <string name="accessibility_service_desc">Monitors Gemini and Google Assistant window states to illuminate the Pixel 11 rear LEDs during voice queries.</string>
 </resources>

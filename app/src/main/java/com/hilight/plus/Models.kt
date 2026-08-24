@@ -11,11 +11,10 @@ enum class PatternMode(val id: String, val displayName: String) {
     COMET("comet", "Comet"),
     RAINBOW("rainbow", "Rainbow"),
 
-    // --- Effect Placeholders for Future Implementation ---
-    GEMINI_LISTENING("gemini_listening", "Gemini Listening"),
-    GEMINI_THINKING("gemini_thinking", "Gemini Thinking"),
-    GEMINI_RESPONDING("gemini_responding", "Gemini Responding"),
-    CONTACT_CALL_ALERT("contact_call_alert", "Favorite Call Alert")
+    // --- Authentic Google Gemini Assistant Patterns ---
+    GOOGLE_QUAD("google_quad", "Google 4-Color"),
+    GEMINI_THINKING("gemini_thinking", "Gemini Comet"),
+    GEMINI_RESPONDING("gemini_responding", "Gemini Glow")
 }
 
 data class LightStyle(
@@ -29,9 +28,9 @@ data class LightStyle(
  * Lighting rule assigned to a specific contact or phone number.
  */
 data class ContactRule(
-    val id: String, // Unique identifier / Contact Lookup Key
+    val id: String,
     val name: String,
-    val phoneNumber: String, // Normalized phone number
+    val phoneNumber: String,
     val color: Long,
     val pattern: PatternMode = PatternMode.PULSE,
     val isEnabled: Boolean = true

@@ -13,7 +13,7 @@ import org.json.JSONArray
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "hilight_plus_settings")
 
 /**
- * DataStore-backed repository managing application settings, light configurations, and contact calling rules.
+ * DataStore-backed repository managing application settings, light configurations, contact calling rules, and Gemini assistant configurations.
  */
 class AppStore private constructor(private val appContext: Context) {
 
@@ -38,6 +38,15 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_UNKNOWN_NUMBERS_PATTERN = stringPreferencesKey("unknown_numbers_pattern")
 
         private val KEY_CONTACT_RULES_JSON = stringPreferencesKey("contact_rules_json")
+
+        // Gemini & Assistant Illumination Settings
+        private val KEY_GEMINI_ENABLED = booleanPreferencesKey("gemini_enabled")
+        private val KEY_GEMINI_LISTENING_PATTERN = stringPreferencesKey("gemini_listening_pattern")
+        private val KEY_GEMINI_LISTENING_COLOR = longPreferencesKey("gemini_listening_color")
+        private val KEY_GEMINI_THINKING_PATTERN = stringPreferencesKey("gemini_thinking_pattern")
+        private val KEY_GEMINI_THINKING_COLOR = longPreferencesKey("gemini_thinking_color")
+        private val KEY_GEMINI_RESPONDING_PATTERN = stringPreferencesKey("gemini_responding_pattern")
+        private val KEY_GEMINI_RESPONDING_COLOR = longPreferencesKey("gemini_responding_color")
 
         @Volatile
         private var instance: AppStore? = null
@@ -113,6 +122,41 @@ class AppStore private constructor(private val appContext: Context) {
             }.getOrDefault(emptyList())
         }
 
+    // --- Gemini & Assistant Illumination Flows ---
+
+    val isGeminiEnabled: Flow<Boolean> = appContext.dataStore.data
+        .map { it[KEY_GEMINI_ENABLED] ?: true }
+
+    // Listening Default: Google 4-Color Quad
+    val geminiListeningPattern: Flow<PatternMode> = appContext.dataStore.data
+        .map { prefs ->
+            val name = prefs[KEY_GEMINI_LISTENING_PATTERN] ?: PatternMode.GOOGLE_QUAD.name
+            runCatching { PatternMode.valueOf(name) }.getOrDefault(PatternMode.GOOGLE_QUAD)
+        }
+
+    val geminiListeningColor: Flow<Long> = appContext.dataStore.data
+        .map { it[KEY_GEMINI_LISTENING_COLOR] ?: 0xFF4285F4 }
+
+    // Thinking Default: Gemini Comet with Cyan
+    val geminiThinkingPattern: Flow<PatternMode> = appContext.dataStore.data
+        .map { prefs ->
+            val name = prefs[KEY_GEMINI_THINKING_PATTERN] ?: PatternMode.GEMINI_THINKING.name
+            runCatching { PatternMode.valueOf(name) }.getOrDefault(PatternMode.GEMINI_THINKING)
+        }
+
+    val geminiThinkingColor: Flow<Long> = appContext.dataStore.data
+        .map { it[KEY_GEMINI_THINKING_COLOR] ?: 0xFF00E5FF }
+
+    // Responding Default: Gemini Glow with Google Blue
+    val geminiRespondingPattern: Flow<PatternMode> = appContext.dataStore.data
+        .map { prefs ->
+            val name = prefs[KEY_GEMINI_RESPONDING_PATTERN] ?: PatternMode.GEMINI_RESPONDING.name
+            runCatching { PatternMode.valueOf(name) }.getOrDefault(PatternMode.GEMINI_RESPONDING)
+        }
+
+    val geminiRespondingColor: Flow<Long> = appContext.dataStore.data
+        .map { it[KEY_GEMINI_RESPONDING_COLOR] ?: 0xFF4285F4 }
+
     // --- Preferences Updaters ---
 
     suspend fun setOnboardingCompleted(completed: Boolean) {
@@ -162,6 +206,34 @@ class AppStore private constructor(private val appContext: Context) {
 
     suspend fun setUnknownNumbersPattern(pattern: PatternMode) {
         appContext.dataStore.edit { it[KEY_UNKNOWN_NUMBERS_PATTERN] = pattern.name }
+    }
+
+    suspend fun setGeminiEnabled(enabled: Boolean) {
+        appContext.dataStore.edit { it[KEY_GEMINI_ENABLED] = enabled }
+    }
+
+    suspend fun setGeminiListeningPattern(pattern: PatternMode) {
+        appContext.dataStore.edit { it[KEY_GEMINI_LISTENING_PATTERN] = pattern.name }
+    }
+
+    suspend fun setGeminiListeningColor(color: Long) {
+        appContext.dataStore.edit { it[KEY_GEMINI_LISTENING_COLOR] = color }
+    }
+
+    suspend fun setGeminiThinkingPattern(pattern: PatternMode) {
+        appContext.dataStore.edit { it[KEY_GEMINI_THINKING_PATTERN] = pattern.name }
+    }
+
+    suspend fun setGeminiThinkingColor(color: Long) {
+        appContext.dataStore.edit { it[KEY_GEMINI_THINKING_COLOR] = color }
+    }
+
+    suspend fun setGeminiRespondingPattern(pattern: PatternMode) {
+        appContext.dataStore.edit { it[KEY_GEMINI_RESPONDING_PATTERN] = pattern.name }
+    }
+
+    suspend fun setGeminiRespondingColor(color: Long) {
+        appContext.dataStore.edit { it[KEY_GEMINI_RESPONDING_COLOR] = color }
     }
 
     suspend fun saveContactRule(rule: ContactRule) {

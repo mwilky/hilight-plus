@@ -9,6 +9,14 @@ import kotlin.math.sin
  */
 class PatternRenderer {
 
+    // Google Quad-Color Palette: Blue, Red, Yellow, Green
+    private val googleQuadColors = intArrayOf(
+        0xFF4285F4.toInt(), 0xFF4285F4.toInt(), // LEDs 0, 1: Google Blue
+        0xFFEA4335.toInt(), 0xFFEA4335.toInt(), // LEDs 2, 3: Google Red
+        0xFFFBBC05.toInt(), 0xFFFBBC05.toInt(), // LEDs 4, 5: Google Yellow
+        0xFF34A853.toInt(), 0xFF34A853.toInt()  // LEDs 6, 7: Google Green
+    )
+
     fun renderFrame(
         pattern: String,
         colorLong: Long,
@@ -83,7 +91,6 @@ class PatternRenderer {
             }
 
             "rainbow" -> {
-                // Responsive and lively 360-degree rainbow rotation matched to speed parameter
                 val phase = (elapsedTimeMs % speed) / speed.toDouble()
                 for (i in 0 until count) {
                     val hue = ((phase + (i.toDouble() / count)) * 360.0) % 360.0
@@ -91,10 +98,43 @@ class PatternRenderer {
                 }
             }
 
-            "contact_call_alert" -> {
+            // --- Authentic Stock Pixel 11 Gemini Assistant Effects ---
+
+            "google_quad", "gemini_listening" -> {
+                // Stock Google Assistant 4-Color Quad Breathing Pulse
                 val phase = (elapsedTimeMs % speed) / speed.toDouble()
-                val k = if (phase < 0.2) phase / 0.2 else (1.0 - (phase - 0.2) / 0.8).coerceAtLeast(0.0)
-                frame.fill(scaleColor(baseColor, k * clampedBrightness))
+                val k = (1.0 - cos(phase * 2.0 * PI)) / 2.0
+                val intensity = (0.10 + 0.90 * k) * clampedBrightness
+                for (i in 0 until count) {
+                    val quadCol = googleQuadColors[i % googleQuadColors.size]
+                    frame[i] = scaleColor(quadCol, intensity)
+                }
+            }
+
+            "gemini_thinking", "gemini_comet" -> {
+                // Fast circulating dual-comet orbiting rotation (defaulting to Electric Cyan)
+                val headPos = ((elapsedTimeMs % speed) / speed.toDouble()) * count
+                val tailLength = 3.5
+                val ledColor = if (colorLong == 0xFF000000) 0xFF00E5FF.toInt() else baseColor
+
+                for (i in 0 until count) {
+                    val diff1 = ((headPos - i) % count + count) % count
+                    val diff2 = ((headPos + (count / 2.0) - i) % count + count) % count
+                    val k1 = if (diff1 <= tailLength) (1.0 - (diff1 / tailLength)).coerceIn(0.0, 1.0) else 0.0
+                    val k2 = if (diff2 <= tailLength) (1.0 - (diff2 / tailLength)).coerceIn(0.0, 1.0) else 0.0
+                    val k = maxOf(k1 * k1, k2 * k2)
+
+                    frame[i] = if (k > 0.01) scaleColor(ledColor, k * clampedBrightness) else 0x00000000
+                }
+            }
+
+            "gemini_responding", "gemini_glow" -> {
+                // Soft undulating voice response waveform
+                val phase = (elapsedTimeMs % speed) / speed.toDouble()
+                val k = (1.0 - cos(phase * 2.0 * PI)) / 2.0
+                val intensity = (0.15 + 0.85 * k) * clampedBrightness
+                val ledColor = if (colorLong == 0xFF000000) 0xFF4285F4.toInt() else baseColor
+                frame.fill(scaleColor(ledColor, intensity))
             }
 
             else -> {
