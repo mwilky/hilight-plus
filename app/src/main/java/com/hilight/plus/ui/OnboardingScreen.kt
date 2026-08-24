@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Launch
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -89,15 +90,18 @@ fun OnboardingScreen(controller: LightController, onComplete: () -> Unit) {
                     containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
                     contentColor = MaterialTheme.colorScheme.onErrorContainer,
                     isWarning = true,
-                    trailingAction = {
+                    bottomAction = {
                         Button(
                             onClick = { NativeHiLightDetector.openHiLightSettings(context) },
+                            modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.error,
                                 contentColor = MaterialTheme.colorScheme.onError
                             )
                         ) {
-                            Text("Fix Settings")
+                            Icon(Icons.Rounded.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Open System Settings to Resolve")
                         }
                     }
                 )
@@ -140,7 +144,7 @@ fun OnboardingScreen(controller: LightController, onComplete: () -> Unit) {
                 title = "Shizuku Privileged Access",
                 subtitle = when (shizukuState) {
                     ShizukuBridge.State.CONNECTED -> "Active session holding privileged control over your Pixel's rear light array."
-                    ShizukuBridge.State.NEEDS_PERMISSION -> "Shizuku is running. Tap 'Authorize' to grant privileged LED access."
+                    ShizukuBridge.State.NEEDS_PERMISSION -> "Shizuku is running. Tap 'Authorize' below to grant privileged LED access."
                     ShizukuBridge.State.NOT_RUNNING -> "Shizuku daemon is stopped. Start via Wireless Debugging or ADB."
                     ShizukuBridge.State.NOT_INSTALLED -> "Shizuku Manager is not installed on this device."
                     ShizukuBridge.State.CONNECTING -> "Connecting to local Shizuku binder daemon..."
@@ -158,31 +162,72 @@ fun OnboardingScreen(controller: LightController, onComplete: () -> Unit) {
                 accentColor = if (isShizukuConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                 containerColor = if (isShizukuConnected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f),
                 contentColor = if (isShizukuConnected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer,
-                trailingAction = {
+                bottomAction = {
                     when (shizukuState) {
                         ShizukuBridge.State.CONNECTED -> {
-                            TextButton(onClick = { controller.shizuku.unbind() }) {
-                                Text("Disconnect")
+                            OutlinedButton(
+                                onClick = { controller.shizuku.unbind() },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.primary
+                                )
+                            ) {
+                                Icon(Icons.Rounded.PowerSettingsNew, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Disconnect Shizuku Session")
                             }
                         }
                         ShizukuBridge.State.NEEDS_PERMISSION -> {
-                            Button(onClick = { controller.shizuku.requestPermission() }) {
-                                Text("Authorize")
+                            Button(
+                                onClick = { controller.shizuku.requestPermission() },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Rounded.Key, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Authorize Shizuku Access")
                             }
                         }
                         ShizukuBridge.State.NOT_INSTALLED -> {
-                            Button(onClick = { controller.shizuku.openShizukuApp(context) }) {
-                                Text("Install")
+                            Button(
+                                onClick = { controller.shizuku.openShizukuApp(context) },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Install Shizuku Manager")
                             }
                         }
                         ShizukuBridge.State.NOT_RUNNING -> {
-                            Button(onClick = { controller.shizuku.openShizukuApp(context) }) {
-                                Text("Open")
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = { controller.shizuku.openShizukuApp(context) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.AutoMirrored.Rounded.Launch, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Open Shizuku")
+                                }
+                                OutlinedButton(
+                                    onClick = { controller.shizuku.refresh() },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Check Again")
+                                }
                             }
                         }
                         else -> {
-                            Button(onClick = { controller.shizuku.refresh() }) {
-                                Text("Retry")
+                            Button(
+                                onClick = { controller.shizuku.refresh() },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Retry Connection")
                             }
                         }
                     }

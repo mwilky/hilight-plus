@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Launch
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -218,13 +219,13 @@ private fun DashboardScreen(controller: LightController, onResetAll: () -> Unit)
                 color = MaterialTheme.colorScheme.primary
             )
 
-            // 1. Shizuku Privileged Access Status Card (Vibrant Teal / Primary Tonal)
+            // 1. Shizuku Privileged Access Status Card
             val isShizukuConnected = shizukuState == ShizukuBridge.State.CONNECTED
             ExpressiveStatusCard(
                 title = "Shizuku Privileged Access",
                 subtitle = when (shizukuState) {
                     ShizukuBridge.State.CONNECTED -> "Active session holding privileged control over your Pixel's rear light array."
-                    ShizukuBridge.State.NEEDS_PERMISSION -> "Shizuku is running. Tap 'Authorize' to grant privileged LED access."
+                    ShizukuBridge.State.NEEDS_PERMISSION -> "Shizuku is running. Tap 'Authorize' below to grant privileged LED access."
                     ShizukuBridge.State.NOT_RUNNING -> "Shizuku daemon is stopped. Start via Wireless Debugging or ADB."
                     ShizukuBridge.State.NOT_INSTALLED -> "Shizuku Manager is not installed on this device."
                     ShizukuBridge.State.CONNECTING -> "Connecting to local Shizuku binder daemon..."
@@ -242,40 +243,81 @@ private fun DashboardScreen(controller: LightController, onResetAll: () -> Unit)
                 accentColor = if (isShizukuConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                 containerColor = if (isShizukuConnected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f),
                 contentColor = if (isShizukuConnected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer,
-                trailingAction = {
+                bottomAction = {
                     when (shizukuState) {
                         ShizukuBridge.State.CONNECTED -> {
-                            TextButton(onClick = { controller.shizuku.unbind() }) {
-                                Text("Disconnect")
+                            OutlinedButton(
+                                onClick = { controller.shizuku.unbind() },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.primary
+                                )
+                            ) {
+                                Icon(Icons.Rounded.PowerSettingsNew, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Disconnect Shizuku Session")
                             }
                         }
                         ShizukuBridge.State.NEEDS_PERMISSION -> {
-                            Button(onClick = { controller.shizuku.requestPermission() }) {
-                                Text("Authorize")
+                            Button(
+                                onClick = { controller.shizuku.requestPermission() },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Rounded.Key, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Authorize Shizuku Access")
                             }
                         }
                         ShizukuBridge.State.NOT_INSTALLED -> {
-                            Button(onClick = { controller.shizuku.openShizukuApp(context) }) {
-                                Text("Install")
+                            Button(
+                                onClick = { controller.shizuku.openShizukuApp(context) },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Install Shizuku Manager")
                             }
                         }
                         ShizukuBridge.State.NOT_RUNNING -> {
-                            Button(onClick = { controller.shizuku.openShizukuApp(context) }) {
-                                Text("Open")
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = { controller.shizuku.openShizukuApp(context) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.AutoMirrored.Rounded.Launch, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Open Shizuku")
+                                }
+                                OutlinedButton(
+                                    onClick = { controller.shizuku.refresh() },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Check Again")
+                                }
                             }
                         }
                         else -> {
-                            Button(onClick = { controller.shizuku.refresh() }) {
-                                Text("Retry")
+                            Button(
+                                onClick = { controller.shizuku.refresh() },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Retry Connection")
                             }
                         }
                     }
                 }
             )
 
-            // 2. Native Pixel HiLight Status & Conflict Card (Vibrant Amber/Gold / Secondary Tonal)
+            // 2. Native Pixel HiLight Status & Conflict Card
             val isNativeConflict = stockState.anyActive
-            val stockAccent = if (isNativeConflict) MaterialTheme.colorScheme.error else Color(0xFF388E3C) // Emerald Green when clear
+            val stockAccent = if (isNativeConflict) MaterialTheme.colorScheme.error else Color(0xFF388E3C)
             val stockContainer = if (isNativeConflict) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
             val stockContent = if (isNativeConflict) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer
 
@@ -293,22 +335,25 @@ private fun DashboardScreen(controller: LightController, onResetAll: () -> Unit)
                 containerColor = stockContainer,
                 contentColor = stockContent,
                 isWarning = isNativeConflict,
-                trailingAction = {
-                    if (isNativeConflict) {
+                bottomAction = if (isNativeConflict) {
+                    {
                         Button(
                             onClick = { NativeHiLightDetector.openHiLightSettings(context) },
+                            modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.error,
                                 contentColor = MaterialTheme.colorScheme.onError
                             )
                         ) {
-                            Text("Fix Settings")
+                            Icon(Icons.Rounded.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Open System Settings to Resolve")
                         }
                     }
-                }
+                } else null
             )
 
-            // 3. Android Telephony & Contacts Permissions Card (Vibrant Purple/Tertiary Tonal)
+            // 3. Android Telephony & Contacts Permissions Card
             val hasAllPerms = isPhoneGranted && isContactsGranted
             val permsStatusText = when {
                 hasAllPerms -> "Granted"
@@ -336,29 +381,36 @@ private fun DashboardScreen(controller: LightController, onResetAll: () -> Unit)
                 containerColor = permsContainer,
                 contentColor = permsContent,
                 isWarning = !hasAllPerms,
-                trailingAction = {
-                    if (!hasAllPerms) {
+                bottomAction = if (!hasAllPerms) {
+                    {
                         val missing = mutableListOf<String>().apply {
                             if (!isPhoneGranted) add(Manifest.permission.READ_PHONE_STATE)
                             if (!isContactsGranted) add(Manifest.permission.READ_CONTACTS)
                         }.toTypedArray()
 
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             Button(
                                 onClick = { permissionLauncher.launch(missing) },
+                                modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.error,
                                     contentColor = MaterialTheme.colorScheme.onError
                                 )
                             ) {
-                                Text("Grant")
+                                Text("Grant Permission")
                             }
-                            TextButton(onClick = { openAppSettings() }) {
-                                Text("Settings", color = MaterialTheme.colorScheme.error)
+                            OutlinedButton(
+                                onClick = { openAppSettings() },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("App Info")
                             }
                         }
                     }
-                }
+                } else null
             )
 
             Spacer(Modifier.weight(1f))

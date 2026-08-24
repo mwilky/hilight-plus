@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Material 3 Expressive status indicator card designed for clear system diagnostics.
- * Features vibrant tonal container backgrounds, accent badge pills, and colored icon halos.
+ * Features vibrant tonal container backgrounds, accent badge pills, colored icon halos, and an optional bottom action bar.
  */
 @Composable
 fun ExpressiveStatusCard(
@@ -30,7 +30,8 @@ fun ExpressiveStatusCard(
     contentColor: Color,
     modifier: Modifier = Modifier,
     isWarning: Boolean = false,
-    trailingAction: (@Composable () -> Unit)? = null
+    headerAction: (@Composable () -> Unit)? = null,
+    bottomAction: (@Composable () -> Unit)? = null
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -107,8 +108,8 @@ fun ExpressiveStatusCard(
                     }
                 }
 
-                if (trailingAction != null) {
-                    trailingAction()
+                if (headerAction != null) {
+                    headerAction()
                 }
             }
 
@@ -117,6 +118,16 @@ fun ExpressiveStatusCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = contentColor.copy(alpha = 0.85f)
             )
+
+            if (bottomAction != null) {
+                HorizontalDivider(
+                    color = accentColor.copy(alpha = 0.15f),
+                    thickness = 1.dp
+                )
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    bottomAction()
+                }
+            }
         }
     }
 }
