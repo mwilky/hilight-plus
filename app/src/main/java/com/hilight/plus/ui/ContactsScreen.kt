@@ -10,6 +10,13 @@ import android.provider.ContactsContract
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -629,6 +636,9 @@ private fun MiniRuleAnimationIcon(
     )
 }
 
+// Material 3 Expressive spring-like motion curve for smooth dialog expansions
+private val ExpressiveMotionSpec = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)
+
 @Composable
 private fun ContactRuleDialog(
     initialRule: ContactRule,
@@ -729,8 +739,20 @@ private fun ContactRuleDialog(
                     }
                 }
 
-                // Instant direct visibility without sluggish transition delays
-                if (selectedPattern != PatternMode.RAINBOW) {
+                // Fluid, perfectly timed Material 3 Expressive expansion & collapse
+                AnimatedVisibility(
+                    visible = selectedPattern != PatternMode.RAINBOW,
+                    enter = expandVertically(
+                        animationSpec = tween(durationMillis = 240, easing = ExpressiveMotionSpec)
+                    ) + fadeIn(
+                        animationSpec = tween(durationMillis = 200, delayMillis = 40)
+                    ),
+                    exit = shrinkVertically(
+                        animationSpec = tween(durationMillis = 200, easing = ExpressiveMotionSpec)
+                    ) + fadeOut(
+                        animationSpec = tween(durationMillis = 150)
+                    )
+                ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -886,8 +908,20 @@ private fun PatternColorConfigDialog(
                     }
                 }
 
-                // Instant direct visibility without sluggish transition delays
-                if (selectedPattern != PatternMode.RAINBOW) {
+                // Fluid, perfectly timed Material 3 Expressive expansion & collapse
+                AnimatedVisibility(
+                    visible = selectedPattern != PatternMode.RAINBOW,
+                    enter = expandVertically(
+                        animationSpec = tween(durationMillis = 240, easing = ExpressiveMotionSpec)
+                    ) + fadeIn(
+                        animationSpec = tween(durationMillis = 200, delayMillis = 40)
+                    ),
+                    exit = shrinkVertically(
+                        animationSpec = tween(durationMillis = 200, easing = ExpressiveMotionSpec)
+                    ) + fadeOut(
+                        animationSpec = tween(durationMillis = 150)
+                    )
+                ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
