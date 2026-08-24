@@ -47,11 +47,11 @@ class MainActivity : ComponentActivity() {
 
         val controller = LightController.get(this)
         NativeHiLightDetector.check(this)
-        val prefs = AppPreferences.get(this)
+        val store = AppStore.get(this)
 
         setContent {
             HiLightPlusTheme {
-                val isOnboardingCompleted by prefs.isOnboardingCompleted.collectAsStateWithLifecycle(initialValue = null)
+                val isOnboardingCompleted by store.isOnboardingCompleted.collectAsStateWithLifecycle(initialValue = null)
                 val scope = rememberCoroutineScope()
 
                 val owner = LocalLifecycleOwner.current
@@ -75,7 +75,7 @@ class MainActivity : ComponentActivity() {
                             controller = controller,
                             onComplete = {
                                 scope.launch {
-                                    prefs.setOnboardingCompleted(true)
+                                    store.setOnboardingCompleted(true)
                                 }
                             }
                         )
@@ -85,7 +85,7 @@ class MainActivity : ComponentActivity() {
                             controller = controller,
                             onResetOnboarding = {
                                 scope.launch {
-                                    prefs.setOnboardingCompleted(false)
+                                    store.setOnboardingCompleted(false)
                                 }
                             }
                         )

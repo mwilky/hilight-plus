@@ -1,5 +1,6 @@
 package com.hilight.plus
 
+import android.app.Application
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
@@ -9,7 +10,10 @@ import kotlinx.coroutines.flow.map
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "hilight_plus_settings")
 
-class AppPreferences private constructor(private val context: Context) {
+/**
+ * DataStore-backed repository managing application settings, light configurations, and onboarding state.
+ */
+class AppStore private constructor(private val appContext: Context) {
 
     companion object {
         private val KEY_ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
@@ -21,21 +25,23 @@ class AppPreferences private constructor(private val context: Context) {
         private val KEY_AUTO_OFF_SEC = intPreferencesKey("auto_off_sec")
 
         @Volatile
-        private var instance: AppPreferences? = null
+        private var instance: AppStore? = null
 
-        fun get(context: Context): AppPreferences =
-            instance ?: synchronized(this) {
-                instance ?: AppPreferences(context.applicationContext).also { instance = it }
+        fun get(context: Context): AppStore {
+            val app = if (context is Application) context else context.applicationContext
+            return instance ?: synchronized(this) {
+                instance ?: AppStore(app).also { instance = it }
             }
+        }
     }
 
-    val isOnboardingCompleted: Flow<Boolean> = context.dataStore.data
+    val isOnboardingCompleted: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_ONBOARDING_COMPLETED] ?: false }
 
-    val isEnabled: Flow<Boolean> = context.dataStore.data
+    val isEnabled: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_ENABLED] ?: true }
 
-    val lightStyle: Flow<LightStyle> = context.dataStore.data
+    val lightStyle: Flow<LightStyle> = appContext.dataStore.data
         .map { prefs ->
             val patternName = prefs[KEY_PATTERN] ?: PatternMode.OFF.name
             val pattern = runCatching { PatternMode.valueOf(patternName) }.getOrDefault(PatternMode.OFF)
@@ -45,19 +51,19 @@ class AppPreferences private constructor(private val context: Context) {
             LightStyle(pattern, color, speedMs, brightness)
         }
 
-    val autoOffSeconds: Flow<Int> = context.dataStore.data
+    val autoOffSeconds: Flow<Int> = appContext.dataStore.data
         .map { it[KEY_AUTO_OFF_SEC] ?: 60 }
 
     suspend fun setOnboardingCompleted(completed: Boolean) {
-        context.dataStore.edit { it[KEY_ONBOARDING_COMPLETED] = completed }
+        appContext.dataStore.edit { it[KEY_ONBOARDING_COMPLETED] = completed }
     }
 
     suspend fun setEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[KEY_ENABLED] = enabled }
+        appContext.dataStore.edit { it[KEY_ENABLED] = enabled }
     }
 
     suspend fun setLightStyle(style: LightStyle) {
-        context.dataStore.edit { prefs ->
+        appContext.dataStore.edit { prefs ->
             prefs[KEY_PATTERN] = style.pattern.name
             prefs[KEY_COLOR] = style.color
             prefs[KEY_SPEED_MS] = style.speedMs
@@ -66,6 +72,6 @@ class AppPreferences private constructor(private val context: Context) {
     }
 
     suspend fun setAutoOffSeconds(seconds: Int) {
-        context.dataStore.edit { it[KEY_AUTO_OFF_SEC] = seconds }
+        appContext.dataStore.edit { it[KEY_AUTO_OFF_SEC] = seconds }
     }
 }

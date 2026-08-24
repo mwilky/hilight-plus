@@ -1,5 +1,6 @@
 package com.hilight.plus
 
+import android.app.Application
 import android.content.Context
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -11,23 +12,22 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * High-level controller coordinating DataStore preferences and hardware light execution via [ShizukuBridge].
+ * High-level controller coordinating DataStore preferences ([AppStore]) and hardware light execution via [ShizukuBridge].
  */
-class LightController private constructor(context: Context) {
+class LightController private constructor(app: Application) {
 
-    private val appContext = context.applicationContext
-    val prefs = AppPreferences.get(appContext)
-    val shizuku = ShizukuBridge.get(appContext)
+    val store = AppStore.get(app)
+    val shizuku = ShizukuBridge.get(app)
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
-    val isEnabled: StateFlow<Boolean> = prefs.isEnabled
+    val isEnabled: StateFlow<Boolean> = store.isEnabled
         .stateIn(scope, SharingStarted.Eagerly, true)
 
-    val lightStyle: StateFlow<LightStyle> = prefs.lightStyle
+    val lightStyle: StateFlow<LightStyle> = store.lightStyle
         .stateIn(scope, SharingStarted.Eagerly, LightStyle())
 
-    val autoOffSeconds: StateFlow<Int> = prefs.autoOffSeconds
+    val autoOffSeconds: StateFlow<Int> = store.autoOffSeconds
         .stateIn(scope, SharingStarted.Eagerly, 60)
 
     init {
@@ -36,28 +36,28 @@ class LightController private constructor(context: Context) {
         }
 
         scope.launch {
-            prefs.isEnabled.collect { syncState() }
+            store.isEnabled.collect { syncState() }
         }
         scope.launch {
-            prefs.lightStyle.collect { syncState() }
+            store.lightStyle.collect { syncState() }
         }
     }
 
     fun setEnabled(enabled: Boolean) {
         scope.launch {
-            prefs.setEnabled(enabled)
+            store.setEnabled(enabled)
         }
     }
 
     fun setLightStyle(style: LightStyle) {
         scope.launch {
-            prefs.setLightStyle(style)
+            store.setLightStyle(style)
         }
     }
 
     fun setAutoOffSeconds(seconds: Int) {
         scope.launch {
-            prefs.setAutoOffSeconds(seconds)
+            store.setAutoOffSeconds(seconds)
         }
     }
 
@@ -76,12 +76,12 @@ class LightController private constructor(context: Context) {
 
     fun syncState() {
         scope.launch {
-            val enabled = prefs.isEnabled.first()
+            val enabled = store.isEnabled.first()
             if (!enabled) {
                 shizuku.turnOff()
                 return@launch
             }
-            val style = prefs.lightStyle.first()
+            val style = store.lightStyle.first()
             shizuku.setAmbient(
                 pattern = style.pattern.id,
                 color = style.color,
@@ -99,9 +99,11 @@ class LightController private constructor(context: Context) {
         @Volatile
         private var instance: LightController? = null
 
-        fun get(context: Context): LightController =
-            instance ?: synchronized(this) {
-                instance ?: LightController(context).also { instance = it }
+        fun get(context: Context): LightController {
+            val app = if (context is Application) context else context.applicationContext as Application
+            return instance ?: synchronized(this) {
+                instance ?: LightController(app).also { instance = it }
             }
+        }
     }
 }

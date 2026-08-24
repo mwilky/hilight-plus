@@ -1,5 +1,6 @@
 package com.hilight.plus
 
+import android.app.Application
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -18,7 +19,7 @@ import rikka.shizuku.Shizuku
 /**
  * Manages connection, permission requests, and typed IPC with [HiLightDaemonService].
  */
-class ShizukuBridge private constructor(private val ctx: Context) {
+class ShizukuBridge private constructor(private val app: Application) {
 
     enum class State { NOT_INSTALLED, NOT_RUNNING, NEEDS_PERMISSION, CONNECTING, CONNECTED, FAILED }
 
@@ -84,7 +85,7 @@ class ShizukuBridge private constructor(private val ctx: Context) {
     }
 
     fun isInstalled(): Boolean = runCatching {
-        ctx.packageManager.getPackageInfo(SHIZUKU_PKG, 0)
+        app.packageManager.getPackageInfo(SHIZUKU_PKG, 0)
         true
     }.getOrDefault(false)
 
@@ -192,8 +193,11 @@ class ShizukuBridge private constructor(private val ctx: Context) {
         @Volatile
         private var instance: ShizukuBridge? = null
 
-        fun get(ctx: Context): ShizukuBridge = instance ?: synchronized(this) {
-            instance ?: ShizukuBridge(ctx.applicationContext).also { instance = it }
+        fun get(context: Context): ShizukuBridge {
+            val app = if (context is Application) context else context.applicationContext as Application
+            return instance ?: synchronized(this) {
+                instance ?: ShizukuBridge(app).also { instance = it }
+            }
         }
     }
 }
