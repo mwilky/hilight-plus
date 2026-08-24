@@ -342,17 +342,25 @@ fun ContactsScreen(controller: LightController) {
                             activePreviewingRuleId = "other_contacts"
                             scope.launch {
                                 val startMs = System.currentTimeMillis()
+                                val speed = when (otherContactsPattern) {
+                                    PatternMode.BREATHE -> 2000L
+                                    PatternMode.WAVE -> 1200L
+                                    PatternMode.COMET -> 1000L
+                                    PatternMode.RAINBOW -> 2800L
+                                    PatternMode.PULSE -> 850L
+                                    else -> 1000L
+                                }
                                 while (isActive && System.currentTimeMillis() - startMs < 3000L) {
                                     val elapsed = System.currentTimeMillis() - startMs
                                     livePreviewFrames = renderer.renderFrame(
                                         pattern = otherContactsPattern.id,
                                         colorLong = otherContactsColor,
                                         brightness = 1.0f,
-                                        speedMs = 800L,
+                                        speedMs = speed,
                                         elapsedTimeMs = elapsed,
                                         ledCount = 8
                                     )
-                                    delay(33)
+                                    delay(16)
                                 }
                                 livePreviewFrames = IntArray(8) { 0x00000000 }
                                 activePreviewingRuleId = null
@@ -373,17 +381,25 @@ fun ContactsScreen(controller: LightController) {
                             activePreviewingRuleId = "unknown_numbers"
                             scope.launch {
                                 val startMs = System.currentTimeMillis()
+                                val speed = when (unknownNumbersPattern) {
+                                    PatternMode.BREATHE -> 2000L
+                                    PatternMode.WAVE -> 1200L
+                                    PatternMode.COMET -> 1000L
+                                    PatternMode.RAINBOW -> 2800L
+                                    PatternMode.PULSE -> 850L
+                                    else -> 1000L
+                                }
                                 while (isActive && System.currentTimeMillis() - startMs < 3000L) {
                                     val elapsed = System.currentTimeMillis() - startMs
                                     livePreviewFrames = renderer.renderFrame(
                                         pattern = unknownNumbersPattern.id,
                                         colorLong = unknownNumbersColor,
                                         brightness = 1.0f,
-                                        speedMs = 800L,
+                                        speedMs = speed,
                                         elapsedTimeMs = elapsed,
                                         ledCount = 8
                                     )
-                                    delay(33)
+                                    delay(16)
                                 }
                                 livePreviewFrames = IntArray(8) { 0x00000000 }
                                 activePreviewingRuleId = null
@@ -443,17 +459,25 @@ fun ContactsScreen(controller: LightController) {
                                 activePreviewingRuleId = rule.id
                                 scope.launch {
                                     val startMs = System.currentTimeMillis()
+                                    val speed = when (rule.pattern) {
+                                        PatternMode.BREATHE -> 2000L
+                                        PatternMode.WAVE -> 1200L
+                                        PatternMode.COMET -> 1000L
+                                        PatternMode.RAINBOW -> 2800L
+                                        PatternMode.PULSE -> 850L
+                                        else -> 1000L
+                                    }
                                     while (isActive && System.currentTimeMillis() - startMs < 3000L) {
                                         val elapsed = System.currentTimeMillis() - startMs
                                         livePreviewFrames = renderer.renderFrame(
                                             pattern = rule.pattern.id,
                                             colorLong = rule.color,
                                             brightness = 1.0f,
-                                            speedMs = 800L,
+                                            speedMs = speed,
                                             elapsedTimeMs = elapsed,
                                             ledCount = 8
                                         )
-                                        delay(33)
+                                        delay(16)
                                     }
                                     livePreviewFrames = IntArray(8) { 0x00000000 }
                                     activePreviewingRuleId = null
@@ -692,17 +716,25 @@ private fun ContactRuleDialog(
 
     LaunchedEffect(selectedPattern, selectedColor) {
         val startMs = System.currentTimeMillis()
+        val speed = when (selectedPattern) {
+            PatternMode.BREATHE -> 2000L
+            PatternMode.WAVE -> 1200L
+            PatternMode.COMET -> 1000L
+            PatternMode.RAINBOW -> 2800L
+            PatternMode.PULSE -> 850L
+            else -> 1000L
+        }
         while (isActive) {
             val elapsed = System.currentTimeMillis() - startMs
             dialogPreviewFrames = renderer.renderFrame(
                 pattern = selectedPattern.id,
                 colorLong = selectedColor,
                 brightness = 1.0f,
-                speedMs = 800L,
+                speedMs = speed,
                 elapsedTimeMs = elapsed,
                 ledCount = 8
             )
-            delay(33)
+            delay(16)
         }
     }
 
@@ -825,17 +857,25 @@ private fun PatternColorConfigDialog(
 
     LaunchedEffect(selectedPattern, selectedColor) {
         val startMs = System.currentTimeMillis()
+        val speed = when (selectedPattern) {
+            PatternMode.BREATHE -> 2000L
+            PatternMode.WAVE -> 1200L
+            PatternMode.COMET -> 1000L
+            PatternMode.RAINBOW -> 2800L
+            PatternMode.PULSE -> 850L
+            else -> 1000L
+        }
         while (isActive) {
             val elapsed = System.currentTimeMillis() - startMs
             dialogPreviewFrames = renderer.renderFrame(
                 pattern = selectedPattern.id,
                 colorLong = selectedColor,
                 brightness = 1.0f,
-                speedMs = 800L,
+                speedMs = speed,
                 elapsedTimeMs = elapsed,
                 ledCount = 8
             )
-            delay(33)
+            delay(16)
         }
     }
 

@@ -70,14 +70,22 @@ class LightController private constructor(app: Application) {
         pattern: PatternMode,
         color: Long,
         brightness: Float = 1.0f,
-        speedMs: Long = 800L,
+        speedMs: Long = 1200L,
         durationMs: Long = 3000L
     ) {
+        val calculatedSpeed = when (pattern) {
+            PatternMode.BREATHE -> 2200L
+            PatternMode.WAVE -> 1400L
+            PatternMode.COMET -> 1200L
+            PatternMode.RAINBOW -> 3000L
+            PatternMode.PULSE -> 900L
+            else -> speedMs
+        }
         shizuku.triggerAlert(
             pattern = pattern.id,
             color = color,
             brightness = brightness,
-            speedMs = speedMs,
+            speedMs = calculatedSpeed,
             durationMs = durationMs
         )
     }
@@ -89,14 +97,21 @@ class LightController private constructor(app: Application) {
         pattern: PatternMode = PatternMode.PULSE,
         color: Long = 0xFF4285F4,
         brightness: Float = 1.0f,
-        speedMs: Long = 600L
+        speedMs: Long = 1000L
     ) {
-        // Use an extended 60-second window that will be explicitly cleared when the call state becomes IDLE/OFFHOOK
+        val calculatedSpeed = when (pattern) {
+            PatternMode.BREATHE -> 2000L
+            PatternMode.WAVE -> 1200L
+            PatternMode.COMET -> 1000L
+            PatternMode.RAINBOW -> 2800L
+            PatternMode.PULSE -> 850L
+            else -> speedMs
+        }
         shizuku.triggerAlert(
             pattern = pattern.id,
             color = color,
             brightness = brightness,
-            speedMs = speedMs,
+            speedMs = calculatedSpeed,
             durationMs = 60_000L
         )
     }
@@ -117,7 +132,6 @@ class LightController private constructor(app: Application) {
             pattern = pattern,
             color = color,
             brightness = 1.0f,
-            speedMs = 800L,
             durationMs = durationMs
         )
     }
