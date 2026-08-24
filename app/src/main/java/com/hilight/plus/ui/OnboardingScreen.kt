@@ -4,9 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -77,45 +75,20 @@ fun OnboardingScreen(controller: LightController, onComplete: () -> Unit) {
                 )
             }
 
-            // Conflict Warning Card (if stock features are active)
+            // Conflict Warning Card
             if (stockState.anyActive) {
-                val warningDesc = when {
-                    stockState.bothActive -> stringResource(R.string.stock_hilight_warning_both)
-                    stockState.favoriteCallsActive -> stringResource(R.string.stock_hilight_warning_calls)
-                    else -> stringResource(R.string.stock_hilight_warning_assistant)
-                }
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                Icons.Rounded.Warning,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                            Text(
-                                text = stringResource(R.string.stock_hilight_warning_title),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onErrorContainer
-                            )
-                        }
-                        Text(
-                            text = androidx.core.text.HtmlCompat.fromHtml(
-                                warningDesc,
-                                androidx.core.text.HtmlCompat.FROM_HTML_MODE_COMPACT
-                            ).toString(),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
+                ExpressiveStatusCard(
+                    title = "Stock Settings Conflict",
+                    subtitle = when {
+                        stockState.bothActive -> "Both Favorite Calls and Assistant Feedback are active in System Settings. These will override HiLight Plus animations."
+                        stockState.favoriteCallsActive -> "Stock Favorite Calls is active in System Settings and will conflict with custom caller lighting."
+                        else -> "Stock Assistant Feedback is active in System Settings and will conflict with custom AI lighting."
+                    },
+                    icon = Icons.Rounded.Warning,
+                    statusText = "Conflict Detected",
+                    isPositive = false,
+                    isWarning = true,
+                    trailingAction = {
                         Button(
                             onClick = { NativeHiLightDetector.openHiLightSettings(context) },
                             colors = ButtonDefaults.buttonColors(
@@ -123,10 +96,10 @@ fun OnboardingScreen(controller: LightController, onComplete: () -> Unit) {
                                 contentColor = MaterialTheme.colorScheme.onError
                             )
                         ) {
-                            Text(stringResource(R.string.stock_hilight_open_settings))
+                            Text("Fix Settings")
                         }
                     }
-                }
+                )
             }
 
             // Info Card
@@ -160,97 +133,58 @@ fun OnboardingScreen(controller: LightController, onComplete: () -> Unit) {
                 }
             }
 
-            // Shizuku Connection Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.onboarding_shizuku_title),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = when (shizukuState) {
-                            ShizukuBridge.State.CONNECTED -> "Renderer running in Shizuku's shell-UID process."
-                            ShizukuBridge.State.NEEDS_PERMISSION -> "Running. Approve this app to use it."
-                            ShizukuBridge.State.NOT_INSTALLED -> "No computer needed — start it via Wireless debugging."
-                            ShizukuBridge.State.NOT_RUNNING -> "Start it under Wireless debugging. Needed again after each reboot."
-                            ShizukuBridge.State.CONNECTING -> "Connecting to Shizuku daemon…"
-                            else -> controller.shizuku.errorText() ?: "Could not reach Shizuku."
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            if (shizukuState == ShizukuBridge.State.CONNECTED) {
-                                Icon(
-                                    Icons.Rounded.CheckCircle,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
+            // Shizuku Connection Status
+            val isShizukuConnected = shizukuState == ShizukuBridge.State.CONNECTED
+            ExpressiveStatusCard(
+                title = "Shizuku Privileged Access",
+                subtitle = when (shizukuState) {
+                    ShizukuBridge.State.CONNECTED -> "Active session holding privileged control over $ledCount Pixel 11 rear LEDs."
+                    ShizukuBridge.State.NEEDS_PERMISSION -> "Shizuku is running. Tap 'Authorize' to grant privileged LED access."
+                    ShizukuBridge.State.NOT_RUNNING -> "Shizuku daemon is stopped. Start via Wireless Debugging or ADB."
+                    ShizukuBridge.State.NOT_INSTALLED -> "Shizuku Manager is not installed on this device."
+                    ShizukuBridge.State.CONNECTING -> "Connecting to local Shizuku binder daemon..."
+                    else -> controller.shizuku.errorText() ?: "Could not establish binder connection to Shizuku."
+                },
+                icon = if (isShizukuConnected) Icons.Rounded.VerifiedUser else Icons.Rounded.AdminPanelSettings,
+                statusText = when (shizukuState) {
+                    ShizukuBridge.State.CONNECTED -> "Connected ($ledCount LEDs)"
+                    ShizukuBridge.State.CONNECTING -> "Connecting"
+                    ShizukuBridge.State.NEEDS_PERMISSION -> "Needs Permission"
+                    ShizukuBridge.State.NOT_RUNNING -> "Not Running"
+                    ShizukuBridge.State.NOT_INSTALLED -> "Not Installed"
+                    else -> "Disconnected"
+                },
+                isPositive = isShizukuConnected,
+                trailingAction = {
+                    when (shizukuState) {
+                        ShizukuBridge.State.CONNECTED -> {
+                            TextButton(onClick = { controller.shizuku.unbind() }) {
+                                Text("Disconnect")
                             }
-                            Text(
-                                text = when (shizukuState) {
-                                    ShizukuBridge.State.CONNECTED -> "connected ($ledCount LEDs)"
-                                    ShizukuBridge.State.CONNECTING -> "connecting"
-                                    ShizukuBridge.State.NEEDS_PERMISSION -> "approve it"
-                                    ShizukuBridge.State.NOT_INSTALLED -> "not installed"
-                                    ShizukuBridge.State.NOT_RUNNING -> "not running"
-                                    else -> "failed"
-                                },
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = if (shizukuState == ShizukuBridge.State.CONNECTED) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                            )
                         }
-
-                        when (shizukuState) {
-                            ShizukuBridge.State.CONNECTED -> {
-                                TextButton(onClick = { controller.shizuku.unbind() }) {
-                                    Text("Disconnect")
-                                }
+                        ShizukuBridge.State.NEEDS_PERMISSION -> {
+                            Button(onClick = { controller.shizuku.requestPermission() }) {
+                                Text("Authorize")
                             }
-                            ShizukuBridge.State.NEEDS_PERMISSION -> {
-                                Button(onClick = { controller.shizuku.requestPermission() }) {
-                                    Text("Request access")
-                                }
+                        }
+                        ShizukuBridge.State.NOT_INSTALLED -> {
+                            Button(onClick = { controller.shizuku.openShizukuApp(context) }) {
+                                Text("Install")
                             }
-                            ShizukuBridge.State.NOT_INSTALLED -> {
-                                Button(onClick = { controller.shizuku.openShizukuApp(context) }) {
-                                    Text("Get Shizuku")
-                                }
+                        }
+                        ShizukuBridge.State.NOT_RUNNING -> {
+                            Button(onClick = { controller.shizuku.openShizukuApp(context) }) {
+                                Text("Open")
                             }
-                            ShizukuBridge.State.NOT_RUNNING -> {
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Button(onClick = { controller.shizuku.openShizukuApp(context) }) {
-                                        Text("Open Shizuku")
-                                    }
-                                    TextButton(onClick = { controller.shizuku.refresh() }) {
-                                        Text("Check again")
-                                    }
-                                }
-                            }
-                            else -> {
-                                Button(onClick = { controller.shizuku.refresh() }) {
-                                    Text("Retry")
-                                }
+                        }
+                        else -> {
+                            Button(onClick = { controller.shizuku.refresh() }) {
+                                Text("Retry")
                             }
                         }
                     }
                 }
-            }
+            )
         }
     }
 }
