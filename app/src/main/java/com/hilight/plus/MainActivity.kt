@@ -1,13 +1,8 @@
 package com.hilight.plus
 
 import android.Manifest
-import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -95,22 +90,13 @@ class MainActivity : ComponentActivity() {
                                     // 2. Unbind Shizuku
                                     controller.shizuku.unbind()
 
-                                    // 3. Revoke runtime permissions on Android 13+ (API 33+)
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                        runCatching {
-                                            revokeSelfPermissionOnKill(Manifest.permission.READ_PHONE_STATE)
-                                            revokeSelfPermissionOnKill(Manifest.permission.READ_CONTACTS)
-                                            revokeSelfPermissionOnKill(Manifest.permission.READ_CALL_LOG)
-                                            revokeSelfPermissionOnKill(Manifest.permission.POST_NOTIFICATIONS)
-                                        }
+                                    // 3. Revoke runtime permissions
+                                    runCatching {
+                                        revokeSelfPermissionOnKill(Manifest.permission.READ_PHONE_STATE)
+                                        revokeSelfPermissionOnKill(Manifest.permission.READ_CONTACTS)
+                                        revokeSelfPermissionOnKill(Manifest.permission.READ_CALL_LOG)
+                                        revokeSelfPermissionOnKill(Manifest.permission.POST_NOTIFICATIONS)
                                     }
-
-                                    // 4. Open App Info settings so the user can review or clear all permissions
-                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                        data = Uri.fromParts("package", packageName, null)
-                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                    }
-                                    startActivity(intent)
                                 }
                             }
                         )
