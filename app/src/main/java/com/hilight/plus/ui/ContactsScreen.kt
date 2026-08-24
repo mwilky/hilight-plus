@@ -1,6 +1,7 @@
 package com.hilight.plus.ui
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -29,8 +30,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.hilight.plus.ContactRule
 import com.hilight.plus.LightController
 import com.hilight.plus.PatternMode
@@ -55,7 +60,7 @@ fun ContactsScreen(controller: LightController) {
     var ruleBeingEdited by remember { mutableStateOf<ContactRule?>(null) }
     var isConfiguringDefault by remember { mutableStateOf(false) }
 
-    // Telephony & Contact Permission State
+    // Telephony & Contact Permissions
     val requiredPermissions = arrayOf(
         Manifest.permission.READ_PHONE_STATE,
         Manifest.permission.READ_CONTACTS
@@ -66,6 +71,26 @@ fun ContactsScreen(controller: LightController) {
     }
 
     var hasPermissions by remember { mutableStateOf(checkPermissionsGranted()) }
+
+    // Check if the system has permanently blocked the dialog ("Don't ask again")
+    fun isPermanentlyDenied(): Boolean {
+        val activity = context as? Activity ?: return false
+        return requiredPermissions.any { perm ->
+            ContextCompat.checkSelfPermission(context, perm) != PackageManager.PERMISSION_GRANTED &&
+                !ActivityCompat.shouldShowRequestPermissionRationale(activity, perm)
+        }
+    }
+
+    var permanentlyDenied by remember { mutableStateOf(isPermanentlyDenied()) }
+
+    // Live refresh when returning to foreground
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            hasPermissions = checkPermissionsGranted()
+            permanentlyDenied = isPermanentlyDenied()
+        }
+    }
 
     // On-screen preview state for the main list
     var livePreviewFrames by remember { mutableStateOf(IntArray(8) { 0x00000000 }) }
@@ -92,15 +117,27 @@ fun ContactsScreen(controller: LightController) {
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
         hasPermissions = results.values.all { it }
+        permanentlyDenied = isPermanentlyDenied()
         if (hasPermissions) {
             contactPickerLauncher.launch(null)
         }
     }
 
+    fun openAppSettings() {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.fromParts("package", context.packageName, null)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(intent)
+    }
+
     fun onAddContactClicked() {
         hasPermissions = checkPermissionsGranted()
+        permanentlyDenied = isPermanentlyDenied()
         if (hasPermissions) {
             contactPickerLauncher.launch(null)
+        } else if (permanentlyDenied) {
+            openAppSettings()
         } else {
             permissionLauncher.launch(requiredPermissions)
         }
@@ -151,36 +188,44 @@ fun ContactsScreen(controller: LightController) {
                                     tint = MaterialTheme.colorScheme.error
                                 )
                                 Text(
-                                    text = "Permissions Required",
+                                    text = if (permanentlyDenied) "Permission Denied in Settings" else "Permissions Required",
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onErrorContainer
                                 )
                             }
                             Text(
-                                text = "HiLight Plus needs Phone State and Contacts permissions to detect incoming calls and match your caller rules.",
+                                text = if (permanentlyDenied) {
+                                    "Phone & Contacts permissions are blocked. Tap 'Open Settings' -> 'Permissions' to allow them."
+                                } else {
+                                    "HiLight Plus needs Phone State and Contacts permissions to detect incoming calls and match your caller rules."
+                                },
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Button(
-                                    onClick = { permissionLauncher.launch(requiredPermissions) },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.error,
-                                        contentColor = MaterialTheme.colorScheme.onError
-                                    )
-                                ) {
-                                    Text("Grant Permissions")
-                                }
-                                TextButton(
-                                    onClick = {
-                                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                            data = Uri.fromParts("package", context.packageName, null)
-                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                        }
-                                        context.startActivity(intent)
+                                if (permanentlyDenied) {
+                                    Button(
+                                        onClick = { openAppSettings() },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.error,
+                                            contentColor = MaterialTheme.colorScheme.onError
+                                        )
+                                    ) {
+                                        Text("Open Settings")
                                     }
-                                ) {
-                                    Text("App Info", color = MaterialTheme.colorScheme.error)
+                                } else {
+                                    Button(
+                                        onClick = { permissionLauncher.launch(requiredPermissions) },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.error,
+                                            contentColor = MaterialTheme.colorScheme.onError
+                                        )
+                                    ) {
+                                        Text("Grant Permissions")
+                                    }
+                                    TextButton(onClick = { openAppSettings() }) {
+                                        Text("Settings", color = MaterialTheme.colorScheme.error)
+                                    }
                                 }
                             }
                         }
