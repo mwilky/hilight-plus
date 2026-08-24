@@ -72,20 +72,23 @@ fun DiffusedRingPreview(
 
                 val c = frames.getOrElse(i) { 0x00000000 }
                 val alpha = (c ushr 24) and 0xFF
-                val rgb = c and 0x00FFFFFF
+                val r = (c ushr 16) and 0xFF
+                val g = (c ushr 8) and 0xFF
+                val b = c and 0xFF
+                val maxChannel = maxOf(r, g, b)
 
-                // Only render glow if the color has non-black luminance
-                if (alpha > 0 && rgb > 0x050505) {
+                // Only render glow if the color has non-black RGB luminance
+                if (alpha > 0 && maxChannel > 5) {
                     val ledColor = Color(c)
-                    val intensity = (alpha / 255f)
+                    val intensity = (maxChannel / 255f)
 
                     // Outer soft diffusion flare
                     drawCircle(
                         brush = Brush.radialGradient(
                             colors = listOf(
-                                ledColor.copy(alpha = 0.95f * intensity),
-                                ledColor.copy(alpha = 0.55f * intensity),
-                                ledColor.copy(alpha = 0.15f * intensity),
+                                ledColor.copy(alpha = 0.95f),
+                                ledColor.copy(alpha = 0.55f),
+                                ledColor.copy(alpha = 0.15f),
                                 Color.Transparent
                             ),
                             center = spotCenter,
@@ -95,12 +98,12 @@ fun DiffusedRingPreview(
                         center = spotCenter
                     )
 
-                    // High-intensity core emitter with alpha scaling
+                    // High-intensity core emitter
                     drawCircle(
                         brush = Brush.radialGradient(
                             colors = listOf(
                                 Color.White.copy(alpha = 0.70f * intensity),
-                                ledColor.copy(alpha = 0.95f * intensity)
+                                ledColor.copy(alpha = 0.95f)
                             ),
                             center = spotCenter,
                             radius = spotRadius * 0.45f

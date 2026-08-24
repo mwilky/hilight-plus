@@ -21,7 +21,7 @@ import rikka.shizuku.Shizuku
  */
 class ShizukuBridge private constructor(private val app: Application) {
 
-    enum class State { NOT_INSTALLED, NOT_RUNNING, NEEDS_PERMISSION, CONNECTING, CONNECTED, FAILED }
+    enum class State { NOT_INSTALLED, NOT_RUNNING, NEEDS_PERMISSION, CONNECTING, CONNECTED, DISCONNECTED, FAILED }
 
     private val _state = MutableStateFlow(State.NOT_RUNNING)
     val state: StateFlow<State> = _state.asStateFlow()
@@ -31,6 +31,8 @@ class ShizukuBridge private constructor(private val app: Application) {
 
     private var service: IHiLightService? = null
     private var lastError: String? = null
+    @Volatile
+    private var manuallyDisconnected = false
 
     var onAvailabilityChanged: (() -> Unit)? = null
 
@@ -51,6 +53,7 @@ class ShizukuBridge private constructor(private val app: Application) {
             }
             service = IHiLightService.Stub.asInterface(binder)
             _state.value = State.CONNECTED
+            manuallyDisconnected = false
             val count = runCatching { service?.getLedCount() }.getOrNull() ?: 8
             if (count > 0) _ledCount.value = count
             Log.i(TAG, "HiLightDaemonService connected with $count LEDs")
@@ -59,7 +62,9 @@ class ShizukuBridge private constructor(private val app: Application) {
 
         override fun onServiceDisconnected(name: ComponentName?) {
             service = null
-            if (_state.value == State.CONNECTED) _state.value = State.NOT_RUNNING
+            if (_state.value == State.CONNECTED) {
+                _state.value = if (manuallyDisconnected) State.DISCONNECTED else State.NOT_RUNNING
+            }
             onAvailabilityChanged?.invoke()
         }
     }
@@ -67,6 +72,7 @@ class ShizukuBridge private constructor(private val app: Application) {
     private val permissionListener =
         Shizuku.OnRequestPermissionResultListener { _, grantResult ->
             if (grantResult == PackageManager.PERMISSION_GRANTED) {
+                manuallyDisconnected = false
                 bind()
             } else {
                 _state.value = State.NEEDS_PERMISSION
@@ -75,10 +81,14 @@ class ShizukuBridge private constructor(private val app: Application) {
 
     init {
         Shizuku.addRequestPermissionResultListener(permissionListener)
-        Shizuku.addBinderReceivedListenerSticky { refresh() }
+        Shizuku.addBinderReceivedListenerSticky {
+            if (!manuallyDisconnected) {
+                refresh()
+            }
+        }
         Shizuku.addBinderDeadListener {
             service = null
-            _state.value = State.NOT_RUNNING
+            _state.value = if (manuallyDisconnected) State.DISCONNECTED else State.NOT_RUNNING
             onAvailabilityChanged?.invoke()
         }
         refresh()
@@ -90,6 +100,7 @@ class ShizukuBridge private constructor(private val app: Application) {
     }.getOrDefault(false)
 
     fun refresh() {
+        if (manuallyDisconnected) return
         if (_state.value == State.CONNECTED && service?.asBinder()?.pingBinder() == true) return
         if (!Shizuku.pingBinder()) {
             if (!isInstalled()) {
@@ -112,6 +123,7 @@ class ShizukuBridge private constructor(private val app: Application) {
     }
 
     fun requestPermission() {
+        manuallyDisconnected = false
         if (!Shizuku.pingBinder()) {
             refresh()
             return
@@ -121,6 +133,11 @@ class ShizukuBridge private constructor(private val app: Application) {
         } else {
             Shizuku.requestPermission(PERMISSION_REQUEST)
         }
+    }
+
+    fun connectManually() {
+        manuallyDisconnected = false
+        refresh()
     }
 
     private fun bind() {
@@ -135,9 +152,11 @@ class ShizukuBridge private constructor(private val app: Application) {
     }
 
     fun unbind() {
+        manuallyDisconnected = true
         runCatching { Shizuku.unbindUserService(args, connection, true) }
         service = null
-        _state.value = State.NOT_RUNNING
+        _state.value = State.DISCONNECTED
+        onAvailabilityChanged?.invoke()
     }
 
     fun errorText(): String? = lastError

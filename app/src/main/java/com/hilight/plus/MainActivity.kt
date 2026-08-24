@@ -224,10 +224,12 @@ private fun DashboardScreen(controller: LightController, onResetAll: () -> Unit)
 
             // 1. Shizuku Privileged Access Status Card
             val isShizukuConnected = shizukuState == ShizukuBridge.State.CONNECTED
+            val isExplicitlyDisconnected = shizukuState == ShizukuBridge.State.DISCONNECTED
             ExpressiveStatusCard(
                 title = "Shizuku Privileged Access",
                 subtitle = when (shizukuState) {
                     ShizukuBridge.State.CONNECTED -> "Active session holding privileged control over your Pixel's rear light array."
+                    ShizukuBridge.State.DISCONNECTED -> "Session is paused/disconnected. Tap 'Connect' to re-engage hardware lights."
                     ShizukuBridge.State.NEEDS_PERMISSION -> "Shizuku is running. Tap 'Authorize' below to grant privileged LED access."
                     ShizukuBridge.State.NOT_RUNNING -> "Shizuku daemon is stopped. Start via Wireless Debugging or ADB."
                     ShizukuBridge.State.NOT_INSTALLED -> "Shizuku Manager is not installed on this device."
@@ -237,15 +239,16 @@ private fun DashboardScreen(controller: LightController, onResetAll: () -> Unit)
                 icon = if (isShizukuConnected) Icons.Rounded.VerifiedUser else Icons.Rounded.AdminPanelSettings,
                 statusText = when (shizukuState) {
                     ShizukuBridge.State.CONNECTED -> "Connected"
+                    ShizukuBridge.State.DISCONNECTED -> "Disconnected (Paused)"
                     ShizukuBridge.State.CONNECTING -> "Connecting"
                     ShizukuBridge.State.NEEDS_PERMISSION -> "Needs Permission"
                     ShizukuBridge.State.NOT_RUNNING -> "Not Running"
                     ShizukuBridge.State.NOT_INSTALLED -> "Not Installed"
                     else -> "Disconnected"
                 },
-                accentColor = if (isShizukuConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                containerColor = if (isShizukuConnected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f),
-                contentColor = if (isShizukuConnected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer,
+                accentColor = if (isShizukuConnected) MaterialTheme.colorScheme.primary else if (isExplicitlyDisconnected) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
+                containerColor = if (isShizukuConnected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f) else MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = if (isShizukuConnected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                 bottomAction = {
                     when (shizukuState) {
                         ShizukuBridge.State.CONNECTED -> {
@@ -259,6 +262,16 @@ private fun DashboardScreen(controller: LightController, onResetAll: () -> Unit)
                                 Icon(Icons.Rounded.PowerSettingsNew, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(8.dp))
                                 Text("Disconnect Shizuku Session")
+                            }
+                        }
+                        ShizukuBridge.State.DISCONNECTED -> {
+                            Button(
+                                onClick = { controller.shizuku.connectManually() },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Rounded.PowerSettingsNew, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Connect Shizuku Session")
                             }
                         }
                         ShizukuBridge.State.NEEDS_PERMISSION -> {
@@ -295,7 +308,7 @@ private fun DashboardScreen(controller: LightController, onResetAll: () -> Unit)
                                     Text("Open Shizuku")
                                 }
                                 OutlinedButton(
-                                    onClick = { controller.shizuku.refresh() },
+                                    onClick = { controller.shizuku.connectManually() },
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -306,7 +319,7 @@ private fun DashboardScreen(controller: LightController, onResetAll: () -> Unit)
                         }
                         else -> {
                             Button(
-                                onClick = { controller.shizuku.refresh() },
+                                onClick = { controller.shizuku.connectManually() },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))

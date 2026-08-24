@@ -101,7 +101,6 @@ class PatternRenderer {
             // --- Authentic Stock Pixel 11 Gemini Assistant Effects ---
 
             "google_quad", "gemini_listening" -> {
-                // Stock Google Assistant 4-Color Quad Breathing Pulse
                 val phase = (elapsedTimeMs % speed) / speed.toDouble()
                 val k = (1.0 - cos(phase * 2.0 * PI)) / 2.0
                 val intensity = (0.10 + 0.90 * k) * clampedBrightness
@@ -112,11 +111,8 @@ class PatternRenderer {
             }
 
             "gemini_thinking", "gemini_comet" -> {
-                // Fast circulating dual-comet orbiting rotation (defaulting to Electric Cyan)
                 val headPos = ((elapsedTimeMs % speed) / speed.toDouble()) * count
                 val tailLength = 3.5
-                val ledColor = if (colorLong == 0xFF000000) 0xFF00E5FF.toInt() else baseColor
-
                 for (i in 0 until count) {
                     val diff1 = ((headPos - i) % count + count) % count
                     val diff2 = ((headPos + (count / 2.0) - i) % count + count) % count
@@ -124,17 +120,15 @@ class PatternRenderer {
                     val k2 = if (diff2 <= tailLength) (1.0 - (diff2 / tailLength)).coerceIn(0.0, 1.0) else 0.0
                     val k = maxOf(k1 * k1, k2 * k2)
 
-                    frame[i] = if (k > 0.01) scaleColor(ledColor, k * clampedBrightness) else 0x00000000
+                    frame[i] = if (k > 0.01) scaleColor(baseColor, k * clampedBrightness) else 0x00000000
                 }
             }
 
             "gemini_responding", "gemini_glow" -> {
-                // Soft undulating voice response waveform
                 val phase = (elapsedTimeMs % speed) / speed.toDouble()
                 val k = (1.0 - cos(phase * 2.0 * PI)) / 2.0
                 val intensity = (0.15 + 0.85 * k) * clampedBrightness
-                val ledColor = if (colorLong == 0xFF000000) 0xFF4285F4.toInt() else baseColor
-                frame.fill(scaleColor(ledColor, intensity))
+                frame.fill(scaleColor(baseColor, intensity))
             }
 
             else -> {
@@ -148,7 +142,7 @@ class PatternRenderer {
 
     private fun scaleColor(color: Int, factor: Double): Int {
         val k = factor.coerceIn(0.0, 1.0)
-        val a = (255 * k).toInt().coerceIn(0, 255)
+        val a = 0xFF
         val r = (((color ushr 16) and 0xFF) * k).toInt().coerceIn(0, 255)
         val g = (((color ushr 8) and 0xFF) * k).toInt().coerceIn(0, 255)
         val b = ((color and 0xFF) * k).toInt().coerceIn(0, 255)
