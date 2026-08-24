@@ -60,25 +60,29 @@ fun ContactsScreen(controller: LightController) {
     var ruleBeingEdited by remember { mutableStateOf<ContactRule?>(null) }
     var isConfiguringDefault by remember { mutableStateOf(false) }
 
-    // Telephony & Contact Permissions
-    val requiredPermissions = arrayOf(
-        Manifest.permission.READ_PHONE_STATE,
-        Manifest.permission.READ_CONTACTS
-    )
+    // Telephony & Contact Specific Permission Checks
+    fun hasPhonePermission(): Boolean =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
 
-    fun checkPermissionsGranted(): Boolean = requiredPermissions.all {
-        ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+    fun hasContactsPermission(): Boolean =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
+
+    var isPhoneGranted by remember { mutableStateOf(hasPhonePermission()) }
+    var isContactsGranted by remember { mutableStateOf(hasContactsPermission()) }
+
+    fun checkMissingPermissions(): Array<String> {
+        val list = mutableListOf<String>()
+        if (!hasPhonePermission()) list.add(Manifest.permission.READ_PHONE_STATE)
+        if (!hasContactsPermission()) list.add(Manifest.permission.READ_CONTACTS)
+        return list.toTypedArray()
     }
 
-    var hasPermissions by remember { mutableStateOf(checkPermissionsGranted()) }
-
-    // Check if the system has permanently blocked the dialog ("Don't ask again")
+    // Check if missing permissions are permanently blocked in settings
     fun isPermanentlyDenied(): Boolean {
         val activity = context as? Activity ?: return false
-        return requiredPermissions.any { perm ->
-            ContextCompat.checkSelfPermission(context, perm) != PackageManager.PERMISSION_GRANTED &&
-                !ActivityCompat.shouldShowRequestPermissionRationale(activity, perm)
-        }
+        val missing = checkMissingPermissions()
+        if (missing.isEmpty()) return false
+        return missing.any { perm -> !ActivityCompat.shouldShowRequestPermissionRationale(activity, perm) }
     }
 
     var permanentlyDenied by remember { mutableStateOf(isPermanentlyDenied()) }
@@ -87,7 +91,8 @@ fun ContactsScreen(controller: LightController) {
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            hasPermissions = checkPermissionsGranted()
+            isPhoneGranted = hasPhonePermission()
+            isContactsGranted = hasContactsPermission()
             permanentlyDenied = isPermanentlyDenied()
         }
     }
@@ -115,10 +120,11 @@ fun ContactsScreen(controller: LightController) {
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { results ->
-        hasPermissions = results.values.all { it }
+    ) {
+        isPhoneGranted = hasPhonePermission()
+        isContactsGranted = hasContactsPermission()
         permanentlyDenied = isPermanentlyDenied()
-        if (hasPermissions) {
+        if (isPhoneGranted && isContactsGranted) {
             contactPickerLauncher.launch(null)
         }
     }
@@ -132,14 +138,17 @@ fun ContactsScreen(controller: LightController) {
     }
 
     fun onAddContactClicked() {
-        hasPermissions = checkPermissionsGranted()
+        val missing = checkMissingPermissions()
+        isPhoneGranted = hasPhonePermission()
+        isContactsGranted = hasContactsPermission()
         permanentlyDenied = isPermanentlyDenied()
-        if (hasPermissions) {
+
+        if (missing.isEmpty()) {
             contactPickerLauncher.launch(null)
         } else if (permanentlyDenied) {
             openAppSettings()
         } else {
-            permissionLauncher.launch(requiredPermissions)
+            permissionLauncher.launch(missing)
         }
     }
 
@@ -167,8 +176,24 @@ fun ContactsScreen(controller: LightController) {
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(bottom = 90.dp, top = 10.dp)
         ) {
-            // Permission Warning Card (if phone/contacts permissions are missing)
-            if (!hasPermissions) {
+            // Permission Warning Card tailored to exact missing permissions
+            val hasAllPermissions = isPhoneGranted && isContactsGranted
+            if (!hasAllPermissions) {
+                val missingName = when {
+                    !isPhoneGranted && !isContactsGranted -> "Phone & Contacts permissions"
+                    !isPhoneGranted -> "Phone State permission"
+                    else -> "Contacts permission"
+                }
+
+                val descText = when {
+                    !isPhoneGranted && !isContactsGranted ->
+                        "HiLight Plus needs Phone State to detect incoming calls and Contacts to match your custom caller rules."
+                    !isPhoneGranted ->
+                        "HiLight Plus needs Phone State permission to detect when an incoming call is ringing and trigger the rear LEDs."
+                    else ->
+                        "HiLight Plus needs Contacts permission to look up and match your custom contact rules."
+                }
+
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -188,16 +213,16 @@ fun ContactsScreen(controller: LightController) {
                                     tint = MaterialTheme.colorScheme.error
                                 )
                                 Text(
-                                    text = if (permanentlyDenied) "Permission Denied in Settings" else "Permissions Required",
+                                    text = if (permanentlyDenied) "$missingName Blocked" else "$missingName Required",
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onErrorContainer
                                 )
                             }
                             Text(
                                 text = if (permanentlyDenied) {
-                                    "Phone & Contacts permissions are blocked. Tap 'Open Settings' -> 'Permissions' to allow them."
+                                    "$descText This is currently blocked in system settings. Tap 'Open Settings' -> 'Permissions' to allow it."
                                 } else {
-                                    "HiLight Plus needs Phone State and Contacts permissions to detect incoming calls and match your caller rules."
+                                    descText
                                 },
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onErrorContainer
@@ -215,13 +240,13 @@ fun ContactsScreen(controller: LightController) {
                                     }
                                 } else {
                                     Button(
-                                        onClick = { permissionLauncher.launch(requiredPermissions) },
+                                        onClick = { permissionLauncher.launch(checkMissingPermissions()) },
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = MaterialTheme.colorScheme.error,
                                             contentColor = MaterialTheme.colorScheme.onError
                                         )
                                     ) {
-                                        Text("Grant Permissions")
+                                        Text("Grant Permission")
                                     }
                                     TextButton(onClick = { openAppSettings() }) {
                                         Text("Settings", color = MaterialTheme.colorScheme.error)
