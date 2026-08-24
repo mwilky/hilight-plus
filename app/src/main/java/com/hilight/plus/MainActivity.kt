@@ -1,9 +1,13 @@
 package com.hilight.plus
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,9 +15,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Lightbulb
-import androidx.compose.material.icons.rounded.Smartphone
-import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,11 +27,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.hilight.plus.core.PatternRenderer
+import com.hilight.plus.ui.ContactsScreen
 import com.hilight.plus.ui.HiLightPlusTheme
 import com.hilight.plus.ui.OnboardingScreen
 import kotlinx.coroutines.delay
@@ -81,7 +85,7 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     true -> {
-                        MainScreen(
+                        MainAppNavigation(
                             controller = controller,
                             onResetOnboarding = {
                                 scope.launch {
@@ -102,9 +106,73 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+private enum class NavTab(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    DASHBOARD("Dashboard", Icons.Rounded.Lightbulb),
+    CONTACTS("Calls", Icons.Rounded.PhoneInTalk)
+}
+
+@Composable
+private fun MainAppNavigation(controller: LightController, onResetOnboarding: () -> Unit) {
+    var selectedTab by remember { mutableStateOf(NavTab.DASHBOARD) }
+
+    Scaffold(
+        bottomBar = {
+            NavigationBar {
+                NavTab.entries.forEach { tab ->
+                    NavigationBarItem(
+                        selected = selectedTab == tab,
+                        onClick = { selectedTab = tab },
+                        icon = { Icon(tab.icon, contentDescription = tab.title) },
+                        label = { Text(tab.title) }
+                    )
+                }
+            }
+        }
+    ) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
+            when (selectedTab) {
+                NavTab.DASHBOARD -> DashboardScreen(controller = controller, onResetOnboarding = onResetOnboarding)
+                NavTab.CONTACTS -> {
+                    CheckTelephonyPermissions()
+                    ContactsScreen(controller = controller)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CheckTelephonyPermissions() {
+    val context = LocalContext.current
+    val permissions = arrayOf(
+        Manifest.permission.READ_PHONE_STATE,
+        Manifest.permission.READ_CONTACTS
+    )
+
+    var hasPermissions by remember {
+        mutableStateOf(
+            permissions.all {
+                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+            }
+        )
+    }
+
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        hasPermissions = results.values.all { it }
+    }
+
+    LaunchedEffect(Unit) {
+        if (!hasPermissions) {
+            launcher.launch(permissions)
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MainScreen(controller: LightController, onResetOnboarding: () -> Unit) {
+private fun DashboardScreen(controller: LightController, onResetOnboarding: () -> Unit) {
     val context = LocalContext.current
     val stockState by NativeHiLightDetector.state.collectAsStateWithLifecycle()
     val shizukuState by controller.shizuku.state.collectAsStateWithLifecycle()
@@ -383,12 +451,11 @@ private fun MainScreen(controller: LightController, onResetOnboarding: () -> Uni
                         }
                     }
 
-                    // Action Buttons: Test on Display & Test on Device
+                    // Action Buttons: Preview on Display & Test on Device
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Test on Display Button
                         OutlinedButton(
                             onClick = {
                                 if (isScreenTesting) return@OutlinedButton
@@ -425,13 +492,12 @@ private fun MainScreen(controller: LightController, onResetOnboarding: () -> Uni
                             Text("Preview")
                         }
 
-                        // Test on Device Hardware Button
                         Button(
                             onClick = {
-                                controller.testAlert(
+                                controller.previewEffect(
                                     pattern = PatternMode.SOLID,
                                     color = selectedColor,
-                                    durationMs = 3000
+                                    durationMs = 3000L
                                 )
                             },
                             modifier = Modifier

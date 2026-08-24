@@ -6,12 +6,15 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import org.json.JSONArray
+import org.json.JSONObject
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "hilight_plus_settings")
 
 /**
- * DataStore-backed repository managing application settings, light configurations, and onboarding state.
+ * DataStore-backed repository managing application settings, light configurations, and contact calling rules.
  */
 class AppStore private constructor(private val appContext: Context) {
 
@@ -23,6 +26,12 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_BRIGHTNESS = floatPreferencesKey("brightness")
         private val KEY_SPEED_MS = longPreferencesKey("speed_ms")
         private val KEY_AUTO_OFF_SEC = intPreferencesKey("auto_off_sec")
+
+        // Contact Calling Settings
+        private val KEY_CALL_LIGHTS_ENABLED = booleanPreferencesKey("call_lights_enabled")
+        private val KEY_DEFAULT_CALL_COLOR = longPreferencesKey("default_call_color")
+        private val KEY_DEFAULT_CALL_PATTERN = stringPreferencesKey("default_call_pattern")
+        private val KEY_CONTACT_RULES_JSON = stringPreferencesKey("contact_rules_json")
 
         @Volatile
         private var instance: AppStore? = null
@@ -54,6 +63,35 @@ class AppStore private constructor(private val appContext: Context) {
     val autoOffSeconds: Flow<Int> = appContext.dataStore.data
         .map { it[KEY_AUTO_OFF_SEC] ?: 60 }
 
+    // --- Contact Calling Settings Flows ---
+
+    val isCallLightsEnabled: Flow<Boolean> = appContext.dataStore.data
+        .map { it[KEY_CALL_LIGHTS_ENABLED] ?: true }
+
+    val defaultCallColor: Flow<Long> = appContext.dataStore.data
+        .map { it[KEY_DEFAULT_CALL_COLOR] ?: 0xFF4285F4 }
+
+    val defaultCallPattern: Flow<PatternMode> = appContext.dataStore.data
+        .map { prefs ->
+            val name = prefs[KEY_DEFAULT_CALL_PATTERN] ?: PatternMode.PULSE.name
+            runCatching { PatternMode.valueOf(name) }.getOrDefault(PatternMode.PULSE)
+        }
+
+    val contactRules: Flow<List<ContactRule>> = appContext.dataStore.data
+        .map { prefs ->
+            val raw = prefs[KEY_CONTACT_RULES_JSON] ?: "[]"
+            runCatching {
+                val array = JSONArray(raw)
+                val list = mutableListOf<ContactRule>()
+                for (i in 0 until array.length()) {
+                    list.add(ContactRule.fromJson(array.getJSONObject(i)))
+                }
+                list.toList()
+            }.getOrDefault(emptyList())
+        }
+
+    // --- Preferences Updaters ---
+
     suspend fun setOnboardingCompleted(completed: Boolean) {
         appContext.dataStore.edit { it[KEY_ONBOARDING_COMPLETED] = completed }
     }
@@ -73,5 +111,58 @@ class AppStore private constructor(private val appContext: Context) {
 
     suspend fun setAutoOffSeconds(seconds: Int) {
         appContext.dataStore.edit { it[KEY_AUTO_OFF_SEC] = seconds }
+    }
+
+    suspend fun setCallLightsEnabled(enabled: Boolean) {
+        appContext.dataStore.edit { it[KEY_CALL_LIGHTS_ENABLED] = enabled }
+    }
+
+    suspend fun setDefaultCallColor(color: Long) {
+        appContext.dataStore.edit { it[KEY_DEFAULT_CALL_COLOR] = color }
+    }
+
+    suspend fun setDefaultCallPattern(pattern: PatternMode) {
+        appContext.dataStore.edit { it[KEY_DEFAULT_CALL_PATTERN] = pattern.name }
+    }
+
+    suspend fun saveContactRule(rule: ContactRule) {
+        appContext.dataStore.edit { prefs ->
+            val currentRules = contactRules.first().toMutableList()
+            val index = currentRules.indexOfFirst { it.id == rule.id || (it.phoneNumber.isNotEmpty() && it.phoneNumber == rule.phoneNumber) }
+            if (index >= 0) {
+                currentRules[index] = rule
+            } else {
+                currentRules.add(rule)
+            }
+            val array = JSONArray().apply {
+                currentRules.forEach { put(it.toJson()) }
+            }
+            prefs[KEY_CONTACT_RULES_JSON] = array.toString()
+        }
+    }
+
+    suspend fun deleteContactRule(ruleId: String) {
+        appContext.dataStore.edit { prefs ->
+            val currentRules = contactRules.first().filterNot { it.id == ruleId }
+            val array = JSONArray().apply {
+                currentRules.forEach { put(it.toJson()) }
+            }
+            prefs[KEY_CONTACT_RULES_JSON] = array.toString()
+        }
+    }
+
+    /**
+     * Looks up if a specific incoming phone number matches an active contact rule.
+     */
+    suspend fun findRuleForPhoneNumber(incomingNumber: String): ContactRule? {
+        if (incomingNumber.isBlank()) return null
+        val normalized = incomingNumber.replace(Regex("[^0-9+]"), "")
+        val rules = contactRules.first()
+        return rules.firstOrNull { rule ->
+            rule.isEnabled && (
+                rule.phoneNumber == normalized ||
+                (rule.phoneNumber.length >= 7 && normalized.endsWith(rule.phoneNumber.takeLast(7)))
+            )
+        }
     }
 }

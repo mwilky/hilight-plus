@@ -154,13 +154,20 @@ class ShizukuBridge private constructor(private val app: Application) {
         }
     }
 
-    fun testAlert(pattern: String, color: Long, brightness: Float, speedMs: Long, durationMs: Long) {
+    fun triggerAlert(pattern: String, color: Long, brightness: Float, speedMs: Long, durationMs: Long) {
         val s = service ?: return
         runCatching { s.triggerAlert(pattern, color, brightness, speedMs, durationMs) }.onFailure {
             Log.w(TAG, "triggerAlert failed", it)
             service = null
             _state.value = State.NOT_RUNNING
             onAvailabilityChanged?.invoke()
+        }
+    }
+
+    fun clearAlert() {
+        val s = service ?: return
+        runCatching { s.clearAlert() }.onFailure {
+            Log.w(TAG, "clearAlert failed", it)
         }
     }
 

@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * High-level controller coordinating DataStore preferences ([AppStore]) and hardware light execution via [ShizukuBridge].
+ * Coordinates persistent preferences ([AppStore]) and privileged hardware lighting execution ([ShizukuBridge]).
  */
 class LightController private constructor(app: Application) {
 
@@ -61,12 +61,60 @@ class LightController private constructor(app: Application) {
         }
     }
 
+    // --- Production Alert & Event Controls ---
+
     /**
-     * Executes a 3-second hardware test alert on the Pixel 11 rear LEDs.
+     * Triggers a transient alert effect for [durationMs] (e.g. notifications, preview effects).
      */
-    fun testAlert(pattern: PatternMode, color: Long, durationMs: Long = 3000) {
-        shizuku.testAlert(
+    fun triggerAlertEffect(
+        pattern: PatternMode,
+        color: Long,
+        brightness: Float = 1.0f,
+        speedMs: Long = 800L,
+        durationMs: Long = 3000L
+    ) {
+        shizuku.triggerAlert(
             pattern = pattern.id,
+            color = color,
+            brightness = brightness,
+            speedMs = speedMs,
+            durationMs = durationMs
+        )
+    }
+
+    /**
+     * Starts an indefinite incoming call ring alert until answered or ended.
+     */
+    fun startIncomingCallAlert(
+        pattern: PatternMode = PatternMode.PULSE,
+        color: Long = 0xFF4285F4,
+        brightness: Float = 1.0f,
+        speedMs: Long = 600L
+    ) {
+        // Use an extended 60-second window that will be explicitly cleared when the call state becomes IDLE/OFFHOOK
+        shizuku.triggerAlert(
+            pattern = pattern.id,
+            color = color,
+            brightness = brightness,
+            speedMs = speedMs,
+            durationMs = 60_000L
+        )
+    }
+
+    /**
+     * Halts any active incoming call or transient alert immediately.
+     */
+    fun stopIncomingCallAlert() {
+        shizuku.clearAlert()
+        syncState()
+    }
+
+    /**
+     * Preview helper for testing a style on the hardware.
+     */
+    fun previewEffect(pattern: PatternMode, color: Long, durationMs: Long = 3000L) {
+        triggerAlertEffect(
+            pattern = pattern,
             color = color,
             brightness = 1.0f,
             speedMs = 800L,
