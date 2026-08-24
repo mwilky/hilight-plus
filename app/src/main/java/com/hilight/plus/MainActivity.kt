@@ -1,8 +1,13 @@
 package com.hilight.plus
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -82,9 +87,30 @@ class MainActivity : ComponentActivity() {
                     true -> {
                         MainAppNavigation(
                             controller = controller,
-                            onResetOnboarding = {
+                            onResetAll = {
                                 scope.launch {
+                                    // 1. Reset DataStore onboarding flag
                                     store.setOnboardingCompleted(false)
+
+                                    // 2. Unbind Shizuku
+                                    controller.shizuku.unbind()
+
+                                    // 3. Revoke runtime permissions on Android 13+ (API 33+)
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        runCatching {
+                                            revokeSelfPermissionOnKill(Manifest.permission.READ_PHONE_STATE)
+                                            revokeSelfPermissionOnKill(Manifest.permission.READ_CONTACTS)
+                                            revokeSelfPermissionOnKill(Manifest.permission.READ_CALL_LOG)
+                                            revokeSelfPermissionOnKill(Manifest.permission.POST_NOTIFICATIONS)
+                                        }
+                                    }
+
+                                    // 4. Open App Info settings so the user can review or clear all permissions
+                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = Uri.fromParts("package", packageName, null)
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    startActivity(intent)
                                 }
                             }
                         )
@@ -107,7 +133,7 @@ private enum class NavTab(val title: String, val icon: androidx.compose.ui.graph
 }
 
 @Composable
-private fun MainAppNavigation(controller: LightController, onResetOnboarding: () -> Unit) {
+private fun MainAppNavigation(controller: LightController, onResetAll: () -> Unit) {
     var selectedTab by remember { mutableStateOf(NavTab.DASHBOARD) }
 
     Scaffold(
@@ -126,7 +152,7 @@ private fun MainAppNavigation(controller: LightController, onResetOnboarding: ()
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             when (selectedTab) {
-                NavTab.DASHBOARD -> DashboardScreen(controller = controller, onResetOnboarding = onResetOnboarding)
+                NavTab.DASHBOARD -> DashboardScreen(controller = controller, onResetAll = onResetAll)
                 NavTab.CONTACTS -> {
                     CheckTelephonyPermissions()
                     ContactsScreen(controller = controller)
@@ -167,7 +193,7 @@ private fun CheckTelephonyPermissions() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DashboardScreen(controller: LightController, onResetOnboarding: () -> Unit) {
+private fun DashboardScreen(controller: LightController, onResetAll: () -> Unit) {
     val context = LocalContext.current
     val stockState by NativeHiLightDetector.state.collectAsStateWithLifecycle()
     val shizukuState by controller.shizuku.state.collectAsStateWithLifecycle()
@@ -440,7 +466,7 @@ private fun DashboardScreen(controller: LightController, onResetOnboarding: () -
             Spacer(Modifier.weight(1f))
 
             OutlinedButton(
-                onClick = onResetOnboarding,
+                onClick = onResetAll,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(stringResource(R.string.main_reset_onboarding))
