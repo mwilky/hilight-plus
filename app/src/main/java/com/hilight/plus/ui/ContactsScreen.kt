@@ -10,13 +10,8 @@ import android.provider.ContactsContract
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
@@ -33,6 +29,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -274,24 +271,26 @@ fun ContactsScreen(controller: LightController) {
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    shape = RoundedCornerShape(100.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(vertical = 16.dp, horizontal = 40.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Incoming Call Illumination",
-                                style = MaterialTheme.typography.titleMedium
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Text(
                                 text = "Light the rear array when calls are ringing",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
                         Switch(
@@ -302,6 +301,11 @@ fun ContactsScreen(controller: LightController) {
                         )
                     }
                 }
+            }
+
+            item {
+                Spacer(modifier = Modifier
+                    .height(4.dp))
             }
 
             if (isCallLightsEnabled) {
@@ -636,9 +640,6 @@ private fun MiniRuleAnimationIcon(
     )
 }
 
-// Material 3 Expressive spring-like motion curve for smooth dialog expansions
-private val ExpressiveMotionSpec = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f)
-
 @Composable
 private fun ContactRuleDialog(
     initialRule: ContactRule,
@@ -684,6 +685,13 @@ private fun ContactRuleDialog(
             delay(16)
         }
     }
+
+    val isColorEnabled = selectedPattern != PatternMode.RAINBOW
+    val colorAlpha by animateFloatAsState(
+        targetValue = if (isColorEnabled) 1.0f else 0.35f,
+        animationSpec = tween(durationMillis = 200),
+        label = "colorPickerAlpha"
+    )
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -739,50 +747,38 @@ private fun ContactRuleDialog(
                     }
                 }
 
-                // Fluid, perfectly timed Material 3 Expressive expansion & collapse
-                AnimatedVisibility(
-                    visible = selectedPattern != PatternMode.RAINBOW,
-                    enter = expandVertically(
-                        animationSpec = tween(durationMillis = 240, easing = ExpressiveMotionSpec)
-                    ) + fadeIn(
-                        animationSpec = tween(durationMillis = 200, delayMillis = 40)
-                    ),
-                    exit = shrinkVertically(
-                        animationSpec = tween(durationMillis = 200, easing = ExpressiveMotionSpec)
-                    ) + fadeOut(
-                        animationSpec = tween(durationMillis = 150)
-                    )
+                // Fixed-height layout with smooth alpha & interaction dimming to prevent dialog layout shifts
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp)
+                        .alpha(colorAlpha),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = "Select Alert Color",
-                            style = MaterialTheme.typography.labelLarge
-                        )
+                    Text(
+                        text = "Select Alert Color",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (isColorEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            palette.forEach { c ->
-                                val isSelected = selectedColor == c
-                                Box(
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(c))
-                                        .border(
-                                            width = if (isSelected) 3.dp else 1.dp,
-                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                                            shape = CircleShape
-                                        )
-                                        .clickable { selectedColor = c }
-                                )
-                            }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        palette.forEach { c ->
+                            val isSelected = selectedColor == c && isColorEnabled
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(c))
+                                    .border(
+                                        width = if (isSelected) 3.dp else 1.dp,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                                        shape = CircleShape
+                                    )
+                                    .clickable(enabled = isColorEnabled) { selectedColor = c }
+                            )
                         }
                     }
                 }
@@ -854,6 +850,13 @@ private fun PatternColorConfigDialog(
         }
     }
 
+    val isColorEnabled = selectedPattern != PatternMode.RAINBOW
+    val colorAlpha by animateFloatAsState(
+        targetValue = if (isColorEnabled) 1.0f else 0.35f,
+        animationSpec = tween(durationMillis = 200),
+        label = "colorPickerAlpha"
+    )
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -908,50 +911,38 @@ private fun PatternColorConfigDialog(
                     }
                 }
 
-                // Fluid, perfectly timed Material 3 Expressive expansion & collapse
-                AnimatedVisibility(
-                    visible = selectedPattern != PatternMode.RAINBOW,
-                    enter = expandVertically(
-                        animationSpec = tween(durationMillis = 240, easing = ExpressiveMotionSpec)
-                    ) + fadeIn(
-                        animationSpec = tween(durationMillis = 200, delayMillis = 40)
-                    ),
-                    exit = shrinkVertically(
-                        animationSpec = tween(durationMillis = 200, easing = ExpressiveMotionSpec)
-                    ) + fadeOut(
-                        animationSpec = tween(durationMillis = 150)
-                    )
+                // Fixed-height layout with smooth alpha & interaction dimming to prevent dialog layout shifts
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp)
+                        .alpha(colorAlpha),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = "Select Color",
-                            style = MaterialTheme.typography.labelLarge
-                        )
+                    Text(
+                        text = "Select Color",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (isColorEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            palette.forEach { c ->
-                                val isSelected = selectedColor == c
-                                Box(
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(c))
-                                        .border(
-                                            width = if (isSelected) 3.dp else 1.dp,
-                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                                            shape = CircleShape
-                                        )
-                                        .clickable { selectedColor = c }
-                                )
-                            }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        palette.forEach { c ->
+                            val isSelected = selectedColor == c && isColorEnabled
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(c))
+                                    .border(
+                                        width = if (isSelected) 3.dp else 1.dp,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                                        shape = CircleShape
+                                    )
+                                    .clickable(enabled = isColorEnabled) { selectedColor = c }
+                            )
                         }
                     }
                 }

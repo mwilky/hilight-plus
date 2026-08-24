@@ -212,13 +212,6 @@ private fun DashboardScreen(controller: LightController, onResetAll: () -> Unit)
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = "System Diagnostics & Status",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-
             // 1. Shizuku Privileged Access Status Card
             val isShizukuConnected = shizukuState == ShizukuBridge.State.CONNECTED
             ExpressiveStatusCard(
