@@ -38,20 +38,34 @@ class IncomingCallWatcher : BroadcastReceiver() {
 
                     if (incomingNumber.isBlank() || incomingNumber.equals("private", ignoreCase = true) || incomingNumber.equals("unknown", ignoreCase = true)) {
                         // Unknown / Private number
-                        val pattern = store.unknownNumbersPattern.first()
-                        val color = store.unknownNumbersColor.first()
-                        Log.i(TAG, "Triggering unknown/private caller lighting: $pattern")
-                        controller.startIncomingCallAlert(pattern = pattern, color = color)
+                        val isUnknownEnabled = store.isUnknownNumbersEnabled.first()
+                        if (isUnknownEnabled) {
+                            val pattern = store.unknownNumbersPattern.first()
+                            val color = store.unknownNumbersColor.first()
+                            Log.i(TAG, "Triggering unknown/private caller lighting: $pattern")
+                            controller.startIncomingCallAlert(pattern = pattern, color = color)
+                        } else {
+                            Log.i(TAG, "Unknown/private caller lights are disabled")
+                        }
                     } else {
                         val matchedRule = store.findRuleForPhoneNumber(incomingNumber)
-                        if (matchedRule != null && matchedRule.isEnabled) {
-                            Log.i(TAG, "Matched custom rule for ${matchedRule.name}: ${matchedRule.pattern}")
-                            controller.startIncomingCallAlert(pattern = matchedRule.pattern, color = matchedRule.color)
+                        if (matchedRule != null) {
+                            if (matchedRule.isEnabled) {
+                                Log.i(TAG, "Matched custom rule for ${matchedRule.name}: ${matchedRule.pattern}")
+                                controller.startIncomingCallAlert(pattern = matchedRule.pattern, color = matchedRule.color)
+                            } else {
+                                Log.i(TAG, "Custom rule for ${matchedRule.name} is disabled")
+                            }
                         } else {
-                            val otherContactsPattern = store.otherContactsPattern.first()
-                            val otherContactsColor = store.otherContactsColor.first()
-                            Log.i(TAG, "Using other contacts default lighting: $otherContactsPattern")
-                            controller.startIncomingCallAlert(pattern = otherContactsPattern, color = otherContactsColor)
+                            val isOtherEnabled = store.isOtherContactsEnabled.first()
+                            if (isOtherEnabled) {
+                                val otherContactsPattern = store.otherContactsPattern.first()
+                                val otherContactsColor = store.otherContactsColor.first()
+                                Log.i(TAG, "Using other contacts default lighting: $otherContactsPattern")
+                                controller.startIncomingCallAlert(pattern = otherContactsPattern, color = otherContactsColor)
+                            } else {
+                                Log.i(TAG, "Other contacts lights are disabled")
+                            }
                         }
                     }
                 }

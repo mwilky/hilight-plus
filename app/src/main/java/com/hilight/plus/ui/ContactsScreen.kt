@@ -65,10 +65,12 @@ fun ContactsScreen(controller: LightController) {
     val isCallLightsEnabled by controller.store.isCallLightsEnabled.collectAsStateWithLifecycle(initialValue = true)
 
     // Other Contacts Settings
+    val isOtherContactsEnabled by controller.store.isOtherContactsEnabled.collectAsStateWithLifecycle(initialValue = true)
     val otherContactsColor by controller.store.otherContactsColor.collectAsStateWithLifecycle(initialValue = 0xFF4285F4)
     val otherContactsPattern by controller.store.otherContactsPattern.collectAsStateWithLifecycle(initialValue = PatternMode.PULSE)
 
     // Unknown Numbers Settings
+    val isUnknownNumbersEnabled by controller.store.isUnknownNumbersEnabled.collectAsStateWithLifecycle(initialValue = true)
     val unknownNumbersColor by controller.store.unknownNumbersColor.collectAsStateWithLifecycle(initialValue = 0xFFFBBC05)
     val unknownNumbersPattern by controller.store.unknownNumbersPattern.collectAsStateWithLifecycle(initialValue = PatternMode.PULSE)
 
@@ -388,7 +390,11 @@ fun ContactsScreen(controller: LightController) {
                         pattern = otherContactsPattern,
                         color = otherContactsColor,
                         renderer = renderer,
+                        isEnabled = isOtherContactsEnabled,
                         isPlaying = activePreviewingRuleId == "other_contacts",
+                        onToggle = { enabled ->
+                            scope.launch { controller.store.setOtherContactsEnabled(enabled) }
+                        },
                         onEdit = { isConfiguringOtherContacts = true },
                         onTogglePreview = {
                             startOngoingPreview("other_contacts", otherContactsPattern, otherContactsColor)
@@ -404,7 +410,11 @@ fun ContactsScreen(controller: LightController) {
                         pattern = unknownNumbersPattern,
                         color = unknownNumbersColor,
                         renderer = renderer,
+                        isEnabled = isUnknownNumbersEnabled,
                         isPlaying = activePreviewingRuleId == "unknown_numbers",
+                        onToggle = { enabled ->
+                            scope.launch { controller.store.setUnknownNumbersEnabled(enabled) }
+                        },
                         onEdit = { isConfiguringUnknownNumbers = true },
                         onTogglePreview = {
                             startOngoingPreview("unknown_numbers", unknownNumbersPattern, unknownNumbersColor)
@@ -534,7 +544,9 @@ private fun CallerCategoryCard(
     pattern: PatternMode,
     color: Long,
     renderer: PatternRenderer,
+    isEnabled: Boolean,
     isPlaying: Boolean,
+    onToggle: (Boolean) -> Unit,
     onEdit: () -> Unit,
     onTogglePreview: () -> Unit
 ) {
@@ -593,6 +605,10 @@ private fun CallerCategoryCard(
                 IconButton(onClick = onEdit) {
                     Icon(Icons.Rounded.Edit, contentDescription = "Edit rule")
                 }
+                Switch(
+                    checked = isEnabled,
+                    onCheckedChange = onToggle
+                )
             }
         }
     }
@@ -886,8 +902,14 @@ private fun PatternColorConfigDialog(
     var dialogPreviewFrames by remember { mutableStateOf(IntArray(8) { 0x00000000 }) }
 
     val palette = listOf(
-        0xFF4285F4, 0xFFEA4335, 0xFFFBBC05, 0xFF34A853,
-        0xFFFF007F, 0xFF8A2BE2, 0xFF00E5FF, 0xFFFFFFFF
+        0xFF4285F4, // Google Blue
+        0xFFEA4335, // Google Red
+        0xFFFBBC05, // Google Yellow
+        0xFF34A853, // Google Green
+        0xFFFF007F, // Neon Pink
+        0xFF8A2BE2, // Purple
+        0xFF00E5FF, // Cyan
+        0xFFFFFFFF  // Pure White
     )
 
     LaunchedEffect(selectedPattern, selectedColor) {

@@ -28,10 +28,12 @@ class AppStore private constructor(private val appContext: Context) {
 
         // Contact Calling Settings: All Other Contacts
         private val KEY_CALL_LIGHTS_ENABLED = booleanPreferencesKey("call_lights_enabled")
+        private val KEY_OTHER_CONTACTS_ENABLED = booleanPreferencesKey("other_contacts_enabled")
         private val KEY_OTHER_CONTACTS_COLOR = longPreferencesKey("other_contacts_color")
         private val KEY_OTHER_CONTACTS_PATTERN = stringPreferencesKey("other_contacts_pattern")
 
         // Contact Calling Settings: Unknown / Private Numbers
+        private val KEY_UNKNOWN_NUMBERS_ENABLED = booleanPreferencesKey("unknown_numbers_enabled")
         private val KEY_UNKNOWN_NUMBERS_COLOR = longPreferencesKey("unknown_numbers_color")
         private val KEY_UNKNOWN_NUMBERS_PATTERN = stringPreferencesKey("unknown_numbers_pattern")
 
@@ -72,6 +74,9 @@ class AppStore private constructor(private val appContext: Context) {
     val isCallLightsEnabled: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_CALL_LIGHTS_ENABLED] ?: true }
 
+    val isOtherContactsEnabled: Flow<Boolean> = appContext.dataStore.data
+        .map { it[KEY_OTHER_CONTACTS_ENABLED] ?: true }
+
     val otherContactsColor: Flow<Long> = appContext.dataStore.data
         .map { it[KEY_OTHER_CONTACTS_COLOR] ?: 0xFF4285F4 }
 
@@ -83,8 +88,11 @@ class AppStore private constructor(private val appContext: Context) {
 
     // --- Contact Calling Settings: Unknown / Private Numbers ---
 
+    val isUnknownNumbersEnabled: Flow<Boolean> = appContext.dataStore.data
+        .map { it[KEY_UNKNOWN_NUMBERS_ENABLED] ?: true }
+
     val unknownNumbersColor: Flow<Long> = appContext.dataStore.data
-        .map { it[KEY_UNKNOWN_NUMBERS_COLOR] ?: 0xFFFBBC05 } // Google Yellow as default for unknown
+        .map { it[KEY_UNKNOWN_NUMBERS_COLOR] ?: 0xFFFBBC05 }
 
     val unknownNumbersPattern: Flow<PatternMode> = appContext.dataStore.data
         .map { prefs ->
@@ -132,12 +140,20 @@ class AppStore private constructor(private val appContext: Context) {
         appContext.dataStore.edit { it[KEY_CALL_LIGHTS_ENABLED] = enabled }
     }
 
+    suspend fun setOtherContactsEnabled(enabled: Boolean) {
+        appContext.dataStore.edit { it[KEY_OTHER_CONTACTS_ENABLED] = enabled }
+    }
+
     suspend fun setOtherContactsColor(color: Long) {
         appContext.dataStore.edit { it[KEY_OTHER_CONTACTS_COLOR] = color }
     }
 
     suspend fun setOtherContactsPattern(pattern: PatternMode) {
         appContext.dataStore.edit { it[KEY_OTHER_CONTACTS_PATTERN] = pattern.name }
+    }
+
+    suspend fun setUnknownNumbersEnabled(enabled: Boolean) {
+        appContext.dataStore.edit { it[KEY_UNKNOWN_NUMBERS_ENABLED] = enabled }
     }
 
     suspend fun setUnknownNumbersColor(color: Long) {
