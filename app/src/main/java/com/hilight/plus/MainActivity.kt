@@ -143,7 +143,6 @@ private fun DashboardScreen(controller: LightController, onResetAll: () -> Unit)
     val context = LocalContext.current
     val stockState by NativeHiLightDetector.state.collectAsStateWithLifecycle()
     val shizukuState by controller.shizuku.state.collectAsStateWithLifecycle()
-    val ledCount by controller.shizuku.ledCount.collectAsStateWithLifecycle()
 
     fun hasPhonePermission(): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
@@ -222,7 +221,7 @@ private fun DashboardScreen(controller: LightController, onResetAll: () -> Unit)
             ExpressiveStatusCard(
                 title = "Shizuku Privileged Access",
                 subtitle = when (shizukuState) {
-                    ShizukuBridge.State.CONNECTED -> "Active session holding privileged control over $ledCount Pixel 11 rear LEDs."
+                    ShizukuBridge.State.CONNECTED -> "Active session holding privileged control over your Pixel's rear light array."
                     ShizukuBridge.State.NEEDS_PERMISSION -> "Shizuku is running. Tap 'Authorize' to grant privileged LED access."
                     ShizukuBridge.State.NOT_RUNNING -> "Shizuku daemon is stopped. Start via Wireless Debugging or ADB."
                     ShizukuBridge.State.NOT_INSTALLED -> "Shizuku Manager is not installed on this device."
@@ -231,7 +230,7 @@ private fun DashboardScreen(controller: LightController, onResetAll: () -> Unit)
                 },
                 icon = if (isShizukuConnected) Icons.Rounded.VerifiedUser else Icons.Rounded.AdminPanelSettings,
                 statusText = when (shizukuState) {
-                    ShizukuBridge.State.CONNECTED -> "Connected ($ledCount LEDs)"
+                    ShizukuBridge.State.CONNECTED -> "Connected"
                     ShizukuBridge.State.CONNECTING -> "Connecting"
                     ShizukuBridge.State.NEEDS_PERMISSION -> "Needs Permission"
                     ShizukuBridge.State.NOT_RUNNING -> "Not Running"
