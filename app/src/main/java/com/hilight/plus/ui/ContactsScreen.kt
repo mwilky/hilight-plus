@@ -11,6 +11,8 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -35,10 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -478,22 +477,33 @@ private fun CallerCategoryCard(
             ) {
                 MiniRuleAnimationIcon(pattern = pattern, color = color, renderer = renderer, size = 36.dp)
 
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = buildAnnotatedString {
-                            append("$subtitle  Pattern: ")
-                            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                                append(pattern.displayName)
-                            }
-                        },
+                        text = subtitle,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "Pattern:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = pattern.displayName,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
 
@@ -536,22 +546,33 @@ private fun ContactRuleItem(
             ) {
                 MiniRuleAnimationIcon(pattern = rule.pattern, color = rule.color, renderer = renderer, size = 36.dp)
 
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         text = rule.name,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = buildAnnotatedString {
-                            append("${rule.phoneNumber}  Pattern: ")
-                            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                                append(rule.pattern.displayName)
-                            }
-                        },
+                        text = rule.phoneNumber,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "Pattern:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = rule.pattern.displayName,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
 
@@ -667,7 +688,10 @@ private fun ContactRuleDialog(
         title = { Text("Configure ${initialRule.name}") },
         text = {
             Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateContentSize(animationSpec = tween(300, easing = FastOutSlowInEasing))
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Text(
@@ -717,8 +741,8 @@ private fun ContactRuleDialog(
                 // Smooth expansion/collapse animation for color palette
                 AnimatedVisibility(
                     visible = selectedPattern != PatternMode.RAINBOW,
-                    enter = expandVertically(animationSpec = tween(260), clip = false) + fadeIn(animationSpec = tween(260)),
-                    exit = shrinkVertically(animationSpec = tween(220), clip = false) + fadeOut(animationSpec = tween(220))
+                    enter = expandVertically(animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeIn(animationSpec = tween(300)),
+                    exit = shrinkVertically(animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeOut(animationSpec = tween(300))
                 ) {
                     Column(
                         modifier = Modifier
@@ -826,7 +850,10 @@ private fun PatternColorConfigDialog(
         title = { Text(title) },
         text = {
             Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateContentSize(animationSpec = tween(300, easing = FastOutSlowInEasing))
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Text(
@@ -876,8 +903,8 @@ private fun PatternColorConfigDialog(
                 // Smooth expansion/collapse animation for color palette
                 AnimatedVisibility(
                     visible = selectedPattern != PatternMode.RAINBOW,
-                    enter = expandVertically(animationSpec = tween(260), clip = false) + fadeIn(animationSpec = tween(260)),
-                    exit = shrinkVertically(animationSpec = tween(220), clip = false) + fadeOut(animationSpec = tween(220))
+                    enter = expandVertically(animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeIn(animationSpec = tween(300)),
+                    exit = shrinkVertically(animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeOut(animationSpec = tween(300))
                 ) {
                     Column(
                         modifier = Modifier
