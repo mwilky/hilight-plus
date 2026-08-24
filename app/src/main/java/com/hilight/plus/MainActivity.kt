@@ -1,13 +1,10 @@
 package com.hilight.plus
 
 import android.Manifest
-import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,7 +21,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -139,40 +135,8 @@ private fun MainAppNavigation(controller: LightController, onResetAll: () -> Uni
         Box(modifier = Modifier.padding(padding)) {
             when (selectedTab) {
                 NavTab.DASHBOARD -> DashboardScreen(controller = controller, onResetAll = onResetAll)
-                NavTab.CONTACTS -> {
-                    CheckTelephonyPermissions()
-                    ContactsScreen(controller = controller)
-                }
+                NavTab.CONTACTS -> ContactsScreen(controller = controller)
             }
-        }
-    }
-}
-
-@Composable
-private fun CheckTelephonyPermissions() {
-    val context = LocalContext.current
-    val permissions = arrayOf(
-        Manifest.permission.READ_PHONE_STATE,
-        Manifest.permission.READ_CONTACTS
-    )
-
-    var hasPermissions by remember {
-        mutableStateOf(
-            permissions.all {
-                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-            }
-        )
-    }
-
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { results ->
-        hasPermissions = results.values.all { it }
-    }
-
-    LaunchedEffect(Unit) {
-        if (!hasPermissions) {
-            launcher.launch(permissions)
         }
     }
 }
