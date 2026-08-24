@@ -11,6 +11,11 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -787,9 +792,16 @@ private fun ContactRuleDialog(
                     }
                 }
 
-                // Hide color picker when Rainbow is selected
-                AnimatedVisibility(visible = selectedPattern != PatternMode.RAINBOW) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Smooth expansion/collapse animation for color palette
+                AnimatedVisibility(
+                    visible = selectedPattern != PatternMode.RAINBOW,
+                    enter = expandVertically(animationSpec = tween(220)) + fadeIn(animationSpec = tween(220)),
+                    exit = shrinkVertically(animationSpec = tween(180)) + fadeOut(animationSpec = tween(180))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(top = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Text(
                             text = "Select Alert Color",
                             style = MaterialTheme.typography.labelLarge
@@ -928,9 +940,16 @@ private fun PatternColorConfigDialog(
                     }
                 }
 
-                // Hide color picker when Rainbow is selected
-                AnimatedVisibility(visible = selectedPattern != PatternMode.RAINBOW) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Smooth expansion/collapse animation for color palette
+                AnimatedVisibility(
+                    visible = selectedPattern != PatternMode.RAINBOW,
+                    enter = expandVertically(animationSpec = tween(220)) + fadeIn(animationSpec = tween(220)),
+                    exit = shrinkVertically(animationSpec = tween(180)) + fadeOut(animationSpec = tween(180))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(top = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Text(
                             text = "Select Color",
                             style = MaterialTheme.typography.labelLarge
