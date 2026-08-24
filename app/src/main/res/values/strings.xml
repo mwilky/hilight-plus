@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">HiLight Plus</string>
+
+    <!-- Onboarding Screen -->
+    <string name="onboarding_title">Welcome to HiLight Plus</string>
+    <string name="onboarding_subtitle">Take full control of the 8-LED rear array on your Pixel 11 Pro.</string>
+    <string name="onboarding_info_title">What is HiLight Plus?</string>
+    <string name="onboarding_info_desc">HiLight Plus replaces standard stock lighting with customizable patterns, contact caller alerts, and AI visual states—all running seamlessly without root.</string>
+
+    <string name="onboarding_shizuku_title">Shizuku Service</string>
+    <string name="onboarding_shizuku_desc">HiLight Plus connects to Shizuku to communicate with the hardware lights service.</string>
+    <string name="onboarding_shizuku_connect_btn">Connect Shizuku</string>
+
+    <string name="onboarding_complete_btn">Complete Setup</string>
+
+    <!-- Stock HiLight Warning -->
+    <string name="stock_hilight_warning_title">Stock HiLight is Active</string>
+    <string name="stock_hilight_warning_both">Both <b>Favorite calls</b> and <b>Gemini feedback</b> lighting are turned on in system settings (Settings → System → HiLight). Please turn them off to prevent lighting conflicts.</string>
+    <string name="stock_hilight_warning_calls"><b>Favorite calls</b> lighting is turned on in system settings (Settings → System → HiLight). Please turn it off to allow HiLight Plus to control call alerts.</string>
+    <string name="stock_hilight_warning_assistant"><b>Gemini feedback</b> lighting is turned on in system settings (Settings → System → HiLight). Please turn it off to allow HiLight Plus to control assistant lighting.</string>
+    <string name="stock_hilight_open_settings">Open HiLight Settings</string>
+
+    <!-- Status -->
+    <string name="status_connected">Connected (Shizuku)</string>
+    <string name="status_disconnected">Not Connected</string>
+    <string name="status_connecting">Connecting…</string>
+    <string name="status_permission_needed">Permission Needed</string>
+    <string name="status_active_leds">%1$d LEDs Active</string>
+
+    <!-- Main Screen -->
+    <string name="main_title">HiLight Plus</string>
+    <string name="main_test_card_title">Test HiLight LEDs</string>
+    <string name="main_test_card_desc">Pick a color below and tap Test to light the 8-LED array for 3 seconds.</string>
+    <string name="main_test_btn">Test on Hardware</string>
+    <string name="main_reset_onboarding">Reset Onboarding</string>
+</resources>
