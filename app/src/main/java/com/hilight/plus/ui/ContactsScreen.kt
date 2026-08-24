@@ -32,10 +32,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -47,6 +49,7 @@ import com.hilight.plus.ContactRule
 import com.hilight.plus.LightController
 import com.hilight.plus.PatternMode
 import com.hilight.plus.core.PatternRenderer
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -110,8 +113,50 @@ fun ContactsScreen(controller: LightController) {
         }
     }
 
+    // Interactive ongoing preview state
     var livePreviewFrames by remember { mutableStateOf(IntArray(8) { 0x00000000 }) }
     var activePreviewingRuleId by remember { mutableStateOf<String?>(null) }
+    var previewJob by remember { mutableStateOf<Job?>(null) }
+
+    fun stopOngoingPreview() {
+        previewJob?.cancel()
+        previewJob = null
+        activePreviewingRuleId = null
+        livePreviewFrames = IntArray(8) { 0x00000000 }
+    }
+
+    fun startOngoingPreview(ruleId: String, pattern: PatternMode, color: Long) {
+        if (activePreviewingRuleId == ruleId) {
+            stopOngoingPreview()
+            return
+        }
+        stopOngoingPreview()
+        activePreviewingRuleId = ruleId
+
+        previewJob = scope.launch {
+            val startMs = System.currentTimeMillis()
+            val speed = when (pattern) {
+                PatternMode.BREATHE -> 2000L
+                PatternMode.WAVE -> 1200L
+                PatternMode.COMET -> 1000L
+                PatternMode.RAINBOW -> 1200L
+                PatternMode.PULSE -> 850L
+                else -> 1000L
+            }
+            while (isActive) {
+                val elapsed = System.currentTimeMillis() - startMs
+                livePreviewFrames = renderer.renderFrame(
+                    pattern = pattern.id,
+                    colorLong = color,
+                    brightness = 1.0f,
+                    speedMs = speed,
+                    elapsedTimeMs = elapsed,
+                    ledCount = 8
+                )
+                delay(16)
+            }
+        }
+    }
 
     val contactPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickContact()
@@ -343,34 +388,10 @@ fun ContactsScreen(controller: LightController) {
                         pattern = otherContactsPattern,
                         color = otherContactsColor,
                         renderer = renderer,
+                        isPlaying = activePreviewingRuleId == "other_contacts",
                         onEdit = { isConfiguringOtherContacts = true },
-                        onPreview = {
-                            activePreviewingRuleId = "other_contacts"
-                            scope.launch {
-                                val startMs = System.currentTimeMillis()
-                                val speed = when (otherContactsPattern) {
-                                    PatternMode.BREATHE -> 2000L
-                                    PatternMode.WAVE -> 1200L
-                                    PatternMode.COMET -> 1000L
-                                    PatternMode.RAINBOW -> 2800L
-                                    PatternMode.PULSE -> 850L
-                                    else -> 1000L
-                                }
-                                while (isActive && System.currentTimeMillis() - startMs < 3000L) {
-                                    val elapsed = System.currentTimeMillis() - startMs
-                                    livePreviewFrames = renderer.renderFrame(
-                                        pattern = otherContactsPattern.id,
-                                        colorLong = otherContactsColor,
-                                        brightness = 1.0f,
-                                        speedMs = speed,
-                                        elapsedTimeMs = elapsed,
-                                        ledCount = 8
-                                    )
-                                    delay(16)
-                                }
-                                livePreviewFrames = IntArray(8) { 0x00000000 }
-                                activePreviewingRuleId = null
-                            }
+                        onTogglePreview = {
+                            startOngoingPreview("other_contacts", otherContactsPattern, otherContactsColor)
                         }
                     )
                 }
@@ -383,34 +404,10 @@ fun ContactsScreen(controller: LightController) {
                         pattern = unknownNumbersPattern,
                         color = unknownNumbersColor,
                         renderer = renderer,
+                        isPlaying = activePreviewingRuleId == "unknown_numbers",
                         onEdit = { isConfiguringUnknownNumbers = true },
-                        onPreview = {
-                            activePreviewingRuleId = "unknown_numbers"
-                            scope.launch {
-                                val startMs = System.currentTimeMillis()
-                                val speed = when (unknownNumbersPattern) {
-                                    PatternMode.BREATHE -> 2000L
-                                    PatternMode.WAVE -> 1200L
-                                    PatternMode.COMET -> 1000L
-                                    PatternMode.RAINBOW -> 2800L
-                                    PatternMode.PULSE -> 850L
-                                    else -> 1000L
-                                }
-                                while (isActive && System.currentTimeMillis() - startMs < 3000L) {
-                                    val elapsed = System.currentTimeMillis() - startMs
-                                    livePreviewFrames = renderer.renderFrame(
-                                        pattern = unknownNumbersPattern.id,
-                                        colorLong = unknownNumbersColor,
-                                        brightness = 1.0f,
-                                        speedMs = speed,
-                                        elapsedTimeMs = elapsed,
-                                        ledCount = 8
-                                    )
-                                    delay(16)
-                                }
-                                livePreviewFrames = IntArray(8) { 0x00000000 }
-                                activePreviewingRuleId = null
-                            }
+                        onTogglePreview = {
+                            startOngoingPreview("unknown_numbers", unknownNumbersPattern, unknownNumbersColor)
                         }
                     )
                 }
@@ -452,6 +449,7 @@ fun ContactsScreen(controller: LightController) {
                         ContactRuleItem(
                             rule = rule,
                             renderer = renderer,
+                            isPlaying = activePreviewingRuleId == rule.id,
                             onToggle = { isEnabled ->
                                 scope.launch {
                                     controller.store.saveContactRule(rule.copy(isEnabled = isEnabled))
@@ -459,37 +457,13 @@ fun ContactsScreen(controller: LightController) {
                             },
                             onEdit = { ruleBeingEdited = rule },
                             onDelete = {
+                                if (activePreviewingRuleId == rule.id) stopOngoingPreview()
                                 scope.launch {
                                     controller.store.deleteContactRule(rule.id)
                                 }
                             },
-                            onPreview = {
-                                activePreviewingRuleId = rule.id
-                                scope.launch {
-                                    val startMs = System.currentTimeMillis()
-                                    val speed = when (rule.pattern) {
-                                        PatternMode.BREATHE -> 2000L
-                                        PatternMode.WAVE -> 1200L
-                                        PatternMode.COMET -> 1000L
-                                        PatternMode.RAINBOW -> 2800L
-                                        PatternMode.PULSE -> 850L
-                                        else -> 1000L
-                                    }
-                                    while (isActive && System.currentTimeMillis() - startMs < 3000L) {
-                                        val elapsed = System.currentTimeMillis() - startMs
-                                        livePreviewFrames = renderer.renderFrame(
-                                            pattern = rule.pattern.id,
-                                            colorLong = rule.color,
-                                            brightness = 1.0f,
-                                            speedMs = speed,
-                                            elapsedTimeMs = elapsed,
-                                            ledCount = 8
-                                        )
-                                        delay(16)
-                                    }
-                                    livePreviewFrames = IntArray(8) { 0x00000000 }
-                                    activePreviewingRuleId = null
-                                }
+                            onTogglePreview = {
+                                startOngoingPreview(rule.id, rule.pattern, rule.color)
                             }
                         )
                     }
@@ -560,8 +534,9 @@ private fun CallerCategoryCard(
     pattern: PatternMode,
     color: Long,
     renderer: PatternRenderer,
+    isPlaying: Boolean,
     onEdit: () -> Unit,
-    onPreview: () -> Unit
+    onTogglePreview: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -588,7 +563,12 @@ private fun CallerCategoryCard(
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "$subtitle · Pattern: ${pattern.displayName}",
+                        text = buildAnnotatedString {
+                            append("$subtitle  Pattern: ")
+                            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                append(pattern.displayName)
+                            }
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -596,8 +576,19 @@ private fun CallerCategoryCard(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onPreview) {
-                    Icon(Icons.Rounded.PlayArrow, contentDescription = "Preview alert")
+                IconButton(onClick = onTogglePreview) {
+                    if (isPlaying) {
+                        Icon(
+                            Icons.Rounded.Stop,
+                            contentDescription = "Stop preview",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    } else {
+                        Icon(
+                            Icons.Rounded.PlayArrow,
+                            contentDescription = "Preview alert"
+                        )
+                    }
                 }
                 IconButton(onClick = onEdit) {
                     Icon(Icons.Rounded.Edit, contentDescription = "Edit rule")
@@ -611,10 +602,11 @@ private fun CallerCategoryCard(
 private fun ContactRuleItem(
     rule: ContactRule,
     renderer: PatternRenderer,
+    isPlaying: Boolean,
     onToggle: (Boolean) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    onPreview: () -> Unit
+    onTogglePreview: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -641,7 +633,12 @@ private fun ContactRuleItem(
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "${rule.phoneNumber} · Pattern: ${rule.pattern.displayName}",
+                        text = buildAnnotatedString {
+                            append("${rule.phoneNumber}  Pattern: ")
+                            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                append(rule.pattern.displayName)
+                            }
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -649,8 +646,19 @@ private fun ContactRuleItem(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onPreview) {
-                    Icon(Icons.Rounded.PlayArrow, contentDescription = "Preview alert")
+                IconButton(onClick = onTogglePreview) {
+                    if (isPlaying) {
+                        Icon(
+                            Icons.Rounded.Stop,
+                            contentDescription = "Stop preview",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    } else {
+                        Icon(
+                            Icons.Rounded.PlayArrow,
+                            contentDescription = "Preview alert"
+                        )
+                    }
                 }
                 IconButton(onClick = onEdit) {
                     Icon(Icons.Rounded.Edit, contentDescription = "Edit rule")
@@ -685,7 +693,7 @@ private fun MiniRuleAnimationIcon(
             PatternMode.BREATHE -> 2000L
             PatternMode.WAVE -> 1200L
             PatternMode.COMET -> 1000L
-            PatternMode.RAINBOW -> 2800L
+            PatternMode.RAINBOW -> 1200L
             PatternMode.PULSE -> 850L
             else -> 1000L
         }
@@ -740,7 +748,7 @@ private fun ContactRuleDialog(
             PatternMode.BREATHE -> 2000L
             PatternMode.WAVE -> 1200L
             PatternMode.COMET -> 1000L
-            PatternMode.RAINBOW -> 2800L
+            PatternMode.RAINBOW -> 1200L
             PatternMode.PULSE -> 850L
             else -> 1000L
         }
@@ -888,7 +896,7 @@ private fun PatternColorConfigDialog(
             PatternMode.BREATHE -> 2000L
             PatternMode.WAVE -> 1200L
             PatternMode.COMET -> 1000L
-            PatternMode.RAINBOW -> 2800L
+            PatternMode.RAINBOW -> 1200L
             PatternMode.PULSE -> 850L
             else -> 1000L
         }

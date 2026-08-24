@@ -70,15 +70,15 @@ class LightController private constructor(app: Application) {
         pattern: PatternMode,
         color: Long,
         brightness: Float = 1.0f,
-        speedMs: Long = 1200L,
+        speedMs: Long = 1000L,
         durationMs: Long = 3000L
     ) {
         val calculatedSpeed = when (pattern) {
-            PatternMode.BREATHE -> 2200L
-            PatternMode.WAVE -> 1400L
-            PatternMode.COMET -> 1200L
-            PatternMode.RAINBOW -> 3000L
-            PatternMode.PULSE -> 900L
+            PatternMode.BREATHE -> 2000L
+            PatternMode.WAVE -> 1200L
+            PatternMode.COMET -> 1000L
+            PatternMode.RAINBOW -> 1200L
+            PatternMode.PULSE -> 850L
             else -> speedMs
         }
         shizuku.triggerAlert(
@@ -103,7 +103,7 @@ class LightController private constructor(app: Application) {
             PatternMode.BREATHE -> 2000L
             PatternMode.WAVE -> 1200L
             PatternMode.COMET -> 1000L
-            PatternMode.RAINBOW -> 2800L
+            PatternMode.RAINBOW -> 1200L
             PatternMode.PULSE -> 850L
             else -> speedMs
         }

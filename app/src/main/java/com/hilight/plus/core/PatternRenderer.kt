@@ -35,7 +35,6 @@ class PatternRenderer {
             }
 
             "breathe" -> {
-                // Smooth sine easing from 5% to 100% brightness
                 val phase = (elapsedTimeMs % speed) / speed.toDouble()
                 val k = (1.0 - cos(phase * 2.0 * PI)) / 2.0
                 val intensity = (0.05 + 0.95 * k) * clampedBrightness
@@ -44,7 +43,6 @@ class PatternRenderer {
             }
 
             "pulse" -> {
-                // Smooth rhythmic pulse that fades completely to 0 at the end of each period
                 val phase = (elapsedTimeMs % speed) / speed.toDouble()
                 val k = if (phase < 0.30) {
                     val t = phase / 0.30
@@ -53,14 +51,13 @@ class PatternRenderer {
                     val t = (phase - 0.30) / 0.55
                     (1.0 + cos(t * PI)) / 2.0
                 } else {
-                    0.0 // True dark rest interval between pulses
+                    0.0
                 }
                 val c = if (k > 0.001) scaleColor(baseColor, k * clampedBrightness) else 0x00000000
                 frame.fill(c)
             }
 
             "wave" -> {
-                // Continuous traveling sinusoidal wave around the ring
                 val phase = (elapsedTimeMs % speed) / speed.toDouble()
                 for (i in 0 until count) {
                     val angle = 2.0 * PI * (phase - i.toDouble() / count)
@@ -71,7 +68,6 @@ class PatternRenderer {
             }
 
             "comet" -> {
-                // Smooth circulating comet head with a 3-LED decaying tail wrapped smoothly around modulo 8
                 val headPos = ((elapsedTimeMs % speed) / speed.toDouble()) * count
                 val tailLength = 3.5
                 for (i in 0 until count) {
@@ -87,8 +83,8 @@ class PatternRenderer {
             }
 
             "rainbow" -> {
-                // Ultra-smooth 360-degree continuous spectrum rotation
-                val phase = (elapsedTimeMs % (speed * 2)) / (speed * 2).toDouble()
+                // Responsive and lively 360-degree rainbow rotation matched to speed parameter
+                val phase = (elapsedTimeMs % speed) / speed.toDouble()
                 for (i in 0 until count) {
                     val hue = ((phase + (i.toDouble() / count)) * 360.0) % 360.0
                     frame[i] = scaleColor(hsvToRgb(hue, 1f, 1f), clampedBrightness.toDouble())
