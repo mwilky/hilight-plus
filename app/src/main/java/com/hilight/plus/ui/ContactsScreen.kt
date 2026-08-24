@@ -8,9 +8,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
@@ -21,14 +23,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hilight.plus.ContactRule
 import com.hilight.plus.LightController
 import com.hilight.plus.PatternMode
-import com.hilight.plus.R
+import com.hilight.plus.core.PatternRenderer
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -37,6 +40,7 @@ import java.util.UUID
 fun ContactsScreen(controller: LightController) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val renderer = remember { PatternRenderer() }
 
     val isCallLightsEnabled by controller.store.isCallLightsEnabled.collectAsStateWithLifecycle(initialValue = true)
     val defaultCallColor by controller.store.defaultCallColor.collectAsStateWithLifecycle(initialValue = 0xFF4285F4)
@@ -45,6 +49,10 @@ fun ContactsScreen(controller: LightController) {
 
     var ruleBeingEdited by remember { mutableStateOf<ContactRule?>(null) }
     var isConfiguringDefault by remember { mutableStateOf(false) }
+
+    // On-screen preview state for the main list
+    var livePreviewFrames by remember { mutableStateOf(IntArray(8) { 0x00000000 }) }
+    var activePreviewingRuleId by remember { mutableStateOf<String?>(null) }
 
     val contactPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickContact()
@@ -122,6 +130,36 @@ fun ContactsScreen(controller: LightController) {
             }
 
             if (isCallLightsEnabled) {
+                // Live On-Screen Ring Preview Header Card
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = if (activePreviewingRuleId != null) "Previewing Animation" else "Call Illumination Preview",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            DiffusedRingPreview(
+                                frames = livePreviewFrames,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(110.dp),
+                                size = 90.dp
+                            )
+                        }
+                    }
+                }
+
                 // Default / Fallback Call Illumination Rule Card
                 item {
                     Card(
@@ -159,6 +197,31 @@ fun ContactsScreen(controller: LightController) {
                                             .clip(CircleShape)
                                             .background(Color(defaultCallColor))
                                     )
+
+                                    IconButton(
+                                        onClick = {
+                                            activePreviewingRuleId = "default"
+                                            scope.launch {
+                                                val startMs = System.currentTimeMillis()
+                                                while (isActive && System.currentTimeMillis() - startMs < 3000L) {
+                                                    val elapsed = System.currentTimeMillis() - startMs
+                                                    livePreviewFrames = renderer.renderFrame(
+                                                        pattern = defaultCallPattern.id,
+                                                        colorLong = defaultCallColor,
+                                                        brightness = 1.0f,
+                                                        speedMs = 800L,
+                                                        elapsedTimeMs = elapsed,
+                                                        ledCount = 8
+                                                    )
+                                                    delay(33)
+                                                }
+                                                livePreviewFrames = IntArray(8) { 0x00000000 }
+                                                activePreviewingRuleId = null
+                                            }
+                                        }
+                                    ) {
+                                        Icon(Icons.Rounded.PlayArrow, contentDescription = "Preview default")
+                                    }
 
                                     IconButton(onClick = { isConfiguringDefault = true }) {
                                         Icon(Icons.Rounded.Edit, contentDescription = "Edit default")
@@ -217,11 +280,24 @@ fun ContactsScreen(controller: LightController) {
                                 }
                             },
                             onPreview = {
-                                controller.previewEffect(
-                                    pattern = rule.pattern,
-                                    color = rule.color,
-                                    durationMs = 3000L
-                                )
+                                activePreviewingRuleId = rule.id
+                                scope.launch {
+                                    val startMs = System.currentTimeMillis()
+                                    while (isActive && System.currentTimeMillis() - startMs < 3000L) {
+                                        val elapsed = System.currentTimeMillis() - startMs
+                                        livePreviewFrames = renderer.renderFrame(
+                                            pattern = rule.pattern.id,
+                                            colorLong = rule.color,
+                                            brightness = 1.0f,
+                                            speedMs = 800L,
+                                            elapsedTimeMs = elapsed,
+                                            ledCount = 8
+                                        )
+                                        delay(33)
+                                    }
+                                    livePreviewFrames = IntArray(8) { 0x00000000 }
+                                    activePreviewingRuleId = null
+                                }
                             }
                         )
                     }
@@ -235,10 +311,8 @@ fun ContactsScreen(controller: LightController) {
         val rule = ruleBeingEdited!!
         ContactRuleDialog(
             initialRule = rule,
+            renderer = renderer,
             onDismiss = { ruleBeingEdited = null },
-            onPreview = { pattern, color ->
-                controller.previewEffect(pattern = pattern, color = color, durationMs = 2500L)
-            },
             onSave = { updatedRule ->
                 scope.launch {
                     controller.store.saveContactRule(updatedRule)
@@ -253,10 +327,8 @@ fun ContactsScreen(controller: LightController) {
         DefaultCallRuleDialog(
             initialPattern = defaultCallPattern,
             initialColor = defaultCallColor,
+            renderer = renderer,
             onDismiss = { isConfiguringDefault = false },
-            onPreview = { pattern, color ->
-                controller.previewEffect(pattern = pattern, color = color, durationMs = 2500L)
-            },
             onSave = { pattern, color ->
                 scope.launch {
                     controller.store.setDefaultCallPattern(pattern)
@@ -336,12 +408,13 @@ private fun ContactRuleItem(
 @Composable
 private fun ContactRuleDialog(
     initialRule: ContactRule,
+    renderer: PatternRenderer,
     onDismiss: () -> Unit,
-    onPreview: (PatternMode, Long) -> Unit,
     onSave: (ContactRule) -> Unit
 ) {
     var selectedColor by remember { mutableLongStateOf(initialRule.color) }
     var selectedPattern by remember { mutableStateOf(initialRule.pattern) }
+    var dialogPreviewFrames by remember { mutableStateOf(IntArray(8) { 0x00000000 }) }
 
     val palette = listOf(
         0xFF4285F4, // Google Blue
@@ -354,6 +427,23 @@ private fun ContactRuleDialog(
         0xFFFFFFFF  // Pure White
     )
 
+    // Continuous live diffused animation preview inside dialog
+    LaunchedEffect(selectedPattern, selectedColor) {
+        val startMs = System.currentTimeMillis()
+        while (isActive) {
+            val elapsed = System.currentTimeMillis() - startMs
+            dialogPreviewFrames = renderer.renderFrame(
+                pattern = selectedPattern.id,
+                colorLong = selectedColor,
+                brightness = 1.0f,
+                speedMs = 800L,
+                elapsedTimeMs = elapsed,
+                ledCount = 8
+            )
+            delay(33)
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Configure ${initialRule.name}") },
@@ -363,6 +453,15 @@ private fun ContactRuleDialog(
                     text = "Phone: ${initialRule.phoneNumber}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                // On-Screen Diffused Ring Preview inside Dialog
+                DiffusedRingPreview(
+                    frames = dialogPreviewFrames,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(95.dp),
+                    size = 75.dp
                 )
 
                 Text(
@@ -396,10 +495,21 @@ private fun ContactRuleDialog(
                     style = MaterialTheme.typography.labelLarge
                 )
 
-                val patterns = listOf(PatternMode.PULSE, PatternMode.BREATHE, PatternMode.WAVE, PatternMode.COMET, PatternMode.SOLID)
+                // Horizontally Scrollable Patterns
+                val patterns = listOf(
+                    PatternMode.PULSE,
+                    PatternMode.BREATHE,
+                    PatternMode.WAVE,
+                    PatternMode.COMET,
+                    PatternMode.RAINBOW,
+                    PatternMode.SOLID
+                )
+
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     patterns.forEach { p ->
                         FilterChip(
@@ -421,13 +531,8 @@ private fun ContactRuleDialog(
             }
         },
         dismissButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { onPreview(selectedPattern, selectedColor) }) {
-                    Text("Preview")
-                }
-                TextButton(onClick = onDismiss) {
-                    Text("Cancel")
-                }
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
             }
         }
     )
@@ -437,17 +542,35 @@ private fun ContactRuleDialog(
 private fun DefaultCallRuleDialog(
     initialPattern: PatternMode,
     initialColor: Long,
+    renderer: PatternRenderer,
     onDismiss: () -> Unit,
-    onPreview: (PatternMode, Long) -> Unit,
     onSave: (PatternMode, Long) -> Unit
 ) {
     var selectedColor by remember { mutableLongStateOf(initialColor) }
     var selectedPattern by remember { mutableStateOf(initialPattern) }
+    var dialogPreviewFrames by remember { mutableStateOf(IntArray(8) { 0x00000000 }) }
 
     val palette = listOf(
         0xFF4285F4, 0xFFEA4335, 0xFFFBBC05, 0xFF34A853,
         0xFFFF007F, 0xFF8A2BE2, 0xFF00E5FF, 0xFFFFFFFF
     )
+
+    // Continuous live diffused animation preview inside dialog
+    LaunchedEffect(selectedPattern, selectedColor) {
+        val startMs = System.currentTimeMillis()
+        while (isActive) {
+            val elapsed = System.currentTimeMillis() - startMs
+            dialogPreviewFrames = renderer.renderFrame(
+                pattern = selectedPattern.id,
+                colorLong = selectedColor,
+                brightness = 1.0f,
+                speedMs = 800L,
+                elapsedTimeMs = elapsed,
+                ledCount = 8
+            )
+            delay(33)
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -458,6 +581,15 @@ private fun DefaultCallRuleDialog(
                     text = "Applied to incoming calls from non-customized numbers.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                // On-Screen Diffused Ring Preview inside Dialog
+                DiffusedRingPreview(
+                    frames = dialogPreviewFrames,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(95.dp),
+                    size = 75.dp
                 )
 
                 Text(
@@ -491,10 +623,21 @@ private fun DefaultCallRuleDialog(
                     style = MaterialTheme.typography.labelLarge
                 )
 
-                val patterns = listOf(PatternMode.PULSE, PatternMode.BREATHE, PatternMode.WAVE, PatternMode.COMET, PatternMode.SOLID)
+                // Horizontally Scrollable Patterns
+                val patterns = listOf(
+                    PatternMode.PULSE,
+                    PatternMode.BREATHE,
+                    PatternMode.WAVE,
+                    PatternMode.COMET,
+                    PatternMode.RAINBOW,
+                    PatternMode.SOLID
+                )
+
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     patterns.forEach { p ->
                         FilterChip(
@@ -512,13 +655,8 @@ private fun DefaultCallRuleDialog(
             }
         },
         dismissButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { onPreview(selectedPattern, selectedColor) }) {
-                    Text("Preview")
-                }
-                TextButton(onClick = onDismiss) {
-                    Text("Cancel")
-                }
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
             }
         }
     )

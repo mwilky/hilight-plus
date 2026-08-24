@@ -8,7 +8,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,8 +20,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -34,14 +31,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.hilight.plus.core.PatternRenderer
 import com.hilight.plus.ui.ContactsScreen
+import com.hilight.plus.ui.DiffusedRingPreview
 import com.hilight.plus.ui.HiLightPlusTheme
 import com.hilight.plus.ui.OnboardingScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.sin
 
 class MainActivity : ComponentActivity() {
 
@@ -330,88 +325,13 @@ private fun DashboardScreen(controller: LightController, onResetOnboarding: () -
                     }
 
                     // Diffused Pixel 11 Glass Camera Ring Preview
-                    Surface(
+                    DiffusedRingPreview(
+                        frames = screenPreviewFrames,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(140.dp),
-                        shape = MaterialTheme.shapes.medium,
-                        color = Color(0xFF16181C)
-                    ) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            val inactiveColor = Color(0xFF282B30)
-                            val frostedLensColor = Color(0x33FFFFFF)
-
-                            Canvas(modifier = Modifier.size(120.dp)) {
-                                val center = Offset(size.width / 2f, size.height / 2f)
-                                val ringRadius = size.minDimension * 0.35f
-                                val spotRadius = size.minDimension * 0.18f
-
-                                // Base unlit translucent channel ring
-                                drawCircle(
-                                    color = inactiveColor,
-                                    radius = ringRadius + 6.dp.toPx(),
-                                    center = center,
-                                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 14.dp.toPx())
-                                )
-
-                                // Render diffused radial glow spots for each LED
-                                for (i in 0 until 8) {
-                                    val angle = (i * (2 * PI / 8.0) - (PI / 2.0))
-                                    val spotCenter = Offset(
-                                        x = center.x + (ringRadius * cos(angle)).toFloat(),
-                                        y = center.y + (ringRadius * sin(angle)).toFloat()
-                                    )
-
-                                    val c = screenPreviewFrames.getOrElse(i) { 0x00000000 }
-                                    val isLit = (c ushr 24) > 0 && ((c and 0x00FFFFFF) != 0)
-
-                                    if (isLit) {
-                                        val ledColor = Color(c)
-                                        // Soft outer diffusion glow blending adjacent LEDs
-                                        drawCircle(
-                                            brush = Brush.radialGradient(
-                                                colors = listOf(
-                                                    ledColor.copy(alpha = 0.95f),
-                                                    ledColor.copy(alpha = 0.65f),
-                                                    ledColor.copy(alpha = 0.25f),
-                                                    Color.Transparent
-                                                ),
-                                                center = spotCenter,
-                                                radius = spotRadius * 1.5f
-                                            ),
-                                            radius = spotRadius * 1.5f,
-                                            center = spotCenter
-                                        )
-
-                                        // Bright core emitter
-                                        drawCircle(
-                                            brush = Brush.radialGradient(
-                                                colors = listOf(
-                                                    Color.White.copy(alpha = 0.85f),
-                                                    ledColor.copy(alpha = 0.95f)
-                                                ),
-                                                center = spotCenter,
-                                                radius = spotRadius * 0.45f
-                                            ),
-                                            radius = spotRadius * 0.45f,
-                                            center = spotCenter
-                                        )
-                                    }
-                                }
-
-                                // Frosted glass diffusion overlay ring on top
-                                drawCircle(
-                                    color = frostedLensColor,
-                                    radius = ringRadius + 6.dp.toPx(),
-                                    center = center,
-                                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 14.dp.toPx())
-                                )
-                            }
-                        }
-                    }
+                            .height(130.dp),
+                        size = 110.dp
+                    )
 
                     Text(
                         text = stringResource(R.string.main_test_card_desc),
