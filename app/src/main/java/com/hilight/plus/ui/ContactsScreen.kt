@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -665,7 +666,10 @@ private fun ContactRuleDialog(
         onDismissRequest = onDismiss,
         title = { Text("Configure ${initialRule.name}") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
                 Text(
                     text = "Phone: ${initialRule.phoneNumber}",
                     style = MaterialTheme.typography.bodyMedium,
@@ -713,11 +717,13 @@ private fun ContactRuleDialog(
                 // Smooth expansion/collapse animation for color palette
                 AnimatedVisibility(
                     visible = selectedPattern != PatternMode.RAINBOW,
-                    enter = expandVertically(animationSpec = tween(220)) + fadeIn(animationSpec = tween(220)),
-                    exit = shrinkVertically(animationSpec = tween(180)) + fadeOut(animationSpec = tween(180))
+                    enter = expandVertically(animationSpec = tween(260), clip = false) + fadeIn(animationSpec = tween(260)),
+                    exit = shrinkVertically(animationSpec = tween(220), clip = false) + fadeOut(animationSpec = tween(220))
                 ) {
                     Column(
-                        modifier = Modifier.padding(top = 4.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
@@ -781,8 +787,14 @@ private fun PatternColorConfigDialog(
     var dialogPreviewFrames by remember { mutableStateOf(IntArray(8) { 0x00000000 }) }
 
     val palette = listOf(
-        0xFF4285F4, 0xFFEA4335, 0xFFFBBC05, 0xFF34A853,
-        0xFFFF007F, 0xFF8A2BE2, 0xFF00E5FF, 0xFFFFFFFF
+        0xFF4285F4, // Google Blue
+        0xFFEA4335, // Google Red
+        0xFFFBBC05, // Google Yellow
+        0xFF34A853, // Google Green
+        0xFFFF007F, // Neon Pink
+        0xFF8A2BE2, // Purple
+        0xFF00E5FF, // Cyan
+        0xFFFFFFFF  // Pure White
     )
 
     LaunchedEffect(selectedPattern, selectedColor) {
@@ -813,7 +825,10 @@ private fun PatternColorConfigDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
@@ -861,11 +876,13 @@ private fun PatternColorConfigDialog(
                 // Smooth expansion/collapse animation for color palette
                 AnimatedVisibility(
                     visible = selectedPattern != PatternMode.RAINBOW,
-                    enter = expandVertically(animationSpec = tween(220)) + fadeIn(animationSpec = tween(220)),
-                    exit = shrinkVertically(animationSpec = tween(180)) + fadeOut(animationSpec = tween(180))
+                    enter = expandVertically(animationSpec = tween(260), clip = false) + fadeIn(animationSpec = tween(260)),
+                    exit = shrinkVertically(animationSpec = tween(220), clip = false) + fadeOut(animationSpec = tween(220))
                 ) {
                     Column(
-                        modifier = Modifier.padding(top = 4.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
