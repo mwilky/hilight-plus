@@ -13,7 +13,7 @@ import java.lang.reflect.Method
  */
 class PixelLightsManager {
 
-    private val token: IBinder = Binder()
+    private var token: IBinder = Binder()
     private var service: Any? = null
     private var mGetLights: Method? = null
     private var mOpenSession: Method? = null
@@ -66,7 +66,11 @@ class PixelLightsManager {
 
     fun openSession(priority: Int = 10): Boolean {
         val s = service ?: return false
-        if (isSessionOpen) return true
+        // If already open, close old session first to guarantee clean session acquisition
+        if (isSessionOpen) {
+            closeSession()
+        }
+        token = Binder() // Fresh token per session to avoid dead token locks in Android lights manager
         return try {
             mOpenSession?.invoke(s, token, priority)
             isSessionOpen = true

@@ -26,13 +26,14 @@ class LightEngine {
     private var ambientBrightness = 1.0f
     private var ambientSpeedMs = 2000L
 
-    // Alert / Test State
+    // Alert State
     private var alertPattern: String? = null
     private var alertColor = 0xFF4285F4
     private var alertBrightness = 1.0f
     private var alertSpeedMs = 800L
     private var alertStartMs = 0L
     private var alertDurationMs = 0L
+    private var needsSessionReset = false
 
     fun start(): Boolean {
         synchronized(lock) {
@@ -98,6 +99,7 @@ class LightEngine {
             alertSpeedMs = speedMs
             alertStartMs = System.currentTimeMillis()
             alertDurationMs = durationMs
+            needsSessionReset = true // Guarantee a clean session reset when starting any alert
         }
     }
 
@@ -105,6 +107,9 @@ class LightEngine {
         synchronized(lock) {
             alertPattern = null
             alertDurationMs = 0L
+            if (ambientPattern.equals("off", ignoreCase = true)) {
+                lights.blank()
+            }
         }
     }
 
@@ -160,8 +165,11 @@ class LightEngine {
                 elapsedMs = now - alertStartMs
             } else {
                 if (alertPattern != null) {
-                    // Alert just finished
                     alertPattern = null
+                    if (ambientPattern.equals("off", ignoreCase = true)) {
+                        lights.blank()
+                        return
+                    }
                 }
                 currentPattern = ambientPattern
                 currentColor = ambientColor
@@ -177,8 +185,10 @@ class LightEngine {
                 return
             }
 
-            if (!lights.isSessionOpen) {
+            // Force session acquisition if requested or if not currently open
+            if (needsSessionReset || !lights.isSessionOpen) {
                 lights.openSession(sessionPriority)
+                needsSessionReset = false
             }
 
             val frame = renderer.renderFrame(
