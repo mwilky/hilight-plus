@@ -10,14 +10,6 @@ import android.provider.ContactsContract
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.FastOutLinearInEasing
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -737,12 +729,8 @@ private fun ContactRuleDialog(
                     }
                 }
 
-                // Crisp, snappy expansion/collapse animation for color palette
-                AnimatedVisibility(
-                    visible = selectedPattern != PatternMode.RAINBOW,
-                    enter = expandVertically(animationSpec = tween(150, easing = FastOutSlowInEasing)) + fadeIn(animationSpec = tween(150)),
-                    exit = shrinkVertically(animationSpec = tween(120, easing = FastOutLinearInEasing)) + fadeOut(animationSpec = tween(100))
-                ) {
+                // Instant direct visibility without sluggish transition delays
+                if (selectedPattern != PatternMode.RAINBOW) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -898,12 +886,8 @@ private fun PatternColorConfigDialog(
                     }
                 }
 
-                // Crisp, snappy expansion/collapse animation for color palette
-                AnimatedVisibility(
-                    visible = selectedPattern != PatternMode.RAINBOW,
-                    enter = expandVertically(animationSpec = tween(150, easing = FastOutSlowInEasing)) + fadeIn(animationSpec = tween(150)),
-                    exit = shrinkVertically(animationSpec = tween(120, easing = FastOutLinearInEasing)) + fadeOut(animationSpec = tween(100))
-                ) {
+                // Instant direct visibility without sluggish transition delays
+                if (selectedPattern != PatternMode.RAINBOW) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
