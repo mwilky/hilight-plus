@@ -1,5 +1,12 @@
 package com.hilight.plus.ui
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -14,141 +21,97 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.hilight.plus.LightController
 import com.hilight.plus.NativeHiLightDetector
 import com.hilight.plus.R
 import com.hilight.plus.ShizukuBridge
 
 @Composable
-fun OnboardingScreen(controller: LightController, onComplete: () -> Unit) {
+fun OnboardingScreen(
+    controller: LightController,
+    onComplete: () -> Unit
+) {
     val context = LocalContext.current
     val stockState by NativeHiLightDetector.state.collectAsStateWithLifecycle()
     val shizukuState by controller.shizuku.state.collectAsStateWithLifecycle()
 
-    Scaffold(
-        bottomBar = {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                tonalElevation = 3.dp
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    Button(
-                        onClick = onComplete,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.onboarding_complete_btn),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    }
-                }
-            }
+    fun hasPhonePermission(): Boolean =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
+
+    fun hasCallLogPermission(): Boolean =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED
+
+    fun hasContactsPermission(): Boolean =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
+
+    var isPhoneGranted by remember { mutableStateOf(hasPhonePermission()) }
+    var isCallLogGranted by remember { mutableStateOf(hasCallLogPermission()) }
+    var isContactsGranted by remember { mutableStateOf(hasContactsPermission()) }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            isPhoneGranted = hasPhonePermission()
+            isCallLogGranted = hasCallLogPermission()
+            isContactsGranted = hasContactsPermission()
+            NativeHiLightDetector.check(context)
+            controller.refreshStatus()
         }
-    ) { padding ->
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        isPhoneGranted = hasPhonePermission()
+        isCallLogGranted = hasCallLogPermission()
+        isContactsGranted = hasContactsPermission()
+    }
+
+    fun openAppSettings() {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.fromParts("package", context.packageName, null)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(intent)
+    }
+
+    Scaffold { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = stringResource(R.string.onboarding_title),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = stringResource(R.string.onboarding_subtitle),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Text(
+                text = stringResource(R.string.onboarding_title),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = stringResource(R.string.onboarding_subtitle),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
-            // Conflict Warning Card
-            if (stockState.anyActive) {
-                ExpressiveStatusCard(
-                    title = "Stock Settings Conflict",
-                    subtitle = when {
-                        stockState.bothActive -> "Both Favorite Calls and Assistant Feedback are active in System Settings. These will override HiLight Plus animations."
-                        stockState.favoriteCallsActive -> "Stock Favorite Calls is active in System Settings and will conflict with custom caller lighting."
-                        else -> "Stock Assistant Feedback is active in System Settings and will conflict with custom AI lighting."
-                    },
-                    icon = Icons.Rounded.Warning,
-                    statusText = "Conflict Detected",
-                    accentColor = MaterialTheme.colorScheme.error,
-                    containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                    isWarning = true,
-                    bottomAction = {
-                        Button(
-                            onClick = { NativeHiLightDetector.openHiLightSettings(context) },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error,
-                                contentColor = MaterialTheme.colorScheme.onError
-                            )
-                        ) {
-                            Icon(Icons.Rounded.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Open System Settings to Resolve")
-                        }
-                    }
-                )
-            }
-
-            // Info Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            Icons.Rounded.Info,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = stringResource(R.string.onboarding_info_title),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    }
-                    Text(
-                        text = stringResource(R.string.onboarding_info_desc),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            // Shizuku Connection Status
+            // Step 1: Shizuku Privileged Access Card
             val isShizukuConnected = shizukuState == ShizukuBridge.State.CONNECTED
             ExpressiveStatusCard(
-                title = "Shizuku Privileged Access",
+                title = "Step 1: Shizuku Hardware Control",
                 subtitle = when (shizukuState) {
-                    ShizukuBridge.State.CONNECTED -> "Active session holding privileged control over your Pixel's rear light array."
-                    ShizukuBridge.State.NEEDS_PERMISSION -> "Shizuku is running. Tap 'Authorize' below to grant privileged LED access."
-                    ShizukuBridge.State.NOT_RUNNING -> "Shizuku daemon is stopped. Start via Wireless Debugging or ADB."
-                    ShizukuBridge.State.NOT_INSTALLED -> "Shizuku Manager is not installed on this device."
-                    ShizukuBridge.State.CONNECTING -> "Connecting to local Shizuku binder daemon..."
-                    else -> controller.shizuku.errorText() ?: "Could not establish binder connection to Shizuku."
+                    ShizukuBridge.State.CONNECTED -> "Shizuku privileged session is active and ready."
+                    ShizukuBridge.State.NEEDS_PERMISSION -> "Shizuku is running. Tap 'Authorize' to grant LED hardware control."
+                    ShizukuBridge.State.NOT_RUNNING -> "Shizuku is not running. Start via Wireless Debugging or ADB."
+                    ShizukuBridge.State.NOT_INSTALLED -> "Shizuku Manager is not installed."
+                    ShizukuBridge.State.CONNECTING -> "Connecting to Shizuku daemon..."
+                    else -> controller.shizuku.errorText() ?: "Could not connect to Shizuku."
                 },
                 icon = if (isShizukuConnected) Icons.Rounded.VerifiedUser else Icons.Rounded.AdminPanelSettings,
                 statusText = when (shizukuState) {
@@ -164,19 +127,6 @@ fun OnboardingScreen(controller: LightController, onComplete: () -> Unit) {
                 contentColor = if (isShizukuConnected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer,
                 bottomAction = {
                     when (shizukuState) {
-                        ShizukuBridge.State.CONNECTED -> {
-                            OutlinedButton(
-                                onClick = { controller.shizuku.unbind() },
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    contentColor = MaterialTheme.colorScheme.primary
-                                )
-                            ) {
-                                Icon(Icons.Rounded.PowerSettingsNew, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("Disconnect Shizuku Session")
-                            }
-                        }
                         ShizukuBridge.State.NEEDS_PERMISSION -> {
                             Button(
                                 onClick = { controller.shizuku.requestPermission() },
@@ -184,7 +134,7 @@ fun OnboardingScreen(controller: LightController, onComplete: () -> Unit) {
                             ) {
                                 Icon(Icons.Rounded.Key, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(8.dp))
-                                Text("Authorize Shizuku Access")
+                                Text("Authorize Shizuku")
                             }
                         }
                         ShizukuBridge.State.NOT_INSTALLED -> {
@@ -220,6 +170,7 @@ fun OnboardingScreen(controller: LightController, onComplete: () -> Unit) {
                                 }
                             }
                         }
+                        ShizukuBridge.State.CONNECTING, ShizukuBridge.State.CONNECTED -> null
                         else -> {
                             Button(
                                 onClick = { controller.shizuku.refresh() },
@@ -233,6 +184,103 @@ fun OnboardingScreen(controller: LightController, onComplete: () -> Unit) {
                     }
                 }
             )
+
+            // Step 2: Android Call Permissions Card
+            val hasAllPerms = isPhoneGranted && isCallLogGranted && isContactsGranted
+            val permsStatusText = when {
+                hasAllPerms -> "Granted"
+                !isPhoneGranted || !isCallLogGranted -> "Missing Phone/Call Permissions"
+                else -> "Missing Contacts"
+            }
+            val permsDesc = when {
+                hasAllPerms -> "Phone State, Call Log, and Contacts permissions are active. Caller identification is ready."
+                !isPhoneGranted || !isCallLogGranted -> "Phone State & Call Log permissions are required to detect and identify incoming caller numbers."
+                else -> "Contacts permission is missing. The app cannot match names and custom caller rules."
+            }
+
+            val permsAccent = if (hasAllPerms) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
+            val permsContainer = if (hasAllPerms) MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.45f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f)
+            val permsContent = if (hasAllPerms) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onErrorContainer
+
+            ExpressiveStatusCard(
+                title = "Step 2: Phone, Call Log & Contacts",
+                subtitle = permsDesc,
+                icon = if (hasAllPerms) Icons.Rounded.ContactPhone else Icons.Rounded.PermPhoneMsg,
+                statusText = permsStatusText,
+                accentColor = permsAccent,
+                containerColor = permsContainer,
+                contentColor = permsContent,
+                isWarning = !hasAllPerms,
+                bottomAction = if (!hasAllPerms) {
+                    {
+                        val missing = mutableListOf<String>().apply {
+                            if (!isPhoneGranted) add(Manifest.permission.READ_PHONE_STATE)
+                            if (!isCallLogGranted) add(Manifest.permission.READ_CALL_LOG)
+                            if (!isContactsGranted) add(Manifest.permission.READ_CONTACTS)
+                        }.toTypedArray()
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = { permissionLauncher.launch(missing) },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    contentColor = MaterialTheme.colorScheme.onError
+                                )
+                            ) {
+                                Text("Grant Permission")
+                            }
+                            OutlinedButton(
+                                onClick = { openAppSettings() },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("App Info")
+                            }
+                        }
+                    }
+                } else null
+            )
+
+            // Step 3: Stock Conflict Warning Card (Favorite Calls)
+            if (stockState.favoriteCallsActive) {
+                ExpressiveStatusCard(
+                    title = "Stock Settings Conflict",
+                    subtitle = "Stock Favorite Calls is active in System Settings. This will conflict with custom caller lighting in HiLight Plus.",
+                    icon = Icons.Rounded.Warning,
+                    statusText = "Conflict Detected",
+                    accentColor = MaterialTheme.colorScheme.error,
+                    containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    isWarning = true,
+                    bottomAction = {
+                        Button(
+                            onClick = { NativeHiLightDetector.openHiLightSettings(context) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            )
+                        ) {
+                            Icon(Icons.Rounded.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Open Settings to Disable")
+                        }
+                    }
+                )
+            }
+
+            Spacer(Modifier.weight(1f))
+
+            Button(
+                onClick = onComplete,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = isShizukuConnected
+            ) {
+                Text(stringResource(R.string.onboarding_complete_btn))
+            }
         }
     }
 }

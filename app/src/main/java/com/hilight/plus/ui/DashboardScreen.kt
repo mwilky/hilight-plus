@@ -46,16 +46,21 @@ fun DashboardScreen(controller: LightController, onResetAll: () -> Unit) {
     fun hasPhonePermission(): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
 
+    fun hasCallLogPermission(): Boolean =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED
+
     fun hasContactsPermission(): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
 
     var isPhoneGranted by remember { mutableStateOf(hasPhonePermission()) }
+    var isCallLogGranted by remember { mutableStateOf(hasCallLogPermission()) }
     var isContactsGranted by remember { mutableStateOf(hasContactsPermission()) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             isPhoneGranted = hasPhonePermission()
+            isCallLogGranted = hasCallLogPermission()
             isContactsGranted = hasContactsPermission()
             NativeHiLightDetector.check(context)
             controller.refreshStatus()
@@ -66,6 +71,7 @@ fun DashboardScreen(controller: LightController, onResetAll: () -> Unit) {
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) {
         isPhoneGranted = hasPhonePermission()
+        isCallLogGranted = hasCallLogPermission()
         isContactsGranted = hasContactsPermission()
     }
 
@@ -224,19 +230,18 @@ fun DashboardScreen(controller: LightController, onResetAll: () -> Unit) {
                 }
             )
 
-            // 2. Native Pixel HiLight Status & Conflict Card
-            val isNativeConflict = stockState.anyActive
+            // 2. Native Pixel HiLight Status & Conflict Card (Calls only)
+            val isNativeConflict = stockState.favoriteCallsActive
             val stockAccent = if (isNativeConflict) MaterialTheme.colorScheme.error else Color(0xFF388E3C)
             val stockContainer = if (isNativeConflict) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
             val stockContent = if (isNativeConflict) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer
 
             ExpressiveStatusCard(
-                title = "Stock HiLight Integration",
-                subtitle = when {
-                    stockState.bothActive -> "Both Favorite Calls and Assistant Feedback are active in System Settings. These will override HiLight Plus animations."
-                    stockState.favoriteCallsActive -> "Stock Favorite Calls is active in System Settings and will conflict with custom caller lighting."
-                    stockState.assistantFeedbackActive -> "Stock Assistant Feedback is active in System Settings and will conflict with custom AI lighting."
-                    else -> "Stock settings are cleared. HiLight Plus has full, unhindered control of the rear LED array."
+                title = "Stock Favorite Calls",
+                subtitle = if (isNativeConflict) {
+                    "Stock Favorite Calls is active in System Settings and will conflict with custom caller lighting."
+                } else {
+                    "Stock Favorite Calls setting is disabled. HiLight Plus has full control over caller lighting."
                 },
                 icon = if (isNativeConflict) Icons.Rounded.Warning else Icons.Rounded.CheckCircle,
                 statusText = if (isNativeConflict) "Conflict Active" else "Optimized",
@@ -263,17 +268,15 @@ fun DashboardScreen(controller: LightController, onResetAll: () -> Unit) {
             )
 
             // 3. Android Telephony & Contacts Permissions Card
-            val hasAllPerms = isPhoneGranted && isContactsGranted
+            val hasAllPerms = isPhoneGranted && isCallLogGranted && isContactsGranted
             val permsStatusText = when {
                 hasAllPerms -> "Granted"
-                !isPhoneGranted && !isContactsGranted -> "Missing 2 Permissions"
-                !isPhoneGranted -> "Missing Phone State"
+                !isPhoneGranted || !isCallLogGranted -> "Missing Phone/Call Permissions"
                 else -> "Missing Contacts"
             }
             val permsDesc = when {
-                hasAllPerms -> "Phone State and Contacts permissions are active. Incoming call detection is fully operational."
-                !isPhoneGranted && !isContactsGranted -> "Phone State (call detection) and Contacts (caller matching) permissions are required for custom call lighting."
-                !isPhoneGranted -> "Phone State permission is missing. The app cannot detect incoming ringing calls."
+                hasAllPerms -> "Phone State, Call Log, and Contacts permissions are active. Caller identification is fully operational."
+                !isPhoneGranted || !isCallLogGranted -> "Phone State & Call Log permissions are required to identify incoming caller numbers."
                 else -> "Contacts permission is missing. The app cannot look up names and custom caller lighting rules."
             }
 
@@ -294,6 +297,7 @@ fun DashboardScreen(controller: LightController, onResetAll: () -> Unit) {
                     {
                         val missing = mutableListOf<String>().apply {
                             if (!isPhoneGranted) add(Manifest.permission.READ_PHONE_STATE)
+                            if (!isCallLogGranted) add(Manifest.permission.READ_CALL_LOG)
                             if (!isContactsGranted) add(Manifest.permission.READ_CONTACTS)
                         }.toTypedArray()
 

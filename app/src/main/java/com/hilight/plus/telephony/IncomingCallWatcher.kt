@@ -3,6 +3,8 @@ package com.hilight.plus.telephony
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.provider.ContactsContract
 import android.telephony.TelephonyManager
 import android.util.Log
 import com.hilight.plus.AppStore
@@ -34,20 +36,19 @@ class IncomingCallWatcher : BroadcastReceiver() {
 
             when (stateStr) {
                 TelephonyManager.EXTRA_STATE_RINGING -> {
-                    Log.i(TAG, "Incoming call ringing: $incomingNumber")
+                    Log.i(TAG, "Incoming call ringing, number: '$incomingNumber'")
 
-                    if (incomingNumber.isBlank() || incomingNumber.equals("private", ignoreCase = true) || incomingNumber.equals("unknown", ignoreCase = true)) {
-                        // Unknown / Private number
-                        val isUnknownEnabled = store.isUnknownNumbersEnabled.first()
-                        if (isUnknownEnabled) {
-                            val pattern = store.unknownNumbersPattern.first()
-                            val color = store.unknownNumbersColor.first()
-                            Log.i(TAG, "Triggering unknown/private caller lighting: $pattern")
-                            controller.startIncomingCallAlert(pattern = pattern, color = color)
-                        } else {
-                            Log.i(TAG, "Unknown/private caller lights are disabled")
-                        }
+                    val isPrivateOrUnknown = incomingNumber.isBlank() ||
+                        incomingNumber.equals("private", ignoreCase = true) ||
+                        incomingNumber.equals("unknown", ignoreCase = true) ||
+                        incomingNumber.equals("-1") ||
+                        incomingNumber.equals("-2")
+
+                    if (isPrivateOrUnknown) {
+                        // Truly unknown / private / hidden caller number
+                        triggerUnknownAlert(store, controller)
                     } else {
+                        // 1. Check if matches a specific custom Contact Rule in HiLight Plus
                         val matchedRule = store.findRuleForPhoneNumber(incomingNumber)
                         if (matchedRule != null) {
                             if (matchedRule.isEnabled) {
@@ -57,14 +58,14 @@ class IncomingCallWatcher : BroadcastReceiver() {
                                 Log.i(TAG, "Custom rule for ${matchedRule.name} is disabled")
                             }
                         } else {
-                            val isOtherEnabled = store.isOtherContactsEnabled.first()
-                            if (isOtherEnabled) {
-                                val otherContactsPattern = store.otherContactsPattern.first()
-                                val otherContactsColor = store.otherContactsColor.first()
-                                Log.i(TAG, "Using other contacts default lighting: $otherContactsPattern")
-                                controller.startIncomingCallAlert(pattern = otherContactsPattern, color = otherContactsColor)
+                            // 2. Check if number exists in saved Android Contacts address book
+                            val isSaved = isSavedInAddressBook(context, incomingNumber)
+                            if (isSaved) {
+                                Log.i(TAG, "Caller is a saved contact (no custom rule) -> using 'All Other Contacts'")
+                                triggerOtherContactsAlert(store, controller)
                             } else {
-                                Log.i(TAG, "Other contacts lights are disabled")
+                                Log.i(TAG, "Caller is unsaved / not in contacts -> using 'Unknown & Private Numbers'")
+                                triggerUnknownAlert(store, controller)
                             }
                         }
                     }
@@ -76,6 +77,52 @@ class IncomingCallWatcher : BroadcastReceiver() {
                     controller.stopIncomingCallAlert()
                 }
             }
+        }
+    }
+
+    private suspend fun triggerOtherContactsAlert(store: AppStore, controller: LightController) {
+        val isOtherEnabled = store.isOtherContactsEnabled.first()
+        if (isOtherEnabled) {
+            val pattern = store.otherContactsPattern.first()
+            val color = store.otherContactsColor.first()
+            Log.i(TAG, "Triggering Other Contacts lighting: $pattern, color=$color")
+            controller.startIncomingCallAlert(pattern = pattern, color = color)
+        } else {
+            Log.i(TAG, "Other Contacts lights are disabled")
+        }
+    }
+
+    private suspend fun triggerUnknownAlert(store: AppStore, controller: LightController) {
+        val isUnknownEnabled = store.isUnknownNumbersEnabled.first()
+        if (isUnknownEnabled) {
+            val pattern = store.unknownNumbersPattern.first()
+            val color = store.unknownNumbersColor.first()
+            Log.i(TAG, "Triggering Unknown/Private lighting: $pattern, color=$color")
+            controller.startIncomingCallAlert(pattern = pattern, color = color)
+        } else {
+            Log.i(TAG, "Unknown/Private lights are disabled")
+        }
+    }
+
+    private fun isSavedInAddressBook(context: Context, phoneNumber: String): Boolean {
+        if (phoneNumber.isBlank()) return false
+        return try {
+            val uri = Uri.withAppendedPath(
+                ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
+                Uri.encode(phoneNumber)
+            )
+            context.contentResolver.query(
+                uri,
+                arrayOf(ContactsContract.PhoneLookup._ID),
+                null,
+                null,
+                null
+            )?.use { cursor ->
+                cursor.count > 0
+            } ?: false
+        } catch (t: Throwable) {
+            Log.w(TAG, "Error looking up contact in address book: ${t.message}")
+            false
         }
     }
 

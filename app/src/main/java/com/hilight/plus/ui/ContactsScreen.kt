@@ -75,19 +75,24 @@ fun ContactsScreen(controller: LightController) {
     var isConfiguringOtherContacts by remember { mutableStateOf(false) }
     var isConfiguringUnknownNumbers by remember { mutableStateOf(false) }
 
-    // Telephony & Contact Specific Permission Checks
+    // Telephony, Call Log & Contact Specific Permission Checks
     fun hasPhonePermission(): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
+
+    fun hasCallLogPermission(): Boolean =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED
 
     fun hasContactsPermission(): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
 
     var isPhoneGranted by remember { mutableStateOf(hasPhonePermission()) }
+    var isCallLogGranted by remember { mutableStateOf(hasCallLogPermission()) }
     var isContactsGranted by remember { mutableStateOf(hasContactsPermission()) }
 
     fun checkMissingPermissions(): Array<String> {
         val list = mutableListOf<String>()
         if (!hasPhonePermission()) list.add(Manifest.permission.READ_PHONE_STATE)
+        if (!hasCallLogPermission()) list.add(Manifest.permission.READ_CALL_LOG)
         if (!hasContactsPermission()) list.add(Manifest.permission.READ_CONTACTS)
         return list.toTypedArray()
     }
@@ -105,6 +110,7 @@ fun ContactsScreen(controller: LightController) {
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             isPhoneGranted = hasPhonePermission()
+            isCallLogGranted = hasCallLogPermission()
             isContactsGranted = hasContactsPermission()
             permanentlyDenied = isPermanentlyDenied()
         }
@@ -131,6 +137,7 @@ fun ContactsScreen(controller: LightController) {
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) {
         isPhoneGranted = hasPhonePermission()
+        isCallLogGranted = hasCallLogPermission()
         isContactsGranted = hasContactsPermission()
         permanentlyDenied = isPermanentlyDenied()
         if (isPhoneGranted && isContactsGranted) {
@@ -149,6 +156,7 @@ fun ContactsScreen(controller: LightController) {
     fun onAddContactClicked() {
         val missing = checkMissingPermissions()
         isPhoneGranted = hasPhonePermission()
+        isCallLogGranted = hasCallLogPermission()
         isContactsGranted = hasContactsPermission()
         permanentlyDenied = isPermanentlyDenied()
 
@@ -186,19 +194,16 @@ fun ContactsScreen(controller: LightController) {
             contentPadding = PaddingValues(bottom = 90.dp, top = 10.dp)
         ) {
             // Permission Warning Card tailored to exact missing permissions
-            val hasAllPermissions = isPhoneGranted && isContactsGranted
+            val hasAllPermissions = isPhoneGranted && isCallLogGranted && isContactsGranted
             if (!hasAllPermissions) {
                 val missingName = when {
-                    !isPhoneGranted && !isContactsGranted -> "Phone & Contacts permissions"
-                    !isPhoneGranted -> "Phone State permission"
+                    !isPhoneGranted || !isCallLogGranted -> "Phone & Call Caller ID permissions"
                     else -> "Contacts permission"
                 }
 
                 val descText = when {
-                    !isPhoneGranted && !isContactsGranted ->
-                        "HiLight Plus needs Phone State to detect incoming calls and Contacts to match your custom caller rules."
-                    !isPhoneGranted ->
-                        "HiLight Plus needs Phone State permission to detect when an incoming call is ringing and trigger the rear LEDs."
+                    !isCallLogGranted || !isPhoneGranted ->
+                        "HiLight Plus needs Phone & Call Log permissions to identify incoming caller numbers and match them against your contact rules."
                     else ->
                         "HiLight Plus needs Contacts permission to look up and match your custom contact rules."
                 }
@@ -304,8 +309,7 @@ fun ContactsScreen(controller: LightController) {
             }
 
             item {
-                Spacer(modifier = Modifier
-                    .height(4.dp))
+                Spacer(modifier = Modifier.height(4.dp))
             }
 
             if (isCallLightsEnabled) {
@@ -920,7 +924,7 @@ private fun PatternColorConfigDialog(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Select Color",
+                        text = "Select Alert Color",
                         style = MaterialTheme.typography.labelLarge,
                         color = if (isColorEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
                     )

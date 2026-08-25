@@ -46,9 +46,11 @@ class ShizukuBridge private constructor(private val app: Application) {
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+            Log.e("HiLightPlus", "=== ShizukuBridge: onServiceConnected fired ===")
             if (binder == null || !binder.pingBinder()) {
                 _state.value = State.FAILED
                 lastError = "Service returned an invalid binder"
+                Log.e("HiLightPlus", "ShizukuBridge: Service returned an invalid binder")
                 return
             }
             service = IHiLightService.Stub.asInterface(binder)
@@ -56,11 +58,12 @@ class ShizukuBridge private constructor(private val app: Application) {
             manuallyDisconnected = false
             val count = runCatching { service?.getLedCount() }.getOrNull() ?: 8
             if (count > 0) _ledCount.value = count
-            Log.i(TAG, "HiLightDaemonService connected with $count LEDs")
+            Log.e("HiLightPlus", "=== HiLightDaemonService CONNECTED with $count LEDs ===")
             onAvailabilityChanged?.invoke()
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
+            Log.e("HiLightPlus", "=== ShizukuBridge: onServiceDisconnected ===")
             service = null
             if (_state.value == State.CONNECTED) {
                 _state.value = if (manuallyDisconnected) State.DISCONNECTED else State.NOT_RUNNING
@@ -71,6 +74,7 @@ class ShizukuBridge private constructor(private val app: Application) {
 
     private val permissionListener =
         Shizuku.OnRequestPermissionResultListener { _, grantResult ->
+            Log.e("HiLightPlus", "Shizuku permission result: $grantResult")
             if (grantResult == PackageManager.PERMISSION_GRANTED) {
                 manuallyDisconnected = false
                 bind()
@@ -80,13 +84,16 @@ class ShizukuBridge private constructor(private val app: Application) {
         }
 
     init {
+        Log.e("HiLightPlus", "=== ShizukuBridge Initializing ===")
         Shizuku.addRequestPermissionResultListener(permissionListener)
         Shizuku.addBinderReceivedListenerSticky {
+            Log.e("HiLightPlus", "Shizuku binder received (sticky)")
             if (!manuallyDisconnected) {
                 refresh()
             }
         }
         Shizuku.addBinderDeadListener {
+            Log.e("HiLightPlus", "Shizuku binder died")
             service = null
             _state.value = if (manuallyDisconnected) State.DISCONNECTED else State.NOT_RUNNING
             onAvailabilityChanged?.invoke()
@@ -105,20 +112,25 @@ class ShizukuBridge private constructor(private val app: Application) {
         if (!Shizuku.pingBinder()) {
             if (!isInstalled()) {
                 _state.value = State.NOT_INSTALLED
+                Log.e("HiLightPlus", "Shizuku not installed")
                 return
             }
             _state.value = State.NOT_RUNNING
+            Log.e("HiLightPlus", "Shizuku daemon not running")
             return
         }
         if (Shizuku.isPreV11()) {
             _state.value = State.FAILED
             lastError = "Shizuku is too old; v11 or newer is required"
+            Log.e("HiLightPlus", "Shizuku version too old")
             return
         }
         if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
             _state.value = State.NEEDS_PERMISSION
+            Log.e("HiLightPlus", "Shizuku needs permission")
             return
         }
+        Log.e("HiLightPlus", "Shizuku ping OK and permission GRANTED -> calling bind()")
         bind()
     }
 
@@ -136,22 +148,28 @@ class ShizukuBridge private constructor(private val app: Application) {
     }
 
     fun connectManually() {
+        Log.e("HiLightPlus", "=== connectManually() called ===")
         manuallyDisconnected = false
         refresh()
     }
 
     private fun bind() {
-        if (_state.value == State.CONNECTING || _state.value == State.CONNECTED) return
+        if (_state.value == State.CONNECTING || _state.value == State.CONNECTED) {
+            Log.e("HiLightPlus", "bind() skipped, current state is ${_state.value}")
+            return
+        }
         _state.value = State.CONNECTING
+        Log.e("HiLightPlus", "Calling Shizuku.bindUserService()...")
         runCatching { Shizuku.bindUserService(args, connection) }
             .onFailure {
                 _state.value = State.FAILED
                 lastError = it.message
-                Log.w(TAG, "bindUserService failed: ${it.message}", it)
+                Log.e("HiLightPlus", "bindUserService failed: ${it.message}", it)
             }
     }
 
     fun unbind() {
+        Log.e("HiLightPlus", "=== unbind() called by user ===")
         manuallyDisconnected = true
         runCatching { Shizuku.unbindUserService(args, connection, true) }
         service = null
@@ -166,7 +184,7 @@ class ShizukuBridge private constructor(private val app: Application) {
     fun setAmbient(pattern: String, color: Long, brightness: Float, speedMs: Long) {
         val s = service ?: return
         runCatching { s.setAmbient(pattern, color, brightness, speedMs) }.onFailure {
-            Log.w(TAG, "setAmbient failed", it)
+            Log.e("HiLightPlus", "setAmbient failed", it)
             service = null
             _state.value = State.NOT_RUNNING
             onAvailabilityChanged?.invoke()
@@ -175,8 +193,9 @@ class ShizukuBridge private constructor(private val app: Application) {
 
     fun triggerAlert(pattern: String, color: Long, brightness: Float, speedMs: Long, durationMs: Long) {
         val s = service ?: return
+        Log.e("HiLightPlus", "triggerAlert: pattern=$pattern, color=$color, durationMs=$durationMs")
         runCatching { s.triggerAlert(pattern, color, brightness, speedMs, durationMs) }.onFailure {
-            Log.w(TAG, "triggerAlert failed", it)
+            Log.e("HiLightPlus", "triggerAlert failed", it)
             service = null
             _state.value = State.NOT_RUNNING
             onAvailabilityChanged?.invoke()
@@ -185,15 +204,17 @@ class ShizukuBridge private constructor(private val app: Application) {
 
     fun clearAlert() {
         val s = service ?: return
+        Log.e("HiLightPlus", "clearAlert called")
         runCatching { s.clearAlert() }.onFailure {
-            Log.w(TAG, "clearAlert failed", it)
+            Log.e("HiLightPlus", "clearAlert failed", it)
         }
     }
 
     fun turnOff() {
         val s = service ?: return
+        Log.e("HiLightPlus", "turnOff called")
         runCatching { s.turnOff() }.onFailure {
-            Log.w(TAG, "turnOff failed", it)
+            Log.e("HiLightPlus", "turnOff failed", it)
         }
     }
 
@@ -214,7 +235,6 @@ class ShizukuBridge private constructor(private val app: Application) {
     companion object {
         const val SHIZUKU_PKG = "moe.shizuku.privileged.api"
         const val PERMISSION_REQUEST = 4242
-        private const val TAG = "ShizukuBridge"
 
         @Volatile
         private var instance: ShizukuBridge? = null
