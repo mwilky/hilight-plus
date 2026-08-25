@@ -74,9 +74,9 @@ class LightController private constructor(app: Application) {
         durationMs: Long = 3000L
     ) {
         val calculatedSpeed = when (pattern) {
-            PatternMode.BREATHE, PatternMode.GOOGLE_QUAD -> 2000L
-            PatternMode.WAVE, PatternMode.GEMINI_RESPONDING -> 1200L
-            PatternMode.COMET, PatternMode.GEMINI_THINKING -> 800L
+            PatternMode.BREATHE -> 2000L
+            PatternMode.WAVE -> 1200L
+            PatternMode.COMET -> 800L
             PatternMode.RAINBOW -> 1200L
             PatternMode.PULSE -> 850L
             else -> speedMs
@@ -100,9 +100,9 @@ class LightController private constructor(app: Application) {
         speedMs: Long = 1000L
     ) {
         val calculatedSpeed = when (pattern) {
-            PatternMode.BREATHE, PatternMode.GOOGLE_QUAD -> 2000L
-            PatternMode.WAVE, PatternMode.GEMINI_RESPONDING -> 1200L
-            PatternMode.COMET, PatternMode.GEMINI_THINKING -> 800L
+            PatternMode.BREATHE -> 2000L
+            PatternMode.WAVE -> 1200L
+            PatternMode.COMET -> 800L
             PatternMode.RAINBOW -> 1200L
             PatternMode.PULSE -> 850L
             else -> speedMs
@@ -120,43 +120,6 @@ class LightController private constructor(app: Application) {
      * Halts any active incoming call or transient alert immediately.
      */
     fun stopIncomingCallAlert() {
-        shizuku.clearAlert()
-        syncState()
-    }
-
-    // --- Gemini / Assistant Lighting Triggers ---
-
-    fun triggerGeminiListening() {
-        scope.launch {
-            val enabled = store.isGeminiEnabled.first() && store.isEnabled.first()
-            if (!enabled) return@launch
-            val pattern = store.geminiListeningPattern.first()
-            val color = store.geminiListeningColor.first()
-            triggerAlertEffect(pattern = pattern, color = color, durationMs = 12_000L)
-        }
-    }
-
-    fun triggerGeminiThinking() {
-        scope.launch {
-            val enabled = store.isGeminiEnabled.first() && store.isEnabled.first()
-            if (!enabled) return@launch
-            val pattern = store.geminiThinkingPattern.first()
-            val color = store.geminiThinkingColor.first()
-            triggerAlertEffect(pattern = pattern, color = color, durationMs = 12_000L)
-        }
-    }
-
-    fun triggerGeminiResponding() {
-        scope.launch {
-            val enabled = store.isGeminiEnabled.first() && store.isEnabled.first()
-            if (!enabled) return@launch
-            val pattern = store.geminiRespondingPattern.first()
-            val color = store.geminiRespondingColor.first()
-            triggerAlertEffect(pattern = pattern, color = color, durationMs = 15_000L)
-        }
-    }
-
-    fun clearGeminiAlert() {
         shizuku.clearAlert()
         syncState()
     }

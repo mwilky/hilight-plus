@@ -9,6 +9,7 @@
 
     <!-- Incoming Call & Contact Permissions -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
 
     <!-- Shizuku API Permission & package query -->
@@ -16,9 +17,6 @@
 
     <queries>
         <package android:name="moe.shizuku.privileged.api" />
-        <package android:name="com.google.android.googlequicksearchbox" />
-        <package android:name="com.google.android.apps.googleassistant" />
-        <package android:name="com.google.android.apps.bard" />
     </queries>
 
     <application
@@ -55,19 +53,6 @@
                 <action android:name="android.intent.action.PHONE_STATE" />
             </intent-filter>
         </receiver>
-
-        <!-- Gemini Assistant Lifecycle Observer Service -->
-        <service
-            android:name=".assistant.GeminiAssistantWatcher"
-            android:exported="true"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/accessibility_service_config" />
-        </service>
 
         <service
             android:name=".NotificationTrigger"

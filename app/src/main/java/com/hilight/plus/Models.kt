@@ -9,12 +9,7 @@ enum class PatternMode(val id: String, val displayName: String) {
     PULSE("pulse", "Pulse"),
     WAVE("wave", "Wave"),
     COMET("comet", "Comet"),
-    RAINBOW("rainbow", "Rainbow"),
-
-    // --- Authentic Google Gemini Assistant Patterns ---
-    GOOGLE_QUAD("google_quad", "Google 4-Color"),
-    GEMINI_THINKING("gemini_thinking", "Gemini Comet"),
-    GEMINI_RESPONDING("gemini_responding", "Gemini Glow")
+    RAINBOW("rainbow", "Rainbow")
 }
 
 data class LightStyle(

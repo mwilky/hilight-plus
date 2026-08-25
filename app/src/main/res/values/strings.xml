@@ -10,9 +10,7 @@
 
     <!-- Native HiLight Conflict Warnings -->
     <string name="stock_hilight_warning_title">Stock HiLight Active</string>
-    <string name="stock_hilight_warning_both">Both <b>Favorite Contacts</b> and <b>Feedback Animations</b> are enabled in System Settings. These will override your custom patterns.</string>
-    <string name="stock_hilight_warning_calls"><b>Favorite Contacts</b> is enabled in System Settings. This native feature will conflict with HiLight Plus animations.</string>
-    <string name="stock_hilight_warning_assistant"><b>Feedback Animations</b> (Assistant) is enabled in System Settings and will conflict with your custom animations.</string>
+    <string name="stock_hilight_warning_calls"><b>Favorite Contacts</b> is enabled in System Settings. This native feature will conflict with HiLight Plus caller animations.</string>
     <string name="stock_hilight_open_settings">Disable in Settings</string>
 
     <string name="main_title">HiLight Plus</string>
@@ -20,6 +18,4 @@
     <string name="main_test_card_desc">Pick a color and tap \'Test Device\' to illuminate the 8 rear LEDs, or \'Preview\' to watch on your screen.</string>
     <string name="main_test_btn">Test Device</string>
     <string name="main_reset_onboarding">Reset Onboarding &amp; Permissions</string>
-
-    <string name="accessibility_service_desc">Monitors Gemini and Google Assistant window states to illuminate the Pixel 11 rear LEDs during voice queries.</string>
 </resources>

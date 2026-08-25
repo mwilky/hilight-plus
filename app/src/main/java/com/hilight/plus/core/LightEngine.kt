@@ -99,7 +99,8 @@ class LightEngine {
             alertSpeedMs = speedMs
             alertStartMs = System.currentTimeMillis()
             alertDurationMs = durationMs
-            needsSessionReset = true // Guarantee a clean session reset when starting any alert
+            needsSessionReset = true
+            Log.i(TAG, "triggerAlert: pattern=$pattern, color=$color, durationMs=$durationMs")
         }
     }
 
