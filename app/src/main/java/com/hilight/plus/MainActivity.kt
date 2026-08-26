@@ -16,10 +16,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
-import com.hilight.plus.ui.ContactsScreen
-import com.hilight.plus.ui.DashboardScreen
+import com.hilight.plus.ui.AboutScreen
+import com.hilight.plus.ui.ConditionsScreen
 import com.hilight.plus.ui.HiLightPlusTheme
-import com.hilight.plus.ui.NotificationsScreen
+import com.hilight.plus.ui.HomeScreen
 import com.hilight.plus.ui.OnboardingScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -96,14 +96,14 @@ class MainActivity : ComponentActivity() {
 }
 
 private enum class NavTab(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    DASHBOARD("Dashboard", Icons.Rounded.Dashboard),
-    CONTACTS("Contacts", Icons.Rounded.Contacts),
-    NOTIFICATIONS("Notifications", Icons.Rounded.Notifications)
+    HOME("Home", Icons.Rounded.Home),
+    CONDITIONS("Conditions", Icons.Rounded.Tune),
+    ABOUT("About", Icons.Rounded.Info)
 }
 
 @Composable
 private fun MainAppNavigation(controller: LightController, onResetAll: () -> Unit) {
-    var selectedTab by remember { mutableStateOf(NavTab.DASHBOARD) }
+    var selectedTab by remember { mutableStateOf(NavTab.HOME) }
 
     Scaffold(
         bottomBar = {
@@ -121,9 +121,9 @@ private fun MainAppNavigation(controller: LightController, onResetAll: () -> Uni
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             when (selectedTab) {
-                NavTab.DASHBOARD -> DashboardScreen(controller = controller, onResetAll = onResetAll)
-                NavTab.CONTACTS -> ContactsScreen(controller = controller)
-                NavTab.NOTIFICATIONS -> NotificationsScreen(controller = controller)
+                NavTab.HOME -> HomeScreen(controller = controller)
+                NavTab.CONDITIONS -> ConditionsScreen(controller = controller)
+                NavTab.ABOUT -> AboutScreen(controller = controller, onResetAll = onResetAll)
             }
         }
     }

@@ -36,12 +36,7 @@ fun ExpressiveStatusCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        border = if (isWarning) {
-            BorderStroke(1.5.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
-        } else {
-            BorderStroke(1.dp, accentColor.copy(alpha = 0.18f))
-        }
+        colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
