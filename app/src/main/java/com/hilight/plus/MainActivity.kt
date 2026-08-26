@@ -19,6 +19,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.hilight.plus.ui.ContactsScreen
 import com.hilight.plus.ui.DashboardScreen
 import com.hilight.plus.ui.HiLightPlusTheme
+import com.hilight.plus.ui.NotificationsScreen
 import com.hilight.plus.ui.OnboardingScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -74,6 +75,7 @@ class MainActivity : ComponentActivity() {
                                     controller.shizuku.unbind()
                                     runCatching {
                                         revokeSelfPermissionOnKill(Manifest.permission.READ_PHONE_STATE)
+                                        revokeSelfPermissionOnKill(Manifest.permission.READ_CALL_LOG)
                                         revokeSelfPermissionOnKill(Manifest.permission.READ_CONTACTS)
                                         revokeSelfPermissionOnKill(Manifest.permission.POST_NOTIFICATIONS)
                                     }
@@ -95,7 +97,8 @@ class MainActivity : ComponentActivity() {
 
 private enum class NavTab(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     DASHBOARD("Dashboard", Icons.Rounded.Dashboard),
-    CALLS("Calls", Icons.Rounded.PhoneInTalk)
+    CONTACTS("Contacts", Icons.Rounded.Contacts),
+    NOTIFICATIONS("Notifications", Icons.Rounded.Notifications)
 }
 
 @Composable
@@ -119,7 +122,8 @@ private fun MainAppNavigation(controller: LightController, onResetAll: () -> Uni
         Box(modifier = Modifier.padding(padding)) {
             when (selectedTab) {
                 NavTab.DASHBOARD -> DashboardScreen(controller = controller, onResetAll = onResetAll)
-                NavTab.CALLS -> ContactsScreen(controller = controller)
+                NavTab.CONTACTS -> ContactsScreen(controller = controller)
+                NavTab.NOTIFICATIONS -> NotificationsScreen(controller = controller)
             }
         }
     }
