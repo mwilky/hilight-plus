@@ -20,20 +20,18 @@ data class LightStyle(
 )
 
 /**
- * Lighting rule assigned to a specific contact or phone number.
+ * Lighting rule assigned to a specific contact for Incoming Calls.
  */
 data class ContactRule(
     val id: String,
     val name: String,
-    val phoneNumber: String,
-    val color: Long,
+    val color: Long = 0xFF4285F4,
     val pattern: PatternMode = PatternMode.PULSE,
     val isEnabled: Boolean = true
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
         put("name", name)
-        put("phoneNumber", phoneNumber)
         put("color", color)
         put("pattern", pattern.name)
         put("isEnabled", isEnabled)
@@ -46,8 +44,73 @@ data class ContactRule(
             return ContactRule(
                 id = json.optString("id", ""),
                 name = json.optString("name", "Unknown Contact"),
-                phoneNumber = json.optString("phoneNumber", ""),
                 color = json.optLong("color", 0xFF4285F4),
+                pattern = pattern,
+                isEnabled = json.optBoolean("isEnabled", true)
+            )
+        }
+    }
+}
+
+/**
+ * Lighting rule assigned to a specific contact for Messages & Chats (Notifications).
+ */
+data class MessageContactRule(
+    val id: String,
+    val name: String,
+    val color: Long = 0xFF00E5FF,
+    val pattern: PatternMode = PatternMode.PULSE,
+    val isEnabled: Boolean = true
+) {
+    fun toJson(): JSONObject = JSONObject().apply {
+        put("id", id)
+        put("name", name)
+        put("color", color)
+        put("pattern", pattern.name)
+        put("isEnabled", isEnabled)
+    }
+
+    companion object {
+        fun fromJson(json: JSONObject): MessageContactRule {
+            val patternName = json.optString("pattern", PatternMode.PULSE.name)
+            val pattern = runCatching { PatternMode.valueOf(patternName) }.getOrDefault(PatternMode.PULSE)
+            return MessageContactRule(
+                id = json.optString("id", ""),
+                name = json.optString("name", "Unknown Contact"),
+                color = json.optLong("color", 0xFF00E5FF),
+                pattern = pattern,
+                isEnabled = json.optBoolean("isEnabled", true)
+            )
+        }
+    }
+}
+
+/**
+ * Lighting rule assigned to an installed Android application (e.g. WhatsApp, Slack).
+ */
+data class AppNotificationRule(
+    val packageName: String,
+    val appName: String,
+    val color: Long = 0xFF34A853,
+    val pattern: PatternMode = PatternMode.PULSE,
+    val isEnabled: Boolean = true
+) {
+    fun toJson(): JSONObject = JSONObject().apply {
+        put("packageName", packageName)
+        put("appName", appName)
+        put("color", color)
+        put("pattern", pattern.name)
+        put("isEnabled", isEnabled)
+    }
+
+    companion object {
+        fun fromJson(json: JSONObject): AppNotificationRule {
+            val patternName = json.optString("pattern", PatternMode.PULSE.name)
+            val pattern = runCatching { PatternMode.valueOf(patternName) }.getOrDefault(PatternMode.PULSE)
+            return AppNotificationRule(
+                packageName = json.optString("packageName", ""),
+                appName = json.optString("appName", ""),
+                color = json.optLong("color", 0xFF34A853),
                 pattern = pattern,
                 isEnabled = json.optBoolean("isEnabled", true)
             )

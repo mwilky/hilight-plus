@@ -48,20 +48,23 @@ class IncomingCallWatcher : BroadcastReceiver() {
                         // Truly unknown / private / hidden caller number
                         triggerUnknownAlert(store, controller)
                     } else {
-                        // 1. Check if matches a specific custom Contact Rule in HiLight Plus
-                        val matchedRule = store.findRuleForPhoneNumber(incomingNumber)
+                        // 1. Look up contact display name from phonebook
+                        val contactName = lookupContactName(context, incomingNumber)
+
+                        // 2. Check if contact has a custom Call Rule configured in HiLight Plus
+                        val matchedRule = if (contactName != null) store.findRuleForContactName(contactName) else null
+
                         if (matchedRule != null) {
                             if (matchedRule.isEnabled) {
-                                Log.i(TAG, "Matched custom rule for ${matchedRule.name}: ${matchedRule.pattern}")
+                                Log.i(TAG, "Matched custom rule for '${matchedRule.name}': ${matchedRule.pattern}")
                                 controller.startIncomingCallAlert(pattern = matchedRule.pattern, color = matchedRule.color)
                             } else {
-                                Log.i(TAG, "Custom rule for ${matchedRule.name} is disabled")
+                                Log.i(TAG, "Custom rule for '${matchedRule.name}' is disabled")
                             }
                         } else {
-                            // 2. Check if number exists in saved Android Contacts address book
-                            val isSaved = isSavedInAddressBook(context, incomingNumber)
-                            if (isSaved) {
-                                Log.i(TAG, "Caller is a saved contact (no custom rule) -> using 'All Other Contacts'")
+                            // 3. If contact is in address book (no custom rule) -> All Other Contacts
+                            if (contactName != null) {
+                                Log.i(TAG, "Caller '$contactName' is a saved contact (no custom rule) -> using 'All Other Contacts'")
                                 triggerOtherContactsAlert(store, controller)
                             } else {
                                 Log.i(TAG, "Caller is unsaved / not in contacts -> using 'Unknown & Private Numbers'")
@@ -104,8 +107,8 @@ class IncomingCallWatcher : BroadcastReceiver() {
         }
     }
 
-    private fun isSavedInAddressBook(context: Context, phoneNumber: String): Boolean {
-        if (phoneNumber.isBlank()) return false
+    private fun lookupContactName(context: Context, phoneNumber: String): String? {
+        if (phoneNumber.isBlank()) return null
         return try {
             val uri = Uri.withAppendedPath(
                 ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
@@ -113,16 +116,19 @@ class IncomingCallWatcher : BroadcastReceiver() {
             )
             context.contentResolver.query(
                 uri,
-                arrayOf(ContactsContract.PhoneLookup._ID),
+                arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME),
                 null,
                 null,
                 null
             )?.use { cursor ->
-                cursor.count > 0
-            } ?: false
+                if (cursor.moveToFirst()) {
+                    val idx = cursor.getColumnIndex(ContactsContract.PhoneLookup.DISPLAY_NAME)
+                    if (idx != -1) cursor.getString(idx) else null
+                } else null
+            }
         } catch (t: Throwable) {
             Log.w(TAG, "Error looking up contact in address book: ${t.message}")
-            false
+            null
         }
     }
 

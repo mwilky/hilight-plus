@@ -13,7 +13,8 @@ import org.json.JSONArray
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "hilight_plus_settings")
 
 /**
- * DataStore-backed repository managing application settings, light configurations, and contact calling rules.
+ * DataStore-backed repository managing application settings, light configurations,
+ * call contact rules, message contact rules, and per-app notification rules.
  */
 class AppStore private constructor(private val appContext: Context) {
 
@@ -26,18 +27,27 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_SPEED_MS = longPreferencesKey("speed_ms")
         private val KEY_AUTO_OFF_SEC = intPreferencesKey("auto_off_sec")
 
-        // Contact Calling Settings: All Other Contacts
+        // Call Settings: All Other Contacts
         private val KEY_CALL_LIGHTS_ENABLED = booleanPreferencesKey("call_lights_enabled")
         private val KEY_OTHER_CONTACTS_ENABLED = booleanPreferencesKey("other_contacts_enabled")
         private val KEY_OTHER_CONTACTS_COLOR = longPreferencesKey("other_contacts_color")
         private val KEY_OTHER_CONTACTS_PATTERN = stringPreferencesKey("other_contacts_pattern")
 
-        // Contact Calling Settings: Unknown / Private Numbers
+        // Call Settings: Unknown / Private Numbers
         private val KEY_UNKNOWN_NUMBERS_ENABLED = booleanPreferencesKey("unknown_numbers_enabled")
         private val KEY_UNKNOWN_NUMBERS_COLOR = longPreferencesKey("unknown_numbers_color")
         private val KEY_UNKNOWN_NUMBERS_PATTERN = stringPreferencesKey("unknown_numbers_pattern")
 
-        private val KEY_CONTACT_RULES_JSON = stringPreferencesKey("contact_rules_json")
+        private val KEY_CALL_RULES_JSON = stringPreferencesKey("contact_rules_json")
+
+        // Notification & Messaging Settings
+        private val KEY_NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
+        private val KEY_NOTIFICATION_DURATION_SEC = intPreferencesKey("notification_duration_sec")
+        private val KEY_DEFAULT_NOTIF_ENABLED = booleanPreferencesKey("default_notif_enabled")
+        private val KEY_DEFAULT_NOTIF_COLOR = longPreferencesKey("default_notif_color")
+        private val KEY_DEFAULT_NOTIF_PATTERN = stringPreferencesKey("default_notif_pattern")
+        private val KEY_MESSAGE_CONTACT_RULES_JSON = stringPreferencesKey("message_contact_rules_json")
+        private val KEY_APP_RULES_JSON = stringPreferencesKey("app_rules_json")
 
         @Volatile
         private var instance: AppStore? = null
@@ -69,7 +79,7 @@ class AppStore private constructor(private val appContext: Context) {
     val autoOffSeconds: Flow<Int> = appContext.dataStore.data
         .map { it[KEY_AUTO_OFF_SEC] ?: 60 }
 
-    // --- Contact Calling Settings: All Other Contacts ---
+    // --- Call Settings: All Other Contacts ---
 
     val isCallLightsEnabled: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_CALL_LIGHTS_ENABLED] ?: true }
@@ -86,7 +96,7 @@ class AppStore private constructor(private val appContext: Context) {
             runCatching { PatternMode.valueOf(name) }.getOrDefault(PatternMode.PULSE)
         }
 
-    // --- Contact Calling Settings: Unknown / Private Numbers ---
+    // --- Call Settings: Unknown / Private Numbers ---
 
     val isUnknownNumbersEnabled: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_UNKNOWN_NUMBERS_ENABLED] ?: true }
@@ -102,12 +112,58 @@ class AppStore private constructor(private val appContext: Context) {
 
     val contactRules: Flow<List<ContactRule>> = appContext.dataStore.data
         .map { prefs ->
-            val raw = prefs[KEY_CONTACT_RULES_JSON] ?: "[]"
+            val raw = prefs[KEY_CALL_RULES_JSON] ?: "[]"
             runCatching {
                 val array = JSONArray(raw)
                 val list = mutableListOf<ContactRule>()
                 for (i in 0 until array.length()) {
                     list.add(ContactRule.fromJson(array.getJSONObject(i)))
+                }
+                list.toList()
+            }.getOrDefault(emptyList())
+        }
+
+    // --- Notification & Messaging Settings ---
+
+    val isNotificationsEnabled: Flow<Boolean> = appContext.dataStore.data
+        .map { it[KEY_NOTIFICATIONS_ENABLED] ?: true }
+
+    val notificationDurationSeconds: Flow<Int> = appContext.dataStore.data
+        .map { it[KEY_NOTIFICATION_DURATION_SEC] ?: 30 }
+
+    val isDefaultNotifEnabled: Flow<Boolean> = appContext.dataStore.data
+        .map { it[KEY_DEFAULT_NOTIF_ENABLED] ?: true }
+
+    val defaultNotifColor: Flow<Long> = appContext.dataStore.data
+        .map { it[KEY_DEFAULT_NOTIF_COLOR] ?: 0xFFFFFFFF }
+
+    val defaultNotifPattern: Flow<PatternMode> = appContext.dataStore.data
+        .map { prefs ->
+            val name = prefs[KEY_DEFAULT_NOTIF_PATTERN] ?: PatternMode.PULSE.name
+            runCatching { PatternMode.valueOf(name) }.getOrDefault(PatternMode.PULSE)
+        }
+
+    val messageContactRules: Flow<List<MessageContactRule>> = appContext.dataStore.data
+        .map { prefs ->
+            val raw = prefs[KEY_MESSAGE_CONTACT_RULES_JSON] ?: "[]"
+            runCatching {
+                val array = JSONArray(raw)
+                val list = mutableListOf<MessageContactRule>()
+                for (i in 0 until array.length()) {
+                    list.add(MessageContactRule.fromJson(array.getJSONObject(i)))
+                }
+                list.toList()
+            }.getOrDefault(emptyList())
+        }
+
+    val appRules: Flow<List<AppNotificationRule>> = appContext.dataStore.data
+        .map { prefs ->
+            val raw = prefs[KEY_APP_RULES_JSON] ?: "[]"
+            runCatching {
+                val array = JSONArray(raw)
+                val list = mutableListOf<AppNotificationRule>()
+                for (i in 0 until array.length()) {
+                    list.add(AppNotificationRule.fromJson(array.getJSONObject(i)))
                 }
                 list.toList()
             }.getOrDefault(emptyList())
@@ -164,10 +220,30 @@ class AppStore private constructor(private val appContext: Context) {
         appContext.dataStore.edit { it[KEY_UNKNOWN_NUMBERS_PATTERN] = pattern.name }
     }
 
+    suspend fun setNotificationsEnabled(enabled: Boolean) {
+        appContext.dataStore.edit { it[KEY_NOTIFICATIONS_ENABLED] = enabled }
+    }
+
+    suspend fun setNotificationDurationSeconds(seconds: Int) {
+        appContext.dataStore.edit { it[KEY_NOTIFICATION_DURATION_SEC] = seconds }
+    }
+
+    suspend fun setDefaultNotifEnabled(enabled: Boolean) {
+        appContext.dataStore.edit { it[KEY_DEFAULT_NOTIF_ENABLED] = enabled }
+    }
+
+    suspend fun setDefaultNotifColor(color: Long) {
+        appContext.dataStore.edit { it[KEY_DEFAULT_NOTIF_COLOR] = color }
+    }
+
+    suspend fun setDefaultNotifPattern(pattern: PatternMode) {
+        appContext.dataStore.edit { it[KEY_DEFAULT_NOTIF_PATTERN] = pattern.name }
+    }
+
     suspend fun saveContactRule(rule: ContactRule) {
         appContext.dataStore.edit { prefs ->
             val currentRules = contactRules.first().toMutableList()
-            val index = currentRules.indexOfFirst { it.id == rule.id || (it.phoneNumber.isNotEmpty() && it.phoneNumber == rule.phoneNumber) }
+            val index = currentRules.indexOfFirst { it.id == rule.id || it.name.equals(rule.name, ignoreCase = true) }
             if (index >= 0) {
                 currentRules[index] = rule
             } else {
@@ -176,7 +252,7 @@ class AppStore private constructor(private val appContext: Context) {
             val array = JSONArray().apply {
                 currentRules.forEach { put(it.toJson()) }
             }
-            prefs[KEY_CONTACT_RULES_JSON] = array.toString()
+            prefs[KEY_CALL_RULES_JSON] = array.toString()
         }
     }
 
@@ -186,22 +262,95 @@ class AppStore private constructor(private val appContext: Context) {
             val array = JSONArray().apply {
                 currentRules.forEach { put(it.toJson()) }
             }
-            prefs[KEY_CONTACT_RULES_JSON] = array.toString()
+            prefs[KEY_CALL_RULES_JSON] = array.toString()
+        }
+    }
+
+    suspend fun saveMessageContactRule(rule: MessageContactRule) {
+        appContext.dataStore.edit { prefs ->
+            val currentRules = messageContactRules.first().toMutableList()
+            val index = currentRules.indexOfFirst { it.id == rule.id || it.name.equals(rule.name, ignoreCase = true) }
+            if (index >= 0) {
+                currentRules[index] = rule
+            } else {
+                currentRules.add(rule)
+            }
+            val array = JSONArray().apply {
+                currentRules.forEach { put(it.toJson()) }
+            }
+            prefs[KEY_MESSAGE_CONTACT_RULES_JSON] = array.toString()
+        }
+    }
+
+    suspend fun deleteMessageContactRule(ruleId: String) {
+        appContext.dataStore.edit { prefs ->
+            val currentRules = messageContactRules.first().filterNot { it.id == ruleId }
+            val array = JSONArray().apply {
+                currentRules.forEach { put(it.toJson()) }
+            }
+            prefs[KEY_MESSAGE_CONTACT_RULES_JSON] = array.toString()
+        }
+    }
+
+    suspend fun saveAppRule(rule: AppNotificationRule) {
+        appContext.dataStore.edit { prefs ->
+            val currentRules = appRules.first().toMutableList()
+            val index = currentRules.indexOfFirst { it.packageName == rule.packageName }
+            if (index >= 0) {
+                currentRules[index] = rule
+            } else {
+                currentRules.add(rule)
+            }
+            val array = JSONArray().apply {
+                currentRules.forEach { put(it.toJson()) }
+            }
+            prefs[KEY_APP_RULES_JSON] = array.toString()
+        }
+    }
+
+    suspend fun deleteAppRule(packageName: String) {
+        appContext.dataStore.edit { prefs ->
+            val currentRules = appRules.first().filterNot { it.packageName == packageName }
+            val array = JSONArray().apply {
+                currentRules.forEach { put(it.toJson()) }
+            }
+            prefs[KEY_APP_RULES_JSON] = array.toString()
         }
     }
 
     /**
-     * Looks up if a specific incoming phone number matches an active contact rule.
+     * Looks up if a contact's display name matches an active call contact rule.
      */
-    suspend fun findRuleForPhoneNumber(incomingNumber: String): ContactRule? {
-        if (incomingNumber.isBlank()) return null
-        val normalized = incomingNumber.replace(Regex("[^0-9+]"), "")
+    suspend fun findRuleForContactName(contactName: String): ContactRule? {
+        if (contactName.isBlank()) return null
+        val cleanName = contactName.trim().lowercase()
         val rules = contactRules.first()
         return rules.firstOrNull { rule ->
+            rule.isEnabled && rule.name.trim().lowercase() == cleanName
+        }
+    }
+
+    /**
+     * Looks up if a sender's display name matches a saved message contact rule.
+     */
+    suspend fun findMessageRuleForSender(senderName: String): MessageContactRule? {
+        if (senderName.isBlank()) return null
+        val cleanName = senderName.trim().lowercase()
+        val rules = messageContactRules.first()
+        return rules.firstOrNull { rule ->
             rule.isEnabled && (
-                rule.phoneNumber == normalized ||
-                (rule.phoneNumber.length >= 7 && normalized.endsWith(rule.phoneNumber.takeLast(7)))
+                rule.name.trim().lowercase() == cleanName ||
+                cleanName.contains(rule.name.trim().lowercase())
             )
         }
+    }
+
+    /**
+     * Looks up if an app package has a custom notification rule configured.
+     */
+    suspend fun findRuleForPackage(packageName: String): AppNotificationRule? {
+        if (packageName.isBlank()) return null
+        val rules = appRules.first()
+        return rules.firstOrNull { it.isEnabled && it.packageName.equals(packageName, ignoreCase = true) }
     }
 }
