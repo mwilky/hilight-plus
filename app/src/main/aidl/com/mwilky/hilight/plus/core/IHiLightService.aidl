@@ -1,4 +1,4 @@
-package com.hilight.plus.core;
+package com.mwilky.hilight.plus.core;
 
 interface IHiLightService {
     void setAmbient(String pattern, long color, float brightness, long speedMs);

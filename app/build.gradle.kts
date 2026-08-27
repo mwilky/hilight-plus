@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.hilight.plus"
+    namespace = "com.mwilky.hilight.plus"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.hilight.plus"
+        applicationId = "com.mwilky.hilight.plus"
         minSdk = 37
         targetSdk = 37
         versionCode = 1

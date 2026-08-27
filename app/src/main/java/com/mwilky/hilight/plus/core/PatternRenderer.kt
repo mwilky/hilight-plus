@@ -1,6 +1,7 @@
-package com.hilight.plus.core
+package com.mwilky.hilight.plus.core
 
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -111,7 +112,7 @@ class PatternRenderer {
     private fun hsvToRgb(hue: Double, sat: Float, value: Float): Int {
         val h = (hue % 360.0 + 360.0) % 360.0
         val c = value * sat
-        val x = c * (1.0f - kotlin.math.abs(((h / 60.0) % 2.0 - 1.0).toFloat()))
+        val x = c * (1.0f - abs(((h / 60.0) % 2.0 - 1.0).toFloat()))
         val m = value - c
 
         val (r, g, b) = when ((h / 60.0).toInt() % 6) {

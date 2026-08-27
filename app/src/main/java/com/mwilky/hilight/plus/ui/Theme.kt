@@ -1,4 +1,4 @@
-package com.hilight.plus.ui
+package com.mwilky.hilight.plus.ui
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme

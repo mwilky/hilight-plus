@@ -1,11 +1,13 @@
-package com.hilight.plus.core
+package com.mwilky.hilight.plus.core
 
 import android.os.Process
 import android.util.Log
+import com.mwilky.hilight.plus.core.IHiLightService
+import kotlin.system.exitProcess
 
 /**
  * Privileged Shizuku UserService running under Shell UID (2000).
- * Implements [IHiLightService] to receive strongly-typed commands from the app.
+ * Implements [com.hilight.plus.core.IHiLightService] to receive strongly-typed commands from the app.
  */
 class HiLightDaemonService : IHiLightService.Stub() {
 
@@ -47,7 +49,7 @@ class HiLightDaemonService : IHiLightService.Stub() {
     override fun destroy() {
         Log.i(TAG, "HiLightDaemonService destroying...")
         engine.stop()
-        kotlin.system.exitProcess(0)
+        exitProcess(0)
     }
 
     companion object {

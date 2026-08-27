@@ -1,4 +1,4 @@
-package com.hilight.plus
+package com.mwilky.hilight.plus
 
 import android.content.ComponentName
 import android.content.Context

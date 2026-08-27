@@ -1,4 +1,4 @@
-package com.hilight.plus.ui
+package com.mwilky.hilight.plus.ui
 
 import android.Manifest
 import android.content.Intent
@@ -15,7 +15,6 @@ import androidx.compose.material.icons.automirrored.rounded.Launch
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -26,10 +25,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
-import com.hilight.plus.LightController
-import com.hilight.plus.NativeHiLightDetector
-import com.hilight.plus.R
-import com.hilight.plus.ShizukuBridge
+import com.mwilky.hilight.plus.LightController
+import com.mwilky.hilight.plus.NativeHiLightDetector
+import com.mwilky.hilight.plus.R
+import com.mwilky.hilight.plus.ShizukuBridge
 
 @Composable
 fun OnboardingScreen(

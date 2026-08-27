@@ -1,4 +1,4 @@
-package com.hilight.plus.telephony
+package com.mwilky.hilight.plus.telephony
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -7,8 +7,8 @@ import android.net.Uri
 import android.provider.ContactsContract
 import android.telephony.TelephonyManager
 import android.util.Log
-import com.hilight.plus.AppStore
-import com.hilight.plus.LightController
+import com.mwilky.hilight.plus.AppStore
+import com.mwilky.hilight.plus.LightController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first

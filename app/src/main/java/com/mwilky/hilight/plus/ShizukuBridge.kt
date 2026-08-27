@@ -1,4 +1,4 @@
-package com.hilight.plus
+package com.mwilky.hilight.plus
 
 import android.app.Application
 import android.content.ComponentName
@@ -9,8 +9,9 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.IBinder
 import android.util.Log
-import com.hilight.plus.core.HiLightDaemonService
-import com.hilight.plus.core.IHiLightService
+import com.mwilky.hilight.plus.BuildConfig
+import com.mwilky.hilight.plus.core.HiLightDaemonService
+import com.mwilky.hilight.plus.core.IHiLightService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

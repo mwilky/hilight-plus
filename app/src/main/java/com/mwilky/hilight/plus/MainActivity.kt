@@ -1,4 +1,4 @@
-package com.hilight.plus
+package com.mwilky.hilight.plus
 
 import android.Manifest
 import android.os.Bundle
@@ -12,15 +12,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
-import com.hilight.plus.ui.AboutScreen
-import com.hilight.plus.ui.ConditionsScreen
-import com.hilight.plus.ui.HiLightPlusTheme
-import com.hilight.plus.ui.HomeScreen
-import com.hilight.plus.ui.OnboardingScreen
+import com.mwilky.hilight.plus.ui.AboutScreen
+import com.mwilky.hilight.plus.ui.ConditionsScreen
+import com.mwilky.hilight.plus.ui.HiLightPlusTheme
+import com.mwilky.hilight.plus.ui.HomeScreen
+import com.mwilky.hilight.plus.ui.OnboardingScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -36,7 +37,9 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             HiLightPlusTheme {
-                val isOnboardingCompleted by store.isOnboardingCompleted.collectAsStateWithLifecycle(initialValue = null)
+                val isOnboardingCompleted by store.isOnboardingCompleted.collectAsStateWithLifecycle(
+                    initialValue = null
+                )
                 val scope = rememberCoroutineScope()
 
                 val owner = LocalLifecycleOwner.current
@@ -52,10 +55,14 @@ class MainActivity : ComponentActivity() {
 
                 when (isOnboardingCompleted) {
                     null -> {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
                             CircularProgressIndicator()
                         }
                     }
+
                     false -> {
                         OnboardingScreen(
                             controller = controller,
@@ -66,6 +73,7 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     }
+
                     true -> {
                         MainAppNavigation(
                             controller = controller,
@@ -95,7 +103,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class NavTab(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
+private enum class NavTab(val title: String, val icon: ImageVector) {
     HOME("Home", Icons.Rounded.Home),
     CONDITIONS("Conditions", Icons.Rounded.Tune),
     ABOUT("About", Icons.Rounded.Info)

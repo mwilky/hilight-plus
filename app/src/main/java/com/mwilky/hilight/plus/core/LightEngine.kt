@@ -1,4 +1,4 @@
-package com.hilight.plus.core
+package com.mwilky.hilight.plus.core
 
 import android.util.Log
 

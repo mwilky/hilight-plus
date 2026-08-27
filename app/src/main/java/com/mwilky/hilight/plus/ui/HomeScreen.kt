@@ -1,4 +1,4 @@
-package com.hilight.plus.ui
+package com.mwilky.hilight.plus.ui
 
 import android.Manifest
 import android.content.Context
@@ -42,7 +42,9 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
@@ -50,16 +52,16 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
-import com.hilight.plus.AppNotificationRule
-import com.hilight.plus.ContactRule
-import com.hilight.plus.LightController
-import com.hilight.plus.MessageContactRule
-import com.hilight.plus.NativeHiLightDetector
-import com.hilight.plus.PatternMode
-import com.hilight.plus.R
-import com.hilight.plus.ShizukuBridge
-import com.hilight.plus.StockHiLightState
-import com.hilight.plus.core.PatternRenderer
+import com.mwilky.hilight.plus.AppNotificationRule
+import com.mwilky.hilight.plus.ContactRule
+import com.mwilky.hilight.plus.LightController
+import com.mwilky.hilight.plus.MessageContactRule
+import com.mwilky.hilight.plus.NativeHiLightDetector
+import com.mwilky.hilight.plus.PatternMode
+import com.mwilky.hilight.plus.R
+import com.mwilky.hilight.plus.ShizukuBridge
+import com.mwilky.hilight.plus.StockHiLightState
+import com.mwilky.hilight.plus.core.PatternRenderer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -817,7 +819,7 @@ fun HomeContent(
                         if (callContactRules.isEmpty()) {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(24.dp),
+                                shape = RoundedCornerShape(16.dp),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
                             ) {
                                 Box(
@@ -830,7 +832,7 @@ fun HomeContent(
                                         text = "No custom caller rules.",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                        textAlign = TextAlign.Center
                                     )
                                 }
                             }
@@ -1008,7 +1010,7 @@ fun HomeContent(
                         if (messageContactRules.isEmpty()) {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(24.dp),
+                                shape = RoundedCornerShape(16.dp),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
                             ) {
                                 Box(
@@ -1021,7 +1023,7 @@ fun HomeContent(
                                         text = "No contact message rules.",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                        textAlign = TextAlign.Center
                                     )
                                 }
                             }
@@ -1072,7 +1074,7 @@ fun HomeContent(
                         if (appRules.isEmpty()) {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(24.dp),
+                                shape = RoundedCornerShape(16.dp),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
                             ) {
                                 Box(
@@ -1085,7 +1087,7 @@ fun HomeContent(
                                         text = "No custom app rules.",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                        textAlign = TextAlign.Center
                                     )
                                 }
                             }
@@ -1213,7 +1215,7 @@ fun AnimatedRingBadge(
     pattern: PatternMode,
     color: Long,
     renderer: PatternRenderer,
-    size: androidx.compose.ui.unit.Dp
+    size: Dp
 ) {
     var miniFrames by remember { mutableStateOf(IntArray(8) { 0x00000000 }) }
 
@@ -1594,19 +1596,42 @@ fun resolveContactName(context: Context, contactUri: Uri): String? {
     return if (!name.isNullOrBlank()) name else null
 }
 
-@Preview(name = "Home Screen Live Preview", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "Home Screen - With Rules", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-fun HomeScreenPreview() {
-    val mockCallContacts = listOf(
-        ContactRule("1", "Sarah Connor", 0xFFEA4335, PatternMode.PULSE, true),
-        ContactRule("2", "Mom", 0xFFFF007F, PatternMode.BREATHE, true)
-    )
-    val mockMsgContacts = listOf(
-        MessageContactRule("1", "Sarah Connor", 0xFF00E5FF, PatternMode.PULSE, true)
-    )
-    val mockApps = listOf(
-        AppNotificationRule("com.whatsapp", "WhatsApp", 0xFF25D366, PatternMode.PULSE, true)
-    )
+fun HomeScreenPreviewWithRules() {
+    HomeScreenPreviewContent(hasCallRules = true, hasMsgRules = true, hasAppRules = true)
+}
+
+@Preview(name = "Home Screen - Empty State", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+fun HomeScreenPreviewEmptyState() {
+    HomeScreenPreviewContent(hasCallRules = false, hasMsgRules = false, hasAppRules = false)
+}
+
+@Composable
+fun HomeScreenPreviewContent(
+    hasCallRules: Boolean = false,
+    hasMsgRules: Boolean = true,
+    hasAppRules: Boolean = true
+) {
+    val mockCallContacts = if (hasCallRules) {
+        listOf(
+            ContactRule("1", "Sarah Connor", 0xFFEA4335, PatternMode.PULSE, true),
+            ContactRule("2", "Mom", 0xFFFF007F, PatternMode.BREATHE, true)
+        )
+    } else emptyList()
+
+    val mockMsgContacts = if (hasMsgRules) {
+        listOf(
+            MessageContactRule("1", "Sarah Connor", 0xFF00E5FF, PatternMode.PULSE, true)
+        )
+    } else emptyList()
+
+    val mockApps = if (hasAppRules) {
+        listOf(
+            AppNotificationRule("com.whatsapp", "WhatsApp", 0xFF25D366, PatternMode.PULSE, true)
+        )
+    } else emptyList()
 
     HiLightPlusTheme {
         HomeContent(

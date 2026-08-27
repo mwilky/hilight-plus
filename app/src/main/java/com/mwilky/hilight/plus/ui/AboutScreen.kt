@@ -1,4 +1,4 @@
-package com.hilight.plus.ui
+package com.mwilky.hilight.plus.ui
 
 import android.Manifest
 import android.content.Intent
@@ -28,10 +28,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
-import com.hilight.plus.LightController
-import com.hilight.plus.NativeHiLightDetector
-import com.hilight.plus.R
-import com.hilight.plus.StockHiLightState
+import com.mwilky.hilight.plus.LightController
+import com.mwilky.hilight.plus.NativeHiLightDetector
+import com.mwilky.hilight.plus.R
+import com.mwilky.hilight.plus.StockHiLightState
 
 /**
  * About & Diagnostics Screen:

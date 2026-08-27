@@ -1,4 +1,4 @@
-package com.hilight.plus.ui
+package com.mwilky.hilight.plus.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.PI
@@ -45,7 +46,7 @@ fun DiffusedRingPreview(
                 color = inactiveChannelColor,
                 radius = ringRadius,
                 center = center,
-                style = androidx.compose.ui.graphics.drawscope.Stroke(width = channelStrokeWidth)
+                style = Stroke(width = channelStrokeWidth)
             )
 
             // Outer & Inner subtle lens edge outlines for clean definition on any theme background
@@ -53,13 +54,13 @@ fun DiffusedRingPreview(
                 color = ringBorderColor,
                 radius = ringRadius + (channelStrokeWidth / 2f),
                 center = center,
-                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
+                style = Stroke(width = 1.dp.toPx())
             )
             drawCircle(
                 color = ringBorderColor,
                 radius = (ringRadius - (channelStrokeWidth / 2f)).coerceAtLeast(1f),
                 center = center,
-                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
+                style = Stroke(width = 1.dp.toPx())
             )
 
             // Render diffused radial glow spots for each LED
@@ -119,7 +120,7 @@ fun DiffusedRingPreview(
                 color = frostedLensColor,
                 radius = ringRadius,
                 center = center,
-                style = androidx.compose.ui.graphics.drawscope.Stroke(width = channelStrokeWidth)
+                style = Stroke(width = channelStrokeWidth)
             )
         }
     }

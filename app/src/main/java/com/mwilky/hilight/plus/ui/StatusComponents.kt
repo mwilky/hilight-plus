@@ -1,4 +1,4 @@
-package com.hilight.plus.ui
+package com.mwilky.hilight.plus.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
