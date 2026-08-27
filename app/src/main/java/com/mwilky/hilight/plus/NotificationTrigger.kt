@@ -2,7 +2,10 @@ package com.mwilky.hilight.plus
 
 import android.app.Notification
 import android.app.Person
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
@@ -14,12 +17,57 @@ import kotlinx.coroutines.launch
 
 /**
  * Listens for incoming system notifications (messages, chats, apps) and triggers
- * the appropriate rear LED animation according to the 3-Tier Priority System
- * with user-configurable duration and per-rule/global Face-Down orientation checking.
+ * the appropriate rear LED animation according to the 3-Tier Priority System.
+ *
+ * Supports auto-dismissing lights when:
+ * 1. The triggering notification is dismissed/removed by the user.
+ * 2. The device is unlocked (ACTION_USER_PRESENT).
  */
 class NotificationTrigger : NotificationListenerService() {
 
     private val scope = CoroutineScope(Dispatchers.IO)
+    private var lastActiveNotificationKey: String? = null
+
+    private val unlockReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_USER_PRESENT) {
+                scope.launch {
+                    val store = AppStore.get(applicationContext)
+                    if (store.isStopOnUnlock.first()) {
+                        Log.i(TAG, "Device unlocked -> stopping notification lights")
+                        LightController.get(applicationContext).clearAlert()
+                        lastActiveNotificationKey = null
+                    }
+                }
+            }
+        }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        val filter = IntentFilter(Intent.ACTION_USER_PRESENT)
+        registerReceiver(unlockReceiver, filter)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        runCatching { unregisterReceiver(unlockReceiver) }
+    }
+
+    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
+        if (sbn == null) return
+        val removedKey = sbn.key
+        if (removedKey == lastActiveNotificationKey) {
+            scope.launch {
+                val store = AppStore.get(applicationContext)
+                if (store.isStopOnDismiss.first()) {
+                    Log.i(TAG, "Notification dismissed ($removedKey) -> stopping notification lights")
+                    LightController.get(applicationContext).clearAlert()
+                    lastActiveNotificationKey = null
+                }
+            }
+        }
+    }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         if (sbn == null) return
@@ -61,6 +109,7 @@ class NotificationTrigger : NotificationListenerService() {
                     val pattern = matchedContactRule.pattern
                     val color = matchedContactRule.color
                     Log.i(TAG, "Priority 1 Match: Contact '${matchedContactRule.name}' -> pattern=$pattern, color=$color")
+                    lastActiveNotificationKey = sbn.key
                     controller.triggerAlertEffect(pattern = pattern, color = color, durationMs = durationMs)
                 } else {
                     Log.i(TAG, "Priority 1 Match: Contact '${matchedContactRule.name}' is OFF or disabled -> NO LIGHT")
@@ -79,6 +128,7 @@ class NotificationTrigger : NotificationListenerService() {
                     val pattern = appRule.pattern
                     val color = appRule.color
                     Log.i(TAG, "Priority 2 Match: App '${appRule.appName}' ($pkg) -> pattern=$pattern, color=$color")
+                    lastActiveNotificationKey = sbn.key
                     controller.triggerAlertEffect(pattern = pattern, color = color, durationMs = durationMs)
                 } else {
                     Log.i(TAG, "Priority 2 Match: App '${appRule.appName}' is OFF or disabled -> NO LIGHT")
@@ -98,6 +148,7 @@ class NotificationTrigger : NotificationListenerService() {
                 val defaultColor = store.defaultNotifColor.first()
                 if (defaultPattern != PatternMode.OFF) {
                     Log.i(TAG, "Priority 3 Match: General Default -> pattern=$defaultPattern, color=$defaultColor")
+                    lastActiveNotificationKey = sbn.key
                     controller.triggerAlertEffect(pattern = defaultPattern, color = defaultColor, durationMs = durationMs)
                 } else {
                     Log.i(TAG, "Priority 3 Match: General Default is OFF -> NO LIGHT")

@@ -48,6 +48,8 @@ class AppStore private constructor(private val appContext: Context) {
         // Notification & Messaging Settings
         private val KEY_NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
         private val KEY_NOTIFICATION_DURATION_SEC = intPreferencesKey("notification_duration_sec")
+        private val KEY_STOP_ON_DISMISS = booleanPreferencesKey("stop_on_dismiss")
+        private val KEY_STOP_ON_UNLOCK = booleanPreferencesKey("stop_on_unlock")
         private val KEY_DEFAULT_NOTIF_ENABLED = booleanPreferencesKey("default_notif_enabled")
         private val KEY_DEFAULT_NOTIF_COLOR = longPreferencesKey("default_notif_color")
         private val KEY_DEFAULT_NOTIF_PATTERN = stringPreferencesKey("default_notif_pattern")
@@ -151,6 +153,12 @@ class AppStore private constructor(private val appContext: Context) {
 
     val notificationDurationSeconds: Flow<Int> = appContext.dataStore.data
         .map { it[KEY_NOTIFICATION_DURATION_SEC] ?: 30 }
+
+    val isStopOnDismiss: Flow<Boolean> = appContext.dataStore.data
+        .map { it[KEY_STOP_ON_DISMISS] ?: false }
+
+    val isStopOnUnlock: Flow<Boolean> = appContext.dataStore.data
+        .map { it[KEY_STOP_ON_UNLOCK] ?: false }
 
     val isDefaultNotifEnabled: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_DEFAULT_NOTIF_ENABLED] ?: true }
@@ -265,6 +273,14 @@ class AppStore private constructor(private val appContext: Context) {
 
     suspend fun setNotificationDurationSeconds(seconds: Int) {
         appContext.dataStore.edit { it[KEY_NOTIFICATION_DURATION_SEC] = seconds }
+    }
+
+    suspend fun setStopOnDismiss(enabled: Boolean) {
+        appContext.dataStore.edit { it[KEY_STOP_ON_DISMISS] = enabled }
+    }
+
+    suspend fun setStopOnUnlock(enabled: Boolean) {
+        appContext.dataStore.edit { it[KEY_STOP_ON_UNLOCK] = enabled }
     }
 
     suspend fun setDefaultNotifEnabled(enabled: Boolean) {

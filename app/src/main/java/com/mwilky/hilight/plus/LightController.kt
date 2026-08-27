@@ -120,6 +120,13 @@ class LightController private constructor(app: Application) {
      * Halts any active incoming call or transient alert immediately.
      */
     fun stopIncomingCallAlert() {
+        clearAlert()
+    }
+
+    /**
+     * Halts any active alert effect immediately.
+     */
+    fun clearAlert() {
         shizuku.clearAlert()
         syncState()
     }
