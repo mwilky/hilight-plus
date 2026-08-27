@@ -1,0 +1,71 @@
+# Google Play Store Listing: HiLight Plus
+
+---
+
+## 📌 App Name (Max 30 characters)
+**HiLight Plus: Pixel LED Alerts**
+
+---
+
+## 📝 Short Description (Max 80 characters)
+**Light up your Pixel’s rear LEDs for calls, messages, and app notifications.**
+
+---
+
+## 📄 Full Description (Max 4,000 characters)
+
+**HiLight Plus brings your Google Pixel’s rear hardware light array to life with customizable lighting alerts for incoming phone calls, contact messages, and app notifications.**
+
+Never miss an important call or alert again—even when your phone is placed face down or on silent. HiLight Plus lets you assign custom colors, fluid animations, and personalized illumination rules to individual contacts, chats, and your favorite apps.
+
+---
+
+### 💡 What Does HiLight Plus Do?
+
+When your Pixel is sitting face down on your desk or table, HiLight Plus uses the hardware LEDs on the back of your phone to visually notify you about incoming events:
+
+- **When someone calls you:** The rear lights illuminate with your chosen animated pattern and color. You can instantly tell who is calling (e.g. VIP contact, family member, work, or an unknown number) without picking up the phone.
+- **When you receive a text or chat:** The rear lights flash in a unique color and pattern assigned specifically to that person.
+- **When an app sends a notification:** WhatsApp, Slack, Gmail, or any installed app lights up the rear array in custom colors so you know what type of alert just arrived.
+- **Adjustable Timer:** You control how long the lights stay on after an alert arrives, from a quick 30-second flash up to 5 minutes.
+
+---
+
+### 🌟 Core Capabilities & Features
+
+#### 📞 1. Incoming Call Illumination
+- **Per-Contact Rules:** Assign custom lighting effects to specific people in your address book (e.g., Red Pulse for family, Cyan Comet for work colleagues, Neon Pink for a partner).
+- **All Other Contacts:** Set a default pattern and color for any saved contact who doesn’t have a custom rule.
+- **Unknown Numbers:** Set a distinct light alert for unsaved, hidden, or private numbers.
+
+#### 💬 2. 3-Tier Notification Priority Engine
+When multiple alerts arrive, HiLight Plus prioritizes your lighting intelligently:
+1. **Contact Message Priority:** High-priority custom lighting when specific contacts text or message you.
+2. **Per-App Customization:** Assign custom colors and animation modes to individual apps (e.g., Green for WhatsApp, Purple for Slack, Red for Gmail).
+3. **General Fallback:** A clean default light alert for all other apps.
+4. **Duration Control:** Choose how long the lights stay active with a smooth 30-second to 5-minute slider.
+
+#### 🌈 3. Six Expressive Lighting Patterns
+Pick from 6 fluid, hardware-accelerated animations:
+- **Pulse:** Crisp, rhythmic alert pulses.
+- **Breathe:** Smooth, gentle fading transitions.
+- **Wave:** Cascading rotational light sweeps around the array.
+- **Comet:** Fast, high-energy orbiting light trails.
+- **Rainbow:** Vibrant multi-color animated sweeps.
+- **Solid:** Clean, steady-state continuous glow.
+
+---
+
+### 🔒 100% Private & On-Device
+- **No Internet Access:** HiLight Plus has zero network permissions (`android.permission.INTERNET` is not included). No data ever leaves your device.
+- **No Tracking or Ads:** 100% ad-free, with no third-party analytics or tracking SDKs.
+- **Local Memory Only:** Incoming caller IDs, contact names, and notification triggers are processed transiently in local RAM only to match your lighting rules.
+
+---
+
+### ⚙️ How It Works (Requirements)
+Pixel devices do not expose public system APIs to control the rear light array. HiLight Plus uses **Shizuku** to safely communicate with the local hardware light drivers without requiring root access:
+
+1. Install and start **Shizuku** (available free on Google Play; easily activated via Wireless Debugging on Android 11+).
+2. Open **HiLight Plus** and tap **Authorize** when prompted.
+3. Turn on Call and Notification illumination, pick your colors, and enjoy customized rear lighting!
