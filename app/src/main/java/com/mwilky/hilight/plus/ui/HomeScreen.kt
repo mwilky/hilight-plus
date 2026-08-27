@@ -93,9 +93,11 @@ fun HomeScreen(controller: LightController) {
     val isOtherContactsEnabled by controller.store.isOtherContactsEnabled.collectAsStateWithLifecycle(initialValue = true)
     val otherContactsColor by controller.store.otherContactsColor.collectAsStateWithLifecycle(initialValue = 0xFF4285F4)
     val otherContactsPattern by controller.store.otherContactsPattern.collectAsStateWithLifecycle(initialValue = PatternMode.PULSE)
+    val otherContactsFaceDown by controller.store.otherContactsFaceDownMode.collectAsStateWithLifecycle(initialValue = com.mwilky.hilight.plus.FaceDownMode.INHERIT)
     val isUnknownNumbersEnabled by controller.store.isUnknownNumbersEnabled.collectAsStateWithLifecycle(initialValue = true)
     val unknownNumbersColor by controller.store.unknownNumbersColor.collectAsStateWithLifecycle(initialValue = 0xFFFBBC05)
     val unknownNumbersPattern by controller.store.unknownNumbersPattern.collectAsStateWithLifecycle(initialValue = PatternMode.PULSE)
+    val unknownNumbersFaceDown by controller.store.unknownNumbersFaceDownMode.collectAsStateWithLifecycle(initialValue = com.mwilky.hilight.plus.FaceDownMode.INHERIT)
     val callContactRules by controller.store.contactRules.collectAsStateWithLifecycle(initialValue = emptyList())
 
     // Notifications state
@@ -104,6 +106,7 @@ fun HomeScreen(controller: LightController) {
     val isDefaultNotifEnabled by controller.store.isDefaultNotifEnabled.collectAsStateWithLifecycle(initialValue = true)
     val defaultNotifColor by controller.store.defaultNotifColor.collectAsStateWithLifecycle(initialValue = 0xFFFFFFFF)
     val defaultNotifPattern by controller.store.defaultNotifPattern.collectAsStateWithLifecycle(initialValue = PatternMode.PULSE)
+    val defaultNotifFaceDown by controller.store.defaultNotifFaceDownMode.collectAsStateWithLifecycle(initialValue = com.mwilky.hilight.plus.FaceDownMode.INHERIT)
     val messageContactRules by controller.store.messageContactRules.collectAsStateWithLifecycle(initialValue = emptyList())
     val appRules by controller.store.appRules.collectAsStateWithLifecycle(initialValue = emptyList())
 
@@ -226,11 +229,13 @@ fun HomeScreen(controller: LightController) {
         isOtherContactsEnabled = isOtherContactsEnabled,
         otherContactsColor = otherContactsColor,
         otherContactsPattern = otherContactsPattern,
+        otherContactsFaceDownMode = otherContactsFaceDown,
         onToggleOtherContacts = { enabled -> scope.launch { controller.store.setOtherContactsEnabled(enabled) } },
         onEditOtherContacts = { isConfiguringOtherContacts = true },
         isUnknownNumbersEnabled = isUnknownNumbersEnabled,
         unknownNumbersColor = unknownNumbersColor,
         unknownNumbersPattern = unknownNumbersPattern,
+        unknownNumbersFaceDownMode = unknownNumbersFaceDown,
         onToggleUnknownNumbers = { enabled -> scope.launch { controller.store.setUnknownNumbersEnabled(enabled) } },
         onEditUnknownNumbers = { isConfiguringUnknownNumbers = true },
         callContactRules = callContactRules,
@@ -248,6 +253,7 @@ fun HomeScreen(controller: LightController) {
         isDefaultNotifEnabled = isDefaultNotifEnabled,
         defaultNotifColor = defaultNotifColor,
         defaultNotifPattern = defaultNotifPattern,
+        defaultNotifFaceDownMode = defaultNotifFaceDown,
         onToggleDefaultNotif = { enabled -> scope.launch { controller.store.setDefaultNotifEnabled(enabled) } },
         onEditDefaultNotif = { isConfiguringDefaultNotif = true },
         messageContactRules = messageContactRules,
@@ -274,11 +280,12 @@ fun HomeScreen(controller: LightController) {
             title = "Configure ${rule.name}",
             initialColor = rule.color,
             initialPattern = rule.pattern,
+            initialFaceDown = rule.faceDownMode,
             renderer = renderer,
             onDismiss = { callRuleBeingEdited = null },
-            onSave = { pattern, color ->
+            onSave = { pattern, color, faceDown ->
                 scope.launch {
-                    controller.store.saveContactRule(rule.copy(pattern = pattern, color = color))
+                    controller.store.saveContactRule(rule.copy(pattern = pattern, color = color, faceDownMode = faceDown))
                     callRuleBeingEdited = null
                 }
             }
@@ -287,17 +294,20 @@ fun HomeScreen(controller: LightController) {
 
     // All Other Contacts Dialog
     if (isConfiguringOtherContacts) {
+        val otherFaceDown by controller.store.otherContactsFaceDownMode.collectAsStateWithLifecycle(initialValue = com.mwilky.hilight.plus.FaceDownMode.INHERIT)
         CustomRuleDialog(
             title = "All Other Contacts",
             description = "Applied to incoming calls from saved contacts without a specific custom rule.",
             initialColor = otherContactsColor,
             initialPattern = otherContactsPattern,
+            initialFaceDown = otherFaceDown,
             renderer = renderer,
             onDismiss = { isConfiguringOtherContacts = false },
-            onSave = { pattern, color ->
+            onSave = { pattern, color, faceDown ->
                 scope.launch {
                     controller.store.setOtherContactsPattern(pattern)
                     controller.store.setOtherContactsColor(color)
+                    controller.store.setOtherContactsFaceDownMode(faceDown)
                     isConfiguringOtherContacts = false
                 }
             }
@@ -306,17 +316,20 @@ fun HomeScreen(controller: LightController) {
 
     // Unknown Numbers Dialog
     if (isConfiguringUnknownNumbers) {
+        val unknownFaceDown by controller.store.unknownNumbersFaceDownMode.collectAsStateWithLifecycle(initialValue = com.mwilky.hilight.plus.FaceDownMode.INHERIT)
         CustomRuleDialog(
             title = "Unknown & Private Numbers",
             description = "Applied to incoming calls from unsaved or hidden caller numbers.",
             initialColor = unknownNumbersColor,
             initialPattern = unknownNumbersPattern,
+            initialFaceDown = unknownFaceDown,
             renderer = renderer,
             onDismiss = { isConfiguringUnknownNumbers = false },
-            onSave = { pattern, color ->
+            onSave = { pattern, color, faceDown ->
                 scope.launch {
                     controller.store.setUnknownNumbersPattern(pattern)
                     controller.store.setUnknownNumbersColor(color)
+                    controller.store.setUnknownNumbersFaceDownMode(faceDown)
                     isConfiguringUnknownNumbers = false
                 }
             }
@@ -348,11 +361,12 @@ fun HomeScreen(controller: LightController) {
             title = "Configure ${rule.name}",
             initialColor = rule.color,
             initialPattern = rule.pattern,
+            initialFaceDown = rule.faceDownMode,
             renderer = renderer,
             onDismiss = { msgRuleBeingEdited = null },
-            onSave = { pattern, color ->
+            onSave = { pattern, color, faceDown ->
                 scope.launch {
-                    controller.store.saveMessageContactRule(rule.copy(pattern = pattern, color = color))
+                    controller.store.saveMessageContactRule(rule.copy(pattern = pattern, color = color, faceDownMode = faceDown))
                     msgRuleBeingEdited = null
                 }
             }
@@ -366,11 +380,12 @@ fun HomeScreen(controller: LightController) {
             title = "Configure ${rule.appName}",
             initialColor = rule.color,
             initialPattern = rule.pattern,
+            initialFaceDown = rule.faceDownMode,
             renderer = renderer,
             onDismiss = { appRuleBeingEdited = null },
-            onSave = { pattern, color ->
+            onSave = { pattern, color, faceDown ->
                 scope.launch {
-                    controller.store.saveAppRule(rule.copy(pattern = pattern, color = color))
+                    controller.store.saveAppRule(rule.copy(pattern = pattern, color = color, faceDownMode = faceDown))
                     appRuleBeingEdited = null
                 }
             }
@@ -379,17 +394,20 @@ fun HomeScreen(controller: LightController) {
 
     // Default Fallback Notif Dialog
     if (isConfiguringDefaultNotif) {
+        val notifFaceDown by controller.store.defaultNotifFaceDownMode.collectAsStateWithLifecycle(initialValue = com.mwilky.hilight.plus.FaceDownMode.INHERIT)
         CustomRuleDialog(
             title = "All Other Notifications",
             description = "Applied to incoming notifications from apps and senders without a specific custom rule.",
             initialColor = defaultNotifColor,
             initialPattern = defaultNotifPattern,
+            initialFaceDown = notifFaceDown,
             renderer = renderer,
             onDismiss = { isConfiguringDefaultNotif = false },
-            onSave = { pattern, color ->
+            onSave = { pattern, color, faceDown ->
                 scope.launch {
                     controller.store.setDefaultNotifPattern(pattern)
                     controller.store.setDefaultNotifColor(color)
+                    controller.store.setDefaultNotifFaceDownMode(faceDown)
                     isConfiguringDefaultNotif = false
                 }
             }
@@ -445,6 +463,9 @@ fun HomeContent(
     isDefaultNotifEnabled: Boolean,
     defaultNotifColor: Long,
     defaultNotifPattern: PatternMode,
+    defaultNotifFaceDownMode: com.mwilky.hilight.plus.FaceDownMode = com.mwilky.hilight.plus.FaceDownMode.INHERIT,
+    otherContactsFaceDownMode: com.mwilky.hilight.plus.FaceDownMode = com.mwilky.hilight.plus.FaceDownMode.INHERIT,
+    unknownNumbersFaceDownMode: com.mwilky.hilight.plus.FaceDownMode = com.mwilky.hilight.plus.FaceDownMode.INHERIT,
     onToggleDefaultNotif: (Boolean) -> Unit,
     onEditDefaultNotif: () -> Unit,
     messageContactRules: List<MessageContactRule>,
@@ -787,6 +808,7 @@ fun HomeContent(
                             color = otherContactsColor,
                             renderer = renderer,
                             isEnabled = isOtherContactsEnabled && isCallLightsEnabled,
+                            faceDownMode = otherContactsFaceDownMode,
                             onToggle = { if (isCallLightsEnabled) onToggleOtherContacts(it) },
                             onEdit = { if (isCallLightsEnabled) onEditOtherContacts() }
                         )
@@ -797,6 +819,7 @@ fun HomeContent(
                             color = unknownNumbersColor,
                             renderer = renderer,
                             isEnabled = isUnknownNumbersEnabled && isCallLightsEnabled,
+                            faceDownMode = unknownNumbersFaceDownMode,
                             onToggle = { if (isCallLightsEnabled) onToggleUnknownNumbers(it) },
                             onEdit = { if (isCallLightsEnabled) onEditUnknownNumbers() }
                         )
@@ -819,20 +842,29 @@ fun HomeContent(
                         if (callContactRules.isEmpty()) {
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
+                                shape = RoundedCornerShape(8.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                                )
                             ) {
-                                Box(
+                                Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(20.dp),
-                                    contentAlignment = Alignment.Center
+                                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
+                                    Icon(
+                                        Icons.Rounded.PhoneCallback,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                     Text(
                                         text = "No custom caller rules.",
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        textAlign = TextAlign.Center
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
                             }
@@ -844,6 +876,7 @@ fun HomeContent(
                                     color = rule.color,
                                     renderer = renderer,
                                     isEnabled = rule.isEnabled && isCallLightsEnabled,
+                                    faceDownMode = rule.faceDownMode,
                                     onToggle = { isEnabled -> if (isCallLightsEnabled) onToggleCallContactRule(rule, isEnabled) },
                                     onEdit = { if (isCallLightsEnabled) onEditCallContactRule(rule) },
                                     onDelete = { if (isCallLightsEnabled) onDeleteCallContactRule(rule.id) }
@@ -887,7 +920,7 @@ fun HomeContent(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Notification Illumination",
+                                text = "Notifications",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
@@ -920,6 +953,183 @@ fun HomeContent(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
+                        // Default Fallback Card
+                        TonalRuleCard(
+                            title = "All Other Notifications",
+                            subtitle = "Notifications with no specific contact or app rule",
+                            pattern = defaultNotifPattern,
+                            color = defaultNotifColor,
+                            renderer = renderer,
+                            isEnabled = isDefaultNotifEnabled && isNotifsEnabled,
+                            faceDownMode = defaultNotifFaceDownMode,
+                            onToggle = { if (isNotifsEnabled) onToggleDefaultNotif(it) },
+                            onEdit = { if (isNotifsEnabled) onEditDefaultNotif() }
+                        )
+
+                        // Contact Message Rules Header
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Custom contact rules (${messageContactRules.size})",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        if (messageContactRules.isEmpty()) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Message,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Text(
+                                        text = "No contact message rules.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+                        } else {
+                            messageContactRules.forEach { rule ->
+                                TonalRuleCard(
+                                    title = rule.name,
+                                    pattern = rule.pattern,
+                                    color = rule.color,
+                                    renderer = renderer,
+                                    isEnabled = rule.isEnabled && isNotifsEnabled,
+                                    faceDownMode = rule.faceDownMode,
+                                    onToggle = { isEnabled -> if (isNotifsEnabled) onToggleMessageRule(rule, isEnabled) },
+                                    onEdit = { if (isNotifsEnabled) onEditMessageRule(rule) },
+                                    onDelete = { if (isNotifsEnabled) onDeleteMessageRule(rule.id) }
+                                )
+                            }
+                        }
+
+                        OutlinedButton(
+                            onClick = { if (isNotifsEnabled) onAddMessageContact() },
+                            enabled = isNotifsEnabled,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Icon(Icons.Rounded.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Add contact")
+                        }
+
+                        // App Rules Header
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Custom app rules (${appRules.size})",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        if (appRules.isEmpty()) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Apps,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Text(
+                                        text = "No custom app rules.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+                        } else {
+                            appRules.forEach { rule ->
+                                TonalRuleCard(
+                                    title = rule.appName,
+                                    pattern = rule.pattern,
+                                    color = rule.color,
+                                    renderer = renderer,
+                                    isEnabled = rule.isEnabled && isNotifsEnabled,
+                                    faceDownMode = rule.faceDownMode,
+                                    onToggle = { isEnabled -> if (isNotifsEnabled) onToggleAppRule(rule, isEnabled) },
+                                    onEdit = { if (isNotifsEnabled) onEditAppRule(rule) },
+                                    onDelete = { if (isNotifsEnabled) onDeleteAppRule(rule.packageName) }
+                                )
+                            }
+                        }
+
+                        OutlinedButton(
+                            onClick = { if (isNotifsEnabled) onAddApp() },
+                            enabled = isNotifsEnabled,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Add app")
+                        }
+
+                        // Additional settings Header
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Additional settings",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
                         // Light Duration Slider Card with Compact Sleek Track & Handle
                         Card(
                             modifier = Modifier.fillMaxWidth(),
@@ -978,146 +1188,6 @@ fun HomeContent(
                                 )
                             }
                         }
-
-                        // Default Fallback Card
-                        TonalRuleCard(
-                            title = "All Other Notifications",
-                            subtitle = "Notifications with no specific contact or app rule",
-                            pattern = defaultNotifPattern,
-                            color = defaultNotifColor,
-                            renderer = renderer,
-                            isEnabled = isDefaultNotifEnabled && isNotifsEnabled,
-                            onToggle = { if (isNotifsEnabled) onToggleDefaultNotif(it) },
-                            onEdit = { if (isNotifsEnabled) onEditDefaultNotif() }
-                        )
-
-                        // Contact Message Rules Header
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "Custom contact rules (${messageContactRules.size})",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-
-                        if (messageContactRules.isEmpty()) {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(20.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "No contact message rules.",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        textAlign = TextAlign.Center
-                                    )
-                                }
-                            }
-                        } else {
-                            messageContactRules.forEach { rule ->
-                                TonalRuleCard(
-                                    title = rule.name,
-                                    pattern = rule.pattern,
-                                    color = rule.color,
-                                    renderer = renderer,
-                                    isEnabled = rule.isEnabled && isNotifsEnabled,
-                                    onToggle = { isEnabled -> if (isNotifsEnabled) onToggleMessageRule(rule, isEnabled) },
-                                    onEdit = { if (isNotifsEnabled) onEditMessageRule(rule) },
-                                    onDelete = { if (isNotifsEnabled) onDeleteMessageRule(rule.id) }
-                                )
-                            }
-                        }
-
-                        OutlinedButton(
-                            onClick = { if (isNotifsEnabled) onAddMessageContact() },
-                            enabled = isNotifsEnabled,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Icon(Icons.Rounded.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Add contact")
-                        }
-
-                        // App Rules Header
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "Custom app rules (${appRules.size})",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-
-                        if (appRules.isEmpty()) {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(20.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "No custom app rules.",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        textAlign = TextAlign.Center
-                                    )
-                                }
-                            }
-                        } else {
-                            appRules.forEach { rule ->
-                                TonalRuleCard(
-                                    title = rule.appName,
-                                    pattern = rule.pattern,
-                                    color = rule.color,
-                                    renderer = renderer,
-                                    isEnabled = rule.isEnabled && isNotifsEnabled,
-                                    onToggle = { isEnabled -> if (isNotifsEnabled) onToggleAppRule(rule, isEnabled) },
-                                    onEdit = { if (isNotifsEnabled) onEditAppRule(rule) },
-                                    onDelete = { if (isNotifsEnabled) onDeleteAppRule(rule.packageName) }
-                                )
-                            }
-                        }
-
-                        OutlinedButton(
-                            onClick = { if (isNotifsEnabled) onAddApp() },
-                            enabled = isNotifsEnabled,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Add app")
-                        }
                     }
                 }
             }
@@ -1139,6 +1209,7 @@ fun TonalRuleCard(
     onToggle: (Boolean) -> Unit,
     onEdit: () -> Unit,
     subtitle: String? = null,
+    faceDownMode: com.mwilky.hilight.plus.FaceDownMode = com.mwilky.hilight.plus.FaceDownMode.INHERIT,
     onDelete: (() -> Unit)? = null
 ) {
     Card(
@@ -1188,6 +1259,25 @@ fun TonalRuleCard(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
+                    }
+
+                    if (faceDownMode != com.mwilky.hilight.plus.FaceDownMode.INHERIT) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "Trigger:",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = if (faceDownMode == com.mwilky.hilight.plus.FaceDownMode.ONLY_FACE_DOWN) "Face down only" else "Always light",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
             }
@@ -1255,6 +1345,7 @@ fun AnimatedRingBadge(
 /**
  * Universal Dialog for Call Contact, Message Contact, App Rule, or Fallback configuration.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomRuleDialog(
     title: String,
@@ -1262,11 +1353,13 @@ fun CustomRuleDialog(
     initialPattern: PatternMode,
     renderer: PatternRenderer,
     onDismiss: () -> Unit,
-    onSave: (PatternMode, Long) -> Unit,
+    onSave: (PatternMode, Long, com.mwilky.hilight.plus.FaceDownMode) -> Unit,
+    initialFaceDown: com.mwilky.hilight.plus.FaceDownMode = com.mwilky.hilight.plus.FaceDownMode.INHERIT,
     description: String? = null
 ) {
-    var selectedColor by remember { mutableLongStateOf(initialColor) }
-    var selectedPattern by remember { mutableStateOf(initialPattern) }
+    var selectedColor by remember(initialColor) { mutableLongStateOf(initialColor) }
+    var selectedPattern by remember(initialPattern) { mutableStateOf(initialPattern) }
+    var selectedFaceDown by remember(initialFaceDown) { mutableStateOf(initialFaceDown) }
     var dialogPreviewFrames by remember { mutableStateOf(IntArray(8) { 0x00000000 }) }
 
     val palette = listOf(
@@ -1421,12 +1514,53 @@ fun CustomRuleDialog(
                         }
                     }
                 }
+
+                // Face-Down Orientation Override Section
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "Device Orientation Trigger",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        val modes = com.mwilky.hilight.plus.FaceDownMode.entries
+                        modes.forEachIndexed { index, mode ->
+                            val isSelected = selectedFaceDown == mode
+                            SegmentedButton(
+                                selected = isSelected,
+                                onClick = { selectedFaceDown = mode },
+                                shape = SegmentedButtonDefaults.itemShape(index = index, count = modes.size),
+                                icon = {}, // Suppress checkmark icon so text stays perfectly centered
+                                colors = SegmentedButtonDefaults.colors(
+                                    activeContainerColor = MaterialTheme.colorScheme.primary,
+                                    activeContentColor = MaterialTheme.colorScheme.onPrimary,
+                                    inactiveContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                ),
+                                label = {
+                                    Text(
+                                        text = when (mode) {
+                                            com.mwilky.hilight.plus.FaceDownMode.INHERIT -> "Default"
+                                            com.mwilky.hilight.plus.FaceDownMode.ALWAYS -> "Always"
+                                            com.mwilky.hilight.plus.FaceDownMode.ONLY_FACE_DOWN -> "Face Down"
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    onSave(selectedPattern, selectedColor)
+                    onSave(selectedPattern, selectedColor, selectedFaceDown)
                 }
             ) {
                 Text("Save")

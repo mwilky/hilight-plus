@@ -14,42 +14,32 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mwilky.hilight.plus.LightController
+import kotlinx.coroutines.launch
 
 /**
  * Conditions Screen:
- * Smart suppression rules for hardware lights (Do Not Disturb, Low Battery, Flip to Shhh, Pocket mode).
+ * Smart suppression and trigger rules for hardware lights.
  */
 @Composable
 fun ConditionsScreen(controller: LightController) {
-    var dndEnabled by remember { mutableStateOf(true) }
-    var lowBatteryEnabled by remember { mutableStateOf(true) }
-    var flipToShhhEnabled by remember { mutableStateOf(false) }
-    var pocketModeEnabled by remember { mutableStateOf(true) }
+    val scope = rememberCoroutineScope()
+    val isOnlyWhenFaceDown by controller.store.isOnlyWhenFaceDown.collectAsStateWithLifecycle(initialValue = false)
 
     ConditionsContent(
-        dndEnabled = dndEnabled,
-        onToggleDnd = { dndEnabled = it },
-        lowBatteryEnabled = lowBatteryEnabled,
-        onToggleLowBattery = { lowBatteryEnabled = it },
-        flipToShhhEnabled = flipToShhhEnabled,
-        onToggleFlipToShhh = { flipToShhhEnabled = it },
-        pocketModeEnabled = pocketModeEnabled,
-        onTogglePocketMode = { pocketModeEnabled = it }
+        isOnlyWhenFaceDown = isOnlyWhenFaceDown,
+        onToggleFaceDown = { enabled ->
+            scope.launch { controller.store.setOnlyWhenFaceDown(enabled) }
+        }
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConditionsContent(
-    dndEnabled: Boolean,
-    onToggleDnd: (Boolean) -> Unit,
-    lowBatteryEnabled: Boolean,
-    onToggleLowBattery: (Boolean) -> Unit,
-    flipToShhhEnabled: Boolean,
-    onToggleFlipToShhh: (Boolean) -> Unit,
-    pocketModeEnabled: Boolean,
-    onTogglePocketMode: (Boolean) -> Unit
+    isOnlyWhenFaceDown: Boolean,
+    onToggleFaceDown: (Boolean) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -66,42 +56,14 @@ fun ConditionsContent(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
-            // DND Rule
-            /*ConditionCard(
-                title = "Do Not Disturb (DND) Sync",
-                subtitle = "Automatically suppress rear LED illumination when Do Not Disturb or Priority Only is active.",
-                icon = Icons.Rounded.DoNotDisturbOn,
-                checked = dndEnabled,
-                onCheckedChange = onToggleDnd
-            )
-
-            // Low Battery Rule
+            // 1. Face-Down Master Condition (Active)
             ConditionCard(
-                title = "Low Battery Saver",
-                subtitle = "Disable lighting effects when phone battery drops below 15% to conserve power.",
-                icon = Icons.Rounded.BatterySaver,
-                checked = lowBatteryEnabled,
-                onCheckedChange = onToggleLowBattery
-            )
-
-            // Flip to Shhh / Face Down Mode
-            ConditionCard(
-                title = "Flip to Shhh Mode",
-                subtitle = "Silence rear lights when the phone is face down on a flat surface.",
+                title = "Face-Down Only",
+                subtitle = "Only illuminate rear lights when your Pixel is placed face down on a flat surface. Can be overridden per individual rule.",
                 icon = Icons.Rounded.ScreenRotation,
-                checked = flipToShhhEnabled,
-                onCheckedChange = onToggleFlipToShhh
+                checked = isOnlyWhenFaceDown,
+                onCheckedChange = onToggleFaceDown
             )
-
-            // Pocket Detection
-            ConditionCard(
-                title = "Pocket & Bag Protection",
-                subtitle = "Prevent LED illumination when proximity sensor detects the device is inside a pocket or bag.",
-                icon = Icons.Rounded.Security,
-                checked = pocketModeEnabled,
-                onCheckedChange = onTogglePocketMode
-            )*/
         }
     }
 }
@@ -164,14 +126,8 @@ private fun ConditionCard(
 fun ConditionsScreenPreview() {
     HiLightPlusTheme {
         ConditionsContent(
-            dndEnabled = true,
-            onToggleDnd = {},
-            lowBatteryEnabled = true,
-            onToggleLowBattery = {},
-            flipToShhhEnabled = false,
-            onToggleFlipToShhh = {},
-            pocketModeEnabled = true,
-            onTogglePocketMode = {}
+            isOnlyWhenFaceDown = false,
+            onToggleFaceDown = {}
         )
     }
 }
