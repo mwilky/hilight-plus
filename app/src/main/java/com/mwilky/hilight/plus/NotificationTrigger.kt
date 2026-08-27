@@ -2,9 +2,11 @@ package com.mwilky.hilight.plus
 
 import android.app.Notification
 import android.app.Person
+import android.content.Context
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import com.mwilky.hilight.plus.core.DeviceOrientationDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -13,7 +15,7 @@ import kotlinx.coroutines.launch
 /**
  * Listens for incoming system notifications (messages, chats, apps) and triggers
  * the appropriate rear LED animation according to the 3-Tier Priority System
- * with user-configurable duration (in seconds/intervals).
+ * with user-configurable duration and per-rule/global Face-Down orientation checking.
  */
 class NotificationTrigger : NotificationListenerService() {
 
@@ -52,6 +54,10 @@ class NotificationTrigger : NotificationListenerService() {
 
             if (matchedContactRule != null) {
                 if (matchedContactRule.isEnabled && matchedContactRule.pattern != PatternMode.OFF) {
+                    if (!isOrientationAllowed(applicationContext, store, matchedContactRule.faceDownMode)) {
+                        Log.i(TAG, "Suppressed '${matchedContactRule.name}' message lights: phone is not face down")
+                        return@launch
+                    }
                     val pattern = matchedContactRule.pattern
                     val color = matchedContactRule.color
                     Log.i(TAG, "Priority 1 Match: Contact '${matchedContactRule.name}' -> pattern=$pattern, color=$color")
@@ -66,6 +72,10 @@ class NotificationTrigger : NotificationListenerService() {
             val appRule = store.findRuleForPackage(pkg)
             if (appRule != null) {
                 if (appRule.isEnabled && appRule.pattern != PatternMode.OFF) {
+                    if (!isOrientationAllowed(applicationContext, store, appRule.faceDownMode)) {
+                        Log.i(TAG, "Suppressed '${appRule.appName}' notification lights: phone is not face down")
+                        return@launch
+                    }
                     val pattern = appRule.pattern
                     val color = appRule.color
                     Log.i(TAG, "Priority 2 Match: App '${appRule.appName}' ($pkg) -> pattern=$pattern, color=$color")
@@ -79,6 +89,11 @@ class NotificationTrigger : NotificationListenerService() {
             // --- PRIORITY 3: General Fallback Notification Rule ---
             val isDefaultEnabled = store.isDefaultNotifEnabled.first()
             if (isDefaultEnabled) {
+                val defaultFaceDown = store.defaultNotifFaceDownMode.first()
+                if (!isOrientationAllowed(applicationContext, store, defaultFaceDown)) {
+                    Log.i(TAG, "Suppressed General Default notification lights: phone is not face down")
+                    return@launch
+                }
                 val defaultPattern = store.defaultNotifPattern.first()
                 val defaultColor = store.defaultNotifColor.first()
                 if (defaultPattern != PatternMode.OFF) {
@@ -89,6 +104,21 @@ class NotificationTrigger : NotificationListenerService() {
                 }
             } else {
                 Log.i(TAG, "Priority 3 Match: General Default is disabled -> NO LIGHT")
+            }
+        }
+    }
+
+    private suspend fun isOrientationAllowed(context: Context, store: AppStore, ruleMode: FaceDownMode): Boolean {
+        return when (ruleMode) {
+            FaceDownMode.ALWAYS -> true
+            FaceDownMode.ONLY_FACE_DOWN -> DeviceOrientationDetector.isDeviceFaceDown(context)
+            FaceDownMode.INHERIT -> {
+                val globalOnlyFaceDown = store.isOnlyWhenFaceDown.first()
+                if (globalOnlyFaceDown) {
+                    DeviceOrientationDetector.isDeviceFaceDown(context)
+                } else {
+                    true
+                }
             }
         }
     }

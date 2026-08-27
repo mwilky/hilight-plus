@@ -12,6 +12,15 @@ enum class PatternMode(val id: String, val displayName: String) {
     RAINBOW("rainbow", "Rainbow")
 }
 
+/**
+ * Orientation trigger preference for a rule.
+ */
+enum class FaceDownMode(val id: String, val displayName: String) {
+    INHERIT("inherit", "Default (Follows Conditions)"),
+    ALWAYS("always", "Always (Face Up or Down)"),
+    ONLY_FACE_DOWN("face_down", "Face Down Only")
+}
+
 data class LightStyle(
     val pattern: PatternMode = PatternMode.OFF,
     val color: Long = 0xFF000000,
@@ -27,7 +36,8 @@ data class ContactRule(
     val name: String,
     val color: Long = 0xFF4285F4,
     val pattern: PatternMode = PatternMode.PULSE,
-    val isEnabled: Boolean = true
+    val isEnabled: Boolean = true,
+    val faceDownMode: FaceDownMode = FaceDownMode.INHERIT
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
@@ -35,18 +45,22 @@ data class ContactRule(
         put("color", color)
         put("pattern", pattern.name)
         put("isEnabled", isEnabled)
+        put("faceDownMode", faceDownMode.name)
     }
 
     companion object {
         fun fromJson(json: JSONObject): ContactRule {
             val patternName = json.optString("pattern", PatternMode.PULSE.name)
             val pattern = runCatching { PatternMode.valueOf(patternName) }.getOrDefault(PatternMode.PULSE)
+            val faceDownName = json.optString("faceDownMode", FaceDownMode.INHERIT.name)
+            val faceDown = runCatching { FaceDownMode.valueOf(faceDownName) }.getOrDefault(FaceDownMode.INHERIT)
             return ContactRule(
                 id = json.optString("id", ""),
                 name = json.optString("name", "Unknown Contact"),
                 color = json.optLong("color", 0xFF4285F4),
                 pattern = pattern,
-                isEnabled = json.optBoolean("isEnabled", true)
+                isEnabled = json.optBoolean("isEnabled", true),
+                faceDownMode = faceDown
             )
         }
     }
@@ -60,7 +74,8 @@ data class MessageContactRule(
     val name: String,
     val color: Long = 0xFF00E5FF,
     val pattern: PatternMode = PatternMode.PULSE,
-    val isEnabled: Boolean = true
+    val isEnabled: Boolean = true,
+    val faceDownMode: FaceDownMode = FaceDownMode.INHERIT
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
@@ -68,18 +83,22 @@ data class MessageContactRule(
         put("color", color)
         put("pattern", pattern.name)
         put("isEnabled", isEnabled)
+        put("faceDownMode", faceDownMode.name)
     }
 
     companion object {
         fun fromJson(json: JSONObject): MessageContactRule {
             val patternName = json.optString("pattern", PatternMode.PULSE.name)
             val pattern = runCatching { PatternMode.valueOf(patternName) }.getOrDefault(PatternMode.PULSE)
+            val faceDownName = json.optString("faceDownMode", FaceDownMode.INHERIT.name)
+            val faceDown = runCatching { FaceDownMode.valueOf(faceDownName) }.getOrDefault(FaceDownMode.INHERIT)
             return MessageContactRule(
                 id = json.optString("id", ""),
                 name = json.optString("name", "Unknown Contact"),
                 color = json.optLong("color", 0xFF00E5FF),
                 pattern = pattern,
-                isEnabled = json.optBoolean("isEnabled", true)
+                isEnabled = json.optBoolean("isEnabled", true),
+                faceDownMode = faceDown
             )
         }
     }
@@ -93,7 +112,8 @@ data class AppNotificationRule(
     val appName: String,
     val color: Long = 0xFF34A853,
     val pattern: PatternMode = PatternMode.PULSE,
-    val isEnabled: Boolean = true
+    val isEnabled: Boolean = true,
+    val faceDownMode: FaceDownMode = FaceDownMode.INHERIT
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("packageName", packageName)
@@ -101,18 +121,22 @@ data class AppNotificationRule(
         put("color", color)
         put("pattern", pattern.name)
         put("isEnabled", isEnabled)
+        put("faceDownMode", faceDownMode.name)
     }
 
     companion object {
         fun fromJson(json: JSONObject): AppNotificationRule {
             val patternName = json.optString("pattern", PatternMode.PULSE.name)
             val pattern = runCatching { PatternMode.valueOf(patternName) }.getOrDefault(PatternMode.PULSE)
+            val faceDownName = json.optString("faceDownMode", FaceDownMode.INHERIT.name)
+            val faceDown = runCatching { FaceDownMode.valueOf(faceDownName) }.getOrDefault(FaceDownMode.INHERIT)
             return AppNotificationRule(
                 packageName = json.optString("packageName", ""),
                 appName = json.optString("appName", ""),
                 color = json.optLong("color", 0xFF34A853),
                 pattern = pattern,
-                isEnabled = json.optBoolean("isEnabled", true)
+                isEnabled = json.optBoolean("isEnabled", true),
+                faceDownMode = faceDown
             )
         }
     }

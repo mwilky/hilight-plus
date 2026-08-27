@@ -8,16 +8,24 @@ import android.provider.ContactsContract
 import android.telephony.TelephonyManager
 import android.util.Log
 import com.mwilky.hilight.plus.AppStore
+import com.mwilky.hilight.plus.FaceDownMode
 import com.mwilky.hilight.plus.LightController
+import com.mwilky.hilight.plus.core.DeviceOrientationDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
- * Monitors incoming phone call state changes to trigger contact-specific lighting patterns.
+ * Listens for incoming phone calls and activates custom rear LED lighting:
+ * - Specific Contact Rule (highest priority)
+ * - All Other Contacts (saved in address book)
+ * - Unknown & Private Numbers (unsaved callers)
+ * - Orientation check: verifies Face-Down condition (per-rule or global setting)
  */
 class IncomingCallWatcher : BroadcastReceiver() {
+
+    private val scope = CoroutineScope(Dispatchers.IO)
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != TelephonyManager.ACTION_PHONE_STATE_CHANGED) return
@@ -28,48 +36,49 @@ class IncomingCallWatcher : BroadcastReceiver() {
         val controller = LightController.get(context)
         val store = AppStore.get(context)
 
-        CoroutineScope(Dispatchers.IO).launch {
-            val callLightsEnabled = store.isCallLightsEnabled.first()
+        scope.launch {
             val masterEnabled = store.isEnabled.first()
+            val callLightsEnabled = store.isCallLightsEnabled.first()
 
-            if (!callLightsEnabled || !masterEnabled) return@launch
+            if (!masterEnabled || !callLightsEnabled) {
+                Log.d(TAG, "Call lights are disabled by master switch")
+                return@launch
+            }
 
             when (stateStr) {
                 TelephonyManager.EXTRA_STATE_RINGING -> {
-                    Log.i(TAG, "Incoming call ringing, number: '$incomingNumber'")
+                    val contactName = if (incomingNumber.isNotBlank()) lookupContactName(context, incomingNumber) else null
+                    val matchedRule = if (contactName != null) store.findRuleForContactName(contactName) else null
 
-                    val isPrivateOrUnknown = incomingNumber.isBlank() ||
-                        incomingNumber.equals("private", ignoreCase = true) ||
-                        incomingNumber.equals("unknown", ignoreCase = true) ||
-                        incomingNumber.equals("-1") ||
-                        incomingNumber.equals("-2")
-
-                    if (isPrivateOrUnknown) {
-                        // Truly unknown / private / hidden caller number
-                        triggerUnknownAlert(store, controller)
-                    } else {
-                        // 1. Look up contact display name from phonebook
-                        val contactName = lookupContactName(context, incomingNumber)
-
-                        // 2. Check if contact has a custom Call Rule configured in HiLight Plus
-                        val matchedRule = if (contactName != null) store.findRuleForContactName(contactName) else null
-
-                        if (matchedRule != null) {
-                            if (matchedRule.isEnabled) {
-                                Log.i(TAG, "Matched custom rule for '${matchedRule.name}': ${matchedRule.pattern}")
-                                controller.startIncomingCallAlert(pattern = matchedRule.pattern, color = matchedRule.color)
-                            } else {
-                                Log.i(TAG, "Custom rule for '${matchedRule.name}' is disabled")
+                    if (matchedRule != null) {
+                        if (matchedRule.isEnabled) {
+                            if (!isOrientationAllowed(context, store, matchedRule.faceDownMode)) {
+                                Log.i(TAG, "Suppressed '${matchedRule.name}' call lights: phone is not face down")
+                                return@launch
                             }
+                            Log.i(TAG, "Matched custom rule for '${matchedRule.name}': ${matchedRule.pattern}")
+                            controller.startIncomingCallAlert(pattern = matchedRule.pattern, color = matchedRule.color)
                         } else {
-                            // 3. If contact is in address book (no custom rule) -> All Other Contacts
-                            if (contactName != null) {
-                                Log.i(TAG, "Caller '$contactName' is a saved contact (no custom rule) -> using 'All Other Contacts'")
-                                triggerOtherContactsAlert(store, controller)
-                            } else {
-                                Log.i(TAG, "Caller is unsaved / not in contacts -> using 'Unknown & Private Numbers'")
-                                triggerUnknownAlert(store, controller)
+                            Log.i(TAG, "Custom rule for '${matchedRule.name}' is disabled")
+                        }
+                    } else {
+                        // 3. If contact is in address book (no custom rule) -> All Other Contacts
+                        if (contactName != null) {
+                            val otherFaceDown = store.otherContactsFaceDownMode.first()
+                            if (!isOrientationAllowed(context, store, otherFaceDown)) {
+                                Log.i(TAG, "Suppressed Other Contacts call lights: phone is not face down")
+                                return@launch
                             }
+                            Log.i(TAG, "Caller '$contactName' is a saved contact (no custom rule) -> using 'All Other Contacts'")
+                            triggerOtherContactsAlert(store, controller)
+                        } else {
+                            val unknownFaceDown = store.unknownNumbersFaceDownMode.first()
+                            if (!isOrientationAllowed(context, store, unknownFaceDown)) {
+                                Log.i(TAG, "Suppressed Unknown Numbers call lights: phone is not face down")
+                                return@launch
+                            }
+                            Log.i(TAG, "Caller is unsaved / not in contacts -> using 'Unknown & Private Numbers'")
+                            triggerUnknownAlert(store, controller)
                         }
                     }
                 }
@@ -78,6 +87,21 @@ class IncomingCallWatcher : BroadcastReceiver() {
                 TelephonyManager.EXTRA_STATE_IDLE -> {
                     Log.i(TAG, "Call ended or answered ($stateStr), stopping call lights")
                     controller.stopIncomingCallAlert()
+                }
+            }
+        }
+    }
+
+    private suspend fun isOrientationAllowed(context: Context, store: AppStore, ruleMode: FaceDownMode): Boolean {
+        return when (ruleMode) {
+            FaceDownMode.ALWAYS -> true
+            FaceDownMode.ONLY_FACE_DOWN -> DeviceOrientationDetector.isDeviceFaceDown(context)
+            FaceDownMode.INHERIT -> {
+                val globalOnlyFaceDown = store.isOnlyWhenFaceDown.first()
+                if (globalOnlyFaceDown) {
+                    DeviceOrientationDetector.isDeviceFaceDown(context)
+                } else {
+                    true
                 }
             }
         }
@@ -108,28 +132,19 @@ class IncomingCallWatcher : BroadcastReceiver() {
     }
 
     private fun lookupContactName(context: Context, phoneNumber: String): String? {
-        if (phoneNumber.isBlank()) return null
-        return try {
-            val uri = Uri.withAppendedPath(
-                ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
-                Uri.encode(phoneNumber)
-            )
-            context.contentResolver.query(
-                uri,
-                arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME),
-                null,
-                null,
-                null
-            )?.use { cursor ->
+        val uri = Uri.withAppendedPath(
+            ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
+            Uri.encode(phoneNumber)
+        )
+        val projection = arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME)
+        return runCatching {
+            context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
                 if (cursor.moveToFirst()) {
-                    val idx = cursor.getColumnIndex(ContactsContract.PhoneLookup.DISPLAY_NAME)
-                    if (idx != -1) cursor.getString(idx) else null
+                    val nameIdx = cursor.getColumnIndex(ContactsContract.PhoneLookup.DISPLAY_NAME)
+                    if (nameIdx != -1) cursor.getString(nameIdx) else null
                 } else null
             }
-        } catch (t: Throwable) {
-            Log.w(TAG, "Error looking up contact in address book: ${t.message}")
-            null
-        }
+        }.getOrNull()
     }
 
     companion object {

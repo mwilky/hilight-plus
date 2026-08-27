@@ -27,16 +27,21 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_SPEED_MS = longPreferencesKey("speed_ms")
         private val KEY_AUTO_OFF_SEC = intPreferencesKey("auto_off_sec")
 
+        // Smart Condition Settings
+        private val KEY_ONLY_WHEN_FACE_DOWN = booleanPreferencesKey("only_when_face_down")
+
         // Call Settings: All Other Contacts
         private val KEY_CALL_LIGHTS_ENABLED = booleanPreferencesKey("call_lights_enabled")
         private val KEY_OTHER_CONTACTS_ENABLED = booleanPreferencesKey("other_contacts_enabled")
         private val KEY_OTHER_CONTACTS_COLOR = longPreferencesKey("other_contacts_color")
         private val KEY_OTHER_CONTACTS_PATTERN = stringPreferencesKey("other_contacts_pattern")
+        private val KEY_OTHER_CONTACTS_FACE_DOWN = stringPreferencesKey("other_contacts_face_down")
 
         // Call Settings: Unknown / Private Numbers
         private val KEY_UNKNOWN_NUMBERS_ENABLED = booleanPreferencesKey("unknown_numbers_enabled")
         private val KEY_UNKNOWN_NUMBERS_COLOR = longPreferencesKey("unknown_numbers_color")
         private val KEY_UNKNOWN_NUMBERS_PATTERN = stringPreferencesKey("unknown_numbers_pattern")
+        private val KEY_UNKNOWN_NUMBERS_FACE_DOWN = stringPreferencesKey("unknown_numbers_face_down")
 
         private val KEY_CALL_RULES_JSON = stringPreferencesKey("contact_rules_json")
 
@@ -46,6 +51,7 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_DEFAULT_NOTIF_ENABLED = booleanPreferencesKey("default_notif_enabled")
         private val KEY_DEFAULT_NOTIF_COLOR = longPreferencesKey("default_notif_color")
         private val KEY_DEFAULT_NOTIF_PATTERN = stringPreferencesKey("default_notif_pattern")
+        private val KEY_DEFAULT_NOTIF_FACE_DOWN = stringPreferencesKey("default_notif_face_down")
         private val KEY_MESSAGE_CONTACT_RULES_JSON = stringPreferencesKey("message_contact_rules_json")
         private val KEY_APP_RULES_JSON = stringPreferencesKey("app_rules_json")
 
@@ -65,6 +71,9 @@ class AppStore private constructor(private val appContext: Context) {
 
     val isEnabled: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_ENABLED] ?: true }
+
+    val isOnlyWhenFaceDown: Flow<Boolean> = appContext.dataStore.data
+        .map { it[KEY_ONLY_WHEN_FACE_DOWN] ?: false }
 
     val lightStyle: Flow<LightStyle> = appContext.dataStore.data
         .map { prefs ->
@@ -96,6 +105,12 @@ class AppStore private constructor(private val appContext: Context) {
             runCatching { PatternMode.valueOf(name) }.getOrDefault(PatternMode.PULSE)
         }
 
+    val otherContactsFaceDownMode: Flow<FaceDownMode> = appContext.dataStore.data
+        .map { prefs ->
+            val name = prefs[KEY_OTHER_CONTACTS_FACE_DOWN] ?: FaceDownMode.INHERIT.name
+            runCatching { FaceDownMode.valueOf(name) }.getOrDefault(FaceDownMode.INHERIT)
+        }
+
     // --- Call Settings: Unknown / Private Numbers ---
 
     val isUnknownNumbersEnabled: Flow<Boolean> = appContext.dataStore.data
@@ -108,6 +123,12 @@ class AppStore private constructor(private val appContext: Context) {
         .map { prefs ->
             val name = prefs[KEY_UNKNOWN_NUMBERS_PATTERN] ?: PatternMode.PULSE.name
             runCatching { PatternMode.valueOf(name) }.getOrDefault(PatternMode.PULSE)
+        }
+
+    val unknownNumbersFaceDownMode: Flow<FaceDownMode> = appContext.dataStore.data
+        .map { prefs ->
+            val name = prefs[KEY_UNKNOWN_NUMBERS_FACE_DOWN] ?: FaceDownMode.INHERIT.name
+            runCatching { FaceDownMode.valueOf(name) }.getOrDefault(FaceDownMode.INHERIT)
         }
 
     val contactRules: Flow<List<ContactRule>> = appContext.dataStore.data
@@ -141,6 +162,12 @@ class AppStore private constructor(private val appContext: Context) {
         .map { prefs ->
             val name = prefs[KEY_DEFAULT_NOTIF_PATTERN] ?: PatternMode.PULSE.name
             runCatching { PatternMode.valueOf(name) }.getOrDefault(PatternMode.PULSE)
+        }
+
+    val defaultNotifFaceDownMode: Flow<FaceDownMode> = appContext.dataStore.data
+        .map { prefs ->
+            val name = prefs[KEY_DEFAULT_NOTIF_FACE_DOWN] ?: FaceDownMode.INHERIT.name
+            runCatching { FaceDownMode.valueOf(name) }.getOrDefault(FaceDownMode.INHERIT)
         }
 
     val messageContactRules: Flow<List<MessageContactRule>> = appContext.dataStore.data
@@ -179,6 +206,10 @@ class AppStore private constructor(private val appContext: Context) {
         appContext.dataStore.edit { it[KEY_ENABLED] = enabled }
     }
 
+    suspend fun setOnlyWhenFaceDown(enabled: Boolean) {
+        appContext.dataStore.edit { it[KEY_ONLY_WHEN_FACE_DOWN] = enabled }
+    }
+
     suspend fun setLightStyle(style: LightStyle) {
         appContext.dataStore.edit { prefs ->
             prefs[KEY_PATTERN] = style.pattern.name
@@ -208,6 +239,10 @@ class AppStore private constructor(private val appContext: Context) {
         appContext.dataStore.edit { it[KEY_OTHER_CONTACTS_PATTERN] = pattern.name }
     }
 
+    suspend fun setOtherContactsFaceDownMode(mode: FaceDownMode) {
+        appContext.dataStore.edit { it[KEY_OTHER_CONTACTS_FACE_DOWN] = mode.name }
+    }
+
     suspend fun setUnknownNumbersEnabled(enabled: Boolean) {
         appContext.dataStore.edit { it[KEY_UNKNOWN_NUMBERS_ENABLED] = enabled }
     }
@@ -218,6 +253,10 @@ class AppStore private constructor(private val appContext: Context) {
 
     suspend fun setUnknownNumbersPattern(pattern: PatternMode) {
         appContext.dataStore.edit { it[KEY_UNKNOWN_NUMBERS_PATTERN] = pattern.name }
+    }
+
+    suspend fun setUnknownNumbersFaceDownMode(mode: FaceDownMode) {
+        appContext.dataStore.edit { it[KEY_UNKNOWN_NUMBERS_FACE_DOWN] = mode.name }
     }
 
     suspend fun setNotificationsEnabled(enabled: Boolean) {
@@ -238,6 +277,10 @@ class AppStore private constructor(private val appContext: Context) {
 
     suspend fun setDefaultNotifPattern(pattern: PatternMode) {
         appContext.dataStore.edit { it[KEY_DEFAULT_NOTIF_PATTERN] = pattern.name }
+    }
+
+    suspend fun setDefaultNotifFaceDownMode(mode: FaceDownMode) {
+        appContext.dataStore.edit { it[KEY_DEFAULT_NOTIF_FACE_DOWN] = mode.name }
     }
 
     suspend fun saveContactRule(rule: ContactRule) {
