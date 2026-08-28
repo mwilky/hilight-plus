@@ -50,6 +50,7 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_NOTIFICATION_DURATION_SEC = intPreferencesKey("notification_duration_sec")
         private val KEY_STOP_ON_DISMISS = booleanPreferencesKey("stop_on_dismiss")
         private val KEY_STOP_ON_UNLOCK = booleanPreferencesKey("stop_on_unlock")
+        private val KEY_CYCLE_NOTIFICATIONS = booleanPreferencesKey("cycle_notifications")
         private val KEY_DEFAULT_NOTIF_ENABLED = booleanPreferencesKey("default_notif_enabled")
         private val KEY_DEFAULT_NOTIF_COLOR = longPreferencesKey("default_notif_color")
         private val KEY_DEFAULT_NOTIF_PATTERN = stringPreferencesKey("default_notif_pattern")
@@ -160,6 +161,9 @@ class AppStore private constructor(private val appContext: Context) {
 
     val isStopOnUnlock: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_STOP_ON_UNLOCK] ?: false }
+
+    val isCycleNotifications: Flow<Boolean> = appContext.dataStore.data
+        .map { it[KEY_CYCLE_NOTIFICATIONS] ?: false }
 
     val isDefaultNotifEnabled: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_DEFAULT_NOTIF_ENABLED] ?: true }
@@ -285,6 +289,10 @@ class AppStore private constructor(private val appContext: Context) {
 
     suspend fun setStopOnUnlock(enabled: Boolean) {
         appContext.dataStore.edit { it[KEY_STOP_ON_UNLOCK] = enabled }
+    }
+
+    suspend fun setCycleNotifications(enabled: Boolean) {
+        appContext.dataStore.edit { it[KEY_CYCLE_NOTIFICATIONS] = enabled }
     }
 
     suspend fun setDefaultNotifEnabled(enabled: Boolean) {

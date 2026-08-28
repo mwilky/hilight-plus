@@ -105,6 +105,7 @@ fun HomeScreen(controller: LightController) {
     val isNotifsEnabled by controller.store.isNotificationsEnabled.collectAsStateWithLifecycle(initialValue = true)
     val notifDurationSec by controller.store.notificationDurationSeconds.collectAsStateWithLifecycle(initialValue = 30)
     val isStopOnUnlock by controller.store.isStopOnUnlock.collectAsStateWithLifecycle(initialValue = false)
+    val isCycleNotifications by controller.store.isCycleNotifications.collectAsStateWithLifecycle(initialValue = false)
     val isDefaultNotifEnabled by controller.store.isDefaultNotifEnabled.collectAsStateWithLifecycle(initialValue = true)
     val defaultNotifColor by controller.store.defaultNotifColor.collectAsStateWithLifecycle(initialValue = 0xFFFFFFFF)
     val defaultNotifPattern by controller.store.defaultNotifPattern.collectAsStateWithLifecycle(initialValue = PatternMode.PULSE)
@@ -255,6 +256,8 @@ fun HomeScreen(controller: LightController) {
         onChangeDuration = { sec -> scope.launch { controller.store.setNotificationDurationSeconds(sec) } },
         isStopOnUnlock = isStopOnUnlock,
         onToggleStopOnUnlock = { enabled -> scope.launch { controller.store.setStopOnUnlock(enabled) } },
+        isCycleNotifications = isCycleNotifications,
+        onToggleCycleNotifications = { enabled -> scope.launch { controller.store.setCycleNotifications(enabled) } },
         isDefaultNotifEnabled = isDefaultNotifEnabled,
         defaultNotifColor = defaultNotifColor,
         defaultNotifPattern = defaultNotifPattern,
@@ -415,7 +418,7 @@ fun HomeScreen(controller: LightController) {
     // Default Fallback Notif Dialog
     if (isConfiguringDefaultNotif) {
         val notifFaceDown by controller.store.defaultNotifFaceDownMode.collectAsStateWithLifecycle(initialValue = com.mwilky.hilight.plus.FaceDownMode.INHERIT)
-        val notifAutoColor by controller.store.isDefaultNotifAutoColor.collectAsStateWithLifecycle(initialValue = true)
+        val notifAutoColor by controller.store.isDefaultNotifAutoColor.collectAsStateWithLifecycle(initialValue = false)
         CustomRuleDialog(
             title = "All Other Notifications",
             description = "Applied to incoming notifications from apps and senders without a specific custom rule.",
@@ -487,6 +490,8 @@ fun HomeContent(
     onChangeDuration: (Int) -> Unit,
     isStopOnUnlock: Boolean = false,
     onToggleStopOnUnlock: (Boolean) -> Unit = {},
+    isCycleNotifications: Boolean = false,
+    onToggleCycleNotifications: (Boolean) -> Unit = {},
     isDefaultNotifEnabled: Boolean,
     defaultNotifColor: Long,
     defaultNotifPattern: PatternMode,
@@ -1256,6 +1261,39 @@ fun HomeContent(
                                 Switch(
                                     checked = isStopOnUnlock,
                                     onCheckedChange = onToggleStopOnUnlock,
+                                    enabled = isNotifsEnabled
+                                )
+                            }
+                        }
+
+                        // Cycle Multiple Notifications Card
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(24.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 18.dp, vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Cycle multiple alerts",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = "Rotate lighting patterns through each active unread notification",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Switch(
+                                    checked = isCycleNotifications,
+                                    onCheckedChange = onToggleCycleNotifications,
                                     enabled = isNotifsEnabled
                                 )
                             }
