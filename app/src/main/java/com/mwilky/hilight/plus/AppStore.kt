@@ -54,6 +54,7 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_DEFAULT_NOTIF_COLOR = longPreferencesKey("default_notif_color")
         private val KEY_DEFAULT_NOTIF_PATTERN = stringPreferencesKey("default_notif_pattern")
         private val KEY_DEFAULT_NOTIF_FACE_DOWN = stringPreferencesKey("default_notif_face_down")
+        private val KEY_DEFAULT_NOTIF_AUTO_COLOR = booleanPreferencesKey("default_notif_auto_color")
         private val KEY_MESSAGE_CONTACT_RULES_JSON = stringPreferencesKey("message_contact_rules_json")
         private val KEY_APP_RULES_JSON = stringPreferencesKey("app_rules_json")
 
@@ -178,6 +179,9 @@ class AppStore private constructor(private val appContext: Context) {
             runCatching { FaceDownMode.valueOf(name) }.getOrDefault(FaceDownMode.INHERIT)
         }
 
+    val isDefaultNotifAutoColor: Flow<Boolean> = appContext.dataStore.data
+        .map { it[KEY_DEFAULT_NOTIF_AUTO_COLOR] ?: true }
+
     val messageContactRules: Flow<List<MessageContactRule>> = appContext.dataStore.data
         .map { prefs ->
             val raw = prefs[KEY_MESSAGE_CONTACT_RULES_JSON] ?: "[]"
@@ -297,6 +301,10 @@ class AppStore private constructor(private val appContext: Context) {
 
     suspend fun setDefaultNotifFaceDownMode(mode: FaceDownMode) {
         appContext.dataStore.edit { it[KEY_DEFAULT_NOTIF_FACE_DOWN] = mode.name }
+    }
+
+    suspend fun setDefaultNotifAutoColor(enabled: Boolean) {
+        appContext.dataStore.edit { it[KEY_DEFAULT_NOTIF_AUTO_COLOR] = enabled }
     }
 
     suspend fun saveContactRule(rule: ContactRule) {

@@ -110,6 +110,7 @@ fun HomeScreen(controller: LightController) {
     val defaultNotifColor by controller.store.defaultNotifColor.collectAsStateWithLifecycle(initialValue = 0xFFFFFFFF)
     val defaultNotifPattern by controller.store.defaultNotifPattern.collectAsStateWithLifecycle(initialValue = PatternMode.PULSE)
     val defaultNotifFaceDown by controller.store.defaultNotifFaceDownMode.collectAsStateWithLifecycle(initialValue = com.mwilky.hilight.plus.FaceDownMode.INHERIT)
+    val isDefaultNotifAutoColor by controller.store.isDefaultNotifAutoColor.collectAsStateWithLifecycle(initialValue = true)
     val messageContactRules by controller.store.messageContactRules.collectAsStateWithLifecycle(initialValue = emptyList())
     val appRules by controller.store.appRules.collectAsStateWithLifecycle(initialValue = emptyList())
 
@@ -290,7 +291,7 @@ fun HomeScreen(controller: LightController) {
             initialFaceDown = rule.faceDownMode,
             renderer = renderer,
             onDismiss = { callRuleBeingEdited = null },
-            onSave = { pattern, color, faceDown ->
+            onSave = { pattern, color, faceDown, _ ->
                 scope.launch {
                     controller.store.saveContactRule(rule.copy(pattern = pattern, color = color, faceDownMode = faceDown))
                     callRuleBeingEdited = null
@@ -310,7 +311,7 @@ fun HomeScreen(controller: LightController) {
             initialFaceDown = otherFaceDown,
             renderer = renderer,
             onDismiss = { isConfiguringOtherContacts = false },
-            onSave = { pattern, color, faceDown ->
+            onSave = { pattern, color, faceDown, _ ->
                 scope.launch {
                     controller.store.setOtherContactsPattern(pattern)
                     controller.store.setOtherContactsColor(color)
@@ -332,7 +333,7 @@ fun HomeScreen(controller: LightController) {
             initialFaceDown = unknownFaceDown,
             renderer = renderer,
             onDismiss = { isConfiguringUnknownNumbers = false },
-            onSave = { pattern, color, faceDown ->
+            onSave = { pattern, color, faceDown, _ ->
                 scope.launch {
                     controller.store.setUnknownNumbersPattern(pattern)
                     controller.store.setUnknownNumbersColor(color)
@@ -351,11 +352,13 @@ fun HomeScreen(controller: LightController) {
             onDismiss = { isPickingApp = false },
             onAppSelected = { pkg, name ->
                 isPickingApp = false
+                val autoColor = com.mwilky.hilight.plus.core.AppIconColorExtractor.extractColorForPackage(context, pkg)
                 appRuleBeingEdited = AppNotificationRule(
                     packageName = pkg,
                     appName = name,
-                    color = 0xFF34A853,
-                    pattern = PatternMode.PULSE
+                    color = autoColor,
+                    pattern = PatternMode.PULSE,
+                    isAutoColor = true
                 )
             }
         )
@@ -371,7 +374,7 @@ fun HomeScreen(controller: LightController) {
             initialFaceDown = rule.faceDownMode,
             renderer = renderer,
             onDismiss = { msgRuleBeingEdited = null },
-            onSave = { pattern, color, faceDown ->
+            onSave = { pattern, color, faceDown, _ ->
                 scope.launch {
                     controller.store.saveMessageContactRule(rule.copy(pattern = pattern, color = color, faceDownMode = faceDown))
                     msgRuleBeingEdited = null
@@ -383,16 +386,29 @@ fun HomeScreen(controller: LightController) {
     // App Customizer Dialog
     if (appRuleBeingEdited != null) {
         val rule = appRuleBeingEdited!!
+        val autoColor = remember(rule.packageName) {
+            com.mwilky.hilight.plus.core.AppIconColorExtractor.extractColorForPackage(context, rule.packageName)
+        }
         CustomRuleDialog(
             title = "Configure ${rule.appName}",
             initialColor = rule.color,
             initialPattern = rule.pattern,
             initialFaceDown = rule.faceDownMode,
+            showAutoColorToggle = true,
+            initialAutoColor = rule.isAutoColor,
+            autoExtractedColor = autoColor,
             renderer = renderer,
             onDismiss = { appRuleBeingEdited = null },
-            onSave = { pattern, color, faceDown ->
+            onSave = { pattern, color, faceDown, isAuto ->
                 scope.launch {
-                    controller.store.saveAppRule(rule.copy(pattern = pattern, color = color, faceDownMode = faceDown))
+                    controller.store.saveAppRule(
+                        rule.copy(
+                            pattern = pattern,
+                            color = color,
+                            faceDownMode = faceDown,
+                            isAutoColor = isAuto
+                        )
+                    )
                     appRuleBeingEdited = null
                 }
             }
@@ -402,19 +418,24 @@ fun HomeScreen(controller: LightController) {
     // Default Fallback Notif Dialog
     if (isConfiguringDefaultNotif) {
         val notifFaceDown by controller.store.defaultNotifFaceDownMode.collectAsStateWithLifecycle(initialValue = com.mwilky.hilight.plus.FaceDownMode.INHERIT)
+        val notifAutoColor by controller.store.isDefaultNotifAutoColor.collectAsStateWithLifecycle(initialValue = true)
         CustomRuleDialog(
             title = "All Other Notifications",
             description = "Applied to incoming notifications from apps and senders without a specific custom rule.",
             initialColor = defaultNotifColor,
             initialPattern = defaultNotifPattern,
             initialFaceDown = notifFaceDown,
+            showAutoColorToggle = true,
+            initialAutoColor = notifAutoColor,
+            autoExtractedColor = null,
             renderer = renderer,
             onDismiss = { isConfiguringDefaultNotif = false },
-            onSave = { pattern, color, faceDown ->
+            onSave = { pattern, color, faceDown, isAuto ->
                 scope.launch {
                     controller.store.setDefaultNotifPattern(pattern)
                     controller.store.setDefaultNotifColor(color)
                     controller.store.setDefaultNotifFaceDownMode(faceDown)
+                    controller.store.setDefaultNotifAutoColor(isAuto)
                     isConfiguringDefaultNotif = false
                 }
             }
@@ -1442,11 +1463,19 @@ fun CustomRuleDialog(
     initialPattern: PatternMode,
     renderer: PatternRenderer,
     onDismiss: () -> Unit,
-    onSave: (PatternMode, Long, com.mwilky.hilight.plus.FaceDownMode) -> Unit,
+    onSave: (PatternMode, Long, com.mwilky.hilight.plus.FaceDownMode, Boolean) -> Unit,
     initialFaceDown: com.mwilky.hilight.plus.FaceDownMode = com.mwilky.hilight.plus.FaceDownMode.INHERIT,
+    showAutoColorToggle: Boolean = false,
+    initialAutoColor: Boolean = true,
+    autoExtractedColor: Long? = null,
     description: String? = null
 ) {
-    var selectedColor by remember(initialColor) { mutableLongStateOf(initialColor) }
+    var isAutoColor by remember(initialAutoColor) { mutableStateOf(initialAutoColor) }
+    var selectedColor by remember(initialColor, isAutoColor, autoExtractedColor) {
+        mutableLongStateOf(
+            if (showAutoColorToggle && isAutoColor && autoExtractedColor != null) autoExtractedColor else initialColor
+        )
+    }
     var selectedPattern by remember(initialPattern) { mutableStateOf(initialPattern) }
     var selectedFaceDown by remember(initialFaceDown) { mutableStateOf(initialFaceDown) }
     var dialogPreviewFrames by remember { mutableStateOf(IntArray(8) { 0x00000000 }) }
@@ -1569,17 +1598,64 @@ fun CustomRuleDialog(
                     }
                 }
 
+                if (showAutoColorToggle) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Auto Color",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = "Extract dynamic vibrant color directly from app icon",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = isAutoColor,
+                                onCheckedChange = { auto ->
+                                    isAutoColor = auto
+                                    if (auto && autoExtractedColor != null) {
+                                        selectedColor = autoExtractedColor
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+
+                val canPickManualColor = isColorEnabled && (!showAutoColorToggle || !isAutoColor)
+                val manualColorAlpha by animateFloatAsState(
+                    targetValue = if (canPickManualColor) 1.0f else 0.35f,
+                    animationSpec = tween(durationMillis = 200),
+                    label = "manualColorAlpha"
+                )
+
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .alpha(colorAlpha),
+                        .alpha(manualColorAlpha),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Select Color",
+                        text = if (showAutoColorToggle && isAutoColor) "Color (Auto from Icon)" else "Select Color",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (isColorEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (canPickManualColor) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Row(
@@ -1587,7 +1663,7 @@ fun CustomRuleDialog(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         palette.forEach { c ->
-                            val isSelected = selectedColor == c && isColorEnabled
+                            val isSelected = selectedColor == c && canPickManualColor
                             Box(
                                 modifier = Modifier
                                     .size(32.dp)
@@ -1598,7 +1674,7 @@ fun CustomRuleDialog(
                                         color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                                         shape = CircleShape
                                     )
-                                    .clickable(enabled = isColorEnabled) { selectedColor = c }
+                                    .clickable(enabled = canPickManualColor) { selectedColor = c }
                             )
                         }
                     }
@@ -1649,7 +1725,7 @@ fun CustomRuleDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    onSave(selectedPattern, selectedColor, selectedFaceDown)
+                    onSave(selectedPattern, selectedColor, selectedFaceDown, isAutoColor)
                 }
             ) {
                 Text("Save")

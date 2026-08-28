@@ -113,7 +113,8 @@ data class AppNotificationRule(
     val color: Long = 0xFF34A853,
     val pattern: PatternMode = PatternMode.PULSE,
     val isEnabled: Boolean = true,
-    val faceDownMode: FaceDownMode = FaceDownMode.INHERIT
+    val faceDownMode: FaceDownMode = FaceDownMode.INHERIT,
+    val isAutoColor: Boolean = true
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("packageName", packageName)
@@ -122,6 +123,7 @@ data class AppNotificationRule(
         put("pattern", pattern.name)
         put("isEnabled", isEnabled)
         put("faceDownMode", faceDownMode.name)
+        put("isAutoColor", isAutoColor)
     }
 
     companion object {
@@ -136,7 +138,8 @@ data class AppNotificationRule(
                 color = json.optLong("color", 0xFF34A853),
                 pattern = pattern,
                 isEnabled = json.optBoolean("isEnabled", true),
-                faceDownMode = faceDown
+                faceDownMode = faceDown,
+                isAutoColor = json.optBoolean("isAutoColor", true)
             )
         }
     }

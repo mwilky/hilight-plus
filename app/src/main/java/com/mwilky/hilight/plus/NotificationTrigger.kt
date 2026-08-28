@@ -126,8 +126,16 @@ class NotificationTrigger : NotificationListenerService() {
                         return@launch
                     }
                     val pattern = appRule.pattern
-                    val color = appRule.color
-                    Log.i(TAG, "Priority 2 Match: App '${appRule.appName}' ($pkg) -> pattern=$pattern, color=$color")
+                    val color = if (appRule.isAutoColor) {
+                        com.mwilky.hilight.plus.core.AppIconColorExtractor.extractColorForPackage(
+                            context = applicationContext,
+                            packageName = appRule.packageName,
+                            fallbackColor = appRule.color
+                        )
+                    } else {
+                        appRule.color
+                    }
+                    Log.i(TAG, "Priority 2 Match: App '${appRule.appName}' ($pkg) -> pattern=$pattern, color=$color (auto=${appRule.isAutoColor})")
                     lastActiveNotificationKey = sbn.key
                     controller.triggerAlertEffect(pattern = pattern, color = color, durationMs = durationMs)
                 } else {
@@ -145,9 +153,18 @@ class NotificationTrigger : NotificationListenerService() {
                     return@launch
                 }
                 val defaultPattern = store.defaultNotifPattern.first()
-                val defaultColor = store.defaultNotifColor.first()
+                val isDefaultAutoColor = store.isDefaultNotifAutoColor.first()
+                val defaultColor = if (isDefaultAutoColor) {
+                    com.mwilky.hilight.plus.core.AppIconColorExtractor.extractColorForPackage(
+                        context = applicationContext,
+                        packageName = pkg,
+                        fallbackColor = store.defaultNotifColor.first()
+                    )
+                } else {
+                    store.defaultNotifColor.first()
+                }
                 if (defaultPattern != PatternMode.OFF) {
-                    Log.i(TAG, "Priority 3 Match: General Default -> pattern=$defaultPattern, color=$defaultColor")
+                    Log.i(TAG, "Priority 3 Match: General Default ($pkg) -> pattern=$defaultPattern, color=$defaultColor (auto=$isDefaultAutoColor)")
                     lastActiveNotificationKey = sbn.key
                     controller.triggerAlertEffect(pattern = defaultPattern, color = defaultColor, durationMs = durationMs)
                 } else {
