@@ -57,15 +57,9 @@ class NotificationTrigger : NotificationListenerService() {
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         if (sbn == null) return
         val removedKey = sbn.key
-        if (removedKey == lastActiveNotificationKey) {
-            scope.launch {
-                val store = AppStore.get(applicationContext)
-                if (store.isStopOnDismiss.first()) {
-                    Log.i(TAG, "Notification dismissed ($removedKey) -> stopping notification lights")
-                    LightController.get(applicationContext).clearAlert()
-                    lastActiveNotificationKey = null
-                }
-            }
+        scope.launch {
+            Log.i(TAG, "Notification dismissed ($removedKey) -> removing from alert queue")
+            LightController.get(applicationContext).removeNotificationAlert(removedKey)
         }
     }
 
@@ -109,8 +103,12 @@ class NotificationTrigger : NotificationListenerService() {
                     val pattern = matchedContactRule.pattern
                     val color = matchedContactRule.color
                     Log.i(TAG, "Priority 1 Match: Contact '${matchedContactRule.name}' -> pattern=$pattern, color=$color")
-                    lastActiveNotificationKey = sbn.key
-                    controller.triggerAlertEffect(pattern = pattern, color = color, durationMs = durationMs)
+                    controller.postNotificationAlert(
+                        key = sbn.key,
+                        pattern = pattern,
+                        color = color,
+                        durationMs = durationMs
+                    )
                 } else {
                     Log.i(TAG, "Priority 1 Match: Contact '${matchedContactRule.name}' is OFF or disabled -> NO LIGHT")
                 }
@@ -136,8 +134,12 @@ class NotificationTrigger : NotificationListenerService() {
                         appRule.color
                     }
                     Log.i(TAG, "Priority 2 Match: App '${appRule.appName}' ($pkg) -> pattern=$pattern, color=$color (auto=${appRule.isAutoColor})")
-                    lastActiveNotificationKey = sbn.key
-                    controller.triggerAlertEffect(pattern = pattern, color = color, durationMs = durationMs)
+                    controller.postNotificationAlert(
+                        key = sbn.key,
+                        pattern = pattern,
+                        color = color,
+                        durationMs = durationMs
+                    )
                 } else {
                     Log.i(TAG, "Priority 2 Match: App '${appRule.appName}' is OFF or disabled -> NO LIGHT")
                 }
@@ -165,8 +167,12 @@ class NotificationTrigger : NotificationListenerService() {
                 }
                 if (defaultPattern != PatternMode.OFF) {
                     Log.i(TAG, "Priority 3 Match: General Default ($pkg) -> pattern=$defaultPattern, color=$defaultColor (auto=$isDefaultAutoColor)")
-                    lastActiveNotificationKey = sbn.key
-                    controller.triggerAlertEffect(pattern = defaultPattern, color = defaultColor, durationMs = durationMs)
+                    controller.postNotificationAlert(
+                        key = sbn.key,
+                        pattern = defaultPattern,
+                        color = defaultColor,
+                        durationMs = durationMs
+                    )
                 } else {
                     Log.i(TAG, "Priority 3 Match: General Default is OFF -> NO LIGHT")
                 }

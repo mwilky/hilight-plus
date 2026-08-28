@@ -9,7 +9,6 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.IBinder
 import android.util.Log
-import com.mwilky.hilight.plus.BuildConfig
 import com.mwilky.hilight.plus.core.HiLightDaemonService
 import com.mwilky.hilight.plus.core.IHiLightService
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,74 +17,91 @@ import kotlinx.coroutines.flow.asStateFlow
 import rikka.shizuku.Shizuku
 
 /**
+ * High-level bridge to Shizuku on Android 11+.
  * Manages connection, permission requests, and typed IPC with [HiLightDaemonService].
  */
 class ShizukuBridge private constructor(private val app: Application) {
 
-    enum class State { NOT_INSTALLED, NOT_RUNNING, NEEDS_PERMISSION, CONNECTING, CONNECTED, DISCONNECTED, FAILED }
+    enum class State {
+        NOT_INSTALLED,
+        NOT_RUNNING,
+        NEEDS_PERMISSION,
+        CONNECTING,
+        CONNECTED,
+        DISCONNECTED,
+        FAILED
+    }
 
     private val _state = MutableStateFlow(State.NOT_RUNNING)
     val state: StateFlow<State> = _state.asStateFlow()
 
-    private val _ledCount = MutableStateFlow(8)
-    val ledCount: StateFlow<Int> = _ledCount.asStateFlow()
-
     private var service: IHiLightService? = null
     private var lastError: String? = null
-    @Volatile
     private var manuallyDisconnected = false
-
-    var onAvailabilityChanged: (() -> Unit)? = null
 
     private val args = Shizuku.UserServiceArgs(
         ComponentName(BuildConfig.APPLICATION_ID, HiLightDaemonService::class.java.name)
     )
-        .daemon(true)
-        .processNameSuffix("hilight")
+        .daemon(false)
+        .processNameSuffix("hilight_daemon")
         .debuggable(BuildConfig.DEBUG)
-        .version(BuildConfig.VERSION_CODE)
+        .version(1)
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
-            Log.e("HiLightPlus", "=== ShizukuBridge: onServiceConnected fired ===")
-            if (binder == null || !binder.pingBinder()) {
+            Log.e("HiLightPlus", "onServiceConnected: binder=$binder")
+            if (binder != null && binder.pingBinder()) {
+                service = IHiLightService.Stub.asInterface(binder)
+                _state.value = State.CONNECTED
+                lastError = null
+                val count = runCatching { service?.getLedCount() }.getOrNull() ?: 8
+                Log.i("HiLightPlus", "Connected to HiLightDaemonService! ($count LEDs)")
+                onAvailabilityChanged?.invoke()
+            } else {
                 _state.value = State.FAILED
-                lastError = "Service returned an invalid binder"
-                Log.e("HiLightPlus", "ShizukuBridge: Service returned an invalid binder")
-                return
+                lastError = "Received null/dead binder from Shizuku"
+                Log.e("HiLightPlus", "Binder ping failed")
             }
-            service = IHiLightService.Stub.asInterface(binder)
-            _state.value = State.CONNECTED
-            manuallyDisconnected = false
-            val count = runCatching { service?.getLedCount() }.getOrNull() ?: 8
-            if (count > 0) _ledCount.value = count
-            Log.e("HiLightPlus", "=== HiLightDaemonService CONNECTED with $count LEDs ===")
-            onAvailabilityChanged?.invoke()
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
-            Log.e("HiLightPlus", "=== ShizukuBridge: onServiceDisconnected ===")
+            Log.e("HiLightPlus", "onServiceDisconnected")
             service = null
-            if (_state.value == State.CONNECTED) {
-                _state.value = if (manuallyDisconnected) State.DISCONNECTED else State.NOT_RUNNING
-            }
+            _state.value = if (manuallyDisconnected) State.DISCONNECTED else State.NOT_RUNNING
             onAvailabilityChanged?.invoke()
+        }
+
+        override fun onBindingDied(name: ComponentName?) {
+            Log.e("HiLightPlus", "onBindingDied")
+            service = null
+            _state.value = if (manuallyDisconnected) State.DISCONNECTED else State.NOT_RUNNING
+            onAvailabilityChanged?.invoke()
+        }
+
+        override fun onNullBinding(name: ComponentName?) {
+            Log.e("HiLightPlus", "onNullBinding")
+            service = null
+            _state.value = State.FAILED
+            lastError = "UserService returned null binding"
         }
     }
 
-    private val permissionListener =
-        Shizuku.OnRequestPermissionResultListener { _, grantResult ->
-            Log.e("HiLightPlus", "Shizuku permission result: $grantResult")
+    private val permissionListener = Shizuku.OnRequestPermissionResultListener { requestCode, grantResult ->
+        if (requestCode == PERMISSION_REQUEST) {
             if (grantResult == PackageManager.PERMISSION_GRANTED) {
+                Log.e("HiLightPlus", "Shizuku permission granted by user")
                 manuallyDisconnected = false
-                bind()
+                refresh()
             } else {
+                Log.e("HiLightPlus", "Shizuku permission denied by user")
                 _state.value = State.NEEDS_PERMISSION
             }
         }
+    }
+
+    var onAvailabilityChanged: (() -> Unit)? = null
 
     init {
-        Log.e("HiLightPlus", "=== ShizukuBridge Initializing ===")
         Shizuku.addRequestPermissionResultListener(permissionListener)
         Shizuku.addBinderReceivedListenerSticky {
             Log.e("HiLightPlus", "Shizuku binder received (sticky)")
@@ -178,9 +194,11 @@ class ShizukuBridge private constructor(private val app: Application) {
         onAvailabilityChanged?.invoke()
     }
 
+    fun isConnected(): Boolean = _state.value == State.CONNECTED && service != null
+
     fun errorText(): String? = lastError
 
-    // --- Typed IPC Operations ---
+    // --- Typed Control Methods ---
 
     fun setAmbient(pattern: String, color: Long, brightness: Float, speedMs: Long) {
         val s = service ?: return
@@ -200,6 +218,25 @@ class ShizukuBridge private constructor(private val app: Application) {
             service = null
             _state.value = State.NOT_RUNNING
             onAvailabilityChanged?.invoke()
+        }
+    }
+
+    fun postAlert(key: String, pattern: String, color: Long, brightness: Float, speedMs: Long, durationMs: Long) {
+        val s = service ?: return
+        Log.e("HiLightPlus", "postAlert [key=$key]: pattern=$pattern, color=$color, durationMs=$durationMs")
+        runCatching { s.postAlert(key, pattern, color, brightness, speedMs, durationMs) }.onFailure {
+            Log.e("HiLightPlus", "postAlert failed", it)
+            service = null
+            _state.value = State.NOT_RUNNING
+            onAvailabilityChanged?.invoke()
+        }
+    }
+
+    fun removeAlert(key: String) {
+        val s = service ?: return
+        Log.e("HiLightPlus", "removeAlert [key=$key]")
+        runCatching { s.removeAlert(key) }.onFailure {
+            Log.e("HiLightPlus", "removeAlert failed", it)
         }
     }
 
@@ -234,17 +271,15 @@ class ShizukuBridge private constructor(private val app: Application) {
     }
 
     companion object {
-        const val SHIZUKU_PKG = "moe.shizuku.privileged.api"
-        const val PERMISSION_REQUEST = 4242
+        private const val SHIZUKU_PKG = "moe.shizuku.privileged.api"
+        private const val PERMISSION_REQUEST = 4001
 
         @Volatile
         private var instance: ShizukuBridge? = null
 
-        fun get(context: Context): ShizukuBridge {
-            val app = if (context is Application) context else context.applicationContext as Application
-            return instance ?: synchronized(this) {
+        fun get(app: Application): ShizukuBridge =
+            instance ?: synchronized(this) {
                 instance ?: ShizukuBridge(app).also { instance = it }
             }
-        }
     }
 }

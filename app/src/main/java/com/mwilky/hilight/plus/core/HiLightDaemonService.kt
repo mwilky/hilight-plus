@@ -7,7 +7,7 @@ import kotlin.system.exitProcess
 
 /**
  * Privileged Shizuku UserService running under Shell UID (2000).
- * Implements [com.hilight.plus.core.IHiLightService] to receive strongly-typed commands from the app.
+ * Implements [IHiLightService] to receive strongly-typed commands from the app.
  */
 class HiLightDaemonService : IHiLightService.Stub() {
 
@@ -28,6 +28,18 @@ class HiLightDaemonService : IHiLightService.Stub() {
 
     override fun triggerAlert(pattern: String?, color: Long, brightness: Float, speedMs: Long, durationMs: Long) {
         engine.triggerAlert(pattern ?: "solid", color, brightness, speedMs, durationMs)
+    }
+
+    override fun postAlert(key: String?, pattern: String?, color: Long, brightness: Float, speedMs: Long, durationMs: Long) {
+        if (key != null) {
+            engine.postAlert(key, pattern ?: "solid", color, brightness, speedMs, durationMs)
+        }
+    }
+
+    override fun removeAlert(key: String?) {
+        if (key != null) {
+            engine.removeAlert(key)
+        }
     }
 
     override fun clearAlert() {

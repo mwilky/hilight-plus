@@ -91,6 +91,42 @@ class LightController private constructor(app: Application) {
     }
 
     /**
+     * Enqueues or updates a notification alert in the multi-notification cyclic queue.
+     */
+    fun postNotificationAlert(
+        key: String,
+        pattern: PatternMode,
+        color: Long,
+        brightness: Float = 1.0f,
+        speedMs: Long = 1000L,
+        durationMs: Long = 30_000L
+    ) {
+        val calculatedSpeed = when (pattern) {
+            PatternMode.BREATHE -> 2000L
+            PatternMode.WAVE -> 1200L
+            PatternMode.COMET -> 800L
+            PatternMode.RAINBOW -> 1200L
+            PatternMode.PULSE -> 850L
+            else -> speedMs
+        }
+        shizuku.postAlert(
+            key = key,
+            pattern = pattern.id,
+            color = color,
+            brightness = brightness,
+            speedMs = calculatedSpeed,
+            durationMs = durationMs
+        )
+    }
+
+    /**
+     * Removes an active notification alert by key when dismissed or swiped away.
+     */
+    fun removeNotificationAlert(key: String) {
+        shizuku.removeAlert(key)
+    }
+
+    /**
      * Starts an indefinite incoming call ring alert until answered or ended.
      */
     fun startIncomingCallAlert(

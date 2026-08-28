@@ -4,9 +4,19 @@ import android.util.Log
 
 /**
  * Clean, lightweight render engine driving the Pixel 11 rear LEDs.
+ * Supports multi-notification cyclic rendering across active unread alerts.
  * Runs at ~30 FPS (33ms period).
  */
 class LightEngine {
+
+    data class QueuedAlert(
+        val key: String,
+        val pattern: String,
+        val color: Long,
+        val brightness: Float,
+        val speedMs: Long,
+        val expiresAtMs: Long
+    )
 
     private val lights = PixelLightsManager()
     private val renderer = PatternRenderer()
@@ -26,13 +36,18 @@ class LightEngine {
     private var ambientBrightness = 1.0f
     private var ambientSpeedMs = 2000L
 
-    // Alert State
-    private var alertPattern: String? = null
-    private var alertColor = 0xFF4285F4
-    private var alertBrightness = 1.0f
-    private var alertSpeedMs = 800L
-    private var alertStartMs = 0L
-    private var alertDurationMs = 0L
+    // Direct / Incoming Call Alert State (Highest priority override)
+    private var directAlertPattern: String? = null
+    private var directAlertColor = 0xFF4285F4
+    private var directAlertBrightness = 1.0f
+    private var directAlertSpeedMs = 800L
+    private var directAlertStartMs = 0L
+    private var directAlertDurationMs = 0L
+
+    // Multi-Notification Cyclic Queue
+    private val activeAlerts = mutableListOf<QueuedAlert>()
+    private var currentAlertIndex = 0
+    private var cycleStartTimeMs = 0L
     private var needsSessionReset = false
 
     fun start(): Boolean {
@@ -91,23 +106,78 @@ class LightEngine {
         }
     }
 
+    /**
+     * Triggers a direct / persistent alert (e.g. incoming phone call ring).
+     */
     fun triggerAlert(pattern: String, color: Long, brightness: Float, speedMs: Long, durationMs: Long) {
         synchronized(lock) {
-            alertPattern = pattern
-            alertColor = color
-            alertBrightness = brightness
-            alertSpeedMs = speedMs
-            alertStartMs = System.currentTimeMillis()
-            alertDurationMs = durationMs
+            directAlertPattern = pattern
+            directAlertColor = color
+            directAlertBrightness = brightness
+            directAlertSpeedMs = speedMs
+            directAlertStartMs = System.currentTimeMillis()
+            directAlertDurationMs = durationMs
             needsSessionReset = true
             Log.i(TAG, "triggerAlert: pattern=$pattern, color=$color, durationMs=$durationMs")
         }
     }
 
+    /**
+     * Enqueues or updates an alert in the multi-notification cyclic queue.
+     */
+    fun postAlert(key: String, pattern: String, color: Long, brightness: Float, speedMs: Long, durationMs: Long) {
+        synchronized(lock) {
+            val now = System.currentTimeMillis()
+            val expiresAt = now + durationMs
+            val alert = QueuedAlert(
+                key = key,
+                pattern = pattern,
+                color = color,
+                brightness = brightness,
+                speedMs = speedMs,
+                expiresAtMs = expiresAt
+            )
+
+            val existingIndex = activeAlerts.indexOfFirst { it.key == key }
+            if (existingIndex >= 0) {
+                activeAlerts[existingIndex] = alert
+            } else {
+                activeAlerts.add(alert)
+                if (activeAlerts.size == 1) {
+                    currentAlertIndex = 0
+                    cycleStartTimeMs = now
+                }
+            }
+            needsSessionReset = true
+            Log.i(TAG, "postAlert [key=$key]: pattern=$pattern, color=$color (queue size=${activeAlerts.size})")
+        }
+    }
+
+    /**
+     * Removes an active alert by key (e.g. when dismissed on device).
+     */
+    fun removeAlert(key: String) {
+        synchronized(lock) {
+            val removed = activeAlerts.removeAll { it.key == key }
+            if (removed) {
+                if (currentAlertIndex >= activeAlerts.size) {
+                    currentAlertIndex = 0
+                    cycleStartTimeMs = System.currentTimeMillis()
+                }
+                Log.i(TAG, "removeAlert [key=$key] (remaining queue=${activeAlerts.size})")
+                if (activeAlerts.isEmpty() && directAlertPattern == null && ambientPattern.equals("off", ignoreCase = true)) {
+                    lights.blank()
+                }
+            }
+        }
+    }
+
     fun clearAlert() {
         synchronized(lock) {
-            alertPattern = null
-            alertDurationMs = 0L
+            directAlertPattern = null
+            directAlertDurationMs = 0L
+            activeAlerts.clear()
+            currentAlertIndex = 0
             if (ambientPattern.equals("off", ignoreCase = true)) {
                 lights.blank()
             }
@@ -117,7 +187,9 @@ class LightEngine {
     fun turnOff() {
         synchronized(lock) {
             ambientPattern = "off"
-            alertPattern = null
+            directAlertPattern = null
+            activeAlerts.clear()
+            currentAlertIndex = 0
             lights.blank()
         }
     }
@@ -150,7 +222,21 @@ class LightEngine {
             }
 
             val now = System.currentTimeMillis()
-            val isAlertActive = alertPattern != null && (now - alertStartMs < alertDurationMs)
+
+            // 1. Check Direct Alert (Incoming Call)
+            val isDirectAlertActive = directAlertPattern != null && (now - directAlertStartMs < directAlertDurationMs)
+
+            // 2. Prune expired alerts from cyclic queue
+            if (activeAlerts.isNotEmpty()) {
+                val beforeSize = activeAlerts.size
+                activeAlerts.removeAll { it.expiresAtMs <= now }
+                if (activeAlerts.size != beforeSize) {
+                    if (currentAlertIndex >= activeAlerts.size) {
+                        currentAlertIndex = 0
+                        cycleStartTimeMs = now
+                    }
+                }
+            }
 
             val currentPattern: String
             val currentColor: Long
@@ -158,19 +244,38 @@ class LightEngine {
             val currentSpeed: Long
             val elapsedMs: Long
 
-            if (isAlertActive) {
-                currentPattern = alertPattern ?: "off"
-                currentColor = alertColor
-                currentBrightness = alertBrightness
-                currentSpeed = alertSpeedMs
-                elapsedMs = now - alertStartMs
+            if (isDirectAlertActive) {
+                currentPattern = directAlertPattern ?: "off"
+                currentColor = directAlertColor
+                currentBrightness = directAlertBrightness
+                currentSpeed = directAlertSpeedMs
+                elapsedMs = now - directAlertStartMs
+            } else if (activeAlerts.isNotEmpty()) {
+                if (currentAlertIndex >= activeAlerts.size) {
+                    currentAlertIndex = 0
+                    cycleStartTimeMs = now
+                }
+
+                val currentAlert = activeAlerts[currentAlertIndex]
+                val singleCycleDuration = currentAlert.speedMs.coerceAtLeast(400L)
+                val alertElapsedInCycle = now - cycleStartTimeMs
+
+                // Check if current alert's animation cycle has completed
+                if (alertElapsedInCycle >= singleCycleDuration) {
+                    // Advance to next alert in queue
+                    currentAlertIndex = (currentAlertIndex + 1) % activeAlerts.size
+                    cycleStartTimeMs = now
+                }
+
+                val activeAlertToRender = activeAlerts[currentAlertIndex.coerceIn(0, activeAlerts.size - 1)]
+                currentPattern = activeAlertToRender.pattern
+                currentColor = activeAlertToRender.color
+                currentBrightness = activeAlertToRender.brightness
+                currentSpeed = activeAlertToRender.speedMs
+                elapsedMs = now - cycleStartTimeMs
             } else {
-                if (alertPattern != null) {
-                    alertPattern = null
-                    if (ambientPattern.equals("off", ignoreCase = true)) {
-                        lights.blank()
-                        return
-                    }
+                if (directAlertPattern != null) {
+                    directAlertPattern = null
                 }
                 currentPattern = ambientPattern
                 currentColor = ambientColor

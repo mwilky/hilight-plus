@@ -104,7 +104,6 @@ fun HomeScreen(controller: LightController) {
     // Notifications state
     val isNotifsEnabled by controller.store.isNotificationsEnabled.collectAsStateWithLifecycle(initialValue = true)
     val notifDurationSec by controller.store.notificationDurationSeconds.collectAsStateWithLifecycle(initialValue = 30)
-    val isStopOnDismiss by controller.store.isStopOnDismiss.collectAsStateWithLifecycle(initialValue = false)
     val isStopOnUnlock by controller.store.isStopOnUnlock.collectAsStateWithLifecycle(initialValue = false)
     val isDefaultNotifEnabled by controller.store.isDefaultNotifEnabled.collectAsStateWithLifecycle(initialValue = true)
     val defaultNotifColor by controller.store.defaultNotifColor.collectAsStateWithLifecycle(initialValue = 0xFFFFFFFF)
@@ -254,8 +253,6 @@ fun HomeScreen(controller: LightController) {
         onToggleNotifs = { enabled -> scope.launch { controller.store.setNotificationsEnabled(enabled) } },
         notifDurationSec = notifDurationSec,
         onChangeDuration = { sec -> scope.launch { controller.store.setNotificationDurationSeconds(sec) } },
-        isStopOnDismiss = isStopOnDismiss,
-        onToggleStopOnDismiss = { enabled -> scope.launch { controller.store.setStopOnDismiss(enabled) } },
         isStopOnUnlock = isStopOnUnlock,
         onToggleStopOnUnlock = { enabled -> scope.launch { controller.store.setStopOnUnlock(enabled) } },
         isDefaultNotifEnabled = isDefaultNotifEnabled,
@@ -488,8 +485,6 @@ fun HomeContent(
     onToggleNotifs: (Boolean) -> Unit,
     notifDurationSec: Int,
     onChangeDuration: (Int) -> Unit,
-    isStopOnDismiss: Boolean = false,
-    onToggleStopOnDismiss: (Boolean) -> Unit = {},
     isStopOnUnlock: Boolean = false,
     onToggleStopOnUnlock: (Boolean) -> Unit = {},
     isDefaultNotifEnabled: Boolean,
@@ -1229,39 +1224,6 @@ fun HomeContent(
                                     valueRange = 30f..300f,
                                     steps = 8,
                                     modifier = Modifier.fillMaxWidth().height(28.dp)
-                                )
-                            }
-                        }
-
-                        // Stop on Dismiss Card
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(24.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 18.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Stop on dismiss",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Text(
-                                        text = "Turn off lights when the notification is swiped away or cleared",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                Switch(
-                                    checked = isStopOnDismiss,
-                                    onCheckedChange = onToggleStopOnDismiss,
-                                    enabled = isNotifsEnabled
                                 )
                             }
                         }
