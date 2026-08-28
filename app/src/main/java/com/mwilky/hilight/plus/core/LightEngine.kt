@@ -117,6 +117,8 @@ class LightEngine {
             directAlertSpeedMs = speedMs
             directAlertStartMs = System.currentTimeMillis()
             directAlertDurationMs = durationMs
+            activeAlerts.clear()
+            currentAlertIndex = 0
             needsSessionReset = true
             Log.i(TAG, "triggerAlert: pattern=$pattern, color=$color, durationMs=$durationMs")
         }
@@ -138,18 +140,18 @@ class LightEngine {
                 expiresAtMs = expiresAt
             )
 
-            val existingIndex = activeAlerts.indexOfFirst { it.key == key }
-            if (existingIndex >= 0) {
-                activeAlerts[existingIndex] = alert
-            } else {
-                activeAlerts.add(alert)
-                if (activeAlerts.size == 1) {
-                    currentAlertIndex = 0
-                    cycleStartTimeMs = now
-                }
+            // Remove any existing entry with this key
+            activeAlerts.removeAll { it.key == key }
+            // Add latest alert to the queue
+            activeAlerts.add(alert)
+
+            // If this is the only active alert, start its cycle timer fresh
+            if (activeAlerts.size == 1) {
+                currentAlertIndex = 0
+                cycleStartTimeMs = now
             }
             needsSessionReset = true
-            Log.i(TAG, "postAlert [key=$key]: pattern=$pattern, color=$color (queue size=${activeAlerts.size})")
+            Log.i(TAG, "postAlert [key=$key]: pattern=$pattern, color=$color, speedMs=$speedMs (queue size=${activeAlerts.size})")
         }
     }
 
@@ -256,13 +258,13 @@ class LightEngine {
                     cycleStartTimeMs = now
                 }
 
+                // Check if current alert's animation cycle has completed
                 val currentAlert = activeAlerts[currentAlertIndex]
-                val singleCycleDuration = currentAlert.speedMs.coerceAtLeast(400L)
+                val singleCycleDuration = currentAlert.speedMs.coerceAtLeast(300L)
                 val alertElapsedInCycle = now - cycleStartTimeMs
 
-                // Check if current alert's animation cycle has completed
                 if (alertElapsedInCycle >= singleCycleDuration) {
-                    // Advance to next alert in queue
+                    // Advance to next alert in queue and reset cycle clock to now
                     currentAlertIndex = (currentAlertIndex + 1) % activeAlerts.size
                     cycleStartTimeMs = now
                 }
@@ -272,7 +274,9 @@ class LightEngine {
                 currentColor = activeAlertToRender.color
                 currentBrightness = activeAlertToRender.brightness
                 currentSpeed = activeAlertToRender.speedMs
-                elapsedMs = now - cycleStartTimeMs
+
+                // Clamp elapsed time strictly within [0, singleCycleDuration]
+                elapsedMs = (now - cycleStartTimeMs).coerceIn(0L, singleCycleDuration)
             } else {
                 if (directAlertPattern != null) {
                     directAlertPattern = null

@@ -1,6 +1,7 @@
 package com.mwilky.hilight.plus
 
 import android.app.Notification
+import android.app.NotificationManager
 import android.app.Person
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -19,14 +20,14 @@ import kotlinx.coroutines.launch
  * Listens for incoming system notifications (messages, chats, apps) and triggers
  * the appropriate rear LED animation according to the 3-Tier Priority System.
  *
- * Supports auto-dismissing lights when:
- * 1. The triggering notification is dismissed/removed by the user.
- * 2. The device is unlocked (ACTION_USER_PRESENT).
+ * Automatically filters out:
+ * - Ongoing/persistent background alerts (media player, step counters, downloads, persistent foreground services).
+ * - Silent/minimized low-priority alerts (IMPORTANCE_LOW / IMPORTANCE_MIN).
+ * - Deduplicates multiple notifications per application/rule so each app has exactly 1 slot in the cycle rotation.
  */
 class NotificationTrigger : NotificationListenerService() {
 
     private val scope = CoroutineScope(Dispatchers.IO)
-    private var lastActiveNotificationKey: String? = null
 
     private val unlockReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -36,7 +37,6 @@ class NotificationTrigger : NotificationListenerService() {
                     if (store.isStopOnUnlock.first()) {
                         Log.i(TAG, "Device unlocked -> stopping notification lights")
                         LightController.get(applicationContext).clearAlert()
-                        lastActiveNotificationKey = null
                     }
                 }
             }
@@ -56,10 +56,20 @@ class NotificationTrigger : NotificationListenerService() {
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         if (sbn == null) return
-        val removedKey = sbn.key
+        val pkg = sbn.packageName ?: return
+
         scope.launch {
-            Log.i(TAG, "Notification dismissed ($removedKey) -> removing from alert queue")
-            LightController.get(applicationContext).removeNotificationAlert(removedKey)
+            // Check if there are any remaining notifications for this package in the active shade
+            val hasRemainingForPkg = try {
+                activeNotifications?.any { it.packageName == pkg && !it.isOngoing } == true
+            } catch (t: Throwable) {
+                false
+            }
+
+            if (!hasRemainingForPkg) {
+                Log.i(TAG, "All notifications for $pkg dismissed -> removing from alert queue")
+                LightController.get(applicationContext).removeNotificationAlert(pkg)
+            }
         }
     }
 
@@ -67,8 +77,23 @@ class NotificationTrigger : NotificationListenerService() {
         if (sbn == null) return
         val pkg = sbn.packageName ?: return
 
-        // Ignore our own notifications or ongoing system alerts
-        if (pkg == packageName || sbn.isOngoing) return
+        // 1. Ignore our own notifications
+        if (pkg == packageName) return
+
+        // 2. Ignore ongoing / persistent system alerts (e.g. Media Player, downloads, Tesla persistent connect)
+        if (sbn.isOngoing || (sbn.notification.flags and Notification.FLAG_ONGOING_EVENT) != 0 || (sbn.notification.flags and Notification.FLAG_NO_CLEAR) != 0) {
+            Log.d(TAG, "Ignoring ongoing notification from $pkg")
+            return
+        }
+
+        // 3. Ignore Silent / Ambient / Minimized notifications in the shade
+        val ranking = Ranking()
+        if (currentRanking?.getRanking(sbn.key, ranking) == true) {
+            if (ranking.isAmbient || ranking.importance < NotificationManager.IMPORTANCE_DEFAULT) {
+                Log.d(TAG, "Ignoring silent/ambient notification from $pkg (importance=${ranking.importance})")
+                return
+            }
+        }
 
         val notification = sbn.notification ?: return
 
@@ -103,12 +128,22 @@ class NotificationTrigger : NotificationListenerService() {
                     val pattern = matchedContactRule.pattern
                     val color = matchedContactRule.color
                     Log.i(TAG, "Priority 1 Match: Contact '${matchedContactRule.name}' -> pattern=$pattern, color=$color")
-                    controller.postNotificationAlert(
-                        key = sbn.key,
-                        pattern = pattern,
-                        color = color,
-                        durationMs = durationMs
-                    )
+                    val isCycle = store.isCycleNotifications.first()
+                    val alertKey = "contact_${matchedContactRule.id}"
+                    if (isCycle) {
+                        controller.postNotificationAlert(
+                            key = alertKey,
+                            pattern = pattern,
+                            color = color,
+                            durationMs = durationMs
+                        )
+                    } else {
+                        controller.triggerAlertEffect(
+                            pattern = pattern,
+                            color = color,
+                            durationMs = durationMs
+                        )
+                    }
                 } else {
                     Log.i(TAG, "Priority 1 Match: Contact '${matchedContactRule.name}' is OFF or disabled -> NO LIGHT")
                 }
@@ -134,12 +169,21 @@ class NotificationTrigger : NotificationListenerService() {
                         appRule.color
                     }
                     Log.i(TAG, "Priority 2 Match: App '${appRule.appName}' ($pkg) -> pattern=$pattern, color=$color (auto=${appRule.isAutoColor})")
-                    controller.postNotificationAlert(
-                        key = sbn.key,
-                        pattern = pattern,
-                        color = color,
-                        durationMs = durationMs
-                    )
+                    val isCycle = store.isCycleNotifications.first()
+                    if (isCycle) {
+                        controller.postNotificationAlert(
+                            key = pkg,
+                            pattern = pattern,
+                            color = color,
+                            durationMs = durationMs
+                        )
+                    } else {
+                        controller.triggerAlertEffect(
+                            pattern = pattern,
+                            color = color,
+                            durationMs = durationMs
+                        )
+                    }
                 } else {
                     Log.i(TAG, "Priority 2 Match: App '${appRule.appName}' is OFF or disabled -> NO LIGHT")
                 }
@@ -167,12 +211,21 @@ class NotificationTrigger : NotificationListenerService() {
                 }
                 if (defaultPattern != PatternMode.OFF) {
                     Log.i(TAG, "Priority 3 Match: General Default ($pkg) -> pattern=$defaultPattern, color=$defaultColor (auto=$isDefaultAutoColor)")
-                    controller.postNotificationAlert(
-                        key = sbn.key,
-                        pattern = defaultPattern,
-                        color = defaultColor,
-                        durationMs = durationMs
-                    )
+                    val isCycle = store.isCycleNotifications.first()
+                    if (isCycle) {
+                        controller.postNotificationAlert(
+                            key = pkg,
+                            pattern = defaultPattern,
+                            color = defaultColor,
+                            durationMs = durationMs
+                        )
+                    } else {
+                        controller.triggerAlertEffect(
+                            pattern = defaultPattern,
+                            color = defaultColor,
+                            durationMs = durationMs
+                        )
+                    }
                 } else {
                     Log.i(TAG, "Priority 3 Match: General Default is OFF -> NO LIGHT")
                 }
