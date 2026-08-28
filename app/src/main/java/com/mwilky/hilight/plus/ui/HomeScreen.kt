@@ -39,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -514,9 +515,12 @@ fun HomeContent(
         label = "notifScale"
     )
 
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -533,7 +537,8 @@ fun HomeContent(
                             fontWeight = FontWeight.Bold
                         )
                     }
-                }
+                },
+                scrollBehavior = scrollBehavior
             )
         }
     ) { padding ->
@@ -762,6 +767,10 @@ fun HomeContent(
             // =========================================================================
             // SECTION: INCOMING CALLS (Material 3 Tonal Elevation)
             // =========================================================================
+
+            item {
+                Spacer(Modifier.height(16.dp))
+            }
 
             // Master Switch for Incoming Calls (OUTSIDE container)
             item {

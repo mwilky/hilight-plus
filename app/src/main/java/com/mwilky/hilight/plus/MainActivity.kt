@@ -127,7 +127,11 @@ private fun MainAppNavigation(controller: LightController, onResetAll: () -> Uni
             }
         }
     ) { padding ->
-        Box(modifier = Modifier.padding(padding)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = padding.calculateBottomPadding())
+        ) {
             when (selectedTab) {
                 NavTab.HOME -> HomeScreen(controller = controller)
                 NavTab.CONDITIONS -> ConditionsScreen(controller = controller)

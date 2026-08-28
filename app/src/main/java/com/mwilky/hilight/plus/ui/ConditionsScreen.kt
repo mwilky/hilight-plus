@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -41,10 +42,14 @@ fun ConditionsContent(
     isOnlyWhenFaceDown: Boolean,
     onToggleFaceDown: (Boolean) -> Unit
 ) {
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
-                title = { Text("Conditions") }
+                title = { Text("Conditions") },
+                scrollBehavior = scrollBehavior
             )
         }
     ) { padding ->
