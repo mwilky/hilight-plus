@@ -9,5 +9,7 @@ interface IHiLightService {
     void turnOff();
     int getLedCount();
     boolean isSessionActive();
+    int getSecureInt(String key, int defaultValue);
+    String getSecureString(String key);
     void destroy();
 }

@@ -1,21 +1,177 @@
 <resources>
     <string name="app_name">HiLight Plus</string>
 
+    <!-- Onboarding Step 1: Welcome & Features -->
     <string name="onboarding_title">Welcome to HiLight Plus</string>
-    <string name="onboarding_subtitle">Supercharge the 8-LED rear array on your Pixel 11 Pro</string>
-    <string name="onboarding_info_title">Hardware Control via Shizuku</string>
-    <string name="onboarding_info_desc">HiLight Plus utilizes Shizuku to safely control your Pixel\'s rear micro-LED array. Make sure Shizuku is running and authorized.</string>
-    <string name="onboarding_shizuku_title">Shizuku Privileged Service</string>
-    <string name="onboarding_complete_btn">Get Started</string>
+    <string name="onboarding_subtitle">HiLight Plus gives you full control over the rear LED lights on your pixel device. It allows you to set up custom rules for incoming calls and notifications.</string>
+    <string name="onboarding_feature_calls_title">Incoming calls</string>
+    <string name="onboarding_feature_calls_desc">Assign unique animated LED patterns and vibrant colors to specific contacts or unknown callers.</string>
+    <string name="onboarding_feature_notifs_title">Notifications</string>
+    <string name="onboarding_feature_notifs_desc">Custom rules for notifications from specific apps or contacts.</string>
+    <string name="onboarding_feature_conditions_title">Conditions</string>
+    <string name="onboarding_feature_conditions_desc">Customisable conditions to determine whether the lights should display or not.</string>
+
+    <!-- Onboarding Step 2: Stock HiLight Conflict -->
+    <string name="onboarding_stock_title">Native HiLight</string>
+    <string name="onboarding_stock_question">Why disable Pixel\'s native \'Calls from favourites\' setting?</string>
+    <string name="onboarding_stock_desc1">Pixel\'s built-in HiLight feature has a basic \'Calls from favourites\' mode. If left enabled in system settings, both the native system and HiLight Plus will try to control the rear light array simultaneously.</string>
+    <string name="onboarding_stock_desc2">Disabling the native \'Calls from favourites\' allows HiLight Plus to have full, exclusive control over the lights without conflicts.</string>
+    <string name="onboarding_stock_card_title">Native HiLight settings</string>
+    <string name="onboarding_stock_conflict_active_desc">Calls from favourites is currently active in system settings and will conflict with HiLight Plus. Please tap below to disable it.</string>
+    <string name="onboarding_stock_ready_desc">Native conflict resolved. HiLight Plus has exclusive access to the rear lighting array.</string>
+    <string name="onboarding_stock_status_conflict">Conflict Active</string>
+    <string name="onboarding_stock_status_ready">Ready</string>
+    <string name="onboarding_stock_btn_open">Open settings to disable</string>
+
+    <!-- Onboarding Step 3: Shizuku Hardware Access -->
+    <string name="onboarding_shizuku_title">Shizuku</string>
+    <string name="onboarding_shizuku_desc">Pixel devices do not expose public APIs to directly control rear hardware LEDs. HiLight Plus uses Shizuku to communicate with hardware drivers, without requiring root access.</string>
+    <string name="onboarding_shizuku_session_title">Shizuku access</string>
+    <string name="onboarding_shizuku_status_needs_auth">Authorization needed</string>
+    <string name="onboarding_shizuku_btn_authorize">Authorize shizuku</string>
+    <string name="onboarding_shizuku_btn_install">Install shizuku manager</string>
+    <string name="onboarding_shizuku_btn_open">Open shizuku</string>
+    <string name="onboarding_shizuku_btn_check_again">Check again</string>
+    <string name="onboarding_shizuku_btn_retry">Retry connection</string>
+
+    <!-- Onboarding Step 4: Permissions -->
+    <string name="onboarding_perms_title">Required permissions</string>
+    <string name="onboarding_perms_subtitle">Grant permissions so HiLight Plus can detect incoming calls, contacts, and app notifications in real-time.</string>
+    <string name="onboarding_perms_calls_title">1. Calls &amp; contacts access</string>
+    <string name="onboarding_perms_calls_granted_desc">Phone state, call log, and contacts permissions are active. Incoming caller identification is ready.</string>
+    <string name="onboarding_perms_calls_needed_desc">Required to detect incoming phone calls and match caller numbers against your saved contact rules.</string>
+    <string name="onboarding_perms_calls_status_granted">Granted</string>
+    <string name="onboarding_perms_calls_status_needed">Permissions required</string>
+    <string name="onboarding_perms_calls_btn_grant">Grant access</string>
+    <string name="onboarding_perms_calls_btn_app_info">App info</string>
+    <string name="onboarding_perms_notif_title">2. Notification listener access</string>
+    <string name="onboarding_perms_notif_granted_desc">Notification listener is active. App notifications and chat messages trigger alerts smoothly.</string>
+    <string name="onboarding_perms_notif_needed_desc">Notification listener access is required to detect incoming notifications.</string>
+    <string name="onboarding_perms_notif_status_needed">Access required</string>
+    <string name="onboarding_perms_notif_btn_enable">Enable notification access</string>
+
+    <!-- Navigation Buttons -->
+    <string name="btn_back">Back</string>
+    <string name="btn_next">Next</string>
+    <string name="onboarding_complete_btn">Get started</string>
 
     <!-- Native HiLight Conflict Warnings -->
-    <string name="stock_hilight_warning_title">Stock HiLight Active</string>
-    <string name="stock_hilight_warning_calls"><b>Favorite Contacts</b> is enabled in System Settings. This native feature will conflict with HiLight Plus caller animations.</string>
-    <string name="stock_hilight_open_settings">Disable in Settings</string>
+    <string name="stock_hilight_warning_title">Native HiLight settings</string>
+    <string name="stock_hilight_warning_calls"><b>Calls from favourites</b> is enabled in stock HiLight settings. This native feature will conflict with HiLight Plus caller animations.</string>
+    <string name="stock_hilight_open_settings">Disable in settings</string>
 
     <string name="main_title">HiLight Plus</string>
-    <string name="main_test_card_title">Hardware Testing</string>
+    <string name="main_test_card_title">Hardware testing</string>
     <string name="main_test_card_desc">Pick a color and tap \'Test Device\' to illuminate the 8 rear LEDs, or \'Preview\' to watch on your screen.</string>
-    <string name="main_test_btn">Test Device</string>
-    <string name="main_reset_onboarding">Reset Onboarding &amp; Permissions</string>
+    <string name="main_test_btn">Test device</string>
+    <string name="main_reset_onboarding">Reset onboarding &amp; permissions</string>
+
+    <!-- Navigation Tabs -->
+    <string name="nav_home">Home</string>
+    <string name="nav_conditions">Conditions</string>
+    <string name="nav_about">About</string>
+
+    <!-- Shizuku Status Card -->
+    <string name="shizuku_card_title">Shizuku</string>
+    <string name="shizuku_status_connected">Connected</string>
+    <string name="shizuku_status_connecting">Connecting</string>
+    <string name="shizuku_status_disconnected_paused">Disconnected (Paused)</string>
+    <string name="shizuku_status_needs_permission">Needs Permission</string>
+    <string name="shizuku_status_not_running">Not Running</string>
+    <string name="shizuku_status_not_installed">Not Installed</string>
+    <string name="shizuku_status_disconnected">Disconnected</string>
+    <string name="shizuku_desc_connected">Connected and providing control over your Pixel\'s rear lights.</string>
+    <string name="shizuku_desc_disconnected">Session is paused/disconnected. Tap \'Connect\' to re-engage hardware lights.</string>
+    <string name="shizuku_desc_needs_permission">Shizuku is running. Tap \'Authorize\' below to grant access.</string>
+    <string name="shizuku_desc_not_running">Shizuku daemon is stopped. Start via Wireless Debugging or ADB.</string>
+    <string name="shizuku_desc_not_installed">Shizuku Manager is not installed on this device.</string>
+    <string name="shizuku_desc_connecting">Connecting to local Shizuku binder daemon&#8230;</string>
+    <string name="shizuku_btn_disconnect">Disconnect shizuku</string>
+    <string name="shizuku_btn_connect">Connect shizuku</string>
+    <string name="shizuku_btn_authorize">Authorize shizuku access</string>
+    <string name="shizuku_btn_install">Install Shizuku Manager</string>
+    <string name="shizuku_btn_open">Open Shizuku</string>
+    <string name="shizuku_btn_check_again">Check Again</string>
+    <string name="shizuku_btn_retry">Retry Connection</string>
+
+    <!-- Permissions Warning Cards -->
+    <string name="perm_card_title">Calls &amp; contacts access required</string>
+    <string name="perm_card_status_needed">Permissions required</string>
+    <string name="perm_card_desc">Phone state, call log, and contacts permissions are required to detect incoming callers and match custom contact rules.</string>
+    <string name="perm_btn_grant">Grant permissions</string>
+    <string name="perm_btn_app_info">App info</string>
+    <string name="notif_access_title">Notification access required</string>
+    <string name="notif_access_status_needed">Access needed</string>
+    <string name="notif_access_desc">Notification listener access is required to detect app notifications and contact messages.</string>
+    <string name="notif_access_btn_grant">Grant notification access</string>
+
+    <!-- Incoming Calls Section -->
+    <string name="calls_section_title">Incoming calls</string>
+    <string name="calls_section_subtitle">Enable lights when there is an incoming call</string>
+    <string name="calls_other_contacts_title">All other contacts</string>
+    <string name="calls_other_contacts_desc">Applied to incoming calls from saved contacts without a specific custom rule.</string>
+    <string name="calls_unknown_numbers_title">Unknown &amp; private numbers</string>
+    <string name="calls_unknown_numbers_desc">Applied to incoming calls from unsaved or hidden caller numbers.</string>
+    <string name="calls_custom_rules_header">Custom caller rules (%1$d)</string>
+    <string name="calls_no_rules">No custom caller rules.</string>
+    <string name="calls_add_contact_btn">Add contact</string>
+
+    <!-- Notifications Section -->
+    <string name="notifs_section_title">Notifications</string>
+    <string name="notifs_section_subtitle">Enable lights when notifications arrive</string>
+    <string name="notifs_default_title">All other notifications</string>
+    <string name="notifs_default_subtitle">Notifications with no specific contact or app rule</string>
+    <string name="notifs_default_desc">Applied to incoming notifications from apps and senders without a specific custom rule.</string>
+    <string name="notifs_contact_rules_header">Custom contact rules (%1$d)</string>
+    <string name="notifs_no_contact_rules">No contact message rules.</string>
+    <string name="notifs_app_rules_header">Custom app rules (%1$d)</string>
+    <string name="notifs_no_app_rules">No custom app rules.</string>
+    <string name="notifs_add_app_btn">Add app</string>
+
+    <!-- Additional Settings Section -->
+    <string name="settings_additional_header">Additional settings</string>
+    <string name="settings_duration_title">Light duration</string>
+    <string name="settings_duration_desc">How long to display the lights after receiving a notification</string>
+    <string name="settings_stop_unlock_title">Stop on unlock</string>
+    <string name="settings_stop_unlock_desc">Turn off lights when you unlock your device</string>
+    <string name="settings_cycle_title">Cycle multiple alerts</string>
+    <string name="settings_cycle_desc">Rotate lighting patterns through each active unread notification</string>
+
+    <!-- Dialogs & Customization -->
+    <string name="dialog_pattern_label">Select animation pattern</string>
+    <string name="dialog_color_label">Select colour</string>
+    <string name="dialog_color_auto_label">Colour (auto from icon)</string>
+    <string name="dialog_auto_color_title">Auto colour</string>
+    <string name="dialog_auto_color_desc">Extract dynamic vibrant color directly from app icon</string>
+    <string name="dialog_orientation_title">Device orientation trigger</string>
+    <string name="dialog_orientation_default">Default</string>
+    <string name="dialog_orientation_always">Always</string>
+    <string name="dialog_orientation_face_down">Face down</string>
+    <string name="dialog_btn_save">Save</string>
+    <string name="dialog_btn_cancel">Cancel</string>
+    <string name="dialog_app_picker_title">Select application</string>
+    <string name="dialog_app_picker_search">Search applications…</string>
+    <string name="dialog_app_picker_no_apps">No applications found</string>
+
+    <!-- Rule Item Labels -->
+    <string name="rule_pattern_label">Pattern:</string>
+    <string name="rule_trigger_label">Trigger:</string>
+    <string name="rule_trigger_always">Always</string>
+    <string name="rule_trigger_face_down">Face down only</string>
+
+    <!-- Conditions Screen -->
+    <string name="conditions_title">Conditions</string>
+    <string name="conditions_face_down_title">Face-down only</string>
+    <string name="conditions_face_down_desc">Only illuminate rear lights when your Pixel is placed face down on a flat surface. Can be overridden per individual rule.</string>
+
+    <!-- About Screen -->
+    <string name="about_title">About &amp; Diagnostics</string>
+    <string name="about_app_desc">Custom rear LED lighting for Google Pixel.</string>
+    <string name="about_version_label">Version</string>
+    <string name="about_status_section_header">System Health &amp; Permissions</string>
+    <string name="about_stock_ok_desc">Native conflict resolved. HiLight Plus has exclusive access to the rear lighting array.</string>
+    <string name="about_call_perms_title">Calls &amp; Contacts Permissions</string>
+    <string name="about_call_perms_granted_desc">Phone State, Call Log, and Contacts permissions are active. Incoming caller identification is ready.</string>
+    <string name="about_notif_perms_title">Notification Listener Access</string>
+    <string name="about_notif_perms_granted_desc">Notification Listener service is active. Incoming app notifications and chats trigger seamlessly.</string>
 </resources>

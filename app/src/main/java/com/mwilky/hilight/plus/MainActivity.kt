@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -101,12 +102,18 @@ class MainActivity : ComponentActivity() {
         LightController.get(this).refreshStatus()
         NativeHiLightDetector.check(this)
     }
+
+    override fun onStart() {
+        super.onStart()
+        LightController.get(this).refreshStatus()
+        NativeHiLightDetector.check(this)
+    }
 }
 
-private enum class NavTab(val title: String, val icon: ImageVector) {
-    HOME("Home", Icons.Rounded.Home),
-    CONDITIONS("Conditions", Icons.Rounded.Tune),
-    ABOUT("About", Icons.Rounded.Info)
+private enum class NavTab(val titleRes: Int, val icon: ImageVector) {
+    HOME(R.string.nav_home, Icons.Rounded.Home),
+    CONDITIONS(R.string.nav_conditions, Icons.Rounded.Tune),
+    ABOUT(R.string.nav_about, Icons.Rounded.Info)
 }
 
 @Composable
@@ -117,11 +124,12 @@ private fun MainAppNavigation(controller: LightController, onResetAll: () -> Uni
         bottomBar = {
             NavigationBar {
                 NavTab.entries.forEach { tab ->
+                    val tabTitle = stringResource(tab.titleRes)
                     NavigationBarItem(
                         selected = selectedTab == tab,
                         onClick = { selectedTab = tab },
-                        icon = { Icon(tab.icon, contentDescription = tab.title) },
-                        label = { Text(tab.title) }
+                        icon = { Icon(tab.icon, contentDescription = tabTitle) },
+                        label = { Text(tabTitle) }
                     )
                 }
             }

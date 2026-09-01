@@ -248,6 +248,16 @@ class ShizukuBridge private constructor(private val app: Application) {
         }
     }
 
+    fun getSecureInt(key: String, defaultValue: Int = -1): Int {
+        val s = service ?: return defaultValue
+        return runCatching { s.getSecureInt(key, defaultValue) }.getOrDefault(defaultValue)
+    }
+
+    fun getSecureString(key: String): String? {
+        val s = service ?: return null
+        return runCatching { s.getSecureString(key) }.getOrNull()
+    }
+
     fun turnOff() {
         val s = service ?: return
         Log.e("HiLightPlus", "turnOff called")

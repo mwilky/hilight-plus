@@ -576,25 +576,25 @@ fun HomeContent(
             val isExplicitlyDisconnected = shizukuState == ShizukuBridge.State.DISCONNECTED
             item {
                 ExpressiveStatusCard(
-                    title = "Shizuku Privileged Access",
+                    title = stringResource(R.string.shizuku_card_title),
                     subtitle = when (shizukuState) {
-                        ShizukuBridge.State.CONNECTED -> "Active session holding privileged control over your Pixel's rear light array."
-                        ShizukuBridge.State.DISCONNECTED -> "Session is paused/disconnected. Tap 'Connect' to re-engage hardware lights."
-                        ShizukuBridge.State.NEEDS_PERMISSION -> "Shizuku is running. Tap 'Authorize' below to grant privileged LED access."
-                        ShizukuBridge.State.NOT_RUNNING -> "Shizuku daemon is stopped. Start via Wireless Debugging or ADB."
-                        ShizukuBridge.State.NOT_INSTALLED -> "Shizuku Manager is not installed on this device."
-                        ShizukuBridge.State.CONNECTING -> "Connecting to local Shizuku binder daemon..."
-                        else -> shizukuError ?: "Could not establish binder connection to Shizuku."
+                        ShizukuBridge.State.CONNECTED -> stringResource(R.string.shizuku_desc_connected)
+                        ShizukuBridge.State.DISCONNECTED -> stringResource(R.string.shizuku_desc_disconnected)
+                        ShizukuBridge.State.NEEDS_PERMISSION -> stringResource(R.string.shizuku_desc_needs_permission)
+                        ShizukuBridge.State.NOT_RUNNING -> stringResource(R.string.shizuku_desc_not_running)
+                        ShizukuBridge.State.NOT_INSTALLED -> stringResource(R.string.shizuku_desc_not_installed)
+                        ShizukuBridge.State.CONNECTING -> stringResource(R.string.shizuku_desc_connecting)
+                        else -> shizukuError ?: stringResource(R.string.shizuku_status_disconnected)
                     },
                     icon = if (isShizukuConnected) Icons.Rounded.VerifiedUser else Icons.Rounded.AdminPanelSettings,
                     statusText = when (shizukuState) {
-                        ShizukuBridge.State.CONNECTED -> "Connected"
-                        ShizukuBridge.State.DISCONNECTED -> "Disconnected (Paused)"
-                        ShizukuBridge.State.CONNECTING -> "Connecting"
-                        ShizukuBridge.State.NEEDS_PERMISSION -> "Needs Permission"
-                        ShizukuBridge.State.NOT_RUNNING -> "Not Running"
-                        ShizukuBridge.State.NOT_INSTALLED -> "Not Installed"
-                        else -> "Disconnected"
+                        ShizukuBridge.State.CONNECTED -> stringResource(R.string.shizuku_status_connected)
+                        ShizukuBridge.State.DISCONNECTED -> stringResource(R.string.shizuku_status_disconnected_paused)
+                        ShizukuBridge.State.CONNECTING -> stringResource(R.string.shizuku_status_connecting)
+                        ShizukuBridge.State.NEEDS_PERMISSION -> stringResource(R.string.shizuku_status_needs_permission)
+                        ShizukuBridge.State.NOT_RUNNING -> stringResource(R.string.shizuku_status_not_running)
+                        ShizukuBridge.State.NOT_INSTALLED -> stringResource(R.string.shizuku_status_not_installed)
+                        else -> stringResource(R.string.shizuku_status_disconnected)
                     },
                     accentColor = if (isShizukuConnected) MaterialTheme.colorScheme.primary else if (isExplicitlyDisconnected) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
                     containerColor = if (isShizukuConnected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f) else MaterialTheme.colorScheme.surfaceVariant,
@@ -611,7 +611,7 @@ fun HomeContent(
                                 ) {
                                     Icon(Icons.Rounded.PowerSettingsNew, contentDescription = null, modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Disconnect Shizuku Session")
+                                    Text(stringResource(R.string.shizuku_btn_disconnect))
                                 }
                             }
                             ShizukuBridge.State.DISCONNECTED -> {
@@ -621,7 +621,7 @@ fun HomeContent(
                                 ) {
                                     Icon(Icons.Rounded.PowerSettingsNew, contentDescription = null, modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Connect Shizuku Session")
+                                    Text(stringResource(R.string.shizuku_btn_connect))
                                 }
                             }
                             ShizukuBridge.State.NEEDS_PERMISSION -> {
@@ -631,7 +631,7 @@ fun HomeContent(
                                 ) {
                                     Icon(Icons.Rounded.Key, contentDescription = null, modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Authorize Shizuku Access")
+                                    Text(stringResource(R.string.shizuku_btn_authorize))
                                 }
                             }
                             ShizukuBridge.State.NOT_INSTALLED -> {
@@ -641,7 +641,7 @@ fun HomeContent(
                                 ) {
                                     Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Install Shizuku Manager")
+                                    Text(stringResource(R.string.shizuku_btn_install))
                                 }
                             }
                             ShizukuBridge.State.NOT_RUNNING -> {
@@ -655,7 +655,7 @@ fun HomeContent(
                                     ) {
                                         Icon(Icons.AutoMirrored.Rounded.Launch, contentDescription = null, modifier = Modifier.size(18.dp))
                                         Spacer(Modifier.width(6.dp))
-                                        Text("Open Shizuku")
+                                        Text(stringResource(R.string.shizuku_btn_open))
                                     }
                                     OutlinedButton(
                                         onClick = onConnectShizuku,
@@ -663,10 +663,11 @@ fun HomeContent(
                                     ) {
                                         Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                                         Spacer(Modifier.width(6.dp))
-                                        Text("Check Again")
+                                        Text(stringResource(R.string.shizuku_btn_check_again))
                                     }
                                 }
                             }
+                            ShizukuBridge.State.CONNECTING -> null
                             else -> {
                                 Button(
                                     onClick = onConnectShizuku,
@@ -674,7 +675,7 @@ fun HomeContent(
                                 ) {
                                     Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Retry Connection")
+                                    Text(stringResource(R.string.shizuku_btn_retry))
                                 }
                             }
                         }
@@ -682,15 +683,15 @@ fun HomeContent(
                 )
             }
 
-            // 2. Conditional Warning Banners (ONLY visible if issues exist)
+            // 2. Conditional Warning Banners (ONLY visible on Home if there is an issue)
             val isNativeConflict = stockState.favoriteCallsActive
             if (isNativeConflict) {
                 item {
                     ExpressiveStatusCard(
-                        title = "Stock Favorite Calls Active",
-                        subtitle = "Stock Favorite Calls is active in System Settings and will conflict with custom caller lighting.",
+                        title = stringResource(R.string.onboarding_stock_card_title),
+                        subtitle = stringResource(R.string.onboarding_stock_conflict_active_desc),
                         icon = Icons.Rounded.Warning,
-                        statusText = "Conflict Active",
+                        statusText = stringResource(R.string.onboarding_stock_status_conflict),
                         accentColor = MaterialTheme.colorScheme.error,
                         containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
                         contentColor = MaterialTheme.colorScheme.onErrorContainer,
@@ -706,7 +707,7 @@ fun HomeContent(
                             ) {
                                 Icon(Icons.Rounded.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(8.dp))
-                                Text("Disable in System Settings")
+                                Text(stringResource(R.string.onboarding_stock_btn_open))
                             }
                         }
                     )
@@ -715,16 +716,12 @@ fun HomeContent(
 
             val hasAllPhonePerms = isPhoneGranted && isCallLogGranted && isContactsGranted
             if (!hasAllPhonePerms) {
-                val missingName = when {
-                    !isPhoneGranted || !isCallLogGranted -> "Phone & Call Log permissions"
-                    else -> "Contacts permission"
-                }
                 item {
                     ExpressiveStatusCard(
-                        title = "$missingName Required",
-                        subtitle = "Phone & Call Log permissions are needed to detect incoming callers and match lighting rules.",
+                        title = stringResource(R.string.onboarding_perms_calls_title),
+                        subtitle = stringResource(R.string.onboarding_perms_calls_needed_desc),
                         icon = Icons.Rounded.PermPhoneMsg,
-                        statusText = "Missing Permissions",
+                        statusText = stringResource(R.string.onboarding_perms_calls_status_needed),
                         accentColor = MaterialTheme.colorScheme.error,
                         containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f),
                         contentColor = MaterialTheme.colorScheme.onErrorContainer,
@@ -742,13 +739,13 @@ fun HomeContent(
                                         contentColor = MaterialTheme.colorScheme.onError
                                     )
                                 ) {
-                                    Text("Grant Permission")
+                                    Text(stringResource(R.string.onboarding_perms_calls_btn_grant))
                                 }
                                 OutlinedButton(
                                     onClick = onOpenAppSettings,
                                     modifier = Modifier.weight(1f)
                                 ) {
-                                    Text("App Info")
+                                    Text(stringResource(R.string.onboarding_perms_calls_btn_app_info))
                                 }
                             }
                         }
@@ -759,10 +756,10 @@ fun HomeContent(
             if (!isNotifAccessGranted) {
                 item {
                     ExpressiveStatusCard(
-                        title = "Notification Access Required",
-                        subtitle = "Notification Listener access is required to detect app notifications and contact messages.",
+                        title = stringResource(R.string.onboarding_perms_notif_title),
+                        subtitle = stringResource(R.string.onboarding_perms_notif_needed_desc),
                         icon = Icons.Rounded.NotificationsActive,
-                        statusText = "Access Needed",
+                        statusText = stringResource(R.string.onboarding_perms_notif_status_needed),
                         accentColor = MaterialTheme.colorScheme.error,
                         containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f),
                         contentColor = MaterialTheme.colorScheme.onErrorContainer,
@@ -776,9 +773,9 @@ fun HomeContent(
                                     contentColor = MaterialTheme.colorScheme.onError
                                 )
                             ) {
-                                Icon(Icons.Rounded.NotificationAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Rounded.NotificationsActive, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(8.dp))
-                                Text("Grant Notification Access")
+                                Text(stringResource(R.string.onboarding_perms_notif_btn_enable))
                             }
                         }
                     )
@@ -809,12 +806,12 @@ fun HomeContent(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Incoming calls",
+                                text = stringResource(R.string.calls_section_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Text(
-                                text = "Light the rear array when calls are ringing",
+                                text = stringResource(R.string.calls_section_subtitle),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
@@ -843,7 +840,7 @@ fun HomeContent(
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         TonalRuleCard(
-                            title = "All Other Contacts",
+                            title = stringResource(R.string.calls_other_contacts_title),
                             pattern = otherContactsPattern,
                             color = otherContactsColor,
                             renderer = renderer,
@@ -854,7 +851,7 @@ fun HomeContent(
                         )
 
                         TonalRuleCard(
-                            title = "Unknown & Private Numbers",
+                            title = stringResource(R.string.calls_unknown_numbers_title),
                             pattern = unknownNumbersPattern,
                             color = unknownNumbersColor,
                             renderer = renderer,
@@ -872,7 +869,7 @@ fun HomeContent(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "Custom caller rules (${callContactRules.size})",
+                                text = stringResource(R.string.calls_custom_rules_header, callContactRules.size),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
@@ -901,7 +898,7 @@ fun HomeContent(
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Text(
-                                        text = "No custom caller rules.",
+                                        text = stringResource(R.string.calls_no_rules),
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Medium,
                                         color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -934,7 +931,7 @@ fun HomeContent(
                         ) {
                             Icon(Icons.Rounded.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Add contact")
+                            Text(stringResource(R.string.calls_add_contact_btn))
                         }
                     }
                 }
@@ -964,12 +961,12 @@ fun HomeContent(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Notifications",
+                                text = stringResource(R.string.notifs_section_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Text(
-                                text = "Light the rear array when notifications arrive",
+                                text = stringResource(R.string.notifs_section_subtitle),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
@@ -999,8 +996,7 @@ fun HomeContent(
                     ) {
                         // Default Fallback Card
                         TonalRuleCard(
-                            title = "All Other Notifications",
-                            subtitle = "Notifications with no specific contact or app rule",
+                            title = stringResource(R.string.notifs_default_title),
                             pattern = defaultNotifPattern,
                             color = defaultNotifColor,
                             renderer = renderer,
@@ -1019,7 +1015,7 @@ fun HomeContent(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "Custom contact rules (${messageContactRules.size})",
+                                text = stringResource(R.string.notifs_contact_rules_header, messageContactRules.size),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
@@ -1048,7 +1044,7 @@ fun HomeContent(
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Text(
-                                        text = "No contact message rules.",
+                                        text = stringResource(R.string.notifs_no_contact_rules),
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Medium,
                                         color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -1081,7 +1077,7 @@ fun HomeContent(
                         ) {
                             Icon(Icons.Rounded.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Add contact")
+                            Text(stringResource(R.string.calls_add_contact_btn))
                         }
 
                         // App Rules Header
@@ -1093,7 +1089,7 @@ fun HomeContent(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "Custom app rules (${appRules.size})",
+                                text = stringResource(R.string.notifs_app_rules_header, appRules.size),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
@@ -1122,7 +1118,7 @@ fun HomeContent(
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Text(
-                                        text = "No custom app rules.",
+                                        text = stringResource(R.string.notifs_no_app_rules),
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Medium,
                                         color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -1155,7 +1151,7 @@ fun HomeContent(
                         ) {
                             Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Add app")
+                            Text(stringResource(R.string.notifs_add_app_btn))
                         }
 
                         // Additional settings Header
@@ -1167,7 +1163,7 @@ fun HomeContent(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "Additional settings",
+                                text = stringResource(R.string.settings_additional_header),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
@@ -1191,12 +1187,12 @@ fun HomeContent(
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = "Light Duration",
+                                            text = stringResource(R.string.settings_duration_title),
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.SemiBold
                                         )
                                         Text(
-                                            text = "How long the rear array stays illuminated",
+                                            text = stringResource(R.string.settings_duration_desc),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -1248,12 +1244,12 @@ fun HomeContent(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Stop on unlock",
+                                        text = stringResource(R.string.settings_stop_unlock_title),
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.SemiBold
                                     )
                                     Text(
-                                        text = "Turn off lights when you unlock your device",
+                                        text = stringResource(R.string.settings_stop_unlock_desc),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -1281,12 +1277,12 @@ fun HomeContent(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Cycle multiple alerts",
+                                        text = stringResource(R.string.settings_cycle_title),
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.SemiBold
                                     )
                                     Text(
-                                        text = "Rotate lighting patterns through each active unread notification",
+                                        text = stringResource(R.string.settings_cycle_desc),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -1318,7 +1314,6 @@ fun TonalRuleCard(
     isEnabled: Boolean,
     onToggle: (Boolean) -> Unit,
     onEdit: () -> Unit,
-    subtitle: String? = null,
     faceDownMode: com.mwilky.hilight.plus.FaceDownMode = com.mwilky.hilight.plus.FaceDownMode.INHERIT,
     onDelete: (() -> Unit)? = null
 ) {
@@ -1347,19 +1342,12 @@ fun TonalRuleCard(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
-                    if (!subtitle.isNullOrBlank()) {
-                        Text(
-                            text = subtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = "Pattern:",
+                            text = stringResource(R.string.rule_pattern_label),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1377,12 +1365,12 @@ fun TonalRuleCard(
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text(
-                                text = "Trigger:",
+                                text = stringResource(R.string.rule_trigger_label),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = if (faceDownMode == com.mwilky.hilight.plus.FaceDownMode.ONLY_FACE_DOWN) "Face down only" else "Always light",
+                                text = if (faceDownMode == com.mwilky.hilight.plus.FaceDownMode.ONLY_FACE_DOWN) stringResource(R.string.rule_trigger_face_down) else stringResource(R.string.rule_trigger_always),
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
@@ -1578,7 +1566,7 @@ fun CustomRuleDialog(
                 }
 
                 Text(
-                    text = "Select Animation Pattern",
+                    text = stringResource(R.string.dialog_pattern_label),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -1615,12 +1603,12 @@ fun CustomRuleDialog(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Auto Color",
+                                    text = stringResource(R.string.dialog_auto_color_title),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 Text(
-                                    text = "Extract dynamic vibrant color directly from app icon",
+                                    text = stringResource(R.string.dialog_auto_color_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -1652,7 +1640,7 @@ fun CustomRuleDialog(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = if (showAutoColorToggle && isAutoColor) "Color (Auto from Icon)" else "Select Color",
+                        text = if (showAutoColorToggle && isAutoColor) stringResource(R.string.dialog_color_auto_label) else stringResource(R.string.dialog_color_label),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = if (canPickManualColor) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
@@ -1686,7 +1674,7 @@ fun CustomRuleDialog(
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = "Device Orientation Trigger",
+                        text = stringResource(R.string.dialog_orientation_title),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -1708,9 +1696,9 @@ fun CustomRuleDialog(
                                 label = {
                                     Text(
                                         text = when (mode) {
-                                            com.mwilky.hilight.plus.FaceDownMode.INHERIT -> "Default"
-                                            com.mwilky.hilight.plus.FaceDownMode.ALWAYS -> "Always"
-                                            com.mwilky.hilight.plus.FaceDownMode.ONLY_FACE_DOWN -> "Face Down"
+                                            com.mwilky.hilight.plus.FaceDownMode.INHERIT -> stringResource(R.string.dialog_orientation_default)
+                                            com.mwilky.hilight.plus.FaceDownMode.ALWAYS -> stringResource(R.string.dialog_orientation_always)
+                                            com.mwilky.hilight.plus.FaceDownMode.ONLY_FACE_DOWN -> stringResource(R.string.dialog_orientation_face_down)
                                         },
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
@@ -1728,12 +1716,12 @@ fun CustomRuleDialog(
                     onSave(selectedPattern, selectedColor, selectedFaceDown, isAutoColor)
                 }
             ) {
-                Text("Save")
+                Text(stringResource(R.string.dialog_btn_save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.dialog_btn_cancel))
             }
         }
     )
@@ -1788,7 +1776,7 @@ fun AppPickerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Select App") },
+        title = { Text(stringResource(R.string.dialog_app_picker_title)) },
         text = {
             Column(
                 modifier = Modifier
@@ -1799,7 +1787,7 @@ fun AppPickerDialog(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search installed apps...") },
+                    placeholder = { Text(stringResource(R.string.dialog_app_picker_search)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
@@ -1823,7 +1811,7 @@ fun AppPickerDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "No matching apps found.",
+                            text = stringResource(R.string.dialog_app_picker_no_apps),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1870,7 +1858,7 @@ fun AppPickerDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.dialog_btn_cancel))
             }
         }
     )

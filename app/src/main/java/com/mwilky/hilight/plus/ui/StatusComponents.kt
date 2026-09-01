@@ -16,6 +16,49 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 /**
+ * Standardized status colors for all diagnostic & permission cards across the app.
+ */
+object DiagnosticCardDefaults {
+    val GreenAccent = Color(0xFF4CAF50)
+    val RedAccent = Color(0xFFE53935)
+}
+
+/**
+ * Standardized diagnostic status card for Native HiLight, Calls/Contacts permissions,
+ * Notification listener access, and Shizuku session.
+ *
+ * When [isOk] == true -> Standard vibrant green dot, pill, and container wash.
+ * When [isOk] == false -> Standard warning red dot, pill, container wash, and optional action button.
+ */
+@Composable
+fun StandardDiagnosticCard(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    statusText: String,
+    isOk: Boolean,
+    modifier: Modifier = Modifier,
+    bottomAction: (@Composable () -> Unit)? = null
+) {
+    val accentColor = if (isOk) DiagnosticCardDefaults.GreenAccent else DiagnosticCardDefaults.RedAccent
+    val containerColor = if (isOk) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.40f)
+    val contentColor = if (isOk) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onErrorContainer
+
+    ExpressiveStatusCard(
+        title = title,
+        subtitle = subtitle,
+        icon = icon,
+        statusText = statusText,
+        accentColor = accentColor,
+        containerColor = containerColor,
+        contentColor = contentColor,
+        isWarning = !isOk,
+        modifier = modifier,
+        bottomAction = bottomAction
+    )
+}
+
+/**
  * Material 3 Expressive status indicator card designed for clear system diagnostics.
  * Features vibrant tonal container backgrounds, accent badge pills, colored icon halos, and an optional bottom action bar.
  */

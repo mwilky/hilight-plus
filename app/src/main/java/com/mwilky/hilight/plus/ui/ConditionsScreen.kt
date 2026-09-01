@@ -12,11 +12,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mwilky.hilight.plus.LightController
+import com.mwilky.hilight.plus.R
 import kotlinx.coroutines.launch
 
 /**
@@ -48,7 +50,7 @@ fun ConditionsContent(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
-                title = { Text("Conditions") },
+                title = { Text(stringResource(R.string.conditions_title)) },
                 scrollBehavior = scrollBehavior
             )
         }
@@ -63,8 +65,8 @@ fun ConditionsContent(
         ) {
             // 1. Face-Down Master Condition (Active)
             ConditionCard(
-                title = "Face-Down Only",
-                subtitle = "Only illuminate rear lights when your Pixel is placed face down on a flat surface. Can be overridden per individual rule.",
+                title = stringResource(R.string.conditions_face_down_title),
+                subtitle = stringResource(R.string.conditions_face_down_desc),
                 icon = Icons.Rounded.ScreenRotation,
                 checked = isOnlyWhenFaceDown,
                 onCheckedChange = onToggleFaceDown

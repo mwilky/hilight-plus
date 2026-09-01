@@ -3,6 +3,8 @@ package com.mwilky.hilight.plus.core
 import android.os.Process
 import android.util.Log
 import com.mwilky.hilight.plus.core.IHiLightService
+import java.io.BufferedReader
+import java.io.InputStreamReader
 import kotlin.system.exitProcess
 
 /**
@@ -56,6 +58,26 @@ class HiLightDaemonService : IHiLightService.Stub() {
 
     override fun isSessionActive(): Boolean {
         return engine.isSessionActive
+    }
+
+    override fun getSecureInt(key: String?, defaultValue: Int): Int {
+        if (key.isNullOrBlank()) return defaultValue
+        val str = getSecureString(key) ?: return defaultValue
+        return str.trim().toIntOrNull() ?: defaultValue
+    }
+
+    override fun getSecureString(key: String?): String? {
+        if (key.isNullOrBlank()) return null
+        return try {
+            val process = Runtime.getRuntime().exec(arrayOf("settings", "get", "secure", key))
+            val reader = BufferedReader(InputStreamReader(process.inputStream))
+            val output = reader.readLine()?.trim()
+            process.waitFor()
+            if (output == "null" || output.isNullOrBlank()) null else output
+        } catch (t: Throwable) {
+            Log.e(TAG, "getSecureString failed: ${t.message}", t)
+            null
+        }
     }
 
     override fun destroy() {

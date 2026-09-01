@@ -134,7 +134,7 @@ fun AboutContent(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
-                title = { Text("About & System") },
+                title = { Text(stringResource(R.string.about_title)) },
                 scrollBehavior = scrollBehavior
             )
         }
@@ -168,12 +168,12 @@ fun AboutContent(
                     )
                     Column {
                         Text(
-                            text = "HiLight Plus",
+                            text = stringResource(R.string.main_title),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Version 1.0.0 • Pixel 11 Pro LED Controller",
+                            text = stringResource(R.string.about_app_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -182,7 +182,7 @@ fun AboutContent(
             }
 
             Text(
-                text = "System Diagnostics & Permissions",
+                text = stringResource(R.string.about_status_section_header),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
@@ -190,23 +190,17 @@ fun AboutContent(
 
             // 1. Stock HiLight Conflict Card
             val isNativeConflict = stockState.favoriteCallsActive
-            val stockAccent = if (isNativeConflict) MaterialTheme.colorScheme.error else Color(0xFF388E3C)
-            val stockContainer = if (isNativeConflict) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
-            val stockContent = if (isNativeConflict) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer
 
-            ExpressiveStatusCard(
-                title = "Stock Favorite Calls",
+            StandardDiagnosticCard(
+                title = stringResource(R.string.onboarding_stock_card_title),
                 subtitle = if (isNativeConflict) {
-                    "Stock Favorite Calls is active in System Settings and will conflict with custom caller lighting."
+                    stringResource(R.string.onboarding_stock_conflict_active_desc)
                 } else {
-                    "Stock Favorite Calls setting is disabled. HiLight Plus has unhindered control over caller lighting."
+                    stringResource(R.string.onboarding_stock_ready_desc)
                 },
                 icon = if (isNativeConflict) Icons.Rounded.Warning else Icons.Rounded.CheckCircle,
-                statusText = if (isNativeConflict) "Conflict Active" else "Optimized",
-                accentColor = stockAccent,
-                containerColor = stockContainer,
-                contentColor = stockContent,
-                isWarning = isNativeConflict,
+                statusText = if (isNativeConflict) stringResource(R.string.onboarding_stock_status_conflict) else stringResource(R.string.onboarding_stock_status_ready),
+                isOk = !isNativeConflict,
                 bottomAction = if (isNativeConflict) {
                     {
                         Button(
@@ -219,7 +213,7 @@ fun AboutContent(
                         ) {
                             Icon(Icons.Rounded.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Open System Settings to Resolve")
+                            Text(stringResource(R.string.onboarding_stock_btn_open))
                         }
                     }
                 } else null
@@ -227,26 +221,17 @@ fun AboutContent(
 
             // 2. Call Telephony & Contacts Card
             val hasAllPhonePerms = isPhoneGranted && isCallLogGranted && isContactsGranted
-            val phoneStatusText = when {
-                hasAllPhonePerms -> "Granted"
-                !isPhoneGranted || !isCallLogGranted -> "Missing Phone/Call Permissions"
-                else -> "Missing Contacts"
-            }
-            val phoneDesc = when {
-                hasAllPhonePerms -> "Phone State, Call Log, and Contacts permissions are active. Caller identification is operational."
-                !isPhoneGranted || !isCallLogGranted -> "Phone State & Call Log permissions are required to identify incoming caller numbers."
-                else -> "Contacts permission is missing. The app cannot match names and custom caller lighting rules."
-            }
 
-            ExpressiveStatusCard(
-                title = "Call Telephony & Contacts",
-                subtitle = phoneDesc,
-                icon = if (hasAllPhonePerms) Icons.Rounded.ContactPhone else Icons.Rounded.PermPhoneMsg,
-                statusText = phoneStatusText,
-                accentColor = if (hasAllPhonePerms) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
-                containerColor = if (hasAllPhonePerms) MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.45f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f),
-                contentColor = if (hasAllPhonePerms) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onErrorContainer,
-                isWarning = !hasAllPhonePerms,
+            StandardDiagnosticCard(
+                title = stringResource(R.string.onboarding_perms_calls_title),
+                subtitle = if (hasAllPhonePerms) {
+                    stringResource(R.string.onboarding_perms_calls_granted_desc)
+                } else {
+                    stringResource(R.string.onboarding_perms_calls_needed_desc)
+                },
+                icon = if (hasAllPhonePerms) Icons.Rounded.CheckCircle else Icons.Rounded.PermPhoneMsg,
+                statusText = if (hasAllPhonePerms) stringResource(R.string.onboarding_perms_calls_status_granted) else stringResource(R.string.onboarding_perms_calls_status_needed),
+                isOk = hasAllPhonePerms,
                 bottomAction = if (!hasAllPhonePerms) {
                     {
                         Row(
@@ -261,13 +246,13 @@ fun AboutContent(
                                     contentColor = MaterialTheme.colorScheme.onError
                                 )
                             ) {
-                                Text("Grant Permission")
+                                Text(stringResource(R.string.onboarding_perms_calls_btn_grant))
                             }
                             OutlinedButton(
                                 onClick = onOpenAppSettings,
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("App Info")
+                                Text(stringResource(R.string.onboarding_perms_calls_btn_app_info))
                             }
                         }
                     }
@@ -275,19 +260,16 @@ fun AboutContent(
             )
 
             // 3. Notification Listener Access Card
-            ExpressiveStatusCard(
-                title = "Notification Listener Access",
+            StandardDiagnosticCard(
+                title = stringResource(R.string.onboarding_perms_notif_title),
                 subtitle = if (isNotifAccessGranted) {
-                    "Notification Listener service is active. Incoming app notifications and chats trigger seamlessly."
+                    stringResource(R.string.onboarding_perms_notif_granted_desc)
                 } else {
-                    "Notification Listener access is required to detect app notifications and contact messages."
+                    stringResource(R.string.onboarding_perms_notif_needed_desc)
                 },
-                icon = if (isNotifAccessGranted) Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationAdd,
-                statusText = if (isNotifAccessGranted) "Granted" else "Access Needed",
-                accentColor = if (isNotifAccessGranted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                containerColor = if (isNotifAccessGranted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f),
-                contentColor = if (isNotifAccessGranted) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer,
-                isWarning = !isNotifAccessGranted,
+                icon = if (isNotifAccessGranted) Icons.Rounded.CheckCircle else Icons.Rounded.NotificationAdd,
+                statusText = if (isNotifAccessGranted) stringResource(R.string.onboarding_perms_calls_status_granted) else stringResource(R.string.onboarding_perms_notif_status_needed),
+                isOk = isNotifAccessGranted,
                 bottomAction = if (!isNotifAccessGranted) {
                     {
                         Button(
@@ -298,9 +280,9 @@ fun AboutContent(
                                 contentColor = MaterialTheme.colorScheme.onError
                             )
                         ) {
-                            Icon(Icons.Rounded.NotificationAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Rounded.NotificationsActive, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Grant Notification Access")
+                            Text(stringResource(R.string.onboarding_perms_notif_btn_enable))
                         }
                     }
                 } else null

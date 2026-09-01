@@ -1,5 +1,6 @@
 package com.mwilky.hilight.plus
 
+import android.app.Application
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -14,7 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * State representing if stock Pixel 11 Favorite Calls is active in system settings.
+ * State representing if stock Pixel Favorite Calls is active in system settings.
  */
 data class StockHiLightState(
     val favoriteCallsActive: Boolean = false
@@ -23,7 +24,11 @@ data class StockHiLightState(
 }
 
 /**
- * Detects whether native Pixel 11 Favorite Calls is active in system settings.
+ * Detects whether native Pixel Favorite Calls is active in Settings.Secure
+ * under key `light_animation_favorite_calls_enabled`.
+ *
+ * Queries the key using the privileged Shizuku daemon under Shell UID (2000)
+ * to bypass Android 12+ (S+) SecurityException for unreadable @hide system settings.
  */
 object NativeHiLightDetector {
 
@@ -35,60 +40,83 @@ object NativeHiLightDetector {
     val state: StateFlow<StockHiLightState> = _state.asStateFlow()
 
     private var observerRegistered = false
+    private var appContext: Context? = null
 
     private val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean, uri: Uri?) {
             super.onChange(selfChange, uri)
+            Log.d(TAG, "ContentObserver triggered with uri: $uri")
             appContext?.let { check(it) }
         }
 
         override fun onChange(selfChange: Boolean) {
             super.onChange(selfChange)
+            Log.d(TAG, "ContentObserver triggered (selfChange=$selfChange)")
             appContext?.let { check(it) }
         }
     }
 
-    private var appContext: Context? = null
-
     fun check(context: Context) {
         val app = context.applicationContext
         appContext = app
-
         val cr = app.contentResolver
 
         if (!observerRegistered) {
             try {
-                cr.registerContentObserver(Settings.Secure.getUriFor(KEY_FAVORITE_CALLS), true, observer)
-                observerRegistered = true
+                // Register observer so whenever the key changes in Settings, Android invokes our callback
+                val uri = Settings.Secure.getUriFor(KEY_FAVORITE_CALLS)
+                if (uri != null) {
+                    cr.registerContentObserver(uri, true, observer)
+                    observerRegistered = true
+                    Log.d(TAG, "Registered ContentObserver on Settings.Secure for '$KEY_FAVORITE_CALLS'")
+                }
             } catch (e: Throwable) {
                 Log.w(TAG, "Failed to register ContentObserver: $e")
             }
         }
 
-        val callsInt = try { Settings.Secure.getInt(cr, KEY_FAVORITE_CALLS, 0) } catch (_: Throwable) { 0 }
-        val callsStr = try { Settings.Secure.getString(cr, KEY_FAVORITE_CALLS) } catch (_: Throwable) { null }
-        val favoriteCallsActive = (callsInt == 1) || (callsStr == "1") || (callsStr.equals("true", ignoreCase = true))
+        var isFavoriteCallsActive = false
 
-        _state.value = StockHiLightState(favoriteCallsActive = favoriteCallsActive)
+        // Direct primary read via privileged Shizuku daemon (Shell UID 2000)
+        if (app is Application) {
+            val bridge = ShizukuBridge.get(app)
+            if (bridge.isConnected()) {
+                val shizukuVal = bridge.getSecureString(KEY_FAVORITE_CALLS)
+                if (shizukuVal != null) {
+                    isFavoriteCallsActive = shizukuVal == "1" || shizukuVal.equals("true", ignoreCase = true)
+                    Log.i(TAG, "Shizuku privileged read: '$KEY_FAVORITE_CALLS'='$shizukuVal' => active=$isFavoriteCallsActive")
+                }
+            }
+        }
+
+        _state.value = StockHiLightState(favoriteCallsActive = isFavoriteCallsActive)
     }
 
     /**
      * Opens the System settings page where HiLight settings reside.
      */
     fun openHiLightSettings(context: Context) {
-        val systemIntent = Intent().apply {
-            component = ComponentName("com.android.settings", "com.android.settings.Settings\$SystemDashboardActivity")
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        }
+        val intents = listOf(
+            Intent().apply {
+                component = ComponentName("com.android.settings", "com.android.settings.Settings\$HiLightSettingsActivity")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            },
+            Intent("android.settings.HILIGHT_SETTINGS").apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            },
+            Intent().apply {
+                component = ComponentName("com.android.settings", "com.android.settings.Settings\$SystemDashboardActivity")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            },
+            Intent(Settings.ACTION_SETTINGS).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+        )
 
-        try {
-            context.startActivity(systemIntent)
-        } catch (_: Throwable) {
+        for (intent in intents) {
             try {
-                val fallback = Intent(Settings.ACTION_SETTINGS).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                }
-                context.startActivity(fallback)
+                context.startActivity(intent)
+                return
             } catch (_: Throwable) {
             }
         }
