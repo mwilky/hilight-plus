@@ -13,12 +13,11 @@
 
     <!-- Onboarding Step 2: Stock HiLight Conflict -->
     <string name="onboarding_stock_title">Native HiLight</string>
-    <string name="onboarding_stock_question">Why disable Pixel\'s native \'Calls from favourites\' setting?</string>
     <string name="onboarding_stock_desc1">Pixel\'s built-in HiLight feature has a basic \'Calls from favourites\' mode. If left enabled in system settings, both the native system and HiLight Plus will try to control the rear light array simultaneously.</string>
     <string name="onboarding_stock_desc2">Disabling the native \'Calls from favourites\' allows HiLight Plus to have full, exclusive control over the lights without conflicts.</string>
     <string name="onboarding_stock_card_title">Native HiLight settings</string>
     <string name="onboarding_stock_conflict_active_desc">Calls from favourites is currently active in system settings and will conflict with HiLight Plus. Please tap below to disable it.</string>
-    <string name="onboarding_stock_ready_desc">Native conflict resolved. HiLight Plus has exclusive access to the rear lighting array.</string>
+    <string name="onboarding_stock_ready_desc">Native setting disabled. HiLight Plus has exclusive access to the rear lights.</string>
     <string name="onboarding_stock_status_conflict">Conflict Active</string>
     <string name="onboarding_stock_status_ready">Ready</string>
     <string name="onboarding_stock_btn_open">Open settings to disable</string>
@@ -64,7 +63,6 @@
     <string name="main_test_card_title">Hardware testing</string>
     <string name="main_test_card_desc">Pick a color and tap \'Test Device\' to illuminate the 8 rear LEDs, or \'Preview\' to watch on your screen.</string>
     <string name="main_test_btn">Test device</string>
-    <string name="main_reset_onboarding">Reset onboarding &amp; permissions</string>
 
     <!-- Navigation Tabs -->
     <string name="nav_home">Home</string>
@@ -110,7 +108,7 @@
     <string name="calls_section_subtitle">Enable lights when there is an incoming call</string>
     <string name="calls_other_contacts_title">All other contacts</string>
     <string name="calls_other_contacts_desc">Applied to incoming calls from saved contacts without a specific custom rule.</string>
-    <string name="calls_unknown_numbers_title">Unknown &amp; private numbers</string>
+    <string name="calls_unknown_numbers_title">Unknown numbers</string>
     <string name="calls_unknown_numbers_desc">Applied to incoming calls from unsaved or hidden caller numbers.</string>
     <string name="calls_custom_rules_header">Custom caller rules (%1$d)</string>
     <string name="calls_no_rules">No custom caller rules.</string>
@@ -138,8 +136,8 @@
     <string name="settings_cycle_desc">Rotate lighting patterns through each active unread notification</string>
 
     <!-- Dialogs & Customization -->
-    <string name="dialog_pattern_label">Select animation pattern</string>
-    <string name="dialog_color_label">Select colour</string>
+    <string name="dialog_pattern_label">Pattern</string>
+    <string name="dialog_color_label">Colour</string>
     <string name="dialog_color_auto_label">Colour (auto from icon)</string>
     <string name="dialog_auto_color_title">Auto colour</string>
     <string name="dialog_auto_color_desc">Extract dynamic vibrant color directly from app icon</string>
@@ -161,15 +159,15 @@
 
     <!-- Conditions Screen -->
     <string name="conditions_title">Conditions</string>
-    <string name="conditions_face_down_title">Face-down only</string>
-    <string name="conditions_face_down_desc">Only illuminate rear lights when your Pixel is placed face down on a flat surface. Can be overridden per individual rule.</string>
+    <string name="conditions_face_down_title">Face down only</string>
+    <string name="conditions_face_down_desc">Only show lights when your Pixel is placed face down on a flat surface. Can be overridden per individual rule.</string>
 
     <!-- About Screen -->
     <string name="about_title">About &amp; Diagnostics</string>
     <string name="about_app_desc">Custom rear LED lighting for Google Pixel.</string>
     <string name="about_version_label">Version</string>
     <string name="about_status_section_header">System Health &amp; Permissions</string>
-    <string name="about_stock_ok_desc">Native conflict resolved. HiLight Plus has exclusive access to the rear lighting array.</string>
+    <string name="about_stock_ok_desc">Native setting disabled. HiLight Plus has exclusive access to the rear lighting array.</string>
     <string name="about_call_perms_title">Calls &amp; Contacts Permissions</string>
     <string name="about_call_perms_granted_desc">Phone State, Call Log, and Contacts permissions are active. Incoming caller identification is ready.</string>
     <string name="about_notif_perms_title">Notification Listener Access</string>

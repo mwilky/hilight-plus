@@ -304,8 +304,7 @@ fun HomeScreen(controller: LightController) {
     if (isConfiguringOtherContacts) {
         val otherFaceDown by controller.store.otherContactsFaceDownMode.collectAsStateWithLifecycle(initialValue = com.mwilky.hilight.plus.FaceDownMode.INHERIT)
         CustomRuleDialog(
-            title = "All Other Contacts",
-            description = "Applied to incoming calls from saved contacts without a specific custom rule.",
+            title = stringResource(R.string.calls_other_contacts_title),
             initialColor = otherContactsColor,
             initialPattern = otherContactsPattern,
             initialFaceDown = otherFaceDown,
@@ -326,8 +325,7 @@ fun HomeScreen(controller: LightController) {
     if (isConfiguringUnknownNumbers) {
         val unknownFaceDown by controller.store.unknownNumbersFaceDownMode.collectAsStateWithLifecycle(initialValue = com.mwilky.hilight.plus.FaceDownMode.INHERIT)
         CustomRuleDialog(
-            title = "Unknown & Private Numbers",
-            description = "Applied to incoming calls from unsaved or hidden caller numbers.",
+            title = stringResource(R.string.calls_unknown_numbers_title),
             initialColor = unknownNumbersColor,
             initialPattern = unknownNumbersPattern,
             initialFaceDown = unknownFaceDown,
@@ -420,8 +418,7 @@ fun HomeScreen(controller: LightController) {
         val notifFaceDown by controller.store.defaultNotifFaceDownMode.collectAsStateWithLifecycle(initialValue = com.mwilky.hilight.plus.FaceDownMode.INHERIT)
         val notifAutoColor by controller.store.isDefaultNotifAutoColor.collectAsStateWithLifecycle(initialValue = false)
         CustomRuleDialog(
-            title = "All Other Notifications",
-            description = "Applied to incoming notifications from apps and senders without a specific custom rule.",
+            title = stringResource(R.string.notifs_default_title),
             initialColor = defaultNotifColor,
             initialPattern = defaultNotifPattern,
             initialFaceDown = notifFaceDown,
@@ -1455,8 +1452,7 @@ fun CustomRuleDialog(
     initialFaceDown: com.mwilky.hilight.plus.FaceDownMode = com.mwilky.hilight.plus.FaceDownMode.INHERIT,
     showAutoColorToggle: Boolean = false,
     initialAutoColor: Boolean = true,
-    autoExtractedColor: Long? = null,
-    description: String? = null
+    autoExtractedColor: Long? = null
 ) {
     var isAutoColor by remember(initialAutoColor) { mutableStateOf(initialAutoColor) }
     var selectedColor by remember(initialColor, isAutoColor, autoExtractedColor) {
@@ -1484,7 +1480,11 @@ fun CustomRuleDialog(
         val speed = when (selectedPattern) {
             PatternMode.BREATHE -> 2000L
             PatternMode.WAVE -> 1200L
-            PatternMode.COMET -> 1000L
+            PatternMode.COMET -> 800L
+            PatternMode.ORBIT -> 1000L
+            PatternMode.BEACON -> 750L
+            PatternMode.RIPPLE -> 900L
+            PatternMode.SPARKLE -> 1400L
             PatternMode.RAINBOW -> 1200L
             PatternMode.PULSE -> 850L
             else -> 1000L
@@ -1510,14 +1510,7 @@ fun CustomRuleDialog(
         label = "dialogColorAlpha"
     )
 
-    val patterns = listOf(
-        PatternMode.PULSE,
-        PatternMode.BREATHE,
-        PatternMode.WAVE,
-        PatternMode.COMET,
-        PatternMode.RAINBOW,
-        PatternMode.SOLID
-    )
+    val patterns = PatternMode.entries.filter { it != PatternMode.OFF }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1533,16 +1526,8 @@ fun CustomRuleDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (!description.isNullOrBlank()) {
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
                 // Hero Preview Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -1559,32 +1544,39 @@ fun CustomRuleDialog(
                             frames = dialogPreviewFrames,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(90.dp),
-                            size = 72.dp
+                                .height(50.dp),
+                            size = 56.dp
                         )
                     }
                 }
 
-                Text(
-                    text = stringResource(R.string.dialog_pattern_label),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
-
-                Row(
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    patterns.forEach { p ->
-                        FilterChip(
-                            selected = selectedPattern == p,
-                            onClick = { selectedPattern = p },
-                            label = { Text(p.displayName) }
-                        )
+                    Text(
+                        text = stringResource(R.string.dialog_pattern_label),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    FlowRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                    ) {
+                        patterns.forEach { p ->
+                            FilterChip(
+                                selected = selectedPattern == p,
+                                onClick = { selectedPattern = p },
+                                label = { Text(p.displayName) },
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+                        }
                     }
                 }
+
+                Spacer(Modifier.height(4.dp))
 
                 if (showAutoColorToggle) {
                     Card(
@@ -1604,7 +1596,7 @@ fun CustomRuleDialog(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = stringResource(R.string.dialog_auto_color_title),
-                                    style = MaterialTheme.typography.titleMedium,
+                                    style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 Text(
@@ -1643,8 +1635,7 @@ fun CustomRuleDialog(
                         text = if (showAutoColorToggle && isAutoColor) stringResource(R.string.dialog_color_auto_label) else stringResource(R.string.dialog_color_label),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (canPickManualColor) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                       )
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -1668,10 +1659,12 @@ fun CustomRuleDialog(
                     }
                 }
 
+                Spacer(Modifier.height(4.dp))
+
                 // Face-Down Orientation Override Section
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         text = stringResource(R.string.dialog_orientation_title),
