@@ -10,6 +10,7 @@ import android.provider.ContactsContract
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -62,6 +63,7 @@ import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.R
 import com.mwilky.hilight.plus.ShizukuBridge
 import com.mwilky.hilight.plus.StockHiLightState
+import com.mwilky.hilight.plus.UnlockBehavior
 import com.mwilky.hilight.plus.core.PatternRenderer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -104,7 +106,7 @@ fun HomeScreen(controller: LightController) {
     // Notifications state
     val isNotifsEnabled by controller.store.isNotificationsEnabled.collectAsStateWithLifecycle(initialValue = true)
     val notifDurationSec by controller.store.notificationDurationSeconds.collectAsStateWithLifecycle(initialValue = 30)
-    val isStopOnUnlock by controller.store.isStopOnUnlock.collectAsStateWithLifecycle(initialValue = false)
+    val unlockBehavior by controller.store.unlockBehavior.collectAsStateWithLifecycle(initialValue = UnlockBehavior.NONE)
     val isCycleNotifications by controller.store.isCycleNotifications.collectAsStateWithLifecycle(initialValue = false)
     val isDefaultNotifEnabled by controller.store.isDefaultNotifEnabled.collectAsStateWithLifecycle(initialValue = true)
     val defaultNotifColor by controller.store.defaultNotifColor.collectAsStateWithLifecycle(initialValue = 0xFFFFFFFF)
@@ -254,8 +256,8 @@ fun HomeScreen(controller: LightController) {
         onToggleNotifs = { enabled -> scope.launch { controller.store.setNotificationsEnabled(enabled) } },
         notifDurationSec = notifDurationSec,
         onChangeDuration = { sec -> scope.launch { controller.store.setNotificationDurationSeconds(sec) } },
-        isStopOnUnlock = isStopOnUnlock,
-        onToggleStopOnUnlock = { enabled -> scope.launch { controller.store.setStopOnUnlock(enabled) } },
+        unlockBehavior = unlockBehavior,
+        onChangeUnlockBehavior = { behavior -> scope.launch { controller.store.setUnlockBehavior(behavior) } },
         isCycleNotifications = isCycleNotifications,
         onToggleCycleNotifications = { enabled -> scope.launch { controller.store.setCycleNotifications(enabled) } },
         isDefaultNotifEnabled = isDefaultNotifEnabled,
@@ -485,8 +487,8 @@ fun HomeContent(
     onToggleNotifs: (Boolean) -> Unit,
     notifDurationSec: Int,
     onChangeDuration: (Int) -> Unit,
-    isStopOnUnlock: Boolean = false,
-    onToggleStopOnUnlock: (Boolean) -> Unit = {},
+    unlockBehavior: UnlockBehavior = UnlockBehavior.NONE,
+    onChangeUnlockBehavior: (UnlockBehavior) -> Unit = {},
     isCycleNotifications: Boolean = false,
     onToggleCycleNotifications: (Boolean) -> Unit = {},
     isDefaultNotifEnabled: Boolean,
@@ -1226,36 +1228,75 @@ fun HomeContent(
                             }
                         }
 
-                        // Stop on Unlock Card
+                        // Unlock Behaviour Card
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(24.dp),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
                         ) {
-                            Row(
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 18.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
+                                Column(modifier = Modifier.fillMaxWidth()) {
                                     Text(
-                                        text = stringResource(R.string.settings_stop_unlock_title),
+                                        text = stringResource(R.string.settings_unlock_behavior_title),
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.SemiBold
                                     )
-                                    Text(
-                                        text = stringResource(R.string.settings_stop_unlock_desc),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                    AnimatedContent(
+                                        targetState = unlockBehavior,
+                                        transitionSpec = {
+                                            fadeIn(animationSpec = tween(220)) togetherWith fadeOut(animationSpec = tween(180))
+                                        },
+                                        label = "UnlockBehaviorSubtitle"
+                                    ) { behavior ->
+                                        Text(
+                                            text = when (behavior) {
+                                                UnlockBehavior.NONE -> stringResource(R.string.settings_unlock_none_desc)
+                                                UnlockBehavior.PAUSE -> stringResource(R.string.settings_unlock_pause_desc)
+                                                UnlockBehavior.CLEAR -> stringResource(R.string.settings_unlock_clear_desc)
+                                            },
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
-                                Switch(
-                                    checked = isStopOnUnlock,
-                                    onCheckedChange = onToggleStopOnUnlock,
-                                    enabled = isNotifsEnabled
-                                )
+
+                                SingleChoiceSegmentedButtonRow(
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    val behaviors = UnlockBehavior.entries
+                                    behaviors.forEachIndexed { index, b ->
+                                        val isSelected = unlockBehavior == b
+                                        SegmentedButton(
+                                            selected = isSelected,
+                                            onClick = { if (isNotifsEnabled) onChangeUnlockBehavior(b) },
+                                            enabled = isNotifsEnabled,
+                                            shape = SegmentedButtonDefaults.itemShape(index = index, count = behaviors.size),
+                                            icon = {},
+                                            colors = SegmentedButtonDefaults.colors(
+                                                activeContainerColor = MaterialTheme.colorScheme.primary,
+                                                activeContentColor = MaterialTheme.colorScheme.onPrimary,
+                                                inactiveContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                                inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                            ),
+                                            label = {
+                                                Text(
+                                                    text = when (b) {
+                                                        UnlockBehavior.NONE -> stringResource(R.string.settings_unlock_none)
+                                                        UnlockBehavior.PAUSE -> stringResource(R.string.settings_unlock_pause)
+                                                        UnlockBehavior.CLEAR -> stringResource(R.string.settings_unlock_clear)
+                                                    },
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                                )
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         }
 

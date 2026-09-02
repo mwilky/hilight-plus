@@ -130,8 +130,13 @@
     <string name="settings_additional_header">Additional settings</string>
     <string name="settings_duration_title">Light duration</string>
     <string name="settings_duration_desc">How long to display the lights after receiving a notification</string>
-    <string name="settings_stop_unlock_title">Stop on unlock</string>
-    <string name="settings_stop_unlock_desc">Turn off lights when you unlock your device</string>
+    <string name="settings_unlock_behavior_title">Unlock behaviour</string>
+    <string name="settings_unlock_none">None</string>
+    <string name="settings_unlock_none_desc">Lights continue playing until the notification duration expires.</string>
+    <string name="settings_unlock_pause">Pause</string>
+    <string name="settings_unlock_pause_desc">Lights stop while unlocked, and resume playing when locked again.</string>
+    <string name="settings_unlock_clear">Clear</string>
+    <string name="settings_unlock_clear_desc">Lights stop immediately and the active alert queue is cleared.</string>
     <string name="settings_cycle_title">Cycle multiple alerts</string>
     <string name="settings_cycle_desc">Rotate lighting patterns through each active unread notification</string>
 
