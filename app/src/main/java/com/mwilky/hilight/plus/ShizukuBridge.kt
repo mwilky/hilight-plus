@@ -248,6 +248,22 @@ class ShizukuBridge private constructor(private val app: Application) {
         }
     }
 
+    fun pauseAlerts() {
+        val s = service ?: return
+        Log.e("HiLightPlus", "pauseAlerts called")
+        runCatching { s.pauseAlerts() }.onFailure {
+            Log.e("HiLightPlus", "pauseAlerts failed", it)
+        }
+    }
+
+    fun resumeAlerts() {
+        val s = service ?: return
+        Log.e("HiLightPlus", "resumeAlerts called")
+        runCatching { s.resumeAlerts() }.onFailure {
+            Log.e("HiLightPlus", "resumeAlerts failed", it)
+        }
+    }
+
     fun getSecureInt(key: String, defaultValue: Int = -1): Int {
         val s = service ?: return defaultValue
         return runCatching { s.getSecureInt(key, defaultValue) }.getOrDefault(defaultValue)

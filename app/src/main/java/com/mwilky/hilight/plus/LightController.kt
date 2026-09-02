@@ -172,11 +172,25 @@ class LightController private constructor(app: Application) {
     }
 
     /**
-     * Halts any active alert effect immediately.
+     * Halts any active alert effect immediately and clears active alerts queue.
      */
     fun clearAlert() {
         shizuku.clearAlert()
         syncState()
+    }
+
+    /**
+     * Pauses alert lighting while retaining queued alerts in memory.
+     */
+    fun pauseAlerts() {
+        shizuku.pauseAlerts()
+    }
+
+    /**
+     * Resumes queued alert lighting when device is locked again.
+     */
+    fun resumeAlerts() {
+        shizuku.resumeAlerts()
     }
 
     /**

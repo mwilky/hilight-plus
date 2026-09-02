@@ -6,6 +6,8 @@ interface IHiLightService {
     void postAlert(String key, String pattern, long color, float brightness, long speedMs, long durationMs);
     void removeAlert(String key);
     void clearAlert();
+    void pauseAlerts();
+    void resumeAlerts();
     void turnOff();
     int getLedCount();
     boolean isSessionActive();

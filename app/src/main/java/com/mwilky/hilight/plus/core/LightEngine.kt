@@ -29,6 +29,7 @@ class LightEngine {
     // State
     private var masterEnabled = true
     private var sessionPriority = 10
+    private var isAlertsPaused = false
 
     // Ambient State
     private var ambientPattern = "off"
@@ -119,6 +120,7 @@ class LightEngine {
             directAlertDurationMs = durationMs
             activeAlerts.clear()
             currentAlertIndex = 0
+            isAlertsPaused = false
             needsSessionReset = true
             Log.i(TAG, "triggerAlert: pattern=$pattern, color=$color, durationMs=$durationMs")
         }
@@ -150,8 +152,10 @@ class LightEngine {
                 currentAlertIndex = 0
                 cycleStartTimeMs = now
             }
-            needsSessionReset = true
-            Log.i(TAG, "postAlert [key=$key]: pattern=$pattern, color=$color, speedMs=$speedMs (queue size=${activeAlerts.size})")
+            if (!isAlertsPaused) {
+                needsSessionReset = true
+            }
+            Log.i(TAG, "postAlert [key=$key]: pattern=$pattern, color=$color, speedMs=$speedMs (queue size=${activeAlerts.size}, isPaused=$isAlertsPaused)")
         }
     }
 
@@ -174,12 +178,41 @@ class LightEngine {
         }
     }
 
+    /**
+     * Pauses active alert rendering (e.g. on device unlock when behavior is PAUSE).
+     * Keeps activeAlerts in memory so they can resume when locked.
+     */
+    fun pauseAlerts() {
+        synchronized(lock) {
+            isAlertsPaused = true
+            Log.i(TAG, "pauseAlerts: alerts paused, keeping ${activeAlerts.size} queued alerts")
+            if (ambientPattern.equals("off", ignoreCase = true)) {
+                lights.blank()
+            }
+        }
+    }
+
+    /**
+     * Resumes paused alert rendering (e.g. when device is locked again).
+     */
+    fun resumeAlerts() {
+        synchronized(lock) {
+            if (isAlertsPaused) {
+                isAlertsPaused = false
+                cycleStartTimeMs = System.currentTimeMillis()
+                needsSessionReset = true
+                Log.i(TAG, "resumeAlerts: resumed alerts with ${activeAlerts.size} queued alerts")
+            }
+        }
+    }
+
     fun clearAlert() {
         synchronized(lock) {
             directAlertPattern = null
             directAlertDurationMs = 0L
             activeAlerts.clear()
             currentAlertIndex = 0
+            isAlertsPaused = false
             if (ambientPattern.equals("off", ignoreCase = true)) {
                 lights.blank()
             }
@@ -192,6 +225,7 @@ class LightEngine {
             directAlertPattern = null
             activeAlerts.clear()
             currentAlertIndex = 0
+            isAlertsPaused = false
             lights.blank()
         }
     }
@@ -252,7 +286,7 @@ class LightEngine {
                 currentBrightness = directAlertBrightness
                 currentSpeed = directAlertSpeedMs
                 elapsedMs = now - directAlertStartMs
-            } else if (activeAlerts.isNotEmpty()) {
+            } else if (!isAlertsPaused && activeAlerts.isNotEmpty()) {
                 if (currentAlertIndex >= activeAlerts.size) {
                     currentAlertIndex = 0
                     cycleStartTimeMs = now
