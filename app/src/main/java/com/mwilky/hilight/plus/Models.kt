@@ -9,6 +9,10 @@ enum class PatternMode(val id: String, val displayName: String) {
     PULSE("pulse", "Pulse"),
     WAVE("wave", "Wave"),
     COMET("comet", "Comet"),
+    ORBIT("orbit", "Orbit"),
+    BEACON("beacon", "Beacon"),
+    RIPPLE("ripple", "Ripple"),
+    SPARKLE("sparkle", "Sparkle"),
     RAINBOW("rainbow", "Rainbow")
 }
 

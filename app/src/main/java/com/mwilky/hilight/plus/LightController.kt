@@ -77,6 +77,10 @@ class LightController private constructor(app: Application) {
             PatternMode.BREATHE -> 2000L
             PatternMode.WAVE -> 1200L
             PatternMode.COMET -> 800L
+            PatternMode.ORBIT -> 1000L
+            PatternMode.BEACON -> 750L
+            PatternMode.RIPPLE -> 900L
+            PatternMode.SPARKLE -> 1400L
             PatternMode.RAINBOW -> 1200L
             PatternMode.PULSE -> 850L
             else -> speedMs
@@ -105,6 +109,10 @@ class LightController private constructor(app: Application) {
             PatternMode.BREATHE -> 2000L
             PatternMode.WAVE -> 1200L
             PatternMode.COMET -> 800L
+            PatternMode.ORBIT -> 1000L
+            PatternMode.BEACON -> 750L
+            PatternMode.RIPPLE -> 900L
+            PatternMode.SPARKLE -> 1400L
             PatternMode.RAINBOW -> 1200L
             PatternMode.PULSE -> 850L
             else -> speedMs
@@ -139,6 +147,10 @@ class LightController private constructor(app: Application) {
             PatternMode.BREATHE -> 2000L
             PatternMode.WAVE -> 1200L
             PatternMode.COMET -> 800L
+            PatternMode.ORBIT -> 1000L
+            PatternMode.BEACON -> 750L
+            PatternMode.RIPPLE -> 900L
+            PatternMode.SPARKLE -> 1400L
             PatternMode.RAINBOW -> 1200L
             PatternMode.PULSE -> 850L
             else -> speedMs
