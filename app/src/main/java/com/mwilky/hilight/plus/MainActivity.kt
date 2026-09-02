@@ -1,6 +1,5 @@
 package com.mwilky.hilight.plus
 
-import android.Manifest
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -77,19 +76,7 @@ class MainActivity : ComponentActivity() {
 
                     true -> {
                         MainAppNavigation(
-                            controller = controller,
-                            onResetAll = {
-                                scope.launch {
-                                    store.setOnboardingCompleted(false)
-                                    controller.shizuku.unbind()
-                                    runCatching {
-                                        revokeSelfPermissionOnKill(Manifest.permission.READ_PHONE_STATE)
-                                        revokeSelfPermissionOnKill(Manifest.permission.READ_CALL_LOG)
-                                        revokeSelfPermissionOnKill(Manifest.permission.READ_CONTACTS)
-                                        revokeSelfPermissionOnKill(Manifest.permission.POST_NOTIFICATIONS)
-                                    }
-                                }
-                            }
+                            controller = controller
                         )
                     }
                 }
@@ -117,7 +104,7 @@ private enum class NavTab(val titleRes: Int, val icon: ImageVector) {
 }
 
 @Composable
-private fun MainAppNavigation(controller: LightController, onResetAll: () -> Unit) {
+private fun MainAppNavigation(controller: LightController) {
     var selectedTab by remember { mutableStateOf(NavTab.HOME) }
 
     Scaffold(
@@ -143,7 +130,7 @@ private fun MainAppNavigation(controller: LightController, onResetAll: () -> Uni
             when (selectedTab) {
                 NavTab.HOME -> HomeScreen(controller = controller)
                 NavTab.CONDITIONS -> ConditionsScreen(controller = controller)
-                NavTab.ABOUT -> AboutScreen(controller = controller, onResetAll = onResetAll)
+                NavTab.ABOUT -> AboutScreen(controller = controller)
             }
         }
     }

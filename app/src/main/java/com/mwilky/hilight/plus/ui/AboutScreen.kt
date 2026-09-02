@@ -36,11 +36,10 @@ import com.mwilky.hilight.plus.StockHiLightState
 
 /**
  * About & Diagnostics Screen:
- * Displays App Version, System Health diagnostics (Stock conflict resolver & Permissions inspector),
- * and the Reset Onboarding action.
+ * Displays App Version, System Health diagnostics (Stock conflict resolver & Permissions inspector).
  */
 @Composable
-fun AboutScreen(controller: LightController, onResetAll: () -> Unit) {
+fun AboutScreen(controller: LightController) {
     val context = LocalContext.current
     val stockState by NativeHiLightDetector.state.collectAsStateWithLifecycle()
 
@@ -109,8 +108,7 @@ fun AboutScreen(controller: LightController, onResetAll: () -> Unit) {
             permissionLauncher.launch(missing)
         },
         onOpenNotifSettings = { openNotifSettings() },
-        onOpenAppSettings = { openAppSettings() },
-        onResetAll = onResetAll
+        onOpenAppSettings = { openAppSettings() }
     )
 }
 
@@ -125,8 +123,7 @@ fun AboutContent(
     onOpenSettings: () -> Unit,
     onRequestPhonePerms: () -> Unit,
     onOpenNotifSettings: () -> Unit,
-    onOpenAppSettings: () -> Unit,
-    onResetAll: () -> Unit
+    onOpenAppSettings: () -> Unit
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
@@ -287,15 +284,6 @@ fun AboutContent(
                     }
                 } else null
             )
-
-            Spacer(Modifier.weight(1f))
-
-            OutlinedButton(
-                onClick = onResetAll,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(stringResource(R.string.main_reset_onboarding))
-            }
         }
     }
 }
@@ -313,8 +301,7 @@ fun AboutScreenPreview() {
             onOpenSettings = {},
             onRequestPhonePerms = {},
             onOpenNotifSettings = {},
-            onOpenAppSettings = {},
-            onResetAll = {}
+            onOpenAppSettings = {}
         )
     }
 }
