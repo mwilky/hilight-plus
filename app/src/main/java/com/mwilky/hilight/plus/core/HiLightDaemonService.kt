@@ -39,6 +39,14 @@ class HiLightDaemonService : IHiLightService.Stub() {
         }
     }
 
+    override fun startIncomingCall(pattern: String?, color: Long, brightness: Float, speedMs: Long) {
+        engine.startIncomingCall(pattern ?: "solid", color, brightness, speedMs)
+    }
+
+    override fun stopIncomingCall() {
+        engine.stopIncomingCall()
+    }
+
     override fun removeAlert(key: String?) {
         if (key != null) {
             engine.removeAlert(key)

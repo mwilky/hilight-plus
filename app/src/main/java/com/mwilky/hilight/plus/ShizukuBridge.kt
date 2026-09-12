@@ -45,7 +45,7 @@ class ShizukuBridge private constructor(private val app: Application) {
         .daemon(false)
         .processNameSuffix("hilight_daemon")
         .debuggable(BuildConfig.DEBUG)
-        .version(1)
+        .version(2)
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -226,6 +226,26 @@ class ShizukuBridge private constructor(private val app: Application) {
         Log.e("HiLightPlus", "postAlert [key=$key]: pattern=$pattern, color=$color, durationMs=$durationMs")
         runCatching { s.postAlert(key, pattern, color, brightness, speedMs, durationMs) }.onFailure {
             Log.e("HiLightPlus", "postAlert failed", it)
+            service = null
+            _state.value = State.NOT_RUNNING
+            onAvailabilityChanged?.invoke()
+        }
+    }
+
+    fun startIncomingCall(pattern: String, color: Long, brightness: Float, speedMs: Long) {
+        val s = service ?: return
+        runCatching { s.startIncomingCall(pattern, color, brightness, speedMs) }.onFailure {
+            Log.e("HiLightPlus", "startIncomingCall failed", it)
+            service = null
+            _state.value = State.NOT_RUNNING
+            onAvailabilityChanged?.invoke()
+        }
+    }
+
+    fun stopIncomingCall() {
+        val s = service ?: return
+        runCatching { s.stopIncomingCall() }.onFailure {
+            Log.e("HiLightPlus", "stopIncomingCall failed", it)
             service = null
             _state.value = State.NOT_RUNNING
             onAvailabilityChanged?.invoke()

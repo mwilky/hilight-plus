@@ -14,4 +14,6 @@ interface IHiLightService {
     int getSecureInt(String key, int defaultValue);
     String getSecureString(String key);
     void destroy();
+    void startIncomingCall(String pattern, long color, float brightness, long speedMs);
+    void stopIncomingCall();
 }

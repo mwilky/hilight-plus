@@ -155,24 +155,23 @@ class LightController private constructor(app: Application) {
             PatternMode.PULSE -> 850L
             else -> speedMs
         }
-        shizuku.triggerAlert(
+        shizuku.startIncomingCall(
             pattern = pattern.id,
             color = color,
             brightness = brightness,
-            speedMs = calculatedSpeed,
-            durationMs = 60_000L
+            speedMs = calculatedSpeed
         )
     }
 
     /**
-     * Halts any active incoming call or transient alert immediately.
+     * Stops the call override without deleting pending notification alerts.
      */
     fun stopIncomingCallAlert() {
-        clearAlert()
+        shizuku.stopIncomingCall()
     }
 
     /**
-     * Halts any active alert effect immediately and clears active alerts queue.
+     * Clears notification / transient alerts without interrupting an incoming call.
      */
     fun clearAlert() {
         shizuku.clearAlert()
