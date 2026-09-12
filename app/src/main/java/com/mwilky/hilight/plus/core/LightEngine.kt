@@ -39,7 +39,7 @@ class LightEngine {
 
     // Direct / Incoming Call Alert State (Highest priority override)
     private var directAlertPattern: String? = null
-    private var directAlertColor = 0xFF4285F4
+    private var directAlertColor = 0xFF000000
     private var directAlertBrightness = 1.0f
     private var directAlertSpeedMs = 800L
     private var directAlertStartMs = 0L
