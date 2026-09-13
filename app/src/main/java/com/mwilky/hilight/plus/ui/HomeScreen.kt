@@ -11,11 +11,12 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.mwilky.hilight.plus.DndMode
+import com.mwilky.hilight.plus.FaceDownMode
+import com.mwilky.hilight.plus.QuietHoursMode
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Launch
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -98,10 +100,14 @@ fun HomeScreen(
     val otherContactsColor by viewModel.otherContactsColor.collectAsStateWithLifecycle()
     val otherContactsPattern by viewModel.otherContactsPattern.collectAsStateWithLifecycle()
     val otherContactsFaceDown by viewModel.otherContactsFaceDownMode.collectAsStateWithLifecycle()
+    val otherContactsDnd by viewModel.otherContactsDndMode.collectAsStateWithLifecycle()
+    val otherContactsQuiet by viewModel.otherContactsQuietHoursMode.collectAsStateWithLifecycle()
     val isUnknownNumbersEnabled by viewModel.isUnknownNumbersEnabled.collectAsStateWithLifecycle()
     val unknownNumbersColor by viewModel.unknownNumbersColor.collectAsStateWithLifecycle()
     val unknownNumbersPattern by viewModel.unknownNumbersPattern.collectAsStateWithLifecycle()
     val unknownNumbersFaceDown by viewModel.unknownNumbersFaceDownMode.collectAsStateWithLifecycle()
+    val unknownNumbersDnd by viewModel.unknownNumbersDndMode.collectAsStateWithLifecycle()
+    val unknownNumbersQuiet by viewModel.unknownNumbersQuietHoursMode.collectAsStateWithLifecycle()
     val callContactRules by viewModel.callContactRules.collectAsStateWithLifecycle()
 
     val isNotifsEnabled by viewModel.isNotifsEnabled.collectAsStateWithLifecycle()
@@ -113,6 +119,8 @@ fun HomeScreen(
     val defaultNotifPattern by viewModel.defaultNotifPattern.collectAsStateWithLifecycle()
     val defaultNotifFaceDown by viewModel.defaultNotifFaceDownMode.collectAsStateWithLifecycle()
     val isDefaultNotifAutoColor by viewModel.isDefaultNotifAutoColor.collectAsStateWithLifecycle()
+    val defaultNotifDnd by viewModel.defaultNotifDndMode.collectAsStateWithLifecycle()
+    val defaultNotifQuiet by viewModel.defaultNotifQuietHoursMode.collectAsStateWithLifecycle()
     val messageContactRules by viewModel.messageContactRules.collectAsStateWithLifecycle()
     val appRules by viewModel.appRules.collectAsStateWithLifecycle()
 
@@ -292,10 +300,20 @@ fun HomeScreen(
             initialColor = rule.color,
             initialPattern = rule.pattern,
             initialFaceDown = rule.faceDownMode,
+            initialDnd = rule.dndMode,
+            initialQuietHours = rule.quietHoursMode,
             renderer = renderer,
             onDismiss = { callRuleBeingEdited = null },
-            onSave = { pattern, color, faceDown, _ ->
-                viewModel.saveContactRule(rule.copy(pattern = pattern, color = color, faceDownMode = faceDown))
+            onSave = { result ->
+                viewModel.saveContactRule(
+                    rule.copy(
+                        pattern = result.pattern,
+                        color = result.color,
+                        faceDownMode = result.faceDown,
+                        dndMode = result.dndMode,
+                        quietHoursMode = result.quietHoursMode
+                    )
+                )
                 callRuleBeingEdited = null
             }
         )
@@ -308,10 +326,18 @@ fun HomeScreen(
             initialColor = otherContactsColor,
             initialPattern = otherContactsPattern,
             initialFaceDown = otherContactsFaceDown,
+            initialDnd = otherContactsDnd,
+            initialQuietHours = otherContactsQuiet,
             renderer = renderer,
             onDismiss = { isConfiguringOtherContacts = false },
-            onSave = { pattern, color, faceDown, _ ->
-                viewModel.setOtherContactsStyle(pattern, color, faceDown)
+            onSave = { result ->
+                viewModel.setOtherContactsStyle(
+                    result.pattern,
+                    result.color,
+                    result.faceDown,
+                    result.dndMode,
+                    result.quietHoursMode
+                )
                 isConfiguringOtherContacts = false
             }
         )
@@ -324,10 +350,18 @@ fun HomeScreen(
             initialColor = unknownNumbersColor,
             initialPattern = unknownNumbersPattern,
             initialFaceDown = unknownNumbersFaceDown,
+            initialDnd = unknownNumbersDnd,
+            initialQuietHours = unknownNumbersQuiet,
             renderer = renderer,
             onDismiss = { isConfiguringUnknownNumbers = false },
-            onSave = { pattern, color, faceDown, _ ->
-                viewModel.setUnknownNumbersStyle(pattern, color, faceDown)
+            onSave = { result ->
+                viewModel.setUnknownNumbersStyle(
+                    result.pattern,
+                    result.color,
+                    result.faceDown,
+                    result.dndMode,
+                    result.quietHoursMode
+                )
                 isConfiguringUnknownNumbers = false
             }
         )
@@ -361,10 +395,20 @@ fun HomeScreen(
             initialColor = rule.color,
             initialPattern = rule.pattern,
             initialFaceDown = rule.faceDownMode,
+            initialDnd = rule.dndMode,
+            initialQuietHours = rule.quietHoursMode,
             renderer = renderer,
             onDismiss = { msgRuleBeingEdited = null },
-            onSave = { pattern, color, faceDown, _ ->
-                viewModel.saveMessageContactRule(rule.copy(pattern = pattern, color = color, faceDownMode = faceDown))
+            onSave = { result ->
+                viewModel.saveMessageContactRule(
+                    rule.copy(
+                        pattern = result.pattern,
+                        color = result.color,
+                        faceDownMode = result.faceDown,
+                        dndMode = result.dndMode,
+                        quietHoursMode = result.quietHoursMode
+                    )
+                )
                 msgRuleBeingEdited = null
             }
         )
@@ -381,18 +425,22 @@ fun HomeScreen(
             initialColor = rule.color,
             initialPattern = rule.pattern,
             initialFaceDown = rule.faceDownMode,
+            initialDnd = rule.dndMode,
+            initialQuietHours = rule.quietHoursMode,
             showAutoColorToggle = true,
             initialAutoColor = rule.isAutoColor,
             autoExtractedColor = autoColor,
             renderer = renderer,
             onDismiss = { appRuleBeingEdited = null },
-            onSave = { pattern, color, faceDown, isAuto ->
+            onSave = { result ->
                 viewModel.saveAppRule(
                     rule.copy(
-                        pattern = pattern,
-                        color = color,
-                        faceDownMode = faceDown,
-                        isAutoColor = isAuto
+                        pattern = result.pattern,
+                        color = result.color,
+                        faceDownMode = result.faceDown,
+                        isAutoColor = result.autoColor,
+                        dndMode = result.dndMode,
+                        quietHoursMode = result.quietHoursMode
                     )
                 )
                 appRuleBeingEdited = null
@@ -407,13 +455,22 @@ fun HomeScreen(
             initialColor = defaultNotifColor,
             initialPattern = defaultNotifPattern,
             initialFaceDown = defaultNotifFaceDown,
+            initialDnd = defaultNotifDnd,
+            initialQuietHours = defaultNotifQuiet,
             showAutoColorToggle = true,
             initialAutoColor = isDefaultNotifAutoColor,
             autoExtractedColor = null,
             renderer = renderer,
             onDismiss = { isConfiguringDefaultNotif = false },
-            onSave = { pattern, color, faceDown, isAuto ->
-                viewModel.setDefaultNotifStyle(pattern, color, faceDown, isAuto)
+            onSave = { result ->
+                viewModel.setDefaultNotifStyle(
+                    result.pattern,
+                    result.color,
+                    result.faceDown,
+                    result.autoColor,
+                    result.dndMode,
+                    result.quietHoursMode
+                )
                 isConfiguringDefaultNotif = false
             }
         )
@@ -424,7 +481,7 @@ fun HomeScreen(
  * Pure stateless Composable rendering the unified Home UI.
  * Directly consumed by both the live runtime screen and the Compose Preview.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun HomeContent(
     shizukuState: ShizukuBridge.State,
@@ -490,56 +547,99 @@ fun HomeContent(
     onAddApp: () -> Unit,
     renderer: PatternRenderer
 ) {
+    val effectsSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+    val spatialSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     val callAlpha by animateFloatAsState(
         targetValue = if (isCallLightsEnabled) 1.0f else 0.40f,
-        animationSpec = tween(280, easing = FastOutSlowInEasing),
+        animationSpec = effectsSpec,
         label = "callAlpha"
     )
 
     val notifAlpha by animateFloatAsState(
         targetValue = if (isNotifsEnabled) 1.0f else 0.40f,
-        animationSpec = tween(280, easing = FastOutSlowInEasing),
+        animationSpec = effectsSpec,
         label = "notifAlpha"
     )
 
     val callScale by animateFloatAsState(
         targetValue = if (isCallLightsEnabled) 1.0f else 0.985f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        animationSpec = spatialSpec,
         label = "callScale"
     )
 
     val notifScale by animateFloatAsState(
         targetValue = if (isNotifsEnabled) 1.0f else 0.985f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        animationSpec = spatialSpec,
         label = "notifScale"
     )
 
+    var selectedTab by remember { mutableIntStateOf(0) }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Icon(
-                            Icons.Rounded.Lightbulb,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(28.dp)
-                        )
-                        Text(
-                            text = stringResource(R.string.main_title),
-                            fontWeight = FontWeight.Bold
+            Column {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                Icons.Rounded.Lightbulb,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(28.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.main_title),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    },
+                    scrollBehavior = scrollBehavior
+                )
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .padding(bottom = 12.dp)
+                ) {
+                    val panes = listOf(
+                        Triple(0, Icons.Rounded.Call, R.string.home_tab_calls),
+                        Triple(1, Icons.Rounded.Notifications, R.string.home_tab_notifications)
+                    )
+                    panes.forEach { (index, icon, labelRes) ->
+                        val selected = selectedTab == index
+                        SegmentedButton(
+                            selected = selected,
+                            onClick = { selectedTab = index },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = panes.size),
+                            icon = {
+                                Icon(
+                                    icon,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            },
+                            colors = SegmentedButtonDefaults.colors(
+                                activeContainerColor = MaterialTheme.colorScheme.primary,
+                                activeContentColor = MaterialTheme.colorScheme.onPrimary,
+                                inactiveContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            label = {
+                                Text(
+                                    text = stringResource(labelRes),
+                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
                         )
                     }
-                },
-                scrollBehavior = scrollBehavior
-            )
+                }
+            }
         }
     ) { padding ->
         LazyColumn(
@@ -662,7 +762,8 @@ fun HomeContent(
                 )
             }
 
-            // 2. Conditional Warning Banners (ONLY visible on Home if there is an issue)
+            // 2. Conditional Warning Banners (tab-specific)
+            if (selectedTab == 0) {
             val isNativeConflict = stockState.known && stockState.favoriteCallsActive
             if (isNativeConflict) {
                 item {
@@ -726,46 +827,8 @@ fun HomeContent(
                 }
             }
 
-            if (!isNotifAccessGranted || !isNotifListenerRunning) {
-                item {
-                    StandardDiagnosticCard(
-                        title = stringResource(R.string.onboarding_perms_notif_title),
-                        subtitle = if (!isNotifAccessGranted) {
-                            stringResource(R.string.onboarding_perms_notif_needed_desc)
-                        } else {
-                            stringResource(R.string.onboarding_perms_notif_not_running_desc)
-                        },
-                        icon = Icons.Rounded.NotificationsActive,
-                        statusText = if (!isNotifAccessGranted) {
-                            stringResource(R.string.onboarding_perms_notif_status_needed)
-                        } else {
-                            stringResource(R.string.onboarding_perms_notif_status_not_running)
-                        },
-                        isOk = false,
-                        bottomAction = {
-                            Button(
-                                onClick = onOpenNotifSettings,
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.error,
-                                    contentColor = MaterialTheme.colorScheme.onError
-                                )
-                            ) {
-                                Icon(Icons.Rounded.NotificationsActive, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.onboarding_perms_notif_btn_enable))
-                            }
-                        }
-                    )
-                }
-            }
-
-            // =========================================================================
-            // SECTION: INCOMING CALLS (Material 3 Tonal Elevation)
-            // =========================================================================
-
             item {
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(8.dp))
             }
 
             item {
@@ -800,9 +863,45 @@ fun HomeContent(
                     renderer = renderer
                 )
             }
+            }
+
+            if (selectedTab == 1) {
+            if (!isNotifAccessGranted || !isNotifListenerRunning) {
+                item {
+                    StandardDiagnosticCard(
+                        title = stringResource(R.string.onboarding_perms_notif_title),
+                        subtitle = if (!isNotifAccessGranted) {
+                            stringResource(R.string.onboarding_perms_notif_needed_desc)
+                        } else {
+                            stringResource(R.string.onboarding_perms_notif_not_running_desc)
+                        },
+                        icon = Icons.Rounded.NotificationsActive,
+                        statusText = if (!isNotifAccessGranted) {
+                            stringResource(R.string.onboarding_perms_notif_status_needed)
+                        } else {
+                            stringResource(R.string.onboarding_perms_notif_status_not_running)
+                        },
+                        isOk = false,
+                        bottomAction = {
+                            Button(
+                                onClick = onOpenNotifSettings,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    contentColor = MaterialTheme.colorScheme.onError
+                                )
+                            ) {
+                                Icon(Icons.Rounded.NotificationsActive, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.onboarding_perms_notif_btn_enable))
+                            }
+                        }
+                    )
+                }
+            }
 
             item {
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(8.dp))
             }
 
             item {
@@ -841,6 +940,7 @@ fun HomeContent(
                     onToggleCycleNotifications = onToggleCycleNotifications,
                     renderer = renderer
                 )
+            }
             }
         }
     }
@@ -992,10 +1092,19 @@ fun AnimatedRingBadge(
     )
 }
 
+data class RuleEditorResult(
+    val pattern: PatternMode,
+    val color: Long,
+    val faceDown: FaceDownMode,
+    val autoColor: Boolean,
+    val dndMode: DndMode,
+    val quietHoursMode: QuietHoursMode
+)
+
 /**
- * Universal Dialog for Call Contact, Message Contact, App Rule, or Fallback configuration.
+ * Full-screen Look / When editor for a call or notification rule.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CustomRuleDialog(
     title: String,
@@ -1003,8 +1112,10 @@ fun CustomRuleDialog(
     initialPattern: PatternMode,
     renderer: PatternRenderer,
     onDismiss: () -> Unit,
-    onSave: (PatternMode, Long, com.mwilky.hilight.plus.FaceDownMode, Boolean) -> Unit,
-    initialFaceDown: com.mwilky.hilight.plus.FaceDownMode = com.mwilky.hilight.plus.FaceDownMode.INHERIT,
+    onSave: (RuleEditorResult) -> Unit,
+    initialFaceDown: FaceDownMode = FaceDownMode.INHERIT,
+    initialDnd: DndMode = DndMode.INHERIT,
+    initialQuietHours: QuietHoursMode = QuietHoursMode.INHERIT,
     showAutoColorToggle: Boolean = false,
     initialAutoColor: Boolean = true,
     autoExtractedColor: Long? = null
@@ -1017,6 +1128,8 @@ fun CustomRuleDialog(
     }
     var selectedPattern by remember(initialPattern) { mutableStateOf(initialPattern) }
     var selectedFaceDown by remember(initialFaceDown) { mutableStateOf(initialFaceDown) }
+    var selectedDnd by remember(initialDnd) { mutableStateOf(initialDnd) }
+    var selectedQuietHours by remember(initialQuietHours) { mutableStateOf(initialQuietHours) }
     var dialogPreviewFrames by remember { mutableStateOf(IntArray(8) { 0x00000000 }) }
 
     val palette = listOf(
@@ -1055,41 +1168,68 @@ fun CustomRuleDialog(
 
     val patterns = PatternMode.entries.filter { it != PatternMode.OFF }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
+    fun save() {
+        onSave(
+            RuleEditorResult(
+                pattern = selectedPattern,
+                color = selectedColor,
+                faceDown = selectedFaceDown,
+                autoColor = isAutoColor,
+                dndMode = selectedDnd,
+                quietHoursMode = selectedQuietHours
             )
-        },
-        text = {
+        )
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    ) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            contentWindowInsets = WindowInsets.safeDrawing,
+            topBar = {
+                TopAppBar(
+                    title = { Text(title) },
+                    navigationIcon = {
+                        IconButton(onClick = onDismiss) {
+                            Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.dialog_btn_close))
+                        }
+                    },
+                    actions = {
+                        TextButton(onClick = { save() }) {
+                            Text(stringResource(R.string.dialog_btn_save))
+                        }
+                    }
+                )
+            }
+        ) { padding ->
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .fillMaxSize()
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Hero Preview Card
-                Card(
+                Box(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = HiLightTheme.DialogCardShape,
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.6f))
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 10.dp),
-                        contentAlignment = Alignment.Center
+                    Surface(
+                        modifier = Modifier.size(148.dp),
+                        shape = HiLightTheme.DialogCardShape,
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.6f)
                     ) {
-                        DiffusedRingPreview(
-                            frames = dialogPreviewFrames,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(50.dp),
-                            size = 56.dp
-                        )
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            DiffusedRingPreview(
+                                frames = dialogPreviewFrames,
+                                size = 112.dp
+                            )
+                        }
                     }
                 }
 
@@ -1164,7 +1304,7 @@ fun CustomRuleDialog(
                 val canPickManualColor = isColorEnabled && (!showAutoColorToggle || !isAutoColor)
                 val manualColorAlpha by animateFloatAsState(
                     targetValue = if (canPickManualColor) 1.0f else 0.35f,
-                    animationSpec = tween(durationMillis = 200),
+                    animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
                     label = "manualColorAlpha"
                 )
 
@@ -1202,9 +1342,6 @@ fun CustomRuleDialog(
                     }
                 }
 
-                Spacer(Modifier.height(4.dp))
-
-                // Face-Down Orientation Override Section
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -1214,15 +1351,26 @@ fun CustomRuleDialog(
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold
                     )
+                    Text(
+                        text = stringResource(
+                            when (selectedFaceDown) {
+                                FaceDownMode.INHERIT -> R.string.dialog_orientation_desc_default
+                                FaceDownMode.ALWAYS -> R.string.dialog_orientation_desc_always
+                                FaceDownMode.ONLY_FACE_DOWN -> R.string.dialog_orientation_desc_face_down
+                            }
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                        val modes = com.mwilky.hilight.plus.FaceDownMode.entries
+                        val modes = FaceDownMode.entries
                         modes.forEachIndexed { index, mode ->
                             val isSelected = selectedFaceDown == mode
                             SegmentedButton(
                                 selected = isSelected,
                                 onClick = { selectedFaceDown = mode },
                                 shape = SegmentedButtonDefaults.itemShape(index = index, count = modes.size),
-                                icon = {}, // Suppress checkmark icon so text stays perfectly centered
+                                icon = {},
                                 colors = SegmentedButtonDefaults.colors(
                                     activeContainerColor = MaterialTheme.colorScheme.primary,
                                     activeContentColor = MaterialTheme.colorScheme.onPrimary,
@@ -1232,9 +1380,9 @@ fun CustomRuleDialog(
                                 label = {
                                     Text(
                                         text = when (mode) {
-                                            com.mwilky.hilight.plus.FaceDownMode.INHERIT -> stringResource(R.string.dialog_orientation_default)
-                                            com.mwilky.hilight.plus.FaceDownMode.ALWAYS -> stringResource(R.string.dialog_orientation_always)
-                                            com.mwilky.hilight.plus.FaceDownMode.ONLY_FACE_DOWN -> stringResource(R.string.dialog_orientation_face_down)
+                                            FaceDownMode.INHERIT -> stringResource(R.string.dialog_orientation_default)
+                                            FaceDownMode.ALWAYS -> stringResource(R.string.dialog_orientation_always)
+                                            FaceDownMode.ONLY_FACE_DOWN -> stringResource(R.string.dialog_orientation_face_down)
                                         },
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
@@ -1244,23 +1392,101 @@ fun CustomRuleDialog(
                         }
                     }
                 }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    onSave(selectedPattern, selectedColor, selectedFaceDown, isAutoColor)
-                }
-            ) {
-                Text(stringResource(R.string.dialog_btn_save))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.dialog_btn_cancel))
+
+                InheritAlwaysRow(
+                    title = stringResource(R.string.dialog_dnd_title),
+                    description = stringResource(
+                        if (selectedDnd == DndMode.INHERIT) {
+                            R.string.dialog_dnd_desc_default
+                        } else {
+                            R.string.dialog_dnd_desc_always
+                        }
+                    ),
+                    inheritSelected = selectedDnd == DndMode.INHERIT,
+                    onInherit = { selectedDnd = DndMode.INHERIT },
+                    onAlways = { selectedDnd = DndMode.ALWAYS }
+                )
+                InheritAlwaysRow(
+                    title = stringResource(R.string.dialog_quiet_hours_title),
+                    description = stringResource(
+                        if (selectedQuietHours == QuietHoursMode.INHERIT) {
+                            R.string.dialog_quiet_hours_desc_default
+                        } else {
+                            R.string.dialog_quiet_hours_desc_always
+                        }
+                    ),
+                    inheritSelected = selectedQuietHours == QuietHoursMode.INHERIT,
+                    onInherit = { selectedQuietHours = QuietHoursMode.INHERIT },
+                    onAlways = { selectedQuietHours = QuietHoursMode.ALWAYS }
+                )
             }
         }
-    )
+    }
+}
+
+@Composable
+private fun InheritAlwaysRow(
+    title: String,
+    description: String,
+    inheritSelected: Boolean,
+    onInherit: () -> Unit,
+    onAlways: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold
+        )
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            SegmentedButton(
+                selected = inheritSelected,
+                onClick = onInherit,
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                icon = {},
+                colors = SegmentedButtonDefaults.colors(
+                    activeContainerColor = MaterialTheme.colorScheme.primary,
+                    activeContentColor = MaterialTheme.colorScheme.onPrimary,
+                    inactiveContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                label = {
+                    Text(
+                        text = stringResource(R.string.dialog_mode_default),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = if (inheritSelected) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+            )
+            SegmentedButton(
+                selected = !inheritSelected,
+                onClick = onAlways,
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                icon = {},
+                colors = SegmentedButtonDefaults.colors(
+                    activeContainerColor = MaterialTheme.colorScheme.primary,
+                    activeContentColor = MaterialTheme.colorScheme.onPrimary,
+                    inactiveContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                label = {
+                    Text(
+                        text = stringResource(R.string.dialog_mode_always),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = if (!inheritSelected) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+            )
+        }
+    }
 }
 
 data class InstalledAppItem(

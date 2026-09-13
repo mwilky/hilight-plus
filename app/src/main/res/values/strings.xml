@@ -151,13 +151,27 @@
     <string name="dialog_color_auto_label">Colour (auto from icon)</string>
     <string name="dialog_auto_color_title">Auto colour</string>
     <string name="dialog_auto_color_desc">Extract dynamic vibrant color directly from app icon</string>
-    <string name="dialog_orientation_title">Device orientation trigger</string>
+    <string name="dialog_orientation_title">Phone position</string>
+    <string name="dialog_orientation_desc_default">Reads the face-down setting from the conditions page.</string>
+    <string name="dialog_orientation_desc_always">Lights whether the phone is face down or in your hand.</string>
+    <string name="dialog_orientation_desc_face_down">Lights only when the phone is placed face down.</string>
     <string name="dialog_orientation_default">Default</string>
-    <string name="dialog_orientation_always">Always</string>
+    <string name="dialog_orientation_always">Any position</string>
     <string name="dialog_orientation_face_down">Face down</string>
+    <string name="dialog_dnd_title">Do Not Disturb</string>
+    <string name="dialog_dnd_desc_default">Reads the Do Not Disturb setting from the conditions page.</string>
+    <string name="dialog_dnd_desc_always">Lights even when Do Not Disturb is on.</string>
+    <string name="dialog_quiet_hours_title">Quiet hours</string>
+    <string name="dialog_quiet_hours_desc_default">Reads the quiet hours setting from the conditions page.</string>
+    <string name="dialog_quiet_hours_desc_always">Lights even during the quiet hours window.</string>
+    <string name="dialog_mode_default">Default</string>
+    <string name="dialog_mode_always">Still light</string>
     <string name="dialog_btn_save">Save</string>
     <string name="dialog_btn_cancel">Cancel</string>
+    <string name="dialog_btn_close">Close</string>
     <string name="dialog_configure_title">Configure %1$s</string>
+    <string name="home_tab_calls">Calls</string>
+    <string name="home_tab_notifications">Notifications</string>
     <string name="rule_edit_cd">Edit rule</string>
     <string name="rule_delete_cd">Delete rule</string>
     <string name="duration_seconds">%1$ds</string>
@@ -182,13 +196,20 @@
     <!-- Rule Item Labels -->
     <string name="rule_pattern_label">Pattern:</string>
     <string name="rule_trigger_label">Trigger:</string>
-    <string name="rule_trigger_always">Always</string>
+    <string name="rule_trigger_always">Any position</string>
     <string name="rule_trigger_face_down">Face down only</string>
 
     <!-- Conditions Screen -->
     <string name="conditions_title">Conditions</string>
+    <string name="conditions_defaults_desc">Rules read these values unless you pick something else on the rule. Still light ignores that condition.</string>
     <string name="conditions_face_down_title">Face down only</string>
-    <string name="conditions_face_down_desc">Only show lights when your Pixel is placed face down on a flat surface. Can be overridden per individual rule.</string>
+    <string name="conditions_face_down_desc">Only show lights when your Pixel is placed face down on a flat surface. A rule can read this, require it, or light in any position.</string>
+    <string name="conditions_dnd_title">Do Not Disturb</string>
+    <string name="conditions_dnd_desc">Skip lights while Do Not Disturb is on. A rule can still light during DND.</string>
+    <string name="conditions_quiet_hours_title">Quiet hours</string>
+    <string name="conditions_quiet_hours_desc">Skip lights during this window. Overnight ranges are allowed. A rule can still light during the window.</string>
+    <string name="conditions_quiet_hours_start">Starts</string>
+    <string name="conditions_quiet_hours_end">Ends</string>
 
     <!-- About Screen -->
     <string name="about_title">About &amp; Diagnostics</string>
