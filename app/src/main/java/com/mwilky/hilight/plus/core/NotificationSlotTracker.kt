@@ -16,6 +16,11 @@ internal class NotificationSlotTracker {
         val requiresFaceDown: Boolean
     )
 
+    data class AddResult(
+        val slot: Slot,
+        val changed: Boolean
+    )
+
     data class Removal(
         val slotId: String?,
         val slotEmptied: Boolean,
@@ -32,7 +37,15 @@ internal class NotificationSlotTracker {
         pattern: PatternMode,
         color: Long,
         requiresFaceDown: Boolean = false
-    ): Slot {
+    ): AddResult {
+        val previous = sourceToSlot[sourceKey]?.let { slots[it] }
+        val unchanged = previous != null &&
+            previous.id == slotId &&
+            previous.pattern == pattern &&
+            previous.color == color &&
+            previous.requiresFaceDown == requiresFaceDown &&
+            sourceKey in previous.contributors
+
         val previousSlotId = sourceToSlot[sourceKey]
         if (previousSlotId != null && previousSlotId != slotId) {
             detach(sourceKey, previousSlotId)
@@ -45,7 +58,7 @@ internal class NotificationSlotTracker {
         slot.contributors.add(sourceKey)
         sourceToSlot[sourceKey] = slotId
         latestSourceKey = sourceKey
-        return slot.snapshot()
+        return AddResult(slot.snapshot(), changed = !unchanged)
     }
 
     fun remove(sourceKey: String): Removal {

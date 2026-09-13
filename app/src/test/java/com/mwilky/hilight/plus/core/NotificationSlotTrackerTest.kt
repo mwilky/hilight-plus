@@ -89,6 +89,18 @@ class NotificationSlotTrackerTest {
     }
 
     @Test
+    fun updatingTheSameSourceDoesNotCreateANewSlot() {
+        val tracker = NotificationSlotTracker()
+        val first = tracker.add("key", "app_wa", PatternMode.PULSE, 1)
+        val update = tracker.add("key", "app_wa", PatternMode.PULSE, 1)
+
+        assertTrue(first.changed)
+        assertFalse(update.changed)
+        assertEquals(1, tracker.slotsInOrder().size)
+        assertEquals(1, tracker.contributorCount("app_wa"))
+    }
+
+    @Test
     fun hasRestrictedSlotTracksFaceDownOnlyRules() {
         val tracker = NotificationSlotTracker()
         tracker.add("always", "app_a", PatternMode.PULSE, 1, requiresFaceDown = false)

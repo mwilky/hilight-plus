@@ -17,6 +17,8 @@ import com.mwilky.hilight.plus.core.DeviceOrientationDetector
 import com.mwilky.hilight.plus.core.NotificationSlotTracker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -28,7 +30,9 @@ import kotlinx.coroutines.launch
  */
 class NotificationTrigger : NotificationListenerService() {
 
-    private val scope = CoroutineScope(Dispatchers.IO)
+    private val job = SupervisorJob()
+    private val scope = CoroutineScope(job + Dispatchers.IO)
+    private val events = Channel<ListenerEvent>(Channel.UNLIMITED)
     private val tracker = NotificationSlotTracker()
 
     @Volatile
@@ -37,52 +41,7 @@ class NotificationTrigger : NotificationListenerService() {
     private val screenStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val action = intent?.action ?: return
-            val controller = LightController.get(applicationContext)
-            val store = AppStore.get(applicationContext)
-
-            scope.launch {
-                val behavior = store.unlockBehavior.first()
-                when (action) {
-                    Intent.ACTION_USER_PRESENT -> {
-                        when (behavior) {
-                            UnlockBehavior.NONE -> {
-                                Log.d(TAG, "Screen unlocked -> UnlockBehavior.NONE: lights continue until timeout")
-                            }
-                            UnlockBehavior.PAUSE -> {
-                                Log.i(TAG, "Screen unlocked -> UnlockBehavior.PAUSE: pausing notification lights")
-                                controller.pauseAlerts()
-                            }
-                            UnlockBehavior.CLEAR -> {
-                                Log.i(TAG, "Screen unlocked -> UnlockBehavior.CLEAR: stopping lights and clearing alerts")
-                                tracker.clear()
-                                controller.clearAlert()
-                                syncNotificationMonitor()
-                            }
-                        }
-                    }
-                    Intent.ACTION_SCREEN_OFF -> {
-                        DevicePresence.dreaming = false
-                        if (behavior == UnlockBehavior.PAUSE) {
-                            Log.i(TAG, "Screen turned off -> clearing unlock pause")
-                            controller.resumeAlerts()
-                        }
-                    }
-                    Intent.ACTION_DREAMING_STARTED -> {
-                        DevicePresence.dreaming = true
-                        if (behavior == UnlockBehavior.PAUSE) {
-                            Log.i(TAG, "Screensaver started -> clearing unlock pause")
-                            controller.resumeAlerts()
-                        }
-                    }
-                    Intent.ACTION_DREAMING_STOPPED -> {
-                        DevicePresence.dreaming = false
-                        if (behavior == UnlockBehavior.PAUSE && DevicePresence.isActivelyUsing(applicationContext)) {
-                            Log.i(TAG, "Screensaver stopped -> restoring unlock pause")
-                            controller.pauseAlerts()
-                        }
-                    }
-                }
-            }
+            enqueue(ListenerEvent.Screen(action))
         }
     }
 
@@ -99,35 +58,36 @@ class NotificationTrigger : NotificationListenerService() {
         LightController.get(applicationContext)
 
         scope.launch {
-            AppStore.get(applicationContext).isCycleNotifications.collect { cycling ->
-                val previous = lastKnownCycling
-                lastKnownCycling = cycling
-                if (previous != null && previous != cycling) {
-                    applyModeChange(cycling)
+            for (event in events) {
+                try {
+                    handle(event)
+                } catch (t: Throwable) {
+                    Log.e(TAG, "Listener event failed", t)
                 }
+            }
+        }
+        scope.launch {
+            AppStore.get(applicationContext).isCycleNotifications.collect { cycling ->
+                enqueue(ListenerEvent.CycleMode(cycling))
             }
         }
     }
 
     override fun onListenerConnected() {
         super.onListenerConnected()
-        scope.launch {
-            val shadeKeys = currentShadeKeys() ?: return@launch
-            applyRemovals(tracker.pruneMissing(shadeKeys), AppStore.get(applicationContext).isCycleNotifications.first())
-        }
+        enqueue(ListenerEvent.Reconnect(currentShadeKeys()))
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        job.cancel()
         DeviceOrientationDetector.stopMonitoring()
         runCatching { unregisterReceiver(screenStateReceiver) }
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         if (sbn == null) return
-        scope.launch {
-            applyRemovals(listOf(tracker.remove(sbn.key)), AppStore.get(applicationContext).isCycleNotifications.first())
-        }
+        enqueue(ListenerEvent.Removed(sbn.key))
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -137,49 +97,136 @@ class NotificationTrigger : NotificationListenerService() {
         if (!isEligiblePostedNotification(sbn)) return
 
         val notification = sbn.notification ?: return
+        enqueue(ListenerEvent.Posted(sbn.key, pkg, notification))
+    }
+
+    private fun enqueue(event: ListenerEvent) {
+        if (!events.trySend(event).isSuccess) {
+            Log.w(TAG, "Dropped listener event after shutdown")
+        }
+    }
+
+    private suspend fun handle(event: ListenerEvent) {
+        when (event) {
+            is ListenerEvent.Posted -> handlePosted(event)
+            is ListenerEvent.Removed -> {
+                applyRemovals(
+                    listOf(tracker.remove(event.key)),
+                    AppStore.get(applicationContext).isCycleNotifications.first()
+                )
+            }
+            is ListenerEvent.Screen -> handleScreen(event.action)
+            is ListenerEvent.Reconnect -> {
+                val shadeKeys = event.shadeKeys ?: return
+                applyRemovals(
+                    tracker.pruneMissing(shadeKeys),
+                    AppStore.get(applicationContext).isCycleNotifications.first()
+                )
+            }
+            is ListenerEvent.CycleMode -> {
+                val previous = lastKnownCycling
+                lastKnownCycling = event.cycling
+                if (previous != null && previous != event.cycling) {
+                    applyModeChange(event.cycling)
+                }
+            }
+        }
+    }
+
+    private suspend fun handleScreen(action: String) {
         val controller = LightController.get(applicationContext)
         val store = AppStore.get(applicationContext)
-
-        scope.launch {
-            val masterEnabled = store.isEnabled.first()
-            val notifsEnabled = store.isNotificationsEnabled.first()
-            if (!masterEnabled || !notifsEnabled) return@launch
-
-            val unlockBehavior = store.unlockBehavior.first()
-            val resolved = resolveAlert(store, pkg, notification) ?: return@launch
-            val isCycle = store.isCycleNotifications.first()
-            val requiresFaceDown = resolved.faceDownMode.requiresFaceDown(store.isOnlyWhenFaceDown.first())
-
-            if (requiresFaceDown) {
-                DeviceOrientationDetector.retainMonitoring(applicationContext, DeviceOrientationDetector.TOKEN_NOTIFICATIONS)
+        val behavior = store.unlockBehavior.first()
+        when (action) {
+            Intent.ACTION_USER_PRESENT -> {
+                when (behavior) {
+                    UnlockBehavior.NONE -> {
+                        Log.d(TAG, "Screen unlocked -> UnlockBehavior.NONE: lights continue until timeout")
+                    }
+                    UnlockBehavior.PAUSE -> {
+                        Log.i(TAG, "Screen unlocked -> UnlockBehavior.PAUSE: pausing notification lights")
+                        controller.pauseAlerts()
+                    }
+                    UnlockBehavior.CLEAR -> {
+                        Log.i(TAG, "Screen unlocked -> UnlockBehavior.CLEAR: stopping lights and clearing alerts")
+                        tracker.clear()
+                        controller.clearAlert()
+                        syncNotificationMonitor()
+                    }
+                }
             }
-            val faceDown = if (requiresFaceDown || unlockBehavior != UnlockBehavior.NONE) {
-                DeviceOrientationDetector.isDeviceFaceDown(applicationContext)
-            } else {
-                DeviceOrientationDetector.lastKnownFaceDown
-            }
-            if (requiresFaceDown) {
-                controller.setDeviceFaceDown(faceDown)
-            }
-
-            val usingDevice = DevicePresence.isActivelyUsing(applicationContext, faceDown)
-            if (usingDevice && unlockBehavior == UnlockBehavior.CLEAR) {
-                Log.i(TAG, "Ignoring notification from $pkg: unlocked with UnlockBehavior.CLEAR")
-                if (requiresFaceDown) syncNotificationMonitor()
-                return@launch
-            }
-            if (unlockBehavior == UnlockBehavior.PAUSE) {
-                if (usingDevice) {
-                    controller.pauseAlerts()
-                } else {
+            Intent.ACTION_SCREEN_OFF -> {
+                DevicePresence.dreaming = false
+                if (behavior == UnlockBehavior.PAUSE) {
+                    Log.i(TAG, "Screen turned off -> clearing unlock pause")
                     controller.resumeAlerts()
                 }
             }
-
-            val slot = tracker.add(sbn.key, resolved.slotId, resolved.pattern, resolved.color, requiresFaceDown)
-            dispatchSlot(controller, store, slot, isCycle)
-            syncNotificationMonitor()
+            Intent.ACTION_DREAMING_STARTED -> {
+                DevicePresence.dreaming = true
+                if (behavior == UnlockBehavior.PAUSE) {
+                    Log.i(TAG, "Screensaver started -> clearing unlock pause")
+                    controller.resumeAlerts()
+                }
+            }
+            Intent.ACTION_DREAMING_STOPPED -> {
+                DevicePresence.dreaming = false
+                if (behavior == UnlockBehavior.PAUSE && DevicePresence.isActivelyUsing(applicationContext)) {
+                    Log.i(TAG, "Screensaver stopped -> restoring unlock pause")
+                    controller.pauseAlerts()
+                }
+            }
         }
+    }
+
+    private suspend fun handlePosted(event: ListenerEvent.Posted) {
+        val pkg = event.pkg
+        val notification = event.notification
+        val controller = LightController.get(applicationContext)
+        val store = AppStore.get(applicationContext)
+
+        val masterEnabled = store.isEnabled.first()
+        val notifsEnabled = store.isNotificationsEnabled.first()
+        if (!masterEnabled || !notifsEnabled) return
+
+        val unlockBehavior = store.unlockBehavior.first()
+        val resolved = resolveAlert(store, pkg, notification) ?: return
+        val isCycle = store.isCycleNotifications.first()
+        val requiresFaceDown = resolved.faceDownMode.requiresFaceDown(store.isOnlyWhenFaceDown.first())
+
+        if (requiresFaceDown) {
+            DeviceOrientationDetector.retainMonitoring(applicationContext, DeviceOrientationDetector.TOKEN_NOTIFICATIONS)
+        }
+        val faceDown = if (requiresFaceDown || unlockBehavior != UnlockBehavior.NONE) {
+            DeviceOrientationDetector.isDeviceFaceDown(applicationContext)
+        } else {
+            DeviceOrientationDetector.lastKnownFaceDown
+        }
+        if (requiresFaceDown) {
+            controller.setDeviceFaceDown(faceDown)
+        }
+
+        val usingDevice = DevicePresence.isActivelyUsing(applicationContext, faceDown)
+        if (usingDevice && unlockBehavior == UnlockBehavior.CLEAR) {
+            Log.i(TAG, "Ignoring notification from $pkg: unlocked with UnlockBehavior.CLEAR")
+            if (requiresFaceDown) syncNotificationMonitor()
+            return
+        }
+        if (unlockBehavior == UnlockBehavior.PAUSE) {
+            if (usingDevice) {
+                controller.pauseAlerts()
+            } else {
+                controller.resumeAlerts()
+            }
+        }
+
+        val added = tracker.add(event.key, resolved.slotId, resolved.pattern, resolved.color, requiresFaceDown)
+        if (added.changed) {
+            dispatchSlot(controller, store, added.slot, isCycle)
+        } else {
+            Log.d(TAG, "Ignoring update for existing slot ${added.slot.id}")
+        }
+        syncNotificationMonitor()
     }
 
     private fun isEligiblePostedNotification(sbn: StatusBarNotification): Boolean {
@@ -362,6 +409,14 @@ class NotificationTrigger : NotificationListenerService() {
         if (!convoTitle.isNullOrBlank()) return convoTitle
 
         return ""
+    }
+
+    private sealed interface ListenerEvent {
+        data class Posted(val key: String, val pkg: String, val notification: Notification) : ListenerEvent
+        data class Removed(val key: String) : ListenerEvent
+        data class Screen(val action: String) : ListenerEvent
+        data class Reconnect(val shadeKeys: Set<String>?) : ListenerEvent
+        data class CycleMode(val cycling: Boolean) : ListenerEvent
     }
 
     companion object {
