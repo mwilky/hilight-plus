@@ -13,7 +13,20 @@ enum class PatternMode(val id: String, val displayName: String) {
     BEACON("beacon", "Beacon"),
     RIPPLE("ripple", "Ripple"),
     SPARKLE("sparkle", "Sparkle"),
-    RAINBOW("rainbow", "Rainbow")
+    RAINBOW("rainbow", "Rainbow");
+
+    fun speedMs(fallback: Long = 1000L): Long = when (this) {
+        BREATHE -> 2000L
+        WAVE -> 1200L
+        COMET -> 800L
+        ORBIT -> 1000L
+        BEACON -> 750L
+        RIPPLE -> 900L
+        SPARKLE -> 1400L
+        RAINBOW -> 1200L
+        PULSE -> 850L
+        else -> fallback
+    }
 }
 
 /**

@@ -54,6 +54,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mwilky.hilight.plus.AppNotificationRule
 import com.mwilky.hilight.plus.ContactRule
 import com.mwilky.hilight.plus.LightController
@@ -69,10 +70,8 @@ import com.mwilky.hilight.plus.core.PatternRenderer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
-import kotlin.math.roundToInt
 
 /**
  * Modern Unified Home Screen:
@@ -84,38 +83,38 @@ import kotlin.math.roundToInt
  * - Android 11+ launcher intent query app picker with app icons.
  */
 @Composable
-fun HomeScreen(controller: LightController) {
+fun HomeScreen(
+    controller: LightController,
+    viewModel: HomeViewModel = viewModel()
+) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val renderer = remember { PatternRenderer() }
 
     val stockState by NativeHiLightDetector.state.collectAsStateWithLifecycle()
     val shizukuState by controller.shizuku.state.collectAsStateWithLifecycle()
 
-    // Calls state
-    val isCallLightsEnabled by controller.store.isCallLightsEnabled.collectAsStateWithLifecycle(initialValue = true)
-    val isOtherContactsEnabled by controller.store.isOtherContactsEnabled.collectAsStateWithLifecycle(initialValue = true)
-    val otherContactsColor by controller.store.otherContactsColor.collectAsStateWithLifecycle(initialValue = 0xFF4285F4)
-    val otherContactsPattern by controller.store.otherContactsPattern.collectAsStateWithLifecycle(initialValue = PatternMode.PULSE)
-    val otherContactsFaceDown by controller.store.otherContactsFaceDownMode.collectAsStateWithLifecycle(initialValue = com.mwilky.hilight.plus.FaceDownMode.INHERIT)
-    val isUnknownNumbersEnabled by controller.store.isUnknownNumbersEnabled.collectAsStateWithLifecycle(initialValue = true)
-    val unknownNumbersColor by controller.store.unknownNumbersColor.collectAsStateWithLifecycle(initialValue = 0xFFFBBC05)
-    val unknownNumbersPattern by controller.store.unknownNumbersPattern.collectAsStateWithLifecycle(initialValue = PatternMode.PULSE)
-    val unknownNumbersFaceDown by controller.store.unknownNumbersFaceDownMode.collectAsStateWithLifecycle(initialValue = com.mwilky.hilight.plus.FaceDownMode.INHERIT)
-    val callContactRules by controller.store.contactRules.collectAsStateWithLifecycle(initialValue = emptyList())
+    val isCallLightsEnabled by viewModel.isCallLightsEnabled.collectAsStateWithLifecycle()
+    val isOtherContactsEnabled by viewModel.isOtherContactsEnabled.collectAsStateWithLifecycle()
+    val otherContactsColor by viewModel.otherContactsColor.collectAsStateWithLifecycle()
+    val otherContactsPattern by viewModel.otherContactsPattern.collectAsStateWithLifecycle()
+    val otherContactsFaceDown by viewModel.otherContactsFaceDownMode.collectAsStateWithLifecycle()
+    val isUnknownNumbersEnabled by viewModel.isUnknownNumbersEnabled.collectAsStateWithLifecycle()
+    val unknownNumbersColor by viewModel.unknownNumbersColor.collectAsStateWithLifecycle()
+    val unknownNumbersPattern by viewModel.unknownNumbersPattern.collectAsStateWithLifecycle()
+    val unknownNumbersFaceDown by viewModel.unknownNumbersFaceDownMode.collectAsStateWithLifecycle()
+    val callContactRules by viewModel.callContactRules.collectAsStateWithLifecycle()
 
-    // Notifications state
-    val isNotifsEnabled by controller.store.isNotificationsEnabled.collectAsStateWithLifecycle(initialValue = true)
-    val notifDurationSec by controller.store.notificationDurationSeconds.collectAsStateWithLifecycle(initialValue = 30)
-    val unlockBehavior by controller.store.unlockBehavior.collectAsStateWithLifecycle(initialValue = UnlockBehavior.NONE)
-    val isCycleNotifications by controller.store.isCycleNotifications.collectAsStateWithLifecycle(initialValue = false)
-    val isDefaultNotifEnabled by controller.store.isDefaultNotifEnabled.collectAsStateWithLifecycle(initialValue = true)
-    val defaultNotifColor by controller.store.defaultNotifColor.collectAsStateWithLifecycle(initialValue = 0xFFFFFFFF)
-    val defaultNotifPattern by controller.store.defaultNotifPattern.collectAsStateWithLifecycle(initialValue = PatternMode.PULSE)
-    val defaultNotifFaceDown by controller.store.defaultNotifFaceDownMode.collectAsStateWithLifecycle(initialValue = com.mwilky.hilight.plus.FaceDownMode.INHERIT)
-    val isDefaultNotifAutoColor by controller.store.isDefaultNotifAutoColor.collectAsStateWithLifecycle(initialValue = true)
-    val messageContactRules by controller.store.messageContactRules.collectAsStateWithLifecycle(initialValue = emptyList())
-    val appRules by controller.store.appRules.collectAsStateWithLifecycle(initialValue = emptyList())
+    val isNotifsEnabled by viewModel.isNotifsEnabled.collectAsStateWithLifecycle()
+    val notifDurationSec by viewModel.notifDurationSec.collectAsStateWithLifecycle()
+    val unlockBehavior by viewModel.unlockBehavior.collectAsStateWithLifecycle()
+    val isCycleNotifications by viewModel.isCycleNotifications.collectAsStateWithLifecycle()
+    val isDefaultNotifEnabled by viewModel.isDefaultNotifEnabled.collectAsStateWithLifecycle()
+    val defaultNotifColor by viewModel.defaultNotifColor.collectAsStateWithLifecycle()
+    val defaultNotifPattern by viewModel.defaultNotifPattern.collectAsStateWithLifecycle()
+    val defaultNotifFaceDown by viewModel.defaultNotifFaceDownMode.collectAsStateWithLifecycle()
+    val isDefaultNotifAutoColor by viewModel.isDefaultNotifAutoColor.collectAsStateWithLifecycle()
+    val messageContactRules by viewModel.messageContactRules.collectAsStateWithLifecycle()
+    val appRules by viewModel.appRules.collectAsStateWithLifecycle()
 
     fun hasPhonePermission(): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
@@ -233,54 +232,54 @@ fun HomeScreen(controller: LightController) {
         onOpenNotifSettings = { openNotifSettings() },
         // Calls Section
         isCallLightsEnabled = isCallLightsEnabled,
-        onToggleCallLights = { enabled -> scope.launch { controller.store.setCallLightsEnabled(enabled) } },
+        onToggleCallLights = viewModel::setCallLightsEnabled,
         isOtherContactsEnabled = isOtherContactsEnabled,
         otherContactsColor = otherContactsColor,
         otherContactsPattern = otherContactsPattern,
         otherContactsFaceDownMode = otherContactsFaceDown,
-        onToggleOtherContacts = { enabled -> scope.launch { controller.store.setOtherContactsEnabled(enabled) } },
+        onToggleOtherContacts = viewModel::setOtherContactsEnabled,
         onEditOtherContacts = { isConfiguringOtherContacts = true },
         isUnknownNumbersEnabled = isUnknownNumbersEnabled,
         unknownNumbersColor = unknownNumbersColor,
         unknownNumbersPattern = unknownNumbersPattern,
         unknownNumbersFaceDownMode = unknownNumbersFaceDown,
-        onToggleUnknownNumbers = { enabled -> scope.launch { controller.store.setUnknownNumbersEnabled(enabled) } },
+        onToggleUnknownNumbers = viewModel::setUnknownNumbersEnabled,
         onEditUnknownNumbers = { isConfiguringUnknownNumbers = true },
         callContactRules = callContactRules,
         onToggleCallContactRule = { rule, isEnabled ->
-            scope.launch { controller.store.saveContactRule(rule.copy(isEnabled = isEnabled)) }
+            viewModel.saveContactRule(rule.copy(isEnabled = isEnabled))
         },
         onEditCallContactRule = { rule -> callRuleBeingEdited = rule },
-        onDeleteCallContactRule = { ruleId -> scope.launch { controller.store.deleteContactRule(ruleId) } },
+        onDeleteCallContactRule = viewModel::deleteContactRule,
         onAddCallContact = { callContactPickerLauncher.launch(null) },
         // Notifications Section
         isNotifsEnabled = isNotifsEnabled,
-        onToggleNotifs = { enabled -> scope.launch { controller.store.setNotificationsEnabled(enabled) } },
+        onToggleNotifs = viewModel::setNotificationsEnabled,
         notifDurationSec = notifDurationSec,
-        onChangeDuration = { sec -> scope.launch { controller.store.setNotificationDurationSeconds(sec) } },
+        onChangeDuration = viewModel::setNotificationDurationSeconds,
         unlockBehavior = unlockBehavior,
-        onChangeUnlockBehavior = { behavior -> scope.launch { controller.store.setUnlockBehavior(behavior) } },
+        onChangeUnlockBehavior = viewModel::setUnlockBehavior,
         isCycleNotifications = isCycleNotifications,
-        onToggleCycleNotifications = { enabled -> scope.launch { controller.store.setCycleNotifications(enabled) } },
+        onToggleCycleNotifications = viewModel::setCycleNotifications,
         isDefaultNotifEnabled = isDefaultNotifEnabled,
         defaultNotifColor = defaultNotifColor,
         defaultNotifPattern = defaultNotifPattern,
         defaultNotifFaceDownMode = defaultNotifFaceDown,
-        onToggleDefaultNotif = { enabled -> scope.launch { controller.store.setDefaultNotifEnabled(enabled) } },
+        onToggleDefaultNotif = viewModel::setDefaultNotifEnabled,
         onEditDefaultNotif = { isConfiguringDefaultNotif = true },
         messageContactRules = messageContactRules,
         onToggleMessageRule = { rule, isEnabled ->
-            scope.launch { controller.store.saveMessageContactRule(rule.copy(isEnabled = isEnabled)) }
+            viewModel.saveMessageContactRule(rule.copy(isEnabled = isEnabled))
         },
         onEditMessageRule = { rule -> msgRuleBeingEdited = rule },
-        onDeleteMessageRule = { ruleId -> scope.launch { controller.store.deleteMessageContactRule(ruleId) } },
+        onDeleteMessageRule = viewModel::deleteMessageContactRule,
         onAddMessageContact = { msgContactPickerLauncher.launch(null) },
         appRules = appRules,
         onToggleAppRule = { rule, isEnabled ->
-            scope.launch { controller.store.saveAppRule(rule.copy(isEnabled = isEnabled)) }
+            viewModel.saveAppRule(rule.copy(isEnabled = isEnabled))
         },
         onEditAppRule = { rule -> appRuleBeingEdited = rule },
-        onDeleteAppRule = { pkg -> scope.launch { controller.store.deleteAppRule(pkg) } },
+        onDeleteAppRule = viewModel::deleteAppRule,
         onAddApp = { isPickingApp = true },
         renderer = renderer
     )
@@ -296,52 +295,40 @@ fun HomeScreen(controller: LightController) {
             renderer = renderer,
             onDismiss = { callRuleBeingEdited = null },
             onSave = { pattern, color, faceDown, _ ->
-                scope.launch {
-                    controller.store.saveContactRule(rule.copy(pattern = pattern, color = color, faceDownMode = faceDown))
-                    callRuleBeingEdited = null
-                }
+                viewModel.saveContactRule(rule.copy(pattern = pattern, color = color, faceDownMode = faceDown))
+                callRuleBeingEdited = null
             }
         )
     }
 
     // All Other Contacts Dialog
     if (isConfiguringOtherContacts) {
-        val otherFaceDown by controller.store.otherContactsFaceDownMode.collectAsStateWithLifecycle(initialValue = com.mwilky.hilight.plus.FaceDownMode.INHERIT)
         CustomRuleDialog(
             title = stringResource(R.string.calls_other_contacts_title),
             initialColor = otherContactsColor,
             initialPattern = otherContactsPattern,
-            initialFaceDown = otherFaceDown,
+            initialFaceDown = otherContactsFaceDown,
             renderer = renderer,
             onDismiss = { isConfiguringOtherContacts = false },
             onSave = { pattern, color, faceDown, _ ->
-                scope.launch {
-                    controller.store.setOtherContactsPattern(pattern)
-                    controller.store.setOtherContactsColor(color)
-                    controller.store.setOtherContactsFaceDownMode(faceDown)
-                    isConfiguringOtherContacts = false
-                }
+                viewModel.setOtherContactsStyle(pattern, color, faceDown)
+                isConfiguringOtherContacts = false
             }
         )
     }
 
     // Unknown Numbers Dialog
     if (isConfiguringUnknownNumbers) {
-        val unknownFaceDown by controller.store.unknownNumbersFaceDownMode.collectAsStateWithLifecycle(initialValue = com.mwilky.hilight.plus.FaceDownMode.INHERIT)
         CustomRuleDialog(
             title = stringResource(R.string.calls_unknown_numbers_title),
             initialColor = unknownNumbersColor,
             initialPattern = unknownNumbersPattern,
-            initialFaceDown = unknownFaceDown,
+            initialFaceDown = unknownNumbersFaceDown,
             renderer = renderer,
             onDismiss = { isConfiguringUnknownNumbers = false },
             onSave = { pattern, color, faceDown, _ ->
-                scope.launch {
-                    controller.store.setUnknownNumbersPattern(pattern)
-                    controller.store.setUnknownNumbersColor(color)
-                    controller.store.setUnknownNumbersFaceDownMode(faceDown)
-                    isConfiguringUnknownNumbers = false
-                }
+                viewModel.setUnknownNumbersStyle(pattern, color, faceDown)
+                isConfiguringUnknownNumbers = false
             }
         )
     }
@@ -377,10 +364,8 @@ fun HomeScreen(controller: LightController) {
             renderer = renderer,
             onDismiss = { msgRuleBeingEdited = null },
             onSave = { pattern, color, faceDown, _ ->
-                scope.launch {
-                    controller.store.saveMessageContactRule(rule.copy(pattern = pattern, color = color, faceDownMode = faceDown))
-                    msgRuleBeingEdited = null
-                }
+                viewModel.saveMessageContactRule(rule.copy(pattern = pattern, color = color, faceDownMode = faceDown))
+                msgRuleBeingEdited = null
             }
         )
     }
@@ -402,43 +387,34 @@ fun HomeScreen(controller: LightController) {
             renderer = renderer,
             onDismiss = { appRuleBeingEdited = null },
             onSave = { pattern, color, faceDown, isAuto ->
-                scope.launch {
-                    controller.store.saveAppRule(
-                        rule.copy(
-                            pattern = pattern,
-                            color = color,
-                            faceDownMode = faceDown,
-                            isAutoColor = isAuto
-                        )
+                viewModel.saveAppRule(
+                    rule.copy(
+                        pattern = pattern,
+                        color = color,
+                        faceDownMode = faceDown,
+                        isAutoColor = isAuto
                     )
-                    appRuleBeingEdited = null
-                }
+                )
+                appRuleBeingEdited = null
             }
         )
     }
 
     // Default Fallback Notif Dialog
     if (isConfiguringDefaultNotif) {
-        val notifFaceDown by controller.store.defaultNotifFaceDownMode.collectAsStateWithLifecycle(initialValue = com.mwilky.hilight.plus.FaceDownMode.INHERIT)
-        val notifAutoColor by controller.store.isDefaultNotifAutoColor.collectAsStateWithLifecycle(initialValue = false)
         CustomRuleDialog(
             title = stringResource(R.string.notifs_default_title),
             initialColor = defaultNotifColor,
             initialPattern = defaultNotifPattern,
-            initialFaceDown = notifFaceDown,
+            initialFaceDown = defaultNotifFaceDown,
             showAutoColorToggle = true,
-            initialAutoColor = notifAutoColor,
+            initialAutoColor = isDefaultNotifAutoColor,
             autoExtractedColor = null,
             renderer = renderer,
             onDismiss = { isConfiguringDefaultNotif = false },
             onSave = { pattern, color, faceDown, isAuto ->
-                scope.launch {
-                    controller.store.setDefaultNotifPattern(pattern)
-                    controller.store.setDefaultNotifColor(color)
-                    controller.store.setDefaultNotifFaceDownMode(faceDown)
-                    controller.store.setDefaultNotifAutoColor(isAuto)
-                    isConfiguringDefaultNotif = false
-                }
+                viewModel.setDefaultNotifStyle(pattern, color, faceDown, isAuto)
+                isConfiguringDefaultNotif = false
             }
         )
     }
@@ -800,555 +776,79 @@ fun HomeContent(
                 Spacer(Modifier.height(16.dp))
             }
 
-            // Master Switch for Incoming Calls (OUTSIDE container)
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(100.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp, horizontal = 32.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.calls_section_title),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                            Text(
-                                text = stringResource(R.string.calls_section_subtitle),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                        Switch(
-                            checked = isCallLightsEnabled,
-                            onCheckedChange = onToggleCallLights
-                        )
-                    }
-                }
+                HomeCallsMasterCard(
+                    enabled = isCallLightsEnabled,
+                    onToggle = onToggleCallLights
+                )
             }
 
-            // Dedicated Surface container for Call Settings
             item {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .scale(callScale)
-                        .alpha(callAlpha),
-                    shape = RoundedCornerShape(28.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    tonalElevation = 0.dp
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        TonalRuleCard(
-                            title = stringResource(R.string.calls_other_contacts_title),
-                            pattern = otherContactsPattern,
-                            color = otherContactsColor,
-                            renderer = renderer,
-                            isEnabled = isOtherContactsEnabled && isCallLightsEnabled,
-                            faceDownMode = otherContactsFaceDownMode,
-                            onToggle = { if (isCallLightsEnabled) onToggleOtherContacts(it) },
-                            onEdit = { if (isCallLightsEnabled) onEditOtherContacts() }
-                        )
-
-                        TonalRuleCard(
-                            title = stringResource(R.string.calls_unknown_numbers_title),
-                            pattern = unknownNumbersPattern,
-                            color = unknownNumbersColor,
-                            renderer = renderer,
-                            isEnabled = isUnknownNumbersEnabled && isCallLightsEnabled,
-                            faceDownMode = unknownNumbersFaceDownMode,
-                            onToggle = { if (isCallLightsEnabled) onToggleUnknownNumbers(it) },
-                            onEdit = { if (isCallLightsEnabled) onEditUnknownNumbers() }
-                        )
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = stringResource(R.string.calls_custom_rules_header, callContactRules.size),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-
-                        if (callContactRules.isEmpty()) {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(8.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-                                )
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.PhoneCallback,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.calls_no_rules),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                }
-                            }
-                        } else {
-                            callContactRules.forEach { rule ->
-                                TonalRuleCard(
-                                    title = rule.name,
-                                    pattern = rule.pattern,
-                                    color = rule.color,
-                                    renderer = renderer,
-                                    isEnabled = rule.isEnabled && isCallLightsEnabled,
-                                    faceDownMode = rule.faceDownMode,
-                                    onToggle = { isEnabled -> if (isCallLightsEnabled) onToggleCallContactRule(rule, isEnabled) },
-                                    onEdit = { if (isCallLightsEnabled) onEditCallContactRule(rule) },
-                                    onDelete = { if (isCallLightsEnabled) onDeleteCallContactRule(rule.id) }
-                                )
-                            }
-                        }
-
-                        OutlinedButton(
-                            onClick = { if (isCallLightsEnabled) onAddCallContact() },
-                            enabled = isCallLightsEnabled,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Icon(Icons.Rounded.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.calls_add_contact_btn))
-                        }
-                    }
-                }
+                HomeCallsSettingsCard(
+                    enabled = isCallLightsEnabled,
+                    alpha = callAlpha,
+                    scale = callScale,
+                    isOtherContactsEnabled = isOtherContactsEnabled,
+                    otherContactsColor = otherContactsColor,
+                    otherContactsPattern = otherContactsPattern,
+                    otherContactsFaceDownMode = otherContactsFaceDownMode,
+                    onToggleOtherContacts = onToggleOtherContacts,
+                    onEditOtherContacts = onEditOtherContacts,
+                    isUnknownNumbersEnabled = isUnknownNumbersEnabled,
+                    unknownNumbersColor = unknownNumbersColor,
+                    unknownNumbersPattern = unknownNumbersPattern,
+                    unknownNumbersFaceDownMode = unknownNumbersFaceDownMode,
+                    onToggleUnknownNumbers = onToggleUnknownNumbers,
+                    onEditUnknownNumbers = onEditUnknownNumbers,
+                    callContactRules = callContactRules,
+                    onToggleCallContactRule = onToggleCallContactRule,
+                    onEditCallContactRule = onEditCallContactRule,
+                    onDeleteCallContactRule = onDeleteCallContactRule,
+                    onAddCallContact = onAddCallContact,
+                    renderer = renderer
+                )
             }
 
             item {
                 Spacer(Modifier.height(16.dp))
             }
 
-            // =========================================================================
-            // SECTION: NOTIFICATIONS & MESSAGES (Material 3 Tonal Elevation)
-            // =========================================================================
-
-            // Master Switch for Notifications (OUTSIDE container)
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(100.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp, horizontal = 32.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.notifs_section_title),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                            Text(
-                                text = stringResource(R.string.notifs_section_subtitle),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                        Switch(
-                            checked = isNotifsEnabled,
-                            onCheckedChange = onToggleNotifs
-                        )
-                    }
-                }
+                HomeNotifsMasterCard(
+                    enabled = isNotifsEnabled,
+                    onToggle = onToggleNotifs
+                )
             }
 
-            // Dedicated Surface container for Notifications & Messages
             item {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .scale(notifScale)
-                        .alpha(notifAlpha),
-                    shape = RoundedCornerShape(28.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    tonalElevation = 0.dp
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        // Default Fallback Card
-                        TonalRuleCard(
-                            title = stringResource(R.string.notifs_default_title),
-                            pattern = defaultNotifPattern,
-                            color = defaultNotifColor,
-                            renderer = renderer,
-                            isEnabled = isDefaultNotifEnabled && isNotifsEnabled,
-                            faceDownMode = defaultNotifFaceDownMode,
-                            onToggle = { if (isNotifsEnabled) onToggleDefaultNotif(it) },
-                            onEdit = { if (isNotifsEnabled) onEditDefaultNotif() }
-                        )
-
-                        // Contact Message Rules Header
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = stringResource(R.string.notifs_contact_rules_header, messageContactRules.size),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-
-                        if (messageContactRules.isEmpty()) {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(8.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-                                )
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.Message,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.notifs_no_contact_rules),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                }
-                            }
-                        } else {
-                            messageContactRules.forEach { rule ->
-                                TonalRuleCard(
-                                    title = rule.name,
-                                    pattern = rule.pattern,
-                                    color = rule.color,
-                                    renderer = renderer,
-                                    isEnabled = rule.isEnabled && isNotifsEnabled,
-                                    faceDownMode = rule.faceDownMode,
-                                    onToggle = { isEnabled -> if (isNotifsEnabled) onToggleMessageRule(rule, isEnabled) },
-                                    onEdit = { if (isNotifsEnabled) onEditMessageRule(rule) },
-                                    onDelete = { if (isNotifsEnabled) onDeleteMessageRule(rule.id) }
-                                )
-                            }
-                        }
-
-                        OutlinedButton(
-                            onClick = { if (isNotifsEnabled) onAddMessageContact() },
-                            enabled = isNotifsEnabled,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Icon(Icons.Rounded.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.calls_add_contact_btn))
-                        }
-
-                        // App Rules Header
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = stringResource(R.string.notifs_app_rules_header, appRules.size),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-
-                        if (appRules.isEmpty()) {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(8.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-                                )
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.Apps,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.notifs_no_app_rules),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                }
-                            }
-                        } else {
-                            appRules.forEach { rule ->
-                                TonalRuleCard(
-                                    title = rule.appName,
-                                    pattern = rule.pattern,
-                                    color = rule.color,
-                                    renderer = renderer,
-                                    isEnabled = rule.isEnabled && isNotifsEnabled,
-                                    faceDownMode = rule.faceDownMode,
-                                    onToggle = { isEnabled -> if (isNotifsEnabled) onToggleAppRule(rule, isEnabled) },
-                                    onEdit = { if (isNotifsEnabled) onEditAppRule(rule) },
-                                    onDelete = { if (isNotifsEnabled) onDeleteAppRule(rule.packageName) }
-                                )
-                            }
-                        }
-
-                        OutlinedButton(
-                            onClick = { if (isNotifsEnabled) onAddApp() },
-                            enabled = isNotifsEnabled,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.notifs_add_app_btn))
-                        }
-
-                        // Additional settings Header
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = stringResource(R.string.settings_additional_header),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-
-                        // Light Duration Slider Card with Compact Sleek Track & Handle
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(24.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = stringResource(R.string.settings_duration_title),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                        Text(
-                                            text = if (isCycleNotifications) {
-                                                stringResource(R.string.settings_duration_cycling_desc)
-                                            } else {
-                                                stringResource(R.string.settings_duration_desc)
-                                            },
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    SuggestionChip(
-                                        onClick = {},
-                                        enabled = isNotifsEnabled && !isCycleNotifications,
-                                        label = {
-                                            Text(
-                                                text = if (notifDurationSec < 60) "${notifDurationSec}s" else "${notifDurationSec / 60}m ${if (notifDurationSec % 60 != 0) "${notifDurationSec % 60}s" else ""}".trim(),
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.primary
-                                            )
-                                        },
-                                        colors = SuggestionChipDefaults.suggestionChipColors(
-                                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                                        ),
-                                        border = null
-                                    )
-                                }
-
-                                // Compact Low-Profile Slider with Small Drag Handle
-                                Slider(
-                                    value = notifDurationSec.toFloat(),
-                                    enabled = isNotifsEnabled && !isCycleNotifications,
-                                    onValueChange = { value ->
-                                        val rounded = (value / 30f).roundToInt() * 30
-                                        onChangeDuration(rounded.coerceIn(30, 300))
-                                    },
-                                    valueRange = 30f..300f,
-                                    steps = 8,
-                                    modifier = Modifier.fillMaxWidth().height(28.dp)
-                                )
-                            }
-                        }
-
-                        // Unlock Behaviour Card
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(24.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 18.dp, vertical = 14.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Column(modifier = Modifier.fillMaxWidth()) {
-                                    Text(
-                                        text = stringResource(R.string.settings_unlock_behavior_title),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    AnimatedContent(
-                                        targetState = unlockBehavior,
-                                        transitionSpec = {
-                                            fadeIn(animationSpec = tween(220)) togetherWith fadeOut(animationSpec = tween(180))
-                                        },
-                                        label = "UnlockBehaviorSubtitle"
-                                    ) { behavior ->
-                                        Text(
-                                            text = when (behavior) {
-                                                UnlockBehavior.NONE -> stringResource(R.string.settings_unlock_none_desc)
-                                                UnlockBehavior.PAUSE -> stringResource(R.string.settings_unlock_pause_desc)
-                                                UnlockBehavior.CLEAR -> stringResource(R.string.settings_unlock_clear_desc)
-                                            },
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-
-                                SingleChoiceSegmentedButtonRow(
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    val behaviors = UnlockBehavior.entries
-                                    behaviors.forEachIndexed { index, b ->
-                                        val isSelected = unlockBehavior == b
-                                        SegmentedButton(
-                                            selected = isSelected,
-                                            onClick = { if (isNotifsEnabled) onChangeUnlockBehavior(b) },
-                                            enabled = isNotifsEnabled,
-                                            shape = SegmentedButtonDefaults.itemShape(index = index, count = behaviors.size),
-                                            icon = {},
-                                            colors = SegmentedButtonDefaults.colors(
-                                                activeContainerColor = MaterialTheme.colorScheme.primary,
-                                                activeContentColor = MaterialTheme.colorScheme.onPrimary,
-                                                inactiveContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                                inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                            ),
-                                            label = {
-                                                Text(
-                                                    text = when (b) {
-                                                        UnlockBehavior.NONE -> stringResource(R.string.settings_unlock_none)
-                                                        UnlockBehavior.PAUSE -> stringResource(R.string.settings_unlock_pause)
-                                                        UnlockBehavior.CLEAR -> stringResource(R.string.settings_unlock_clear)
-                                                    },
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                                )
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        // Cycle Multiple Notifications Card
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(24.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 18.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_cycle_title),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.settings_cycle_desc),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                Switch(
-                                    checked = isCycleNotifications,
-                                    onCheckedChange = onToggleCycleNotifications,
-                                    enabled = isNotifsEnabled
-                                )
-                            }
-                        }
-                    }
-                }
+                HomeNotifsSettingsCard(
+                    enabled = isNotifsEnabled,
+                    alpha = notifAlpha,
+                    scale = notifScale,
+                    isDefaultNotifEnabled = isDefaultNotifEnabled,
+                    defaultNotifColor = defaultNotifColor,
+                    defaultNotifPattern = defaultNotifPattern,
+                    defaultNotifFaceDownMode = defaultNotifFaceDownMode,
+                    onToggleDefaultNotif = onToggleDefaultNotif,
+                    onEditDefaultNotif = onEditDefaultNotif,
+                    messageContactRules = messageContactRules,
+                    onToggleMessageRule = onToggleMessageRule,
+                    onEditMessageRule = onEditMessageRule,
+                    onDeleteMessageRule = onDeleteMessageRule,
+                    onAddMessageContact = onAddMessageContact,
+                    appRules = appRules,
+                    onToggleAppRule = onToggleAppRule,
+                    onEditAppRule = onEditAppRule,
+                    onDeleteAppRule = onDeleteAppRule,
+                    onAddApp = onAddApp,
+                    notifDurationSec = notifDurationSec,
+                    onChangeDuration = onChangeDuration,
+                    unlockBehavior = unlockBehavior,
+                    onChangeUnlockBehavior = onChangeUnlockBehavior,
+                    isCycleNotifications = isCycleNotifications,
+                    onToggleCycleNotifications = onToggleCycleNotifications,
+                    renderer = renderer
+                )
             }
         }
     }
@@ -1462,14 +962,7 @@ fun AnimatedRingBadge(
 
     LaunchedEffect(pattern, color) {
         val startMs = System.currentTimeMillis()
-        val speed = when (pattern) {
-            PatternMode.BREATHE -> 2000L
-            PatternMode.WAVE -> 1200L
-            PatternMode.COMET -> 1000L
-            PatternMode.RAINBOW -> 1200L
-            PatternMode.PULSE -> 850L
-            else -> 1000L
-        }
+        val speed = pattern.speedMs()
         while (isActive) {
             val elapsed = System.currentTimeMillis() - startMs
             miniFrames = renderer.renderFrame(
@@ -1533,18 +1026,7 @@ fun CustomRuleDialog(
 
     LaunchedEffect(selectedPattern, selectedColor) {
         val startMs = System.currentTimeMillis()
-        val speed = when (selectedPattern) {
-            PatternMode.BREATHE -> 2000L
-            PatternMode.WAVE -> 1200L
-            PatternMode.COMET -> 800L
-            PatternMode.ORBIT -> 1000L
-            PatternMode.BEACON -> 750L
-            PatternMode.RIPPLE -> 900L
-            PatternMode.SPARKLE -> 1400L
-            PatternMode.RAINBOW -> 1200L
-            PatternMode.PULSE -> 850L
-            else -> 1000L
-        }
+        val speed = selectedPattern.speedMs()
         while (isActive) {
             val elapsed = System.currentTimeMillis() - startMs
             dialogPreviewFrames = renderer.renderFrame(

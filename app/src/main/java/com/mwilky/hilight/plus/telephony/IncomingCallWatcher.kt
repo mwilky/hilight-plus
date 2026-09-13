@@ -12,12 +12,12 @@ import com.mwilky.hilight.plus.AppStore
 import com.mwilky.hilight.plus.FaceDownMode
 import com.mwilky.hilight.plus.LightController
 import com.mwilky.hilight.plus.PatternMode
+import com.mwilky.hilight.plus.SettingsSnapshot
 import com.mwilky.hilight.plus.core.DeviceOrientationDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -111,19 +111,18 @@ internal object IncomingCallProcessor {
         controller: LightController,
         number: String
     ) {
-        val masterEnabled = store.isEnabled.first()
-        val callLightsEnabled = store.isCallLightsEnabled.first()
-        if (!masterEnabled || !callLightsEnabled) {
+        val snapshot = store.snapshot()
+        if (!snapshot.isEnabled || !snapshot.isCallLightsEnabled) {
             Log.d(TAG, "Call lights are disabled; keeping session but not starting lights")
             return
         }
 
         val contactName = if (number.isNotBlank()) lookupContactName(context, number) else null
-        val matchedRule = if (contactName != null) store.findRuleForContactName(contactName) else null
+        val matchedRule = if (contactName != null) snapshot.findRuleForContactName(contactName) else null
 
         if (matchedRule != null && matchedRule.isEnabled) {
             Log.i(TAG, "Matched custom rule for '${matchedRule.name}': ${matchedRule.pattern}")
-            startCallAlert(context, store, controller, matchedRule.faceDownMode, matchedRule.pattern, matchedRule.color)
+            startCallAlert(context, snapshot, controller, matchedRule.faceDownMode, matchedRule.pattern, matchedRule.color)
             return
         }
 
@@ -133,22 +132,22 @@ internal object IncomingCallProcessor {
             } else {
                 Log.i(TAG, "Caller '$contactName' is a saved contact (no custom rule) -> All Other Contacts")
             }
-            triggerOtherContactsAlert(context, store, controller)
+            triggerOtherContactsAlert(context, snapshot, controller)
         } else {
             Log.i(TAG, "Caller is unsaved / not in contacts -> Unknown & Private Numbers")
-            triggerUnknownAlert(context, store, controller)
+            triggerUnknownAlert(context, snapshot, controller)
         }
     }
 
     private suspend fun startCallAlert(
         context: Context,
-        store: AppStore,
+        snapshot: SettingsSnapshot,
         controller: LightController,
         faceDownMode: FaceDownMode,
         pattern: PatternMode,
         color: Long
     ) {
-        val requiresFaceDown = faceDownMode.requiresFaceDown(store.isOnlyWhenFaceDown.first())
+        val requiresFaceDown = faceDownMode.requiresFaceDown(snapshot.isOnlyWhenFaceDown)
         if (requiresFaceDown) {
             DeviceOrientationDetector.retainMonitoring(context, DeviceOrientationDetector.TOKEN_CALL)
             controller.setDeviceFaceDown(DeviceOrientationDetector.isDeviceFaceDown(context))
@@ -158,25 +157,31 @@ internal object IncomingCallProcessor {
         controller.startIncomingCallAlert(pattern = pattern, color = color, requiresFaceDown = requiresFaceDown)
     }
 
-    private suspend fun triggerOtherContactsAlert(context: Context, store: AppStore, controller: LightController) {
-        val isOtherEnabled = store.isOtherContactsEnabled.first()
-        if (isOtherEnabled) {
-            val pattern = store.otherContactsPattern.first()
-            val color = store.otherContactsColor.first()
+    private suspend fun triggerOtherContactsAlert(
+        context: Context,
+        snapshot: SettingsSnapshot,
+        controller: LightController
+    ) {
+        if (snapshot.isOtherContactsEnabled) {
+            val pattern = snapshot.otherContactsPattern
+            val color = snapshot.otherContactsColor
             Log.i(TAG, "Triggering Other Contacts lighting: $pattern, color=$color")
-            startCallAlert(context, store, controller, store.otherContactsFaceDownMode.first(), pattern, color)
+            startCallAlert(context, snapshot, controller, snapshot.otherContactsFaceDownMode, pattern, color)
         } else {
             Log.i(TAG, "Other Contacts lights are disabled")
         }
     }
 
-    private suspend fun triggerUnknownAlert(context: Context, store: AppStore, controller: LightController) {
-        val isUnknownEnabled = store.isUnknownNumbersEnabled.first()
-        if (isUnknownEnabled) {
-            val pattern = store.unknownNumbersPattern.first()
-            val color = store.unknownNumbersColor.first()
+    private suspend fun triggerUnknownAlert(
+        context: Context,
+        snapshot: SettingsSnapshot,
+        controller: LightController
+    ) {
+        if (snapshot.isUnknownNumbersEnabled) {
+            val pattern = snapshot.unknownNumbersPattern
+            val color = snapshot.unknownNumbersColor
             Log.i(TAG, "Triggering Unknown/Private lighting: $pattern, color=$color")
-            startCallAlert(context, store, controller, store.unknownNumbersFaceDownMode.first(), pattern, color)
+            startCallAlert(context, snapshot, controller, snapshot.unknownNumbersFaceDownMode, pattern, color)
         } else {
             Log.i(TAG, "Unknown/Private lights are disabled")
         }

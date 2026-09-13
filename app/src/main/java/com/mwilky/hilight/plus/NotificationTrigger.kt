@@ -19,7 +19,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -119,7 +118,7 @@ class NotificationTrigger : NotificationListenerService() {
             is ListenerEvent.Removed -> {
                 applyRemovals(
                     listOf(tracker.remove(event.key)),
-                    AppStore.get(applicationContext).isCycleNotifications.first()
+                    AppStore.get(applicationContext).snapshot().isCycleNotifications
                 )
             }
             is ListenerEvent.Screen -> handleScreen(event.action)
@@ -127,7 +126,7 @@ class NotificationTrigger : NotificationListenerService() {
                 val shadeKeys = event.shadeKeys ?: return
                 applyRemovals(
                     tracker.pruneMissing(shadeKeys),
-                    AppStore.get(applicationContext).isCycleNotifications.first()
+                    AppStore.get(applicationContext).snapshot().isCycleNotifications
                 )
             }
             is ListenerEvent.CycleMode -> {
@@ -143,7 +142,7 @@ class NotificationTrigger : NotificationListenerService() {
     private suspend fun handleScreen(action: String) {
         val controller = LightController.get(applicationContext)
         val store = AppStore.get(applicationContext)
-        val behavior = store.unlockBehavior.first()
+        val behavior = store.snapshot().unlockBehavior
         when (action) {
             Intent.ACTION_USER_PRESENT -> {
                 when (behavior) {
@@ -192,14 +191,13 @@ class NotificationTrigger : NotificationListenerService() {
         val controller = LightController.get(applicationContext)
         val store = AppStore.get(applicationContext)
 
-        val masterEnabled = store.isEnabled.first()
-        val notifsEnabled = store.isNotificationsEnabled.first()
-        if (!masterEnabled || !notifsEnabled) return
+        val snapshot = store.snapshot()
+        if (!snapshot.isEnabled || !snapshot.isNotificationsEnabled) return
 
-        val unlockBehavior = store.unlockBehavior.first()
-        val resolved = resolveAlert(store, pkg, notification) ?: return
-        val isCycle = store.isCycleNotifications.first()
-        val requiresFaceDown = resolved.faceDownMode.requiresFaceDown(store.isOnlyWhenFaceDown.first())
+        val unlockBehavior = snapshot.unlockBehavior
+        val resolved = resolveAlert(snapshot, pkg, notification) ?: return
+        val isCycle = snapshot.isCycleNotifications
+        val requiresFaceDown = resolved.faceDownMode.requiresFaceDown(snapshot.isOnlyWhenFaceDown)
 
         if (requiresFaceDown) {
             DeviceOrientationDetector.retainMonitoring(applicationContext, DeviceOrientationDetector.TOKEN_NOTIFICATIONS)
@@ -229,7 +227,7 @@ class NotificationTrigger : NotificationListenerService() {
 
         val added = tracker.add(event.key, resolved.slotId, resolved.pattern, resolved.color, requiresFaceDown)
         if (added.changed) {
-            dispatchSlot(controller, store, added.slot, isCycle)
+            dispatchSlot(controller, snapshot, added.slot, isCycle)
         } else {
             Log.d(TAG, "Ignoring update for existing slot ${added.slot.id}")
         }
@@ -263,9 +261,9 @@ class NotificationTrigger : NotificationListenerService() {
         val faceDownMode: FaceDownMode
     )
 
-    private suspend fun resolveAlert(store: AppStore, pkg: String, notification: Notification): ResolvedAlert? {
+    private fun resolveAlert(snapshot: SettingsSnapshot, pkg: String, notification: Notification): ResolvedAlert? {
         val senderName = extractSenderName(notification)
-        val contactRule = if (senderName.isNotBlank()) store.findMessageRuleForSender(senderName) else null
+        val contactRule = if (senderName.isNotBlank()) snapshot.findMessageRuleForSender(senderName) else null
         if (contactRule != null) {
             if (contactRule.pattern == PatternMode.OFF) {
                 Log.i(TAG, "Priority 1 Match: Contact '${contactRule.name}' is OFF -> NO LIGHT")
@@ -275,7 +273,7 @@ class NotificationTrigger : NotificationListenerService() {
             return ResolvedAlert("contact_${contactRule.id}", contactRule.pattern, contactRule.color, contactRule.faceDownMode)
         }
 
-        val appRule = store.findRuleForPackage(pkg)
+        val appRule = snapshot.findRuleForPackage(pkg)
         if (appRule != null) {
             if (appRule.pattern == PatternMode.OFF) {
                 Log.i(TAG, "Priority 2 Match: App '${appRule.appName}' is OFF -> NO LIGHT")
@@ -290,36 +288,36 @@ class NotificationTrigger : NotificationListenerService() {
             return ResolvedAlert("app_${appRule.packageName}", appRule.pattern, color, appRule.faceDownMode)
         }
 
-        if (!store.isDefaultNotifEnabled.first()) {
+        if (!snapshot.isDefaultNotifEnabled) {
             Log.i(TAG, "Priority 3 Match: General Default is disabled -> NO LIGHT")
             return null
         }
-        val defaultPattern = store.defaultNotifPattern.first()
+        val defaultPattern = snapshot.defaultNotifPattern
         if (defaultPattern == PatternMode.OFF) {
             Log.i(TAG, "Priority 3 Match: General Default is OFF -> NO LIGHT")
             return null
         }
-        val defaultColor = if (store.isDefaultNotifAutoColor.first()) {
+        val defaultColor = if (snapshot.isDefaultNotifAutoColor) {
             AppIconColorExtractor.extractColorForPackage(
                 applicationContext,
                 pkg,
-                store.defaultNotifColor.first()
+                snapshot.defaultNotifColor
             )
         } else {
-            store.defaultNotifColor.first()
+            snapshot.defaultNotifColor
         }
         Log.i(TAG, "Priority 3 Match: General Default ($pkg)")
         return ResolvedAlert(
             slotId = "fallback_$pkg",
             pattern = defaultPattern,
             color = defaultColor,
-            faceDownMode = store.defaultNotifFaceDownMode.first()
+            faceDownMode = snapshot.defaultNotifFaceDownMode
         )
     }
 
-    private suspend fun dispatchSlot(
+    private fun dispatchSlot(
         controller: LightController,
-        store: AppStore,
+        snapshot: SettingsSnapshot,
         slot: NotificationSlotTracker.Slot,
         isCycle: Boolean
     ) {
@@ -332,7 +330,7 @@ class NotificationTrigger : NotificationListenerService() {
                 requiresFaceDown = slot.requiresFaceDown
             )
         } else {
-            val durationMs = store.notificationDurationSeconds.first().coerceIn(5, 300) * 1000L
+            val durationMs = snapshot.notificationDurationSeconds.coerceIn(5, 300) * 1000L
             controller.triggerAlertEffect(
                 pattern = slot.pattern,
                 color = slot.color,
@@ -344,8 +342,8 @@ class NotificationTrigger : NotificationListenerService() {
 
     private suspend fun applyModeChange(cycling: Boolean) {
         val controller = LightController.get(applicationContext)
-        val store = AppStore.get(applicationContext)
-        if (store.unlockBehavior.first() == UnlockBehavior.PAUSE &&
+        val snapshot = AppStore.get(applicationContext).snapshot()
+        if (snapshot.unlockBehavior == UnlockBehavior.PAUSE &&
             DevicePresence.isActivelyUsing(applicationContext)
         ) {
             controller.pauseAlerts()
@@ -356,11 +354,11 @@ class NotificationTrigger : NotificationListenerService() {
         controller.clearAlert()
         if (cycling) {
             tracker.slotsInOrder().forEach { slot ->
-                dispatchSlot(controller, store, slot, isCycle = true)
+                dispatchSlot(controller, snapshot, slot, isCycle = true)
             }
         } else {
             tracker.latestSlot()?.let { latest ->
-                dispatchSlot(controller, store, latest, isCycle = false)
+                dispatchSlot(controller, snapshot, latest, isCycle = false)
             }
         }
         syncNotificationMonitor()
@@ -405,7 +403,7 @@ class NotificationTrigger : NotificationListenerService() {
         val extras = notification.extras ?: return ""
 
         val people = extras.getParcelableArrayList<Person>(Notification.EXTRA_PEOPLE_LIST)
-        val personName = people?.firstOrNull()?.name?.toString()
+        val personName = people?.firstOrNull { !it.name.isNullOrBlank() }?.name?.toString()
         if (!personName.isNullOrBlank()) return personName
 
         val title = extras.getString(Notification.EXTRA_TITLE) ?: extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()

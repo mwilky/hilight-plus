@@ -85,18 +85,7 @@ class LightController private constructor(private val app: Application) {
         durationMs: Long = 3000L,
         requiresFaceDown: Boolean = false
     ) {
-        val calculatedSpeed = when (pattern) {
-            PatternMode.BREATHE -> 2000L
-            PatternMode.WAVE -> 1200L
-            PatternMode.COMET -> 800L
-            PatternMode.ORBIT -> 1000L
-            PatternMode.BEACON -> 750L
-            PatternMode.RIPPLE -> 900L
-            PatternMode.SPARKLE -> 1400L
-            PatternMode.RAINBOW -> 1200L
-            PatternMode.PULSE -> 850L
-            else -> speedMs
-        }
+        val calculatedSpeed = pattern.speedMs(speedMs)
         shizuku.triggerAlert(
             pattern = pattern.id,
             color = color,
@@ -119,18 +108,7 @@ class LightController private constructor(private val app: Application) {
         durationMs: Long = 0L,
         requiresFaceDown: Boolean = false
     ) {
-        val calculatedSpeed = when (pattern) {
-            PatternMode.BREATHE -> 2000L
-            PatternMode.WAVE -> 1200L
-            PatternMode.COMET -> 800L
-            PatternMode.ORBIT -> 1000L
-            PatternMode.BEACON -> 750L
-            PatternMode.RIPPLE -> 900L
-            PatternMode.SPARKLE -> 1400L
-            PatternMode.RAINBOW -> 1200L
-            PatternMode.PULSE -> 850L
-            else -> speedMs
-        }
+        val calculatedSpeed = pattern.speedMs(speedMs)
         shizuku.postAlert(
             key = key,
             pattern = pattern.id,
@@ -159,18 +137,7 @@ class LightController private constructor(private val app: Application) {
         speedMs: Long = 1000L,
         requiresFaceDown: Boolean = false
     ) {
-        val calculatedSpeed = when (pattern) {
-            PatternMode.BREATHE -> 2000L
-            PatternMode.WAVE -> 1200L
-            PatternMode.COMET -> 800L
-            PatternMode.ORBIT -> 1000L
-            PatternMode.BEACON -> 750L
-            PatternMode.RIPPLE -> 900L
-            PatternMode.SPARKLE -> 1400L
-            PatternMode.RAINBOW -> 1200L
-            PatternMode.PULSE -> 850L
-            else -> speedMs
-        }
+        val calculatedSpeed = pattern.speedMs(speedMs)
         shizuku.startIncomingCall(
             pattern = pattern.id,
             color = color,
