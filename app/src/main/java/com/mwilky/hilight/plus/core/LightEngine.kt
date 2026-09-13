@@ -171,7 +171,7 @@ class LightEngine {
     fun postAlert(key: String, pattern: String, color: Long, brightness: Float, speedMs: Long, durationMs: Long) {
         synchronized(lock) {
             val now = SystemClock.elapsedRealtime()
-            val expiresAt = now + durationMs
+            val expiresAt = if (durationMs <= 0L) Long.MAX_VALUE else now + durationMs
             val alert = QueuedAlert(
                 key = key,
                 pattern = pattern,
@@ -318,7 +318,7 @@ class LightEngine {
             // Prune expired alerts from cyclic queue.
             if (activeAlerts.isNotEmpty()) {
                 val beforeSize = activeAlerts.size
-                activeAlerts.removeAll { it.expiresAtMs <= now }
+                activeAlerts.removeAll { it.expiresAtMs != Long.MAX_VALUE && it.expiresAtMs <= now }
                 if (activeAlerts.size != beforeSize) {
                     if (currentAlertIndex >= activeAlerts.size) {
                         currentAlertIndex = 0

@@ -130,6 +130,7 @@
     <string name="settings_additional_header">Additional settings</string>
     <string name="settings_duration_title">Light duration</string>
     <string name="settings_duration_desc">How long to display the lights after receiving a notification</string>
+    <string name="settings_duration_cycling_desc">Duration does not apply while cycle multiple alerts is enabled. Lights continue until each notification is dismissed.</string>
     <string name="settings_unlock_behavior_title">Unlock behaviour</string>
     <string name="settings_unlock_none">None</string>
     <string name="settings_unlock_none_desc">Lights continue playing until the notification duration expires.</string>

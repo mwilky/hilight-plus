@@ -23,7 +23,7 @@ object DeviceOrientationDetector {
 
     private var activeSensorManager: SensorManager? = null
     private var activeListener: SensorEventListener? = null
-    private var isCurrentlyFaceDown = false
+    private var lastReportedFaceDown: Boolean? = null
 
     var onOrientationChanged: ((isFaceDown: Boolean) -> Unit)? = null
 
@@ -88,6 +88,7 @@ object DeviceOrientationDetector {
             ?: sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
             ?: return
 
+        lastReportedFaceDown = null
         activeSensorManager = sensorManager
         activeListener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent?) {
@@ -97,8 +98,8 @@ object DeviceOrientationDetector {
                 val z = event.values[2]
                 val faceDown = isEventFaceDown(x, y, z)
 
-                if (faceDown != isCurrentlyFaceDown) {
-                    isCurrentlyFaceDown = faceDown
+                if (faceDown != lastReportedFaceDown) {
+                    lastReportedFaceDown = faceDown
                     Log.i(TAG, "Device orientation flipped -> isFaceDown=$faceDown")
                     onOrientationChanged?.invoke(faceDown)
                 }
@@ -120,6 +121,7 @@ object DeviceOrientationDetector {
             activeSensorManager?.unregisterListener(it)
             activeListener = null
             activeSensorManager = null
+            lastReportedFaceDown = null
             Log.i(TAG, "Stopped orientation monitoring")
         }
     }

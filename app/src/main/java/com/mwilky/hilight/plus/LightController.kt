@@ -103,7 +103,7 @@ class LightController private constructor(app: Application) {
         color: Long,
         brightness: Float = 1.0f,
         speedMs: Long = 1000L,
-        durationMs: Long = 30_000L
+        durationMs: Long = 0L
     ) {
         val calculatedSpeed = when (pattern) {
             PatternMode.BREATHE -> 2000L

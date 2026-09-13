@@ -1191,14 +1191,18 @@ fun HomeContent(
                                             fontWeight = FontWeight.SemiBold
                                         )
                                         Text(
-                                            text = stringResource(R.string.settings_duration_desc),
+                                            text = if (isCycleNotifications) {
+                                                stringResource(R.string.settings_duration_cycling_desc)
+                                            } else {
+                                                stringResource(R.string.settings_duration_desc)
+                                            },
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                     SuggestionChip(
                                         onClick = {},
-                                        enabled = isNotifsEnabled,
+                                        enabled = isNotifsEnabled && !isCycleNotifications,
                                         label = {
                                             Text(
                                                 text = if (notifDurationSec < 60) "${notifDurationSec}s" else "${notifDurationSec / 60}m ${if (notifDurationSec % 60 != 0) "${notifDurationSec % 60}s" else ""}".trim(),
@@ -1216,7 +1220,7 @@ fun HomeContent(
                                 // Compact Low-Profile Slider with Small Drag Handle
                                 Slider(
                                     value = notifDurationSec.toFloat(),
-                                    enabled = isNotifsEnabled,
+                                    enabled = isNotifsEnabled && !isCycleNotifications,
                                     onValueChange = { value ->
                                         val rounded = (value / 30f).roundToInt() * 30
                                         onChangeDuration(rounded.coerceIn(30, 300))

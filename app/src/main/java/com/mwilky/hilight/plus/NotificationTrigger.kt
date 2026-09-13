@@ -12,25 +12,27 @@ import android.os.PowerManager
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import com.mwilky.hilight.plus.core.AppIconColorExtractor
 import com.mwilky.hilight.plus.core.DeviceOrientationDetector
+import com.mwilky.hilight.plus.core.NotificationSlotTracker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
- * Listens for incoming system notifications (messages, chats, apps) and triggers
- * the appropriate rear LED animation according to the 3-Tier Priority System.
+ * Listens for incoming system notifications and drives rear LED alerts.
  *
- * Automatically filters out:
- * - Ongoing/persistent background alerts (media player, step counters, downloads, persistent foreground services).
- * - Silent/minimized low-priority alerts (IMPORTANCE_LOW / IMPORTANCE_MIN).
- * - Deduplicates multiple notifications per application/rule so each app has exactly 1 slot in the cycle rotation.
- * - Manages Unlock Behavior (NONE, PAUSE, CLEAR) & Screen Lock / Face-Down resumption.
+ * Source notification keys are tracked separately from display slots so cycling
+ * can group repeats while dismissal only removes a slot when its last contributor is gone.
  */
 class NotificationTrigger : NotificationListenerService() {
 
     private val scope = CoroutineScope(Dispatchers.IO)
+    private val tracker = NotificationSlotTracker()
+
+    @Volatile
+    private var lastKnownCycling: Boolean? = null
 
     private val screenStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -50,9 +52,13 @@ class NotificationTrigger : NotificationListenerService() {
                             UnlockBehavior.PAUSE -> {
                                 Log.i(TAG, "Screen unlocked -> UnlockBehavior.PAUSE: pausing active lights")
                                 controller.pauseAlerts()
+                                if (store.isOnlyWhenFaceDown.first()) {
+                                    DeviceOrientationDetector.startMonitoring(applicationContext)
+                                }
                             }
                             UnlockBehavior.CLEAR -> {
                                 Log.i(TAG, "Screen unlocked -> UnlockBehavior.CLEAR: stopping lights and clearing alerts")
+                                tracker.clear()
                                 controller.clearAlert()
                             }
                         }
@@ -61,14 +67,12 @@ class NotificationTrigger : NotificationListenerService() {
                         if (behavior == UnlockBehavior.PAUSE) {
                             val globalOnlyFaceDown = store.isOnlyWhenFaceDown.first()
                             if (globalOnlyFaceDown) {
-                                // Check current orientation immediately
                                 val isFaceDown = DeviceOrientationDetector.isDeviceFaceDown(applicationContext)
                                 if (isFaceDown) {
                                     Log.i(TAG, "Screen turned off (already face-down) -> resuming queued alerts")
                                     controller.resumeAlerts()
                                 } else {
                                     Log.i(TAG, "Screen turned off (face-up) -> listening for face-down flip...")
-                                    // Start monitoring so when phone is placed face-down on table, lights engage!
                                     DeviceOrientationDetector.startMonitoring(applicationContext)
                                 }
                             } else {
@@ -90,18 +94,33 @@ class NotificationTrigger : NotificationListenerService() {
         }
         registerReceiver(screenStateReceiver, filter)
 
-        // Callback whenever phone is flipped while locked with pending alerts
         DeviceOrientationDetector.onOrientationChanged = { isFaceDown ->
             scope.launch {
                 val controller = LightController.get(applicationContext)
-
                 if (isFaceDown) {
                     Log.i(TAG, "Phone flipped face-down while locked -> starting/resuming rear lights")
                     controller.resumeAlerts()
-                    // Stop monitoring once triggered so lights keep running continuously until timeout
                     DeviceOrientationDetector.stopMonitoring()
                 }
             }
+        }
+
+        scope.launch {
+            AppStore.get(applicationContext).isCycleNotifications.collect { cycling ->
+                val previous = lastKnownCycling
+                lastKnownCycling = cycling
+                if (previous != null && previous != cycling) {
+                    applyModeChange(cycling)
+                }
+            }
+        }
+    }
+
+    override fun onListenerConnected() {
+        super.onListenerConnected()
+        scope.launch {
+            val shadeKeys = currentShadeKeys() ?: return@launch
+            applyRemovals(tracker.pruneMissing(shadeKeys), AppStore.get(applicationContext).isCycleNotifications.first())
         }
     }
 
@@ -113,221 +132,194 @@ class NotificationTrigger : NotificationListenerService() {
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         if (sbn == null) return
-        val pkg = sbn.packageName ?: return
-
         scope.launch {
-            // Check if there are any remaining notifications for this package in the active shade
-            val hasRemainingForPkg = try {
-                activeNotifications?.any { it.packageName == pkg && !it.isOngoing } == true
-            } catch (_: Throwable) {
-                false
-            }
-
-            if (!hasRemainingForPkg) {
-                Log.i(TAG, "All notifications for $pkg dismissed -> removing from alert queue")
-                LightController.get(applicationContext).removeNotificationAlert(pkg)
-            }
+            applyRemovals(listOf(tracker.remove(sbn.key)), AppStore.get(applicationContext).isCycleNotifications.first())
         }
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         if (sbn == null) return
         val pkg = sbn.packageName ?: return
-
-        // 1. Ignore our own notifications
         if (pkg == packageName) return
-
-        // 2. Ignore ongoing / persistent system alerts (e.g. Media Player, downloads, Tesla persistent connect)
-        if (sbn.isOngoing || (sbn.notification.flags and Notification.FLAG_ONGOING_EVENT) != 0 || (sbn.notification.flags and Notification.FLAG_NO_CLEAR) != 0) {
-            Log.d(TAG, "Ignoring ongoing notification from $pkg")
-            return
-        }
-
-        // 3. Ignore Silent / Ambient / Minimized notifications in the shade
-        val ranking = Ranking()
-        if (currentRanking?.getRanking(sbn.key, ranking) == true) {
-            if (ranking.isAmbient || ranking.importance < NotificationManager.IMPORTANCE_DEFAULT) {
-                Log.d(TAG, "Ignoring silent/ambient notification from $pkg (importance=${ranking.importance})")
-                return
-            }
-        }
+        if (!isEligiblePostedNotification(sbn)) return
 
         val notification = sbn.notification ?: return
-
         val controller = LightController.get(applicationContext)
         val store = AppStore.get(applicationContext)
 
         scope.launch {
             val masterEnabled = store.isEnabled.first()
             val notifsEnabled = store.isNotificationsEnabled.first()
-
             if (!masterEnabled || !notifsEnabled) return@launch
 
-            val durationSeconds = store.notificationDurationSeconds.first().coerceIn(5, 300)
-            val durationMs = durationSeconds * 1000L
-
-            // Extract sender name / contact title
-            val senderName = extractSenderName(notification)
-            Log.i(TAG, "Notification received from pkg: $pkg, sender: '$senderName' (duration=${durationSeconds}s)")
-
-            // Check if device is currently unlocked with PAUSE behavior
             val isUnlocked = isDeviceUnlocked(applicationContext)
             val unlockBehavior = store.unlockBehavior.first()
+            if (isUnlocked && unlockBehavior == UnlockBehavior.CLEAR) {
+                Log.i(TAG, "Ignoring notification from $pkg: unlocked with UnlockBehavior.CLEAR")
+                return@launch
+            }
+
+            val resolved = resolveAlert(store, pkg, notification) ?: return@launch
+            val isCycle = store.isCycleNotifications.first()
             val shouldPauseOnArrival = isUnlocked && unlockBehavior == UnlockBehavior.PAUSE
+            val isOrientationOk = isOrientationAllowed(applicationContext, store, resolved.faceDownMode)
 
-            // --- PRIORITY 1: Contact Specific Message Rule (Highest) ---
-            var matchedContactRule: MessageContactRule? = null
-            if (senderName.isNotBlank()) {
-                matchedContactRule = store.findMessageRuleForSender(senderName)
+            val slot = tracker.add(sbn.key, resolved.slotId, resolved.pattern, resolved.color)
+            dispatchSlot(controller, store, slot, isCycle)
+
+            if (shouldPauseOnArrival || !isOrientationOk) {
+                controller.pauseAlerts()
+                if (!isOrientationOk) {
+                    DeviceOrientationDetector.startMonitoring(applicationContext)
+                }
             }
+        }
+    }
 
-            if (matchedContactRule != null) {
-                if (matchedContactRule.isEnabled && matchedContactRule.pattern != PatternMode.OFF) {
-                    val isOrientationOk = isOrientationAllowed(applicationContext, store, matchedContactRule.faceDownMode)
-                    val pattern = matchedContactRule.pattern
-                    val color = matchedContactRule.color
-                    val alertKey = "contact_${matchedContactRule.id}"
-                    val isCycle = store.isCycleNotifications.first()
+    private fun isEligiblePostedNotification(sbn: StatusBarNotification): Boolean {
+        if (sbn.isOngoing ||
+            (sbn.notification.flags and Notification.FLAG_ONGOING_EVENT) != 0 ||
+            (sbn.notification.flags and Notification.FLAG_NO_CLEAR) != 0 ||
+            (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY) != 0
+        ) {
+            Log.d(TAG, "Ignoring ongoing/summary notification from ${sbn.packageName}")
+            return false
+        }
 
-                    Log.i(TAG, "Priority 1 Match: Contact '${matchedContactRule.name}' -> pattern=$pattern, color=$color (unlocked=$isUnlocked, orientationOk=$isOrientationOk)")
-
-                    // Always post to memory queue
-                    if (isCycle) {
-                        controller.postNotificationAlert(
-                            key = alertKey,
-                            pattern = pattern,
-                            color = color,
-                            durationMs = durationMs
-                        )
-                    } else {
-                        controller.triggerAlertEffect(
-                            pattern = pattern,
-                            color = color,
-                            durationMs = durationMs
-                        )
-                    }
-
-                    // If screen is active/unlocked or orientation is not yet met, pause the output
-                    if (shouldPauseOnArrival || !isOrientationOk) {
-                        controller.pauseAlerts()
-                        if (!isUnlocked && !isOrientationOk) {
-                            DeviceOrientationDetector.startMonitoring(applicationContext)
-                        }
-                    }
-                } else {
-                    Log.i(TAG, "Priority 1 Match: Contact '${matchedContactRule.name}' is OFF or disabled -> NO LIGHT")
-                }
-                return@launch
+        val ranking = Ranking()
+        if (currentRanking?.getRanking(sbn.key, ranking) == true) {
+            if (ranking.isAmbient || ranking.importance < NotificationManager.IMPORTANCE_DEFAULT) {
+                Log.d(TAG, "Ignoring silent/ambient notification from ${sbn.packageName} (importance=${ranking.importance})")
+                return false
             }
+        }
+        return true
+    }
 
-            // --- PRIORITY 2: Per-App Notification Rule ---
-            val appRule = store.findRuleForPackage(pkg)
-            if (appRule != null) {
-                if (appRule.isEnabled && appRule.pattern != PatternMode.OFF) {
-                    val isOrientationOk = isOrientationAllowed(applicationContext, store, appRule.faceDownMode)
-                    val pattern = appRule.pattern
-                    val color = if (appRule.isAutoColor) {
-                        com.mwilky.hilight.plus.core.AppIconColorExtractor.extractColorForPackage(
-                            context = applicationContext,
-                            packageName = appRule.packageName,
-                            fallbackColor = appRule.color
-                        )
-                    } else {
-                        appRule.color
-                    }
-                    val isCycle = store.isCycleNotifications.first()
+    private data class ResolvedAlert(
+        val slotId: String,
+        val pattern: PatternMode,
+        val color: Long,
+        val faceDownMode: FaceDownMode
+    )
 
-                    Log.i(TAG, "Priority 2 Match: App '${appRule.appName}' ($pkg) -> pattern=$pattern, color=$color (auto=${appRule.isAutoColor}, unlocked=$isUnlocked, orientationOk=$isOrientationOk)")
-
-                    // Always post to memory queue
-                    if (isCycle) {
-                        controller.postNotificationAlert(
-                            key = pkg,
-                            pattern = pattern,
-                            color = color,
-                            durationMs = durationMs
-                        )
-                    } else {
-                        controller.triggerAlertEffect(
-                            pattern = pattern,
-                            color = color,
-                            durationMs = durationMs
-                        )
-                    }
-
-                    // If screen is active/unlocked or orientation is not yet met, pause the output
-                    if (shouldPauseOnArrival || !isOrientationOk) {
-                        controller.pauseAlerts()
-                        if (!isUnlocked && !isOrientationOk) {
-                            DeviceOrientationDetector.startMonitoring(applicationContext)
-                        }
-                    }
-                } else {
-                    Log.i(TAG, "Priority 2 Match: App '${appRule.appName}' is OFF or disabled -> NO LIGHT")
-                }
-                return@launch
+    private suspend fun resolveAlert(store: AppStore, pkg: String, notification: Notification): ResolvedAlert? {
+        val senderName = extractSenderName(notification)
+        val contactRule = if (senderName.isNotBlank()) store.findMessageRuleForSender(senderName) else null
+        if (contactRule != null) {
+            if (contactRule.pattern == PatternMode.OFF) {
+                Log.i(TAG, "Priority 1 Match: Contact '${contactRule.name}' is OFF -> NO LIGHT")
+                return null
             }
+            Log.i(TAG, "Priority 1 Match: Contact '${contactRule.name}'")
+            return ResolvedAlert("contact_${contactRule.id}", contactRule.pattern, contactRule.color, contactRule.faceDownMode)
+        }
 
-            // --- PRIORITY 3: General Fallback Notification Rule ---
-            val isDefaultEnabled = store.isDefaultNotifEnabled.first()
-            if (isDefaultEnabled) {
-                val defaultFaceDown = store.defaultNotifFaceDownMode.first()
-                val isOrientationOk = isOrientationAllowed(applicationContext, store, defaultFaceDown)
-                val defaultPattern = store.defaultNotifPattern.first()
-                val isDefaultAutoColor = store.isDefaultNotifAutoColor.first()
-                val defaultColor = if (isDefaultAutoColor) {
-                    com.mwilky.hilight.plus.core.AppIconColorExtractor.extractColorForPackage(
-                        context = applicationContext,
-                        packageName = pkg,
-                        fallbackColor = store.defaultNotifColor.first()
-                    )
-                } else {
-                    store.defaultNotifColor.first()
-                }
-                if (defaultPattern != PatternMode.OFF) {
-                    val isCycle = store.isCycleNotifications.first()
-                    Log.i(TAG, "Priority 3 Match: General Default ($pkg) -> pattern=$defaultPattern, color=$defaultColor (auto=$isDefaultAutoColor, unlocked=$isUnlocked, orientationOk=$isOrientationOk)")
-
-                    // Always post to memory queue
-                    if (isCycle) {
-                        controller.postNotificationAlert(
-                            key = pkg,
-                            pattern = defaultPattern,
-                            color = defaultColor,
-                            durationMs = durationMs
-                        )
-                    } else {
-                        controller.triggerAlertEffect(
-                            pattern = defaultPattern,
-                            color = defaultColor,
-                            durationMs = durationMs
-                        )
-                    }
-
-                    // If screen is active/unlocked or orientation is not yet met, pause the output
-                    if (shouldPauseOnArrival || !isOrientationOk) {
-                        controller.pauseAlerts()
-                        if (!isUnlocked && !isOrientationOk) {
-                            DeviceOrientationDetector.startMonitoring(applicationContext)
-                        }
-                    }
-                } else {
-                    Log.i(TAG, "Priority 3 Match: General Default is OFF -> NO LIGHT")
-                }
+        val appRule = store.findRuleForPackage(pkg)
+        if (appRule != null) {
+            if (appRule.pattern == PatternMode.OFF) {
+                Log.i(TAG, "Priority 2 Match: App '${appRule.appName}' is OFF -> NO LIGHT")
+                return null
+            }
+            val color = if (appRule.isAutoColor) {
+                AppIconColorExtractor.extractColorForPackage(applicationContext, appRule.packageName, appRule.color)
             } else {
-                Log.i(TAG, "Priority 3 Match: General Default is disabled -> NO LIGHT")
+                appRule.color
             }
+            Log.i(TAG, "Priority 2 Match: App '${appRule.appName}' ($pkg)")
+            return ResolvedAlert("app_${appRule.packageName}", appRule.pattern, color, appRule.faceDownMode)
+        }
+
+        if (!store.isDefaultNotifEnabled.first()) {
+            Log.i(TAG, "Priority 3 Match: General Default is disabled -> NO LIGHT")
+            return null
+        }
+        val defaultPattern = store.defaultNotifPattern.first()
+        if (defaultPattern == PatternMode.OFF) {
+            Log.i(TAG, "Priority 3 Match: General Default is OFF -> NO LIGHT")
+            return null
+        }
+        val defaultColor = if (store.isDefaultNotifAutoColor.first()) {
+            AppIconColorExtractor.extractColorForPackage(
+                applicationContext,
+                pkg,
+                store.defaultNotifColor.first()
+            )
+        } else {
+            store.defaultNotifColor.first()
+        }
+        Log.i(TAG, "Priority 3 Match: General Default ($pkg)")
+        return ResolvedAlert(
+            slotId = "fallback_$pkg",
+            pattern = defaultPattern,
+            color = defaultColor,
+            faceDownMode = store.defaultNotifFaceDownMode.first()
+        )
+    }
+
+    private suspend fun dispatchSlot(
+        controller: LightController,
+        store: AppStore,
+        slot: NotificationSlotTracker.Slot,
+        isCycle: Boolean
+    ) {
+        if (isCycle) {
+            controller.postNotificationAlert(
+                key = slot.id,
+                pattern = slot.pattern,
+                color = slot.color,
+                durationMs = 0L
+            )
+        } else {
+            val durationMs = store.notificationDurationSeconds.first().coerceIn(5, 300) * 1000L
+            controller.triggerAlertEffect(
+                pattern = slot.pattern,
+                color = slot.color,
+                durationMs = durationMs
+            )
+        }
+    }
+
+    private suspend fun applyModeChange(cycling: Boolean) {
+        val controller = LightController.get(applicationContext)
+        val store = AppStore.get(applicationContext)
+        controller.clearAlert()
+        if (cycling) {
+            tracker.slotsInOrder().forEach { slot ->
+                dispatchSlot(controller, store, slot, isCycle = true)
+            }
+        } else {
+            val latest = tracker.latestSlot() ?: return
+            dispatchSlot(controller, store, latest, isCycle = false)
+        }
+    }
+
+    private fun applyRemovals(removals: List<NotificationSlotTracker.Removal>, isCycle: Boolean) {
+        if (removals.isEmpty()) return
+        val controller = LightController.get(applicationContext)
+        if (isCycle) {
+            removals.filter { it.slotEmptied && it.slotId != null }.forEach { removal ->
+                Log.i(TAG, "Slot ${removal.slotId} has no remaining sources -> removing from cycle")
+                controller.removeNotificationAlert(removal.slotId!!)
+            }
+        } else if (removals.any { it.wasLatest }) {
+            Log.i(TAG, "Latest standard-mode notification dismissed -> stopping lights")
+            controller.clearAlert()
+        }
+    }
+
+    private fun currentShadeKeys(): Set<String>? {
+        return try {
+            activeNotifications?.map { it.key }?.toSet()
+        } catch (_: Throwable) {
+            null
         }
     }
 
     private fun isDeviceUnlocked(context: Context): Boolean {
         val km = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
         val pm = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
-
-        val isInteractive = pm?.isInteractive == true
-        val isLocked = km?.isKeyguardLocked == true
-
-        return isInteractive && !isLocked
+        return pm?.isInteractive == true && km?.isKeyguardLocked != true
     }
 
     private suspend fun isOrientationAllowed(context: Context, store: AppStore, ruleMode: FaceDownMode): Boolean {
@@ -356,7 +348,8 @@ class NotificationTrigger : NotificationListenerService() {
         val title = extras.getString(Notification.EXTRA_TITLE) ?: extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
         if (!title.isNullOrBlank()) return title
 
-        val convoTitle = extras.getString(Notification.EXTRA_CONVERSATION_TITLE) ?: extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE)?.toString()
+        val convoTitle = extras.getString(Notification.EXTRA_CONVERSATION_TITLE)
+            ?: extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE)?.toString()
         if (!convoTitle.isNullOrBlank()) return convoTitle
 
         return ""
