@@ -2,18 +2,18 @@ package com.mwilky.hilight.plus
 
 import org.json.JSONObject
 
-enum class PatternMode(val id: String, val displayName: String) {
-    OFF("off", "Off"),
-    SOLID("solid", "Solid"),
-    BREATHE("breathe", "Breathe"),
-    PULSE("pulse", "Pulse"),
-    WAVE("wave", "Wave"),
-    COMET("comet", "Comet"),
-    ORBIT("orbit", "Orbit"),
-    BEACON("beacon", "Beacon"),
-    RIPPLE("ripple", "Ripple"),
-    SPARKLE("sparkle", "Sparkle"),
-    RAINBOW("rainbow", "Rainbow");
+enum class PatternMode(val id: String, val titleRes: Int) {
+    OFF("off", R.string.pattern_off),
+    SOLID("solid", R.string.pattern_solid),
+    BREATHE("breathe", R.string.pattern_breathe),
+    PULSE("pulse", R.string.pattern_pulse),
+    WAVE("wave", R.string.pattern_wave),
+    COMET("comet", R.string.pattern_comet),
+    ORBIT("orbit", R.string.pattern_orbit),
+    BEACON("beacon", R.string.pattern_beacon),
+    RIPPLE("ripple", R.string.pattern_ripple),
+    SPARKLE("sparkle", R.string.pattern_sparkle),
+    RAINBOW("rainbow", R.string.pattern_rainbow);
 
     fun speedMs(fallback: Long = 1000L): Long = when (this) {
         BREATHE -> 2000L
@@ -32,19 +32,19 @@ enum class PatternMode(val id: String, val displayName: String) {
 /**
  * Behavior when device is unlocked.
  */
-enum class UnlockBehavior(val id: String, val displayName: String) {
-    NONE("none", "None"),
-    PAUSE("pause", "Pause"),
-    CLEAR("clear", "Clear")
+enum class UnlockBehavior(val id: String) {
+    NONE("none"),
+    PAUSE("pause"),
+    CLEAR("clear")
 }
 
 /**
  * Orientation trigger preference for a rule.
  */
-enum class FaceDownMode(val id: String, val displayName: String) {
-    INHERIT("inherit", "Default (Follows Conditions)"),
-    ALWAYS("always", "Always (Face Up or Down)"),
-    ONLY_FACE_DOWN("face_down", "Face Down Only");
+enum class FaceDownMode(val id: String) {
+    INHERIT("inherit"),
+    ALWAYS("always"),
+    ONLY_FACE_DOWN("face_down");
 
     fun requiresFaceDown(globalOnlyWhenFaceDown: Boolean): Boolean = when (this) {
         ALWAYS -> false

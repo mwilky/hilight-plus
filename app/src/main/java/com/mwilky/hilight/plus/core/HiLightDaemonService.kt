@@ -2,8 +2,6 @@ package com.mwilky.hilight.plus.core
 
 import android.os.Process
 import android.util.Log
-import com.mwilky.hilight.plus.BuildConfig
-import com.mwilky.hilight.plus.core.IHiLightService
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.concurrent.TimeUnit

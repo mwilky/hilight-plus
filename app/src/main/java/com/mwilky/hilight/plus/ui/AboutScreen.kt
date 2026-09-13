@@ -29,6 +29,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import com.mwilky.hilight.plus.BuildConfig
 import com.mwilky.hilight.plus.LightController
 import com.mwilky.hilight.plus.NativeHiLightDetector
 import com.mwilky.hilight.plus.R
@@ -131,6 +132,7 @@ fun AboutContent(
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.about_title)) },
@@ -173,6 +175,11 @@ fun AboutContent(
                         )
                         Text(
                             text = stringResource(R.string.about_app_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = stringResource(R.string.about_version_format, stringResource(R.string.about_version_label), BuildConfig.VERSION_NAME),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

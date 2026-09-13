@@ -288,7 +288,7 @@ fun HomeScreen(
     if (callRuleBeingEdited != null) {
         val rule = callRuleBeingEdited!!
         CustomRuleDialog(
-            title = "Configure ${rule.name}",
+            title = stringResource(R.string.dialog_configure_title, rule.name),
             initialColor = rule.color,
             initialPattern = rule.pattern,
             initialFaceDown = rule.faceDownMode,
@@ -357,7 +357,7 @@ fun HomeScreen(
     if (msgRuleBeingEdited != null) {
         val rule = msgRuleBeingEdited!!
         CustomRuleDialog(
-            title = "Configure ${rule.name}",
+            title = stringResource(R.string.dialog_configure_title, rule.name),
             initialColor = rule.color,
             initialPattern = rule.pattern,
             initialFaceDown = rule.faceDownMode,
@@ -377,7 +377,7 @@ fun HomeScreen(
             com.mwilky.hilight.plus.core.AppIconColorExtractor.extractColorForPackage(context, rule.packageName)
         }
         CustomRuleDialog(
-            title = "Configure ${rule.appName}",
+            title = stringResource(R.string.dialog_configure_title, rule.appName),
             initialColor = rule.color,
             initialPattern = rule.pattern,
             initialFaceDown = rule.faceDownMode,
@@ -518,6 +518,7 @@ fun HomeContent(
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
@@ -547,7 +548,7 @@ fun HomeContent(
                 .padding(padding)
                 .padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(bottom = 90.dp, top = 8.dp)
+            contentPadding = PaddingValues(bottom = 24.dp, top = 8.dp)
         ) {
             // 1. Shizuku Privileged Access Card (Persistent)
             val isShizukuConnected = shizukuState == ShizukuBridge.State.CONNECTED
@@ -665,15 +666,12 @@ fun HomeContent(
             val isNativeConflict = stockState.known && stockState.favoriteCallsActive
             if (isNativeConflict) {
                 item {
-                    ExpressiveStatusCard(
+                    StandardDiagnosticCard(
                         title = stringResource(R.string.onboarding_stock_card_title),
                         subtitle = stringResource(R.string.onboarding_stock_conflict_active_desc),
                         icon = Icons.Rounded.Warning,
                         statusText = stringResource(R.string.onboarding_stock_status_conflict),
-                        accentColor = MaterialTheme.colorScheme.error,
-                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                        isWarning = true,
+                        isOk = false,
                         bottomAction = {
                             Button(
                                 onClick = onOpenStockSettings,
@@ -695,15 +693,12 @@ fun HomeContent(
             val hasAllPhonePerms = isPhoneGranted && isCallLogGranted && isContactsGranted
             if (!hasAllPhonePerms) {
                 item {
-                    ExpressiveStatusCard(
+                    StandardDiagnosticCard(
                         title = stringResource(R.string.onboarding_perms_calls_title),
                         subtitle = stringResource(R.string.onboarding_perms_calls_needed_desc),
                         icon = Icons.Rounded.PermPhoneMsg,
                         statusText = stringResource(R.string.onboarding_perms_calls_status_needed),
-                        accentColor = MaterialTheme.colorScheme.error,
-                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f),
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                        isWarning = true,
+                        isOk = false,
                         bottomAction = {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -733,7 +728,7 @@ fun HomeContent(
 
             if (!isNotifAccessGranted || !isNotifListenerRunning) {
                 item {
-                    ExpressiveStatusCard(
+                    StandardDiagnosticCard(
                         title = stringResource(R.string.onboarding_perms_notif_title),
                         subtitle = if (!isNotifAccessGranted) {
                             stringResource(R.string.onboarding_perms_notif_needed_desc)
@@ -746,10 +741,7 @@ fun HomeContent(
                         } else {
                             stringResource(R.string.onboarding_perms_notif_status_not_running)
                         },
-                        accentColor = MaterialTheme.colorScheme.error,
-                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f),
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                        isWarning = true,
+                        isOk = false,
                         bottomAction = {
                             Button(
                                 onClick = onOpenNotifSettings,
@@ -868,17 +860,18 @@ fun TonalRuleCard(
     onToggle: (Boolean) -> Unit,
     onEdit: () -> Unit,
     faceDownMode: com.mwilky.hilight.plus.FaceDownMode = com.mwilky.hilight.plus.FaceDownMode.INHERIT,
-    onDelete: (() -> Unit)? = null
+    onDelete: (() -> Unit)? = null,
+    controlsEnabled: Boolean = true
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = HiLightTheme.CardShape,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(HiLightTheme.RuleRowPadding),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -887,7 +880,13 @@ fun TonalRuleCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                AnimatedRingBadge(pattern = pattern, color = color, renderer = renderer, size = 36.dp)
+                AnimatedRingBadge(
+                    pattern = pattern,
+                    color = color,
+                    renderer = renderer,
+                    size = 36.dp,
+                    animate = controlsEnabled
+                )
 
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
@@ -905,7 +904,7 @@ fun TonalRuleCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = pattern.displayName,
+                            text = stringResource(pattern.titleRes),
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -934,17 +933,18 @@ fun TonalRuleCard(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Rounded.Edit, contentDescription = "Edit rule")
+                IconButton(onClick = onEdit, enabled = controlsEnabled) {
+                    Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.rule_edit_cd))
                 }
                 if (onDelete != null) {
-                    IconButton(onClick = onDelete) {
-                        Icon(Icons.Rounded.Delete, contentDescription = "Delete rule", tint = MaterialTheme.colorScheme.error)
+                    IconButton(onClick = onDelete, enabled = controlsEnabled) {
+                        Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.rule_delete_cd), tint = MaterialTheme.colorScheme.error)
                     }
                 }
                 Switch(
                     checked = isEnabled,
-                    onCheckedChange = onToggle
+                    onCheckedChange = onToggle,
+                    enabled = controlsEnabled
                 )
             }
         }
@@ -956,23 +956,29 @@ fun AnimatedRingBadge(
     pattern: PatternMode,
     color: Long,
     renderer: PatternRenderer,
-    size: Dp
+    size: Dp,
+    animate: Boolean = true
 ) {
     var miniFrames by remember { mutableStateOf(IntArray(8) { 0x00000000 }) }
+    val shouldAnimate = animate && pattern != PatternMode.OFF && pattern != PatternMode.SOLID
 
-    LaunchedEffect(pattern, color) {
-        val startMs = System.currentTimeMillis()
+    LaunchedEffect(pattern, color, shouldAnimate) {
         val speed = pattern.speedMs()
+        fun frame(elapsed: Long) = renderer.renderFrame(
+            pattern = pattern.id,
+            colorLong = color,
+            brightness = 1.0f,
+            speedMs = speed,
+            elapsedTimeMs = elapsed,
+            ledCount = 8
+        )
+        if (!shouldAnimate) {
+            miniFrames = frame(0L)
+            return@LaunchedEffect
+        }
+        val startMs = System.currentTimeMillis()
         while (isActive) {
-            val elapsed = System.currentTimeMillis() - startMs
-            miniFrames = renderer.renderFrame(
-                pattern = pattern.id,
-                colorLong = color,
-                brightness = 1.0f,
-                speedMs = speed,
-                elapsedTimeMs = elapsed,
-                ledCount = 8
-            )
+            miniFrames = frame(System.currentTimeMillis() - startMs)
             delay(33)
         }
     }
@@ -1004,9 +1010,9 @@ fun CustomRuleDialog(
     autoExtractedColor: Long? = null
 ) {
     var isAutoColor by remember(initialAutoColor) { mutableStateOf(initialAutoColor) }
-    var selectedColor by remember(initialColor, isAutoColor, autoExtractedColor) {
+    var selectedColor by remember(initialColor) {
         mutableLongStateOf(
-            if (showAutoColorToggle && isAutoColor && autoExtractedColor != null) autoExtractedColor else initialColor
+            if (showAutoColorToggle && initialAutoColor && autoExtractedColor != null) autoExtractedColor else initialColor
         )
     }
     var selectedPattern by remember(initialPattern) { mutableStateOf(initialPattern) }
@@ -1025,28 +1031,27 @@ fun CustomRuleDialog(
     )
 
     LaunchedEffect(selectedPattern, selectedColor) {
-        val startMs = System.currentTimeMillis()
         val speed = selectedPattern.speedMs()
+        fun frame(elapsed: Long) = renderer.renderFrame(
+            pattern = selectedPattern.id,
+            colorLong = selectedColor,
+            brightness = 1.0f,
+            speedMs = speed,
+            elapsedTimeMs = elapsed,
+            ledCount = 8
+        )
+        if (selectedPattern == PatternMode.OFF || selectedPattern == PatternMode.SOLID) {
+            dialogPreviewFrames = frame(0L)
+            return@LaunchedEffect
+        }
+        val startMs = System.currentTimeMillis()
         while (isActive) {
-            val elapsed = System.currentTimeMillis() - startMs
-            dialogPreviewFrames = renderer.renderFrame(
-                pattern = selectedPattern.id,
-                colorLong = selectedColor,
-                brightness = 1.0f,
-                speedMs = speed,
-                elapsedTimeMs = elapsed,
-                ledCount = 8
-            )
-            delay(16)
+            dialogPreviewFrames = frame(System.currentTimeMillis() - startMs)
+            delay(33)
         }
     }
 
     val isColorEnabled = selectedPattern != PatternMode.RAINBOW
-    val colorAlpha by animateFloatAsState(
-        targetValue = if (isColorEnabled) 1.0f else 0.35f,
-        animationSpec = tween(durationMillis = 200),
-        label = "dialogColorAlpha"
-    )
 
     val patterns = PatternMode.entries.filter { it != PatternMode.OFF }
 
@@ -1069,7 +1074,7 @@ fun CustomRuleDialog(
                 // Hero Preview Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = HiLightTheme.DialogCardShape,
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.6f))
                 ) {
                     Box(
@@ -1107,7 +1112,7 @@ fun CustomRuleDialog(
                             FilterChip(
                                 selected = selectedPattern == p,
                                 onClick = { selectedPattern = p },
-                                label = { Text(p.displayName) },
+                                label = { Text(stringResource(p.titleRes)) },
                                 modifier = Modifier.padding(horizontal = 4.dp)
                             )
                         }
@@ -1119,7 +1124,7 @@ fun CustomRuleDialog(
                 if (showAutoColorToggle) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = HiLightTheme.DialogCardShape,
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
                         )
@@ -1183,7 +1188,7 @@ fun CustomRuleDialog(
                             val isSelected = selectedColor == c && canPickManualColor
                             Box(
                                 modifier = Modifier
-                                    .size(32.dp)
+                                    .size(HiLightTheme.PaletteSwatch)
                                     .clip(CircleShape)
                                     .background(Color(c))
                                     .border(
@@ -1322,7 +1327,7 @@ fun AppPickerDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-                    shape = RoundedCornerShape(16.dp)
+                    shape = HiLightTheme.DialogCardShape
                 )
 
                 if (isLoading) {

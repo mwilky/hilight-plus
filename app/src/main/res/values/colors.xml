@@ -1,8 +1,3 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Standardized Diagnostic Card Colors across Light & Dark themes -->
-    <color name="status_green_accent">#4CAF50</color>
-    <color name="status_green_container">#1A4CAF50</color>
-    <color name="status_red_accent">#E53935</color>
-    <color name="status_red_container">#1AE53935</color>
 </resources>

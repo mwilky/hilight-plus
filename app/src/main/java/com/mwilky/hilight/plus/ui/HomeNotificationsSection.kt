@@ -59,7 +59,7 @@ fun HomeNotifsMasterCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(100.dp),
+        shape = HiLightTheme.PillShape,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
     ) {
         Row(
@@ -123,7 +123,7 @@ fun HomeNotifsSettingsCard(
             .fillMaxWidth()
             .scale(scale)
             .alpha(alpha),
-        shape = RoundedCornerShape(28.dp),
+        shape = HiLightTheme.SectionShape,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         tonalElevation = 0.dp
     ) {
@@ -136,10 +136,11 @@ fun HomeNotifsSettingsCard(
                 pattern = defaultNotifPattern,
                 color = defaultNotifColor,
                 renderer = renderer,
-                isEnabled = isDefaultNotifEnabled && enabled,
+                isEnabled = isDefaultNotifEnabled,
+                controlsEnabled = enabled,
                 faceDownMode = defaultNotifFaceDownMode,
-                onToggle = { if (enabled) onToggleDefaultNotif(it) },
-                onEdit = { if (enabled) onEditDefaultNotif() }
+                onToggle = onToggleDefaultNotif,
+                onEdit = onEditDefaultNotif
             )
 
             Row(
@@ -193,11 +194,12 @@ fun HomeNotifsSettingsCard(
                         pattern = rule.pattern,
                         color = rule.color,
                         renderer = renderer,
-                        isEnabled = rule.isEnabled && enabled,
+                        isEnabled = rule.isEnabled,
+                        controlsEnabled = enabled,
                         faceDownMode = rule.faceDownMode,
-                        onToggle = { isEnabled -> if (enabled) onToggleMessageRule(rule, isEnabled) },
-                        onEdit = { if (enabled) onEditMessageRule(rule) },
-                        onDelete = { if (enabled) onDeleteMessageRule(rule.id) }
+                        onToggle = { isEnabled -> onToggleMessageRule(rule, isEnabled) },
+                        onEdit = { onEditMessageRule(rule) },
+                        onDelete = { onDeleteMessageRule(rule.id) }
                     )
                 }
             }
@@ -266,11 +268,12 @@ fun HomeNotifsSettingsCard(
                         pattern = rule.pattern,
                         color = rule.color,
                         renderer = renderer,
-                        isEnabled = rule.isEnabled && enabled,
+                        isEnabled = rule.isEnabled,
+                        controlsEnabled = enabled,
                         faceDownMode = rule.faceDownMode,
-                        onToggle = { isEnabled -> if (enabled) onToggleAppRule(rule, isEnabled) },
-                        onEdit = { if (enabled) onEditAppRule(rule) },
-                        onDelete = { if (enabled) onDeleteAppRule(rule.packageName) }
+                        onToggle = { isEnabled -> onToggleAppRule(rule, isEnabled) },
+                        onEdit = { onEditAppRule(rule) },
+                        onDelete = { onDeleteAppRule(rule.packageName) }
                     )
                 }
             }
@@ -305,7 +308,7 @@ fun HomeNotifsSettingsCard(
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
+                shape = HiLightTheme.CardShape,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
             ) {
                 Column(
@@ -338,7 +341,7 @@ fun HomeNotifsSettingsCard(
                             enabled = enabled && !isCycleNotifications,
                             label = {
                                 Text(
-                                    text = if (notifDurationSec < 60) "${notifDurationSec}s" else "${notifDurationSec / 60}m ${if (notifDurationSec % 60 != 0) "${notifDurationSec % 60}s" else ""}".trim(),
+                                    text = formatDurationLabel(notifDurationSec),
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -366,7 +369,7 @@ fun HomeNotifsSettingsCard(
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
+                shape = HiLightTheme.CardShape,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
             ) {
                 Column(
@@ -437,7 +440,7 @@ fun HomeNotifsSettingsCard(
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
+                shape = HiLightTheme.CardShape,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
             ) {
                 Row(
@@ -466,6 +469,21 @@ fun HomeNotifsSettingsCard(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun formatDurationLabel(seconds: Int): String {
+    return if (seconds < 60) {
+        stringResource(R.string.duration_seconds, seconds)
+    } else {
+        val minutes = seconds / 60
+        val remain = seconds % 60
+        if (remain == 0) {
+            stringResource(R.string.duration_minutes, minutes)
+        } else {
+            stringResource(R.string.duration_minutes_seconds, minutes, remain)
         }
     }
 }

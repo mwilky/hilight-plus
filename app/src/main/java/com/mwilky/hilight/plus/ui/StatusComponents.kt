@@ -4,7 +4,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -16,19 +15,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 /**
- * Standardized status colors for all diagnostic & permission cards across the app.
- */
-object DiagnosticCardDefaults {
-    val GreenAccent = Color(0xFF4CAF50)
-    val RedAccent = Color(0xFFE53935)
-}
-
-/**
- * Standardized diagnostic status card for Native HiLight, Calls/Contacts permissions,
- * Notification listener access, and Shizuku session.
- *
- * When [isOk] == true -> Standard vibrant green dot, pill, and container wash.
- * When [isOk] == false -> Standard warning red dot, pill, container wash, and optional action button.
+ * One semantic status treatment: OK uses primary, not-OK uses error.
+ * LED / rule colours stay on the domain objects, not here.
  */
 @Composable
 fun StandardDiagnosticCard(
@@ -40,9 +28,17 @@ fun StandardDiagnosticCard(
     modifier: Modifier = Modifier,
     bottomAction: (@Composable () -> Unit)? = null
 ) {
-    val accentColor = if (isOk) DiagnosticCardDefaults.GreenAccent else DiagnosticCardDefaults.RedAccent
-    val containerColor = if (isOk) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.40f)
-    val contentColor = if (isOk) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onErrorContainer
+    val accentColor = if (isOk) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+    val containerColor = if (isOk) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+    } else {
+        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f)
+    }
+    val contentColor = if (isOk) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onErrorContainer
+    }
 
     ExpressiveStatusCard(
         title = title,
@@ -52,16 +48,11 @@ fun StandardDiagnosticCard(
         accentColor = accentColor,
         containerColor = containerColor,
         contentColor = contentColor,
-        isWarning = !isOk,
         modifier = modifier,
         bottomAction = bottomAction
     )
 }
 
-/**
- * Material 3 Expressive status indicator card designed for clear system diagnostics.
- * Features vibrant tonal container backgrounds, accent badge pills, colored icon halos, and an optional bottom action bar.
- */
 @Composable
 fun ExpressiveStatusCard(
     title: String,
@@ -72,13 +63,11 @@ fun ExpressiveStatusCard(
     containerColor: Color,
     contentColor: Color,
     modifier: Modifier = Modifier,
-    isWarning: Boolean = false,
-    headerAction: (@Composable () -> Unit)? = null,
     bottomAction: (@Composable () -> Unit)? = null
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = HiLightTheme.CardShape,
         colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
         Column(
@@ -118,7 +107,6 @@ fun ExpressiveStatusCard(
                             color = contentColor
                         )
 
-                        // Status Badge Pill
                         Surface(
                             shape = CircleShape,
                             color = accentColor.copy(alpha = 0.15f),
@@ -144,10 +132,6 @@ fun ExpressiveStatusCard(
                             }
                         }
                     }
-                }
-
-                if (headerAction != null) {
-                    headerAction()
                 }
             }
 

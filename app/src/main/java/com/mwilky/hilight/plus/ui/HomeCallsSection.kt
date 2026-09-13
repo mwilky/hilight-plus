@@ -42,7 +42,7 @@ fun HomeCallsMasterCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(100.dp),
+        shape = HiLightTheme.PillShape,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
     ) {
         Row(
@@ -101,7 +101,7 @@ fun HomeCallsSettingsCard(
             .fillMaxWidth()
             .scale(scale)
             .alpha(alpha),
-        shape = RoundedCornerShape(28.dp),
+        shape = HiLightTheme.SectionShape,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         tonalElevation = 0.dp
     ) {
@@ -114,10 +114,11 @@ fun HomeCallsSettingsCard(
                 pattern = otherContactsPattern,
                 color = otherContactsColor,
                 renderer = renderer,
-                isEnabled = isOtherContactsEnabled && enabled,
+                isEnabled = isOtherContactsEnabled,
+                controlsEnabled = enabled,
                 faceDownMode = otherContactsFaceDownMode,
-                onToggle = { if (enabled) onToggleOtherContacts(it) },
-                onEdit = { if (enabled) onEditOtherContacts() }
+                onToggle = onToggleOtherContacts,
+                onEdit = onEditOtherContacts
             )
 
             TonalRuleCard(
@@ -125,10 +126,11 @@ fun HomeCallsSettingsCard(
                 pattern = unknownNumbersPattern,
                 color = unknownNumbersColor,
                 renderer = renderer,
-                isEnabled = isUnknownNumbersEnabled && enabled,
+                isEnabled = isUnknownNumbersEnabled,
+                controlsEnabled = enabled,
                 faceDownMode = unknownNumbersFaceDownMode,
-                onToggle = { if (enabled) onToggleUnknownNumbers(it) },
-                onEdit = { if (enabled) onEditUnknownNumbers() }
+                onToggle = onToggleUnknownNumbers,
+                onEdit = onEditUnknownNumbers
             )
 
             Row(
@@ -182,11 +184,12 @@ fun HomeCallsSettingsCard(
                         pattern = rule.pattern,
                         color = rule.color,
                         renderer = renderer,
-                        isEnabled = rule.isEnabled && enabled,
+                        isEnabled = rule.isEnabled,
+                        controlsEnabled = enabled,
                         faceDownMode = rule.faceDownMode,
-                        onToggle = { isEnabled -> if (enabled) onToggleCallContactRule(rule, isEnabled) },
-                        onEdit = { if (enabled) onEditCallContactRule(rule) },
-                        onDelete = { if (enabled) onDeleteCallContactRule(rule.id) }
+                        onToggle = { isEnabled -> onToggleCallContactRule(rule, isEnabled) },
+                        onEdit = { onEditCallContactRule(rule) },
+                        onDelete = { onDeleteCallContactRule(rule.id) }
                     )
                 }
             }

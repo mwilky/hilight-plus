@@ -144,18 +144,7 @@ fun OnboardingScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        OnboardingStep.entries.forEach { step ->
-                            val isSelected = step == currentStep
-                            Box(
-                                modifier = Modifier
-                                    .size(if (isSelected) 10.dp else 8.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        if (isSelected) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.outlineVariant
-                                    )
-                            )
-                        }
+                        OnboardingStepDots(currentStep)
                     }
 
                     val isNextEnabled = when (currentStep) {
@@ -742,6 +731,27 @@ private fun FeaturesHighlightCard(
     }
 }
 
+@Composable
+private fun OnboardingStepDots(currentStep: OnboardingStep) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        OnboardingStep.entries.forEach { step ->
+            val isSelected = step == currentStep
+            Box(
+                modifier = Modifier
+                    .size(if (isSelected) HiLightTheme.OnboardingDotSelected else HiLightTheme.OnboardingDot)
+                    .clip(CircleShape)
+                    .background(
+                        if (isSelected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.outlineVariant
+                    )
+            )
+        }
+    }
+}
+
 // =========================================================================
 // PREVIEWS
 // =========================================================================
@@ -762,28 +772,9 @@ fun OnboardingStep1Preview() {
     }
 }
 
-@Preview(name = "Step 2 - Stock Conflict", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "Step 2 - Shizuku Access", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 fun OnboardingStep2Preview() {
-    HiLightPlusTheme {
-        Scaffold(
-            bottomBar = {
-                OnboardingBottomBarPreview(currentStep = OnboardingStep.STOCK_CONFLICT)
-            }
-        ) { padding ->
-            Box(modifier = Modifier.padding(padding)) {
-                StockConflictStepContent(
-                    stockConflictActive = true,
-                    onOpenSettings = {}
-                )
-            }
-        }
-    }
-}
-
-@Preview(name = "Step 3 - Shizuku Access", showBackground = true, widthDp = 390, heightDp = 844)
-@Composable
-fun OnboardingStep3Preview() {
     HiLightPlusTheme {
         Scaffold(
             bottomBar = {
@@ -799,6 +790,25 @@ fun OnboardingStep3Preview() {
                     onDisconnect = {},
                     onOpenShizuku = {},
                     onRefresh = {}
+                )
+            }
+        }
+    }
+}
+
+@Preview(name = "Step 3 - Native HiLight", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+fun OnboardingStep3Preview() {
+    HiLightPlusTheme {
+        Scaffold(
+            bottomBar = {
+                OnboardingBottomBarPreview(currentStep = OnboardingStep.STOCK_CONFLICT)
+            }
+        ) { padding ->
+            Box(modifier = Modifier.padding(padding)) {
+                StockConflictStepContent(
+                    stockConflictActive = true,
+                    onOpenSettings = {}
                 )
             }
         }
@@ -857,18 +867,7 @@ private fun OnboardingBottomBarPreview(currentStep: OnboardingStep) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                OnboardingStep.entries.forEach { step ->
-                    val isSelected = step == currentStep
-                    Box(
-                        modifier = Modifier
-                            .size(if (isSelected) 10.dp else 8.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (isSelected) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.outlineVariant
-                            )
-                    )
-                }
+                OnboardingStepDots(currentStep)
             }
 
             Button(

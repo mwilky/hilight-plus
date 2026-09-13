@@ -25,9 +25,7 @@ import kotlinx.coroutines.launch
 data class StockHiLightState(
     val favoriteCallsActive: Boolean = false,
     val known: Boolean = false
-) {
-    val anyActive: Boolean get() = favoriteCallsActive
-}
+)
 
 /**
  * Detects whether native Pixel Favorite Calls is active in Settings.Secure
