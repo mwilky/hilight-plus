@@ -6,6 +6,7 @@ import com.mwilky.hilight.plus.BuildConfig
 import com.mwilky.hilight.plus.core.IHiLightService
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.util.concurrent.TimeUnit
 import kotlin.system.exitProcess
 
 /**
@@ -110,15 +111,22 @@ class HiLightDaemonService : IHiLightService.Stub() {
 
     override fun getSecureString(key: String?): String? {
         if (key.isNullOrBlank()) return null
+        var process: java.lang.Process? = null
         return try {
-            val process = Runtime.getRuntime().exec(arrayOf("settings", "get", "secure", key))
-            val reader = BufferedReader(InputStreamReader(process.inputStream))
-            val output = reader.readLine()?.trim()
-            process.waitFor()
+            process = Runtime.getRuntime().exec(arrayOf("settings", "get", "secure", key))
+            val output = BufferedReader(InputStreamReader(process.inputStream)).use { it.readLine()?.trim() }
+            runCatching { process.errorStream.close() }
+            val finished = process.waitFor(2, TimeUnit.SECONDS)
+            if (!finished) {
+                process.destroyForcibly()
+                return null
+            }
             if (output == "null" || output.isNullOrBlank()) null else output
         } catch (t: Throwable) {
             Log.e(TAG, "getSecureString failed: ${t.message}", t)
             null
+        } finally {
+            process?.destroy()
         }
     }
 

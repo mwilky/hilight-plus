@@ -56,6 +56,7 @@ fun AboutScreen(controller: LightController) {
     var isCallLogGranted by remember { mutableStateOf(hasCallLogPermission()) }
     var isContactsGranted by remember { mutableStateOf(hasContactsPermission()) }
     var isNotifAccessGranted by remember { mutableStateOf(isNotificationListenerEnabled(context)) }
+    var isNotifListenerRunning by remember { mutableStateOf(isNotificationListenerRunning()) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(lifecycleOwner) {
@@ -64,8 +65,7 @@ fun AboutScreen(controller: LightController) {
             isCallLogGranted = hasCallLogPermission()
             isContactsGranted = hasContactsPermission()
             isNotifAccessGranted = isNotificationListenerEnabled(context)
-            NativeHiLightDetector.check(context)
-            controller.refreshStatus()
+            isNotifListenerRunning = isNotificationListenerRunning()
         }
     }
 
@@ -98,6 +98,7 @@ fun AboutScreen(controller: LightController) {
         isCallLogGranted = isCallLogGranted,
         isContactsGranted = isContactsGranted,
         isNotifAccessGranted = isNotifAccessGranted,
+        isNotifListenerRunning = isNotifListenerRunning,
         onOpenSettings = { NativeHiLightDetector.openHiLightSettings(context) },
         onRequestPhonePerms = {
             val missing = mutableListOf<String>().apply {
@@ -120,6 +121,7 @@ fun AboutContent(
     isCallLogGranted: Boolean,
     isContactsGranted: Boolean,
     isNotifAccessGranted: Boolean,
+    isNotifListenerRunning: Boolean,
     onOpenSettings: () -> Unit,
     onRequestPhonePerms: () -> Unit,
     onOpenNotifSettings: () -> Unit,
@@ -186,18 +188,23 @@ fun AboutContent(
             )
 
             // 1. Stock HiLight Conflict Card
-            val isNativeConflict = stockState.favoriteCallsActive
+            val isNativeConflict = stockState.known && stockState.favoriteCallsActive
+            val stockKnown = stockState.known
 
             StandardDiagnosticCard(
                 title = stringResource(R.string.onboarding_stock_card_title),
-                subtitle = if (isNativeConflict) {
-                    stringResource(R.string.onboarding_stock_conflict_active_desc)
-                } else {
-                    stringResource(R.string.onboarding_stock_ready_desc)
+                subtitle = when {
+                    isNativeConflict -> stringResource(R.string.onboarding_stock_conflict_active_desc)
+                    !stockKnown -> stringResource(R.string.onboarding_stock_unknown_desc)
+                    else -> stringResource(R.string.about_stock_ok_desc)
                 },
-                icon = if (isNativeConflict) Icons.Rounded.Warning else Icons.Rounded.CheckCircle,
-                statusText = if (isNativeConflict) stringResource(R.string.onboarding_stock_status_conflict) else stringResource(R.string.onboarding_stock_status_ready),
-                isOk = !isNativeConflict,
+                icon = if (isNativeConflict || !stockKnown) Icons.Rounded.Warning else Icons.Rounded.CheckCircle,
+                statusText = when {
+                    isNativeConflict -> stringResource(R.string.onboarding_stock_status_conflict)
+                    !stockKnown -> stringResource(R.string.onboarding_stock_status_unknown)
+                    else -> stringResource(R.string.onboarding_stock_status_ready)
+                },
+                isOk = stockKnown && !isNativeConflict,
                 bottomAction = if (isNativeConflict) {
                     {
                         Button(
@@ -259,15 +266,19 @@ fun AboutContent(
             // 3. Notification Listener Access Card
             StandardDiagnosticCard(
                 title = stringResource(R.string.onboarding_perms_notif_title),
-                subtitle = if (isNotifAccessGranted) {
-                    stringResource(R.string.onboarding_perms_notif_granted_desc)
-                } else {
-                    stringResource(R.string.onboarding_perms_notif_needed_desc)
+                subtitle = when {
+                    !isNotifAccessGranted -> stringResource(R.string.onboarding_perms_notif_needed_desc)
+                    !isNotifListenerRunning -> stringResource(R.string.onboarding_perms_notif_not_running_desc)
+                    else -> stringResource(R.string.onboarding_perms_notif_granted_desc)
                 },
-                icon = if (isNotifAccessGranted) Icons.Rounded.CheckCircle else Icons.Rounded.NotificationAdd,
-                statusText = if (isNotifAccessGranted) stringResource(R.string.onboarding_perms_calls_status_granted) else stringResource(R.string.onboarding_perms_notif_status_needed),
-                isOk = isNotifAccessGranted,
-                bottomAction = if (!isNotifAccessGranted) {
+                icon = if (isNotifAccessGranted && isNotifListenerRunning) Icons.Rounded.CheckCircle else Icons.Rounded.NotificationAdd,
+                statusText = when {
+                    !isNotifAccessGranted -> stringResource(R.string.onboarding_perms_notif_status_needed)
+                    !isNotifListenerRunning -> stringResource(R.string.onboarding_perms_notif_status_not_running)
+                    else -> stringResource(R.string.onboarding_perms_calls_status_granted)
+                },
+                isOk = isNotifAccessGranted && isNotifListenerRunning,
+                bottomAction = if (!isNotifAccessGranted || !isNotifListenerRunning) {
                     {
                         Button(
                             onClick = onOpenNotifSettings,
@@ -293,11 +304,12 @@ fun AboutContent(
 fun AboutScreenPreview() {
     HiLightPlusTheme {
         AboutContent(
-            stockState = StockHiLightState(favoriteCallsActive = false),
+            stockState = StockHiLightState(favoriteCallsActive = false, known = true),
             isPhoneGranted = true,
             isCallLogGranted = true,
             isContactsGranted = true,
             isNotifAccessGranted = true,
+            isNotifListenerRunning = true,
             onOpenSettings = {},
             onRequestPhonePerms = {},
             onOpenNotifSettings = {},

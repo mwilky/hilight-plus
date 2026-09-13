@@ -10,15 +10,21 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /**
- * State representing if stock Pixel Favorite Calls is active in system settings.
+ * Native favourite-caller lighting read from Settings.Secure.
+ * Unknown (unread) is not treated as disabled.
  */
 data class StockHiLightState(
-    val favoriteCallsActive: Boolean = false
+    val favoriteCallsActive: Boolean = false,
+    val known: Boolean = false
 ) {
     val anyActive: Boolean get() = favoriteCallsActive
 }
@@ -26,9 +32,6 @@ data class StockHiLightState(
 /**
  * Detects whether native Pixel Favorite Calls is active in Settings.Secure
  * under key `light_animation_favorite_calls_enabled`.
- *
- * Queries the key using the privileged Shizuku daemon under Shell UID (2000)
- * to bypass Android 12+ (S+) SecurityException for unreadable @hide system settings.
  */
 object NativeHiLightDetector {
 
@@ -36,6 +39,7 @@ object NativeHiLightDetector {
 
     const val KEY_FAVORITE_CALLS = "light_animation_favorite_calls_enabled"
 
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val _state = MutableStateFlow(StockHiLightState())
     val state: StateFlow<StockHiLightState> = _state.asStateFlow()
 
@@ -63,7 +67,6 @@ object NativeHiLightDetector {
 
         if (!observerRegistered) {
             try {
-                // Register observer so whenever the key changes in Settings, Android invokes our callback
                 val uri = Settings.Secure.getUriFor(KEY_FAVORITE_CALLS)
                 if (uri != null) {
                     cr.registerContentObserver(uri, true, observer)
@@ -75,26 +78,24 @@ object NativeHiLightDetector {
             }
         }
 
-        var isFavoriteCallsActive = false
+        scope.launch {
+            _state.value = readFavoriteCalls(app)
+        }
+    }
 
-        // Direct primary read via privileged Shizuku daemon (Shell UID 2000)
+    private fun readFavoriteCalls(app: Context): StockHiLightState {
         if (app is Application) {
             val bridge = ShizukuBridge.get(app)
             if (bridge.isConnected()) {
                 val shizukuVal = bridge.getSecureString(KEY_FAVORITE_CALLS)
-                if (shizukuVal != null) {
-                    isFavoriteCallsActive = shizukuVal == "1" || shizukuVal.equals("true", ignoreCase = true)
-                    Log.i(TAG, "Shizuku privileged read: '$KEY_FAVORITE_CALLS'='$shizukuVal' => active=$isFavoriteCallsActive")
-                }
+                val parsed = parseFavoriteCallsSetting(shizukuVal)
+                Log.i(TAG, "Shizuku privileged read: '$KEY_FAVORITE_CALLS'='$shizukuVal' => $parsed")
+                return parsed
             }
         }
-
-        _state.value = StockHiLightState(favoriteCallsActive = isFavoriteCallsActive)
+        return StockHiLightState(known = false)
     }
 
-    /**
-     * Opens the System settings page where HiLight settings reside.
-     */
     fun openHiLightSettings(context: Context) {
         val intents = listOf(
             Intent().apply {
@@ -121,4 +122,10 @@ object NativeHiLightDetector {
             }
         }
     }
+}
+
+internal fun parseFavoriteCallsSetting(value: String?): StockHiLightState {
+    if (value.isNullOrBlank()) return StockHiLightState(known = false)
+    val active = value == "1" || value.equals("true", ignoreCase = true)
+    return StockHiLightState(favoriteCallsActive = active, known = true)
 }

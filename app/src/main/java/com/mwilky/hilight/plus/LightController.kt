@@ -39,9 +39,13 @@ class LightController private constructor(private val app: Application) {
 
         shizuku.onAvailabilityChanged = {
             shizuku.setDeviceFaceDown(DeviceOrientationDetector.lastKnownFaceDown)
+            NativeHiLightDetector.check(app)
             syncState()
         }
 
+        scope.launch {
+            shizuku.state.collect { NativeHiLightDetector.check(app) }
+        }
         scope.launch {
             store.isEnabled.collect { syncState() }
         }

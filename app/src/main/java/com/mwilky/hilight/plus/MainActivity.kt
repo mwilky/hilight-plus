@@ -13,16 +13,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.repeatOnLifecycle
 import com.mwilky.hilight.plus.ui.AboutScreen
 import com.mwilky.hilight.plus.ui.ConditionsScreen
 import com.mwilky.hilight.plus.ui.HiLightPlusTheme
 import com.mwilky.hilight.plus.ui.HomeScreen
 import com.mwilky.hilight.plus.ui.OnboardingScreen
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -32,7 +28,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val controller = LightController.get(this)
-        NativeHiLightDetector.check(this)
+        refreshDiagnostics()
         val store = AppStore.get(this)
 
         setContent {
@@ -41,17 +37,6 @@ class MainActivity : ComponentActivity() {
                     initialValue = null
                 )
                 val scope = rememberCoroutineScope()
-
-                val owner = LocalLifecycleOwner.current
-                LaunchedEffect(owner) {
-                    owner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                        while (true) {
-                            controller.refreshStatus()
-                            NativeHiLightDetector.check(this@MainActivity)
-                            delay(1500)
-                        }
-                    }
-                }
 
                 when (isOnboardingCompleted) {
                     null -> {
@@ -86,12 +71,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        LightController.get(this).refreshStatus()
-        NativeHiLightDetector.check(this)
+        refreshDiagnostics()
     }
 
-    override fun onStart() {
-        super.onStart()
+    private fun refreshDiagnostics() {
         LightController.get(this).refreshStatus()
         NativeHiLightDetector.check(this)
     }

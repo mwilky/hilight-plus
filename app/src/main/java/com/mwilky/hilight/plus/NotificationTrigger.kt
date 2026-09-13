@@ -75,11 +75,18 @@ class NotificationTrigger : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
+        isListenerConnected = true
         enqueue(ListenerEvent.Reconnect(currentShadeKeys()))
+    }
+
+    override fun onListenerDisconnected() {
+        isListenerConnected = false
+        super.onListenerDisconnected()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        isListenerConnected = false
         job.cancel()
         DeviceOrientationDetector.stopMonitoring()
         runCatching { unregisterReceiver(screenStateReceiver) }
@@ -421,6 +428,10 @@ class NotificationTrigger : NotificationListenerService() {
 
     companion object {
         private const val TAG = "NotificationTrigger"
+
+        @Volatile
+        var isListenerConnected: Boolean = false
+            private set
     }
 }
 

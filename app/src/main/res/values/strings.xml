@@ -14,12 +14,14 @@
     <!-- Onboarding Step 2: Stock HiLight Conflict -->
     <string name="onboarding_stock_title">Native HiLight</string>
     <string name="onboarding_stock_desc1">Pixel\'s built-in HiLight feature has a basic \'Calls from favourites\' mode. If left enabled in system settings, both the native system and HiLight Plus will try to control the rear light array simultaneously.</string>
-    <string name="onboarding_stock_desc2">Disabling the native \'Calls from favourites\' allows HiLight Plus to have full, exclusive control over the lights without conflicts.</string>
+    <string name="onboarding_stock_desc2">Turn off native \'Calls from favourites\' so it does not fight HiLight Plus for the rear lights. Gemini and other system features may still use them.</string>
     <string name="onboarding_stock_card_title">Native HiLight settings</string>
     <string name="onboarding_stock_conflict_active_desc">Calls from favourites is currently active in system settings and will conflict with HiLight Plus. Please tap below to disable it.</string>
-    <string name="onboarding_stock_ready_desc">Native setting disabled. HiLight Plus has exclusive access to the rear lights.</string>
+    <string name="onboarding_stock_ready_desc">Native favourite-caller lighting is off. Gemini and other system lights may still use the LEDs.</string>
+    <string name="onboarding_stock_unknown_desc">Could not read the native favourite-caller setting. Connect Shizuku to check it.</string>
     <string name="onboarding_stock_status_conflict">Conflict Active</string>
     <string name="onboarding_stock_status_ready">Ready</string>
+    <string name="onboarding_stock_status_unknown">Unknown</string>
     <string name="onboarding_stock_btn_open">Open settings to disable</string>
 
     <!-- Onboarding Step 3: Shizuku Hardware Access -->
@@ -44,7 +46,9 @@
     <string name="onboarding_perms_calls_btn_grant">Grant access</string>
     <string name="onboarding_perms_calls_btn_app_info">App info</string>
     <string name="onboarding_perms_notif_title">2. Notification listener access</string>
-    <string name="onboarding_perms_notif_granted_desc">Notification listener is active. App notifications and chat messages trigger alerts smoothly.</string>
+    <string name="onboarding_perms_notif_granted_desc">Notification access is granted and the listener is running.</string>
+    <string name="onboarding_perms_notif_not_running_desc">Notification access is granted, but the listener is not running. Toggle it off and on in settings if alerts stop.</string>
+    <string name="onboarding_perms_notif_status_not_running">Not running</string>
     <string name="onboarding_perms_notif_needed_desc">Notification listener access is required to detect incoming notifications.</string>
     <string name="onboarding_perms_notif_status_needed">Access required</string>
     <string name="onboarding_perms_notif_btn_enable">Enable notification access</string>
@@ -173,7 +177,7 @@
     <string name="about_app_desc">Custom rear LED lighting for Google Pixel.</string>
     <string name="about_version_label">Version</string>
     <string name="about_status_section_header">System Health &amp; Permissions</string>
-    <string name="about_stock_ok_desc">Native setting disabled. HiLight Plus has exclusive access to the rear lighting array.</string>
+    <string name="about_stock_ok_desc">Native favourite-caller lighting is off. Gemini and other system lights may still use the LEDs.</string>
     <string name="about_call_perms_title">Calls &amp; Contacts Permissions</string>
     <string name="about_call_perms_granted_desc">Phone State, Call Log, and Contacts permissions are active. Incoming caller identification is ready.</string>
     <string name="about_notif_perms_title">Notification Listener Access</string>

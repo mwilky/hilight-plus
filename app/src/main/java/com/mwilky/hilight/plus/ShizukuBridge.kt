@@ -7,13 +7,20 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.DeadObjectException
 import android.os.IBinder
 import android.util.Log
 import com.mwilky.hilight.plus.core.HiLightDaemonService
 import com.mwilky.hilight.plus.core.IHiLightService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import rikka.shizuku.Shizuku
 
 /**
@@ -38,6 +45,8 @@ class ShizukuBridge private constructor(private val app: Application) {
     private var service: IHiLightService? = null
     private var lastError: String? = null
     private var manuallyDisconnected = false
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var connectTimeoutJob: Job? = null
 
     private val args = Shizuku.UserServiceArgs(
         ComponentName(BuildConfig.APPLICATION_ID, HiLightDaemonService::class.java.name)
@@ -50,18 +59,32 @@ class ShizukuBridge private constructor(private val app: Application) {
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             Log.e("HiLightPlus", "onServiceConnected: binder=$binder")
-            if (binder != null && binder.pingBinder()) {
-                service = IHiLightService.Stub.asInterface(binder)
-                _state.value = State.CONNECTED
-                lastError = null
-                val count = runCatching { service?.getLedCount() }.getOrNull() ?: 8
-                Log.i("HiLightPlus", "Connected to HiLightDaemonService! ($count LEDs)")
-                onAvailabilityChanged?.invoke()
-            } else {
+            connectTimeoutJob?.cancel()
+            if (manuallyDisconnected) {
+                service = null
+                return
+            }
+            if (binder == null || !binder.pingBinder()) {
+                service = null
                 _state.value = State.FAILED
                 lastError = "Received null/dead binder from Shizuku"
                 Log.e("HiLightPlus", "Binder ping failed")
+                return
             }
+            val bound: IHiLightService = IHiLightService.Stub.asInterface(binder)
+            val count = runCatching { bound.getLedCount() }.getOrNull() ?: 0
+            if (count <= 0) {
+                service = null
+                _state.value = State.FAILED
+                lastError = "Lights backend unavailable"
+                Log.e("HiLightPlus", "Binder connected but no LEDs")
+                return
+            }
+            service = bound
+            _state.value = State.CONNECTED
+            lastError = null
+            Log.i("HiLightPlus", "Connected to HiLightDaemonService! ($count LEDs)")
+            onAvailabilityChanged?.invoke()
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
@@ -125,7 +148,12 @@ class ShizukuBridge private constructor(private val app: Application) {
 
     fun refresh() {
         if (manuallyDisconnected) return
-        if (_state.value == State.CONNECTED && service?.asBinder()?.pingBinder() == true) return
+        if (_state.value == State.CONNECTED) {
+            if (isBinderAlive()) return
+            Log.e("HiLightPlus", "CONNECTED with dead binder -> clearing for rebind")
+            service = null
+            _state.value = State.NOT_RUNNING
+        }
         if (!Shizuku.pingBinder()) {
             if (!isInstalled()) {
                 _state.value = State.NOT_INSTALLED
@@ -171,14 +199,29 @@ class ShizukuBridge private constructor(private val app: Application) {
     }
 
     private fun bind() {
-        if (_state.value == State.CONNECTING || _state.value == State.CONNECTED) {
-            Log.e("HiLightPlus", "bind() skipped, current state is ${_state.value}")
+        if (_state.value == State.CONNECTING) {
+            Log.e("HiLightPlus", "bind() skipped, current state is CONNECTING")
+            return
+        }
+        if (_state.value == State.CONNECTED && isBinderAlive()) {
+            Log.e("HiLightPlus", "bind() skipped, already connected")
             return
         }
         _state.value = State.CONNECTING
+        connectTimeoutJob?.cancel()
+        connectTimeoutJob = scope.launch {
+            delay(CONNECT_TIMEOUT_MS)
+            if (_state.value == State.CONNECTING) {
+                service = null
+                _state.value = State.FAILED
+                lastError = "Connection timed out"
+                Log.e("HiLightPlus", "bind() timed out")
+            }
+        }
         Log.e("HiLightPlus", "Calling Shizuku.bindUserService()...")
         runCatching { Shizuku.bindUserService(args, connection) }
             .onFailure {
+                connectTimeoutJob?.cancel()
                 _state.value = State.FAILED
                 lastError = it.message
                 Log.e("HiLightPlus", "bindUserService failed: ${it.message}", it)
@@ -187,6 +230,7 @@ class ShizukuBridge private constructor(private val app: Application) {
 
     fun unbind() {
         Log.e("HiLightPlus", "=== unbind() called by user ===")
+        connectTimeoutJob?.cancel()
         manuallyDisconnected = true
         runCatching { Shizuku.unbindUserService(args, connection, true) }
         service = null
@@ -194,20 +238,32 @@ class ShizukuBridge private constructor(private val app: Application) {
         onAvailabilityChanged?.invoke()
     }
 
-    fun isConnected(): Boolean = _state.value == State.CONNECTED && service != null
+    fun isConnected(): Boolean = _state.value == State.CONNECTED && isBinderAlive()
+
+    private fun isBinderAlive(): Boolean = service?.asBinder()?.pingBinder() == true
+
+    private fun markDead(op: String, error: Throwable) {
+        Log.e("HiLightPlus", "$op failed", error)
+        if (manuallyDisconnected) return
+        if (error is DeadObjectException || error.cause is DeadObjectException || !isBinderAlive()) {
+            service = null
+            _state.value = State.NOT_RUNNING
+            lastError = error.message
+            onAvailabilityChanged?.invoke()
+        }
+    }
+
+    private fun runRemote(op: String, block: (IHiLightService) -> Unit) {
+        val s = service ?: return
+        runCatching { block(s) }.onFailure { markDead(op, it) }
+    }
 
     fun errorText(): String? = lastError
 
     // --- Typed Control Methods ---
 
     fun setAmbient(pattern: String, color: Long, brightness: Float, speedMs: Long) {
-        val s = service ?: return
-        runCatching { s.setAmbient(pattern, color, brightness, speedMs) }.onFailure {
-            Log.e("HiLightPlus", "setAmbient failed", it)
-            service = null
-            _state.value = State.NOT_RUNNING
-            onAvailabilityChanged?.invoke()
-        }
+        runRemote("setAmbient") { it.setAmbient(pattern, color, brightness, speedMs) }
     }
 
     fun triggerAlert(
@@ -218,13 +274,9 @@ class ShizukuBridge private constructor(private val app: Application) {
         durationMs: Long,
         requiresFaceDown: Boolean = false
     ) {
-        val s = service ?: return
         Log.e("HiLightPlus", "triggerAlert: pattern=$pattern, color=$color, durationMs=$durationMs, requiresFaceDown=$requiresFaceDown")
-        runCatching { s.triggerAlert(pattern, color, brightness, speedMs, durationMs, requiresFaceDown) }.onFailure {
-            Log.e("HiLightPlus", "triggerAlert failed", it)
-            service = null
-            _state.value = State.NOT_RUNNING
-            onAvailabilityChanged?.invoke()
+        runRemote("triggerAlert") {
+            it.triggerAlert(pattern, color, brightness, speedMs, durationMs, requiresFaceDown)
         }
     }
 
@@ -237,13 +289,9 @@ class ShizukuBridge private constructor(private val app: Application) {
         durationMs: Long,
         requiresFaceDown: Boolean = false
     ) {
-        val s = service ?: return
         Log.e("HiLightPlus", "postAlert [key=$key]: pattern=$pattern, color=$color, durationMs=$durationMs, requiresFaceDown=$requiresFaceDown")
-        runCatching { s.postAlert(key, pattern, color, brightness, speedMs, durationMs, requiresFaceDown) }.onFailure {
-            Log.e("HiLightPlus", "postAlert failed", it)
-            service = null
-            _state.value = State.NOT_RUNNING
-            onAvailabilityChanged?.invoke()
+        runRemote("postAlert") {
+            it.postAlert(key, pattern, color, brightness, speedMs, durationMs, requiresFaceDown)
         }
     }
 
@@ -254,80 +302,56 @@ class ShizukuBridge private constructor(private val app: Application) {
         speedMs: Long,
         requiresFaceDown: Boolean = false
     ) {
-        val s = service ?: return
-        runCatching { s.startIncomingCall(pattern, color, brightness, speedMs, requiresFaceDown) }.onFailure {
-            Log.e("HiLightPlus", "startIncomingCall failed", it)
-            service = null
-            _state.value = State.NOT_RUNNING
-            onAvailabilityChanged?.invoke()
+        runRemote("startIncomingCall") {
+            it.startIncomingCall(pattern, color, brightness, speedMs, requiresFaceDown)
         }
     }
 
     fun setDeviceFaceDown(faceDown: Boolean) {
-        val s = service ?: return
-        runCatching { s.setDeviceFaceDown(faceDown) }.onFailure {
-            Log.e("HiLightPlus", "setDeviceFaceDown failed", it)
-        }
+        runRemote("setDeviceFaceDown") { it.setDeviceFaceDown(faceDown) }
     }
 
     fun stopIncomingCall() {
-        val s = service ?: return
-        runCatching { s.stopIncomingCall() }.onFailure {
-            Log.e("HiLightPlus", "stopIncomingCall failed", it)
-            service = null
-            _state.value = State.NOT_RUNNING
-            onAvailabilityChanged?.invoke()
-        }
+        runRemote("stopIncomingCall") { it.stopIncomingCall() }
     }
 
     fun removeAlert(key: String) {
-        val s = service ?: return
         Log.e("HiLightPlus", "removeAlert [key=$key]")
-        runCatching { s.removeAlert(key) }.onFailure {
-            Log.e("HiLightPlus", "removeAlert failed", it)
-        }
+        runRemote("removeAlert") { it.removeAlert(key) }
     }
 
     fun clearAlert() {
-        val s = service ?: return
         Log.e("HiLightPlus", "clearAlert called")
-        runCatching { s.clearAlert() }.onFailure {
-            Log.e("HiLightPlus", "clearAlert failed", it)
-        }
+        runRemote("clearAlert") { it.clearAlert() }
     }
 
     fun pauseAlerts() {
-        val s = service ?: return
         Log.e("HiLightPlus", "pauseAlerts called")
-        runCatching { s.pauseAlerts() }.onFailure {
-            Log.e("HiLightPlus", "pauseAlerts failed", it)
-        }
+        runRemote("pauseAlerts") { it.pauseAlerts() }
     }
 
     fun resumeAlerts() {
-        val s = service ?: return
         Log.e("HiLightPlus", "resumeAlerts called")
-        runCatching { s.resumeAlerts() }.onFailure {
-            Log.e("HiLightPlus", "resumeAlerts failed", it)
-        }
+        runRemote("resumeAlerts") { it.resumeAlerts() }
     }
 
     fun getSecureInt(key: String, defaultValue: Int = -1): Int {
         val s = service ?: return defaultValue
-        return runCatching { s.getSecureInt(key, defaultValue) }.getOrDefault(defaultValue)
+        return runCatching { s.getSecureInt(key, defaultValue) }
+            .onFailure { markDead("getSecureInt", it) }
+            .getOrDefault(defaultValue)
     }
 
     fun getSecureString(key: String): String? {
         val s = service ?: return null
-        return runCatching { s.getSecureString(key) }.getOrNull()
+        return runCatching { s.getSecureString(key) }
+            .onFailure { markDead("getSecureString", it) }
+            .getOrNull()
     }
 
     fun turnOff() {
-        val s = service ?: return
         Log.e("HiLightPlus", "turnOff called")
-        runCatching { s.turnOff() }.onFailure {
-            Log.e("HiLightPlus", "turnOff failed", it)
-        }
+        runRemote("turnOff") { it.turnOff() }
     }
 
     fun openShizukuApp(context: Context) {
@@ -347,6 +371,7 @@ class ShizukuBridge private constructor(private val app: Application) {
     companion object {
         private const val SHIZUKU_PKG = "moe.shizuku.privileged.api"
         private const val PERMISSION_REQUEST = 4001
+        private const val CONNECT_TIMEOUT_MS = 8_000L
 
         @Volatile
         private var instance: ShizukuBridge? = null

@@ -59,6 +59,7 @@ import com.mwilky.hilight.plus.ContactRule
 import com.mwilky.hilight.plus.LightController
 import com.mwilky.hilight.plus.MessageContactRule
 import com.mwilky.hilight.plus.NativeHiLightDetector
+import com.mwilky.hilight.plus.NotificationTrigger
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.R
 import com.mwilky.hilight.plus.ShizukuBridge
@@ -127,6 +128,7 @@ fun HomeScreen(controller: LightController) {
     var isCallLogGranted by remember { mutableStateOf(hasCallLogPermission()) }
     var isContactsGranted by remember { mutableStateOf(hasContactsPermission()) }
     var isNotifAccessGranted by remember { mutableStateOf(isNotificationListenerEnabled(context)) }
+    var isNotifListenerRunning by remember { mutableStateOf(isNotificationListenerRunning()) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(lifecycleOwner) {
@@ -135,8 +137,7 @@ fun HomeScreen(controller: LightController) {
             isCallLogGranted = hasCallLogPermission()
             isContactsGranted = hasContactsPermission()
             isNotifAccessGranted = isNotificationListenerEnabled(context)
-            NativeHiLightDetector.check(context)
-            controller.refreshStatus()
+            isNotifListenerRunning = isNotificationListenerRunning()
         }
     }
 
@@ -228,6 +229,7 @@ fun HomeScreen(controller: LightController) {
         },
         onOpenAppSettings = { openAppSettings() },
         isNotifAccessGranted = isNotifAccessGranted,
+        isNotifListenerRunning = isNotifListenerRunning,
         onOpenNotifSettings = { openNotifSettings() },
         // Calls Section
         isCallLightsEnabled = isCallLightsEnabled,
@@ -463,6 +465,7 @@ fun HomeContent(
     onRequestPhonePerms: () -> Unit,
     onOpenAppSettings: () -> Unit,
     isNotifAccessGranted: Boolean,
+    isNotifListenerRunning: Boolean,
     onOpenNotifSettings: () -> Unit,
     // Calls
     isCallLightsEnabled: Boolean,
@@ -683,7 +686,7 @@ fun HomeContent(
             }
 
             // 2. Conditional Warning Banners (ONLY visible on Home if there is an issue)
-            val isNativeConflict = stockState.favoriteCallsActive
+            val isNativeConflict = stockState.known && stockState.favoriteCallsActive
             if (isNativeConflict) {
                 item {
                     ExpressiveStatusCard(
@@ -752,13 +755,21 @@ fun HomeContent(
                 }
             }
 
-            if (!isNotifAccessGranted) {
+            if (!isNotifAccessGranted || !isNotifListenerRunning) {
                 item {
                     ExpressiveStatusCard(
                         title = stringResource(R.string.onboarding_perms_notif_title),
-                        subtitle = stringResource(R.string.onboarding_perms_notif_needed_desc),
+                        subtitle = if (!isNotifAccessGranted) {
+                            stringResource(R.string.onboarding_perms_notif_needed_desc)
+                        } else {
+                            stringResource(R.string.onboarding_perms_notif_not_running_desc)
+                        },
                         icon = Icons.Rounded.NotificationsActive,
-                        statusText = stringResource(R.string.onboarding_perms_notif_status_needed),
+                        statusText = if (!isNotifAccessGranted) {
+                            stringResource(R.string.onboarding_perms_notif_status_needed)
+                        } else {
+                            stringResource(R.string.onboarding_perms_notif_status_not_running)
+                        },
                         accentColor = MaterialTheme.colorScheme.error,
                         containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f),
                         contentColor = MaterialTheme.colorScheme.onErrorContainer,
@@ -1907,6 +1918,8 @@ fun isNotificationListenerEnabled(context: Context): Boolean {
     return flat.contains(context.packageName)
 }
 
+fun isNotificationListenerRunning(): Boolean = NotificationTrigger.isListenerConnected
+
 fun resolveContactName(context: Context, contactUri: Uri): String? {
     var name: String? = null
     val contentResolver = context.contentResolver
@@ -1974,6 +1987,7 @@ fun HomeScreenPreviewContent(
             onRequestPhonePerms = {},
             onOpenAppSettings = {},
             isNotifAccessGranted = true,
+            isNotifListenerRunning = true,
             onOpenNotifSettings = {},
             isCallLightsEnabled = true,
             onToggleCallLights = {},

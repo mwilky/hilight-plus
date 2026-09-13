@@ -73,6 +73,7 @@ fun OnboardingScreen(
     var isCallLogGranted by remember { mutableStateOf(hasCallLogPermission()) }
     var isContactsGranted by remember { mutableStateOf(hasContactsPermission()) }
     var isNotifListenerGranted by remember { mutableStateOf(isNotificationListenerEnabled(context)) }
+    var isNotifListenerRunning by remember { mutableStateOf(isNotificationListenerRunning()) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(lifecycleOwner) {
@@ -81,8 +82,7 @@ fun OnboardingScreen(
             isCallLogGranted = hasCallLogPermission()
             isContactsGranted = hasContactsPermission()
             isNotifListenerGranted = isNotificationListenerEnabled(context)
-            NativeHiLightDetector.check(context)
-            controller.refreshStatus()
+            isNotifListenerRunning = isNotificationListenerRunning()
         }
     }
 
@@ -213,6 +213,7 @@ fun OnboardingScreen(
                 OnboardingStep.STOCK_CONFLICT -> {
                     StockConflictStepContent(
                         stockConflictActive = stockState.favoriteCallsActive,
+                        stockSettingKnown = stockState.known,
                         onOpenSettings = { NativeHiLightDetector.openHiLightSettings(context) }
                     )
                 }
@@ -233,6 +234,7 @@ fun OnboardingScreen(
                         isCallLogGranted = isCallLogGranted,
                         isContactsGranted = isContactsGranted,
                         isNotifListenerGranted = isNotifListenerGranted,
+                        isNotifListenerRunning = isNotifListenerRunning,
                         onRequestCallPerms = {
                             val perms = arrayOf(
                                 Manifest.permission.READ_PHONE_STATE,
@@ -286,6 +288,7 @@ private fun WelcomeStepContent() {
 @Composable
 private fun StockConflictStepContent(
     stockConflictActive: Boolean,
+    stockSettingKnown: Boolean = true,
     onOpenSettings: () -> Unit
 ) {
     Column(
@@ -321,14 +324,18 @@ private fun StockConflictStepContent(
 
         StandardDiagnosticCard(
             title = stringResource(R.string.onboarding_stock_card_title),
-            subtitle = if (stockConflictActive) {
-                stringResource(R.string.onboarding_stock_conflict_active_desc)
-            } else {
-                stringResource(R.string.onboarding_stock_ready_desc)
+            subtitle = when {
+                stockConflictActive -> stringResource(R.string.onboarding_stock_conflict_active_desc)
+                !stockSettingKnown -> stringResource(R.string.onboarding_stock_unknown_desc)
+                else -> stringResource(R.string.onboarding_stock_ready_desc)
             },
-            icon = if (stockConflictActive) Icons.Rounded.Warning else Icons.Rounded.CheckCircle,
-            statusText = if (stockConflictActive) stringResource(R.string.onboarding_stock_status_conflict) else stringResource(R.string.onboarding_stock_status_ready),
-            isOk = !stockConflictActive,
+            icon = if (stockConflictActive || !stockSettingKnown) Icons.Rounded.Warning else Icons.Rounded.CheckCircle,
+            statusText = when {
+                stockConflictActive -> stringResource(R.string.onboarding_stock_status_conflict)
+                !stockSettingKnown -> stringResource(R.string.onboarding_stock_status_unknown)
+                else -> stringResource(R.string.onboarding_stock_status_ready)
+            },
+            isOk = stockSettingKnown && !stockConflictActive,
             bottomAction = if (stockConflictActive) {
                 {
                     Button(
@@ -502,6 +509,7 @@ private fun PermissionsStepContent(
     isCallLogGranted: Boolean,
     isContactsGranted: Boolean,
     isNotifListenerGranted: Boolean,
+    isNotifListenerRunning: Boolean = true,
     onRequestCallPerms: () -> Unit,
     onOpenAppSettings: () -> Unit,
     onOpenNotifListenerSettings: () -> Unit
@@ -574,15 +582,19 @@ private fun PermissionsStepContent(
         // 2. Notification Listener Permission Card
         StandardDiagnosticCard(
             title = stringResource(R.string.onboarding_perms_notif_title),
-            subtitle = if (isNotifListenerGranted) {
-                stringResource(R.string.onboarding_perms_notif_granted_desc)
-            } else {
-                stringResource(R.string.onboarding_perms_notif_needed_desc)
+            subtitle = when {
+                !isNotifListenerGranted -> stringResource(R.string.onboarding_perms_notif_needed_desc)
+                !isNotifListenerRunning -> stringResource(R.string.onboarding_perms_notif_not_running_desc)
+                else -> stringResource(R.string.onboarding_perms_notif_granted_desc)
             },
-            icon = if (isNotifListenerGranted) Icons.Rounded.CheckCircle else Icons.Rounded.NotificationAdd,
-            statusText = if (isNotifListenerGranted) stringResource(R.string.onboarding_perms_calls_status_granted) else stringResource(R.string.onboarding_perms_notif_status_needed),
-            isOk = isNotifListenerGranted,
-            bottomAction = if (!isNotifListenerGranted) {
+            icon = if (isNotifListenerGranted && isNotifListenerRunning) Icons.Rounded.CheckCircle else Icons.Rounded.NotificationAdd,
+            statusText = when {
+                !isNotifListenerGranted -> stringResource(R.string.onboarding_perms_notif_status_needed)
+                !isNotifListenerRunning -> stringResource(R.string.onboarding_perms_notif_status_not_running)
+                else -> stringResource(R.string.onboarding_perms_calls_status_granted)
+            },
+            isOk = isNotifListenerGranted && isNotifListenerRunning,
+            bottomAction = if (!isNotifListenerGranted || !isNotifListenerRunning) {
                 {
                     Button(
                         onClick = onOpenNotifListenerSettings,
