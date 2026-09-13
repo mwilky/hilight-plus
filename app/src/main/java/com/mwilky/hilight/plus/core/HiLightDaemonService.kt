@@ -29,18 +29,43 @@ class HiLightDaemonService : IHiLightService.Stub() {
         engine.setAmbient(pattern ?: "off", color, brightness, speedMs)
     }
 
-    override fun triggerAlert(pattern: String?, color: Long, brightness: Float, speedMs: Long, durationMs: Long) {
-        engine.triggerAlert(pattern ?: "solid", color, brightness, speedMs, durationMs)
+    override fun triggerAlert(
+        pattern: String?,
+        color: Long,
+        brightness: Float,
+        speedMs: Long,
+        durationMs: Long,
+        requiresFaceDown: Boolean
+    ) {
+        engine.triggerAlert(pattern ?: "solid", color, brightness, speedMs, durationMs, requiresFaceDown)
     }
 
-    override fun postAlert(key: String?, pattern: String?, color: Long, brightness: Float, speedMs: Long, durationMs: Long) {
+    override fun postAlert(
+        key: String?,
+        pattern: String?,
+        color: Long,
+        brightness: Float,
+        speedMs: Long,
+        durationMs: Long,
+        requiresFaceDown: Boolean
+    ) {
         if (key != null) {
-            engine.postAlert(key, pattern ?: "solid", color, brightness, speedMs, durationMs)
+            engine.postAlert(key, pattern ?: "solid", color, brightness, speedMs, durationMs, requiresFaceDown)
         }
     }
 
-    override fun startIncomingCall(pattern: String?, color: Long, brightness: Float, speedMs: Long) {
-        engine.startIncomingCall(pattern ?: "solid", color, brightness, speedMs)
+    override fun startIncomingCall(
+        pattern: String?,
+        color: Long,
+        brightness: Float,
+        speedMs: Long,
+        requiresFaceDown: Boolean
+    ) {
+        engine.startIncomingCall(pattern ?: "solid", color, brightness, speedMs, requiresFaceDown)
+    }
+
+    override fun setDeviceFaceDown(faceDown: Boolean) {
+        engine.setDeviceFaceDown(faceDown)
     }
 
     override fun stopIncomingCall() {

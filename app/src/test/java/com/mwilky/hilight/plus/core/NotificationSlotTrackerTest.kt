@@ -89,6 +89,19 @@ class NotificationSlotTrackerTest {
     }
 
     @Test
+    fun hasRestrictedSlotTracksFaceDownOnlyRules() {
+        val tracker = NotificationSlotTracker()
+        tracker.add("always", "app_a", PatternMode.PULSE, 1, requiresFaceDown = false)
+        assertFalse(tracker.hasRestrictedSlot())
+
+        tracker.add("restricted", "app_b", PatternMode.PULSE, 2, requiresFaceDown = true)
+        assertTrue(tracker.hasRestrictedSlot())
+
+        tracker.remove("restricted")
+        assertFalse(tracker.hasRestrictedSlot())
+    }
+
+    @Test
     fun clearDropsAllSourcesAndSlots() {
         val tracker = NotificationSlotTracker()
         tracker.add("a", "app_a", PatternMode.PULSE, 1)

@@ -5,6 +5,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.os.PowerManager
 import android.util.Log
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
@@ -15,15 +16,25 @@ import kotlin.math.abs
  *
  * Supports:
  * 1. Instant single-sample query (`isDeviceFaceDown`).
- * 2. Active monitoring session when alerts are pending while locked (`startMonitoring` / `stopMonitoring`).
+ * 2. Ref-counted monitoring while a restricted call or notification still needs it.
+ *
+ * Unknown, missing, or timed-out samples are treated as not face-down.
  */
 object DeviceOrientationDetector {
 
+    const val TOKEN_NOTIFICATIONS = "notifications"
+    const val TOKEN_CALL = "call"
+
     private const val TAG = "DeviceOrientation"
 
+    private val monitorTokens = mutableSetOf<String>()
     private var activeSensorManager: SensorManager? = null
     private var activeListener: SensorEventListener? = null
     private var lastReportedFaceDown: Boolean? = null
+
+    @Volatile
+    var lastKnownFaceDown: Boolean = false
+        private set
 
     var onOrientationChanged: ((isFaceDown: Boolean) -> Unit)? = null
 
@@ -38,14 +49,17 @@ object DeviceOrientationDetector {
     }
 
     /**
-     * Samples the device orientation and returns true if the phone is facing down.
+     * Samples the device orientation and returns true only if the phone is facing down.
+     * Missing hardware is not face-down. A timeout keeps the last real sample instead of
+     * forcing false, which would hide lights while the phone is already down and dozing.
      */
-    suspend fun isDeviceFaceDown(context: Context, timeoutMs: Long = 250L): Boolean {
-        val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager ?: return true
+    suspend fun isDeviceFaceDown(context: Context, timeoutMs: Long = 500L): Boolean {
+        val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+            ?: return failClosed()
 
         val sensor = sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY)
             ?: sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-            ?: return true
+            ?: return failClosed()
 
         val deferred = CompletableDeferred<Boolean>()
 
@@ -55,32 +69,76 @@ object DeviceOrientationDetector {
                 val x = event.values[0]
                 val y = event.values[1]
                 val z = event.values[2]
-                val faceDown = isEventFaceDown(x, y, z)
-                deferred.complete(faceDown)
+                rememberFaceDown(isEventFaceDown(x, y, z))
+                deferred.complete(lastKnownFaceDown)
             }
 
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
         }
 
+        val wakeLock = (context.getSystemService(Context.POWER_SERVICE) as? PowerManager)
+            ?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "hilight-plus:orientation")
+            ?.apply { setReferenceCounted(false) }
+
         val registered = sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_FASTEST)
         if (!registered) {
-            return true
+            return failClosed()
         }
 
         return try {
+            runCatching { wakeLock?.acquire(timeoutMs + 100L) }
             withTimeoutOrNull(timeoutMs) {
                 deferred.await()
-            } ?: true
+            } ?: lastKnownFaceDown
         } finally {
             sensorManager.unregisterListener(listener)
+            if (wakeLock?.isHeld == true) {
+                runCatching { wakeLock.release() }
+            }
         }
     }
 
     /**
-     * Starts continuous low-power sensor monitoring to detect when the phone is flipped face down.
+     * Starts or keeps continuous monitoring for [token] while a restricted alert needs it.
      */
     @Synchronized
-    fun startMonitoring(context: Context) {
+    fun retainMonitoring(context: Context, token: String) {
+        if (!monitorTokens.add(token)) return
+        if (monitorTokens.size == 1) {
+            startMonitoringLocked(context)
+        }
+    }
+
+    /**
+     * Drops [token]. Sensors stop when nothing still needs orientation.
+     */
+    @Synchronized
+    fun releaseMonitoring(token: String) {
+        if (!monitorTokens.remove(token)) return
+        if (monitorTokens.isEmpty()) {
+            stopMonitoringLocked()
+        }
+    }
+
+    /**
+     * Stops continuous sensor monitoring and drops every retain token.
+     */
+    @Synchronized
+    fun stopMonitoring() {
+        monitorTokens.clear()
+        stopMonitoringLocked()
+    }
+
+    private fun rememberFaceDown(faceDown: Boolean) {
+        lastKnownFaceDown = faceDown
+    }
+
+    private fun failClosed(): Boolean {
+        rememberFaceDown(false)
+        return false
+    }
+
+    private fun startMonitoringLocked(context: Context) {
         if (activeListener != null) return
 
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager ?: return
@@ -98,6 +156,7 @@ object DeviceOrientationDetector {
                 val z = event.values[2]
                 val faceDown = isEventFaceDown(x, y, z)
 
+                rememberFaceDown(faceDown)
                 if (faceDown != lastReportedFaceDown) {
                     lastReportedFaceDown = faceDown
                     Log.i(TAG, "Device orientation flipped -> isFaceDown=$faceDown")
@@ -112,11 +171,7 @@ object DeviceOrientationDetector {
         Log.i(TAG, "Started orientation monitoring for pending alerts")
     }
 
-    /**
-     * Stops continuous sensor monitoring.
-     */
-    @Synchronized
-    fun stopMonitoring() {
+    private fun stopMonitoringLocked() {
         activeListener?.let {
             activeSensorManager?.unregisterListener(it)
             activeListener = null

@@ -12,7 +12,8 @@ internal class NotificationSlotTracker {
         val id: String,
         val pattern: PatternMode,
         val color: Long,
-        val contributors: Set<String>
+        val contributors: Set<String>,
+        val requiresFaceDown: Boolean
     )
 
     data class Removal(
@@ -25,15 +26,22 @@ internal class NotificationSlotTracker {
     private val sourceToSlot = mutableMapOf<String, String>()
     private var latestSourceKey: String? = null
 
-    fun add(sourceKey: String, slotId: String, pattern: PatternMode, color: Long): Slot {
+    fun add(
+        sourceKey: String,
+        slotId: String,
+        pattern: PatternMode,
+        color: Long,
+        requiresFaceDown: Boolean = false
+    ): Slot {
         val previousSlotId = sourceToSlot[sourceKey]
         if (previousSlotId != null && previousSlotId != slotId) {
             detach(sourceKey, previousSlotId)
         }
 
-        val slot = slots.getOrPut(slotId) { MutableSlot(slotId, pattern, color) }
+        val slot = slots.getOrPut(slotId) { MutableSlot(slotId, pattern, color, requiresFaceDown) }
         slot.pattern = pattern
         slot.color = color
+        slot.requiresFaceDown = requiresFaceDown
         slot.contributors.add(sourceKey)
         sourceToSlot[sourceKey] = slotId
         latestSourceKey = sourceKey
@@ -66,6 +74,8 @@ internal class NotificationSlotTracker {
 
     fun latestSlot(): Slot? = latestSourceKey?.let { sourceToSlot[it] }?.let { slots[it]?.snapshot() }
 
+    fun hasRestrictedSlot(): Boolean = slots.values.any { it.requiresFaceDown }
+
     fun contributorCount(slotId: String): Int = slots[slotId]?.contributors?.size ?: 0
 
     val sourceCount: Int get() = sourceToSlot.size
@@ -84,8 +94,9 @@ internal class NotificationSlotTracker {
         val id: String,
         var pattern: PatternMode,
         var color: Long,
+        var requiresFaceDown: Boolean,
         val contributors: MutableSet<String> = linkedSetOf()
     ) {
-        fun snapshot(): Slot = Slot(id, pattern, color, contributors.toSet())
+        fun snapshot(): Slot = Slot(id, pattern, color, contributors.toSet(), requiresFaceDown)
     }
 }

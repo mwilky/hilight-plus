@@ -45,7 +45,7 @@ class ShizukuBridge private constructor(private val app: Application) {
         .daemon(false)
         .processNameSuffix("hilight_daemon")
         .debuggable(BuildConfig.DEBUG)
-        .version(2)
+        .version(3)
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -210,10 +210,17 @@ class ShizukuBridge private constructor(private val app: Application) {
         }
     }
 
-    fun triggerAlert(pattern: String, color: Long, brightness: Float, speedMs: Long, durationMs: Long) {
+    fun triggerAlert(
+        pattern: String,
+        color: Long,
+        brightness: Float,
+        speedMs: Long,
+        durationMs: Long,
+        requiresFaceDown: Boolean = false
+    ) {
         val s = service ?: return
-        Log.e("HiLightPlus", "triggerAlert: pattern=$pattern, color=$color, durationMs=$durationMs")
-        runCatching { s.triggerAlert(pattern, color, brightness, speedMs, durationMs) }.onFailure {
+        Log.e("HiLightPlus", "triggerAlert: pattern=$pattern, color=$color, durationMs=$durationMs, requiresFaceDown=$requiresFaceDown")
+        runCatching { s.triggerAlert(pattern, color, brightness, speedMs, durationMs, requiresFaceDown) }.onFailure {
             Log.e("HiLightPlus", "triggerAlert failed", it)
             service = null
             _state.value = State.NOT_RUNNING
@@ -221,10 +228,18 @@ class ShizukuBridge private constructor(private val app: Application) {
         }
     }
 
-    fun postAlert(key: String, pattern: String, color: Long, brightness: Float, speedMs: Long, durationMs: Long) {
+    fun postAlert(
+        key: String,
+        pattern: String,
+        color: Long,
+        brightness: Float,
+        speedMs: Long,
+        durationMs: Long,
+        requiresFaceDown: Boolean = false
+    ) {
         val s = service ?: return
-        Log.e("HiLightPlus", "postAlert [key=$key]: pattern=$pattern, color=$color, durationMs=$durationMs")
-        runCatching { s.postAlert(key, pattern, color, brightness, speedMs, durationMs) }.onFailure {
+        Log.e("HiLightPlus", "postAlert [key=$key]: pattern=$pattern, color=$color, durationMs=$durationMs, requiresFaceDown=$requiresFaceDown")
+        runCatching { s.postAlert(key, pattern, color, brightness, speedMs, durationMs, requiresFaceDown) }.onFailure {
             Log.e("HiLightPlus", "postAlert failed", it)
             service = null
             _state.value = State.NOT_RUNNING
@@ -232,13 +247,26 @@ class ShizukuBridge private constructor(private val app: Application) {
         }
     }
 
-    fun startIncomingCall(pattern: String, color: Long, brightness: Float, speedMs: Long) {
+    fun startIncomingCall(
+        pattern: String,
+        color: Long,
+        brightness: Float,
+        speedMs: Long,
+        requiresFaceDown: Boolean = false
+    ) {
         val s = service ?: return
-        runCatching { s.startIncomingCall(pattern, color, brightness, speedMs) }.onFailure {
+        runCatching { s.startIncomingCall(pattern, color, brightness, speedMs, requiresFaceDown) }.onFailure {
             Log.e("HiLightPlus", "startIncomingCall failed", it)
             service = null
             _state.value = State.NOT_RUNNING
             onAvailabilityChanged?.invoke()
+        }
+    }
+
+    fun setDeviceFaceDown(faceDown: Boolean) {
+        val s = service ?: return
+        runCatching { s.setDeviceFaceDown(faceDown) }.onFailure {
+            Log.e("HiLightPlus", "setDeviceFaceDown failed", it)
         }
     }
 

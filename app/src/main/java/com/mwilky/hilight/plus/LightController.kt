@@ -2,6 +2,7 @@ package com.mwilky.hilight.plus
 
 import android.app.Application
 import android.content.Context
+import com.mwilky.hilight.plus.core.DeviceOrientationDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -14,7 +15,7 @@ import kotlinx.coroutines.launch
 /**
  * Coordinates persistent preferences ([AppStore]) and privileged hardware lighting execution ([ShizukuBridge]).
  */
-class LightController private constructor(app: Application) {
+class LightController private constructor(private val app: Application) {
 
     val store = AppStore.get(app)
     val shizuku = ShizukuBridge.get(app)
@@ -31,7 +32,13 @@ class LightController private constructor(app: Application) {
         .stateIn(scope, SharingStarted.Eagerly, 60)
 
     init {
+        DeviceOrientationDetector.onOrientationChanged = { faceDown ->
+            shizuku.setDeviceFaceDown(faceDown)
+            scope.launch { syncUnlockPauseWithOrientation(faceDown) }
+        }
+
         shizuku.onAvailabilityChanged = {
+            shizuku.setDeviceFaceDown(DeviceOrientationDetector.lastKnownFaceDown)
             syncState()
         }
 
@@ -71,7 +78,8 @@ class LightController private constructor(app: Application) {
         color: Long,
         brightness: Float = 1.0f,
         speedMs: Long = 1000L,
-        durationMs: Long = 3000L
+        durationMs: Long = 3000L,
+        requiresFaceDown: Boolean = false
     ) {
         val calculatedSpeed = when (pattern) {
             PatternMode.BREATHE -> 2000L
@@ -90,7 +98,8 @@ class LightController private constructor(app: Application) {
             color = color,
             brightness = brightness,
             speedMs = calculatedSpeed,
-            durationMs = durationMs
+            durationMs = durationMs,
+            requiresFaceDown = requiresFaceDown
         )
     }
 
@@ -103,7 +112,8 @@ class LightController private constructor(app: Application) {
         color: Long,
         brightness: Float = 1.0f,
         speedMs: Long = 1000L,
-        durationMs: Long = 0L
+        durationMs: Long = 0L,
+        requiresFaceDown: Boolean = false
     ) {
         val calculatedSpeed = when (pattern) {
             PatternMode.BREATHE -> 2000L
@@ -123,7 +133,8 @@ class LightController private constructor(app: Application) {
             color = color,
             brightness = brightness,
             speedMs = calculatedSpeed,
-            durationMs = durationMs
+            durationMs = durationMs,
+            requiresFaceDown = requiresFaceDown
         )
     }
 
@@ -141,7 +152,8 @@ class LightController private constructor(app: Application) {
         pattern: PatternMode = PatternMode.PULSE,
         color: Long = 0xFF4285F4,
         brightness: Float = 1.0f,
-        speedMs: Long = 1000L
+        speedMs: Long = 1000L,
+        requiresFaceDown: Boolean = false
     ) {
         val calculatedSpeed = when (pattern) {
             PatternMode.BREATHE -> 2000L
@@ -159,8 +171,22 @@ class LightController private constructor(app: Application) {
             pattern = pattern.id,
             color = color,
             brightness = brightness,
-            speedMs = calculatedSpeed
+            speedMs = calculatedSpeed,
+            requiresFaceDown = requiresFaceDown
         )
+    }
+
+    fun setDeviceFaceDown(faceDown: Boolean) {
+        shizuku.setDeviceFaceDown(faceDown)
+    }
+
+    private suspend fun syncUnlockPauseWithOrientation(faceDown: Boolean) {
+        if (store.unlockBehavior.first() != UnlockBehavior.PAUSE) return
+        if (faceDown || !DevicePresence.isActivelyUsing(app, faceDown)) {
+            shizuku.resumeAlerts()
+        } else {
+            shizuku.pauseAlerts()
+        }
     }
 
     /**

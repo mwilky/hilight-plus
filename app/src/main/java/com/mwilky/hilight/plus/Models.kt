@@ -31,7 +31,13 @@ enum class UnlockBehavior(val id: String, val displayName: String) {
 enum class FaceDownMode(val id: String, val displayName: String) {
     INHERIT("inherit", "Default (Follows Conditions)"),
     ALWAYS("always", "Always (Face Up or Down)"),
-    ONLY_FACE_DOWN("face_down", "Face Down Only")
+    ONLY_FACE_DOWN("face_down", "Face Down Only");
+
+    fun requiresFaceDown(globalOnlyWhenFaceDown: Boolean): Boolean = when (this) {
+        ALWAYS -> false
+        ONLY_FACE_DOWN -> true
+        INHERIT -> globalOnlyWhenFaceDown
+    }
 }
 
 data class LightStyle(
