@@ -1,5 +1,6 @@
 package com.mwilky.hilight.plus.telephony
 
+import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -9,11 +10,15 @@ import android.provider.ContactsContract
 import android.telephony.TelephonyManager
 import android.util.Log
 import com.mwilky.hilight.plus.AppStore
+import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.FaceDownMode
 import com.mwilky.hilight.plus.LightController
 import com.mwilky.hilight.plus.PatternMode
+import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.SettingsSnapshot
+import com.mwilky.hilight.plus.blocksArrival
 import com.mwilky.hilight.plus.core.DeviceOrientationDetector
+import com.mwilky.hilight.plus.isSystemDndActive
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -122,7 +127,16 @@ internal object IncomingCallProcessor {
 
         if (matchedRule != null && matchedRule.isEnabled) {
             Log.i(TAG, "Matched custom rule for '${matchedRule.name}': ${matchedRule.pattern}")
-            startCallAlert(context, snapshot, controller, matchedRule.faceDownMode, matchedRule.pattern, matchedRule.color)
+            startCallAlert(
+                context,
+                snapshot,
+                controller,
+                matchedRule.faceDownMode,
+                matchedRule.dndMode,
+                matchedRule.quietHoursMode,
+                matchedRule.pattern,
+                matchedRule.color
+            )
             return
         }
 
@@ -144,9 +158,18 @@ internal object IncomingCallProcessor {
         snapshot: SettingsSnapshot,
         controller: LightController,
         faceDownMode: FaceDownMode,
+        dndMode: DndMode,
+        quietHoursMode: QuietHoursMode,
         pattern: PatternMode,
         color: Long
     ) {
+        val dndActive = isSystemDndActive(
+            context.getSystemService(NotificationManager::class.java).currentInterruptionFilter
+        )
+        if (snapshot.blocksArrival(dndMode, quietHoursMode, dndActive)) {
+            Log.i(TAG, "Call lights suppressed by DND or quiet hours")
+            return
+        }
         val requiresFaceDown = faceDownMode.requiresFaceDown(snapshot.isOnlyWhenFaceDown)
         if (requiresFaceDown) {
             DeviceOrientationDetector.retainMonitoring(context, DeviceOrientationDetector.TOKEN_CALL)
@@ -166,7 +189,16 @@ internal object IncomingCallProcessor {
             val pattern = snapshot.otherContactsPattern
             val color = snapshot.otherContactsColor
             Log.i(TAG, "Triggering Other Contacts lighting: $pattern, color=$color")
-            startCallAlert(context, snapshot, controller, snapshot.otherContactsFaceDownMode, pattern, color)
+            startCallAlert(
+                context,
+                snapshot,
+                controller,
+                snapshot.otherContactsFaceDownMode,
+                snapshot.otherContactsDndMode,
+                snapshot.otherContactsQuietHoursMode,
+                pattern,
+                color
+            )
         } else {
             Log.i(TAG, "Other Contacts lights are disabled")
         }
@@ -181,7 +213,16 @@ internal object IncomingCallProcessor {
             val pattern = snapshot.unknownNumbersPattern
             val color = snapshot.unknownNumbersColor
             Log.i(TAG, "Triggering Unknown/Private lighting: $pattern, color=$color")
-            startCallAlert(context, snapshot, controller, snapshot.unknownNumbersFaceDownMode, pattern, color)
+            startCallAlert(
+                context,
+                snapshot,
+                controller,
+                snapshot.unknownNumbersFaceDownMode,
+                snapshot.unknownNumbersDndMode,
+                snapshot.unknownNumbersQuietHoursMode,
+                pattern,
+                color
+            )
         } else {
             Log.i(TAG, "Unknown/Private lights are disabled")
         }

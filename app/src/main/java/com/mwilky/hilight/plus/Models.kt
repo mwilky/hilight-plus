@@ -53,6 +53,22 @@ enum class FaceDownMode(val id: String) {
     }
 }
 
+enum class DndMode(val id: String) {
+    INHERIT("inherit"),
+    ALWAYS("always");
+
+    fun blockedBy(globalEnabled: Boolean, dndActive: Boolean): Boolean =
+        this == INHERIT && globalEnabled && dndActive
+}
+
+enum class QuietHoursMode(val id: String) {
+    INHERIT("inherit"),
+    ALWAYS("always");
+
+    fun blockedBy(globalEnabled: Boolean, inQuietHours: Boolean): Boolean =
+        this == INHERIT && globalEnabled && inQuietHours
+}
+
 data class LightStyle(
     val pattern: PatternMode = PatternMode.OFF,
     val color: Long = 0xFF000000,
@@ -69,7 +85,9 @@ data class ContactRule(
     val color: Long = 0xFF4285F4,
     val pattern: PatternMode = PatternMode.PULSE,
     val isEnabled: Boolean = true,
-    val faceDownMode: FaceDownMode = FaceDownMode.INHERIT
+    val faceDownMode: FaceDownMode = FaceDownMode.INHERIT,
+    val dndMode: DndMode = DndMode.INHERIT,
+    val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
@@ -78,6 +96,8 @@ data class ContactRule(
         put("pattern", pattern.name)
         put("isEnabled", isEnabled)
         put("faceDownMode", faceDownMode.name)
+        put("dndMode", dndMode.name)
+        put("quietHoursMode", quietHoursMode.name)
     }
 
     companion object {
@@ -86,13 +106,19 @@ data class ContactRule(
             val pattern = runCatching { PatternMode.valueOf(patternName) }.getOrDefault(PatternMode.PULSE)
             val faceDownName = json.optString("faceDownMode", FaceDownMode.INHERIT.name)
             val faceDown = runCatching { FaceDownMode.valueOf(faceDownName) }.getOrDefault(FaceDownMode.INHERIT)
+            val dndName = json.optString("dndMode", DndMode.INHERIT.name)
+            val dnd = runCatching { DndMode.valueOf(dndName) }.getOrDefault(DndMode.INHERIT)
+            val quietName = json.optString("quietHoursMode", QuietHoursMode.INHERIT.name)
+            val quiet = runCatching { QuietHoursMode.valueOf(quietName) }.getOrDefault(QuietHoursMode.INHERIT)
             return ContactRule(
                 id = json.optString("id", ""),
                 name = json.optString("name", "Unknown Contact"),
                 color = json.optLong("color", 0xFF4285F4),
                 pattern = pattern,
                 isEnabled = json.optBoolean("isEnabled", true),
-                faceDownMode = faceDown
+                faceDownMode = faceDown,
+                dndMode = dnd,
+                quietHoursMode = quiet
             )
         }
     }
@@ -107,7 +133,9 @@ data class MessageContactRule(
     val color: Long = 0xFF00E5FF,
     val pattern: PatternMode = PatternMode.PULSE,
     val isEnabled: Boolean = true,
-    val faceDownMode: FaceDownMode = FaceDownMode.INHERIT
+    val faceDownMode: FaceDownMode = FaceDownMode.INHERIT,
+    val dndMode: DndMode = DndMode.INHERIT,
+    val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
@@ -116,6 +144,8 @@ data class MessageContactRule(
         put("pattern", pattern.name)
         put("isEnabled", isEnabled)
         put("faceDownMode", faceDownMode.name)
+        put("dndMode", dndMode.name)
+        put("quietHoursMode", quietHoursMode.name)
     }
 
     companion object {
@@ -124,13 +154,19 @@ data class MessageContactRule(
             val pattern = runCatching { PatternMode.valueOf(patternName) }.getOrDefault(PatternMode.PULSE)
             val faceDownName = json.optString("faceDownMode", FaceDownMode.INHERIT.name)
             val faceDown = runCatching { FaceDownMode.valueOf(faceDownName) }.getOrDefault(FaceDownMode.INHERIT)
+            val dndName = json.optString("dndMode", DndMode.INHERIT.name)
+            val dnd = runCatching { DndMode.valueOf(dndName) }.getOrDefault(DndMode.INHERIT)
+            val quietName = json.optString("quietHoursMode", QuietHoursMode.INHERIT.name)
+            val quiet = runCatching { QuietHoursMode.valueOf(quietName) }.getOrDefault(QuietHoursMode.INHERIT)
             return MessageContactRule(
                 id = json.optString("id", ""),
                 name = json.optString("name", "Unknown Contact"),
                 color = json.optLong("color", 0xFF00E5FF),
                 pattern = pattern,
                 isEnabled = json.optBoolean("isEnabled", true),
-                faceDownMode = faceDown
+                faceDownMode = faceDown,
+                dndMode = dnd,
+                quietHoursMode = quiet
             )
         }
     }
@@ -146,7 +182,9 @@ data class AppNotificationRule(
     val pattern: PatternMode = PatternMode.PULSE,
     val isEnabled: Boolean = true,
     val faceDownMode: FaceDownMode = FaceDownMode.INHERIT,
-    val isAutoColor: Boolean = true
+    val isAutoColor: Boolean = true,
+    val dndMode: DndMode = DndMode.INHERIT,
+    val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("packageName", packageName)
@@ -156,6 +194,8 @@ data class AppNotificationRule(
         put("isEnabled", isEnabled)
         put("faceDownMode", faceDownMode.name)
         put("isAutoColor", isAutoColor)
+        put("dndMode", dndMode.name)
+        put("quietHoursMode", quietHoursMode.name)
     }
 
     companion object {
@@ -164,6 +204,10 @@ data class AppNotificationRule(
             val pattern = runCatching { PatternMode.valueOf(patternName) }.getOrDefault(PatternMode.PULSE)
             val faceDownName = json.optString("faceDownMode", FaceDownMode.INHERIT.name)
             val faceDown = runCatching { FaceDownMode.valueOf(faceDownName) }.getOrDefault(FaceDownMode.INHERIT)
+            val dndName = json.optString("dndMode", DndMode.INHERIT.name)
+            val dnd = runCatching { DndMode.valueOf(dndName) }.getOrDefault(DndMode.INHERIT)
+            val quietName = json.optString("quietHoursMode", QuietHoursMode.INHERIT.name)
+            val quiet = runCatching { QuietHoursMode.valueOf(quietName) }.getOrDefault(QuietHoursMode.INHERIT)
             return AppNotificationRule(
                 packageName = json.optString("packageName", ""),
                 appName = json.optString("appName", ""),
@@ -171,7 +215,9 @@ data class AppNotificationRule(
                 pattern = pattern,
                 isEnabled = json.optBoolean("isEnabled", true),
                 faceDownMode = faceDown,
-                isAutoColor = json.optBoolean("isAutoColor", true)
+                isAutoColor = json.optBoolean("isAutoColor", true),
+                dndMode = dnd,
+                quietHoursMode = quiet
             )
         }
     }

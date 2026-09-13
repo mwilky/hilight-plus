@@ -6,9 +6,11 @@ import androidx.lifecycle.viewModelScope
 import com.mwilky.hilight.plus.AppNotificationRule
 import com.mwilky.hilight.plus.AppStore
 import com.mwilky.hilight.plus.ContactRule
+import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.FaceDownMode
 import com.mwilky.hilight.plus.MessageContactRule
 import com.mwilky.hilight.plus.PatternMode
+import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.UnlockBehavior
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -24,10 +26,14 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val otherContactsColor = store.otherContactsColor.hot(0xFF4285F4)
     val otherContactsPattern = store.otherContactsPattern.hot(PatternMode.PULSE)
     val otherContactsFaceDownMode = store.otherContactsFaceDownMode.hot(FaceDownMode.INHERIT)
+    val otherContactsDndMode = store.otherContactsDndMode.hot(DndMode.INHERIT)
+    val otherContactsQuietHoursMode = store.otherContactsQuietHoursMode.hot(QuietHoursMode.INHERIT)
     val isUnknownNumbersEnabled = store.isUnknownNumbersEnabled.hot(true)
     val unknownNumbersColor = store.unknownNumbersColor.hot(0xFFFBBC05)
     val unknownNumbersPattern = store.unknownNumbersPattern.hot(PatternMode.PULSE)
     val unknownNumbersFaceDownMode = store.unknownNumbersFaceDownMode.hot(FaceDownMode.INHERIT)
+    val unknownNumbersDndMode = store.unknownNumbersDndMode.hot(DndMode.INHERIT)
+    val unknownNumbersQuietHoursMode = store.unknownNumbersQuietHoursMode.hot(QuietHoursMode.INHERIT)
     val callContactRules = store.contactRules.hot(emptyList())
 
     val isNotifsEnabled = store.isNotificationsEnabled.hot(true)
@@ -39,6 +45,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val defaultNotifPattern = store.defaultNotifPattern.hot(PatternMode.PULSE)
     val defaultNotifFaceDownMode = store.defaultNotifFaceDownMode.hot(FaceDownMode.INHERIT)
     val isDefaultNotifAutoColor = store.isDefaultNotifAutoColor.hot(true)
+    val defaultNotifDndMode = store.defaultNotifDndMode.hot(DndMode.INHERIT)
+    val defaultNotifQuietHoursMode = store.defaultNotifQuietHoursMode.hot(QuietHoursMode.INHERIT)
     val messageContactRules = store.messageContactRules.hot(emptyList())
     val appRules = store.appRules.hot(emptyList())
 
@@ -58,14 +66,30 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun saveAppRule(rule: AppNotificationRule) = launch { store.saveAppRule(rule) }
     fun deleteAppRule(packageName: String) = launch { store.deleteAppRule(packageName) }
 
-    fun setOtherContactsStyle(pattern: PatternMode, color: Long, faceDown: FaceDownMode) =
-        launch { store.setOtherContactsStyle(pattern, color, faceDown) }
+    fun setOtherContactsStyle(
+        pattern: PatternMode,
+        color: Long,
+        faceDown: FaceDownMode,
+        dndMode: DndMode,
+        quietHoursMode: QuietHoursMode
+    ) = launch { store.setOtherContactsStyle(pattern, color, faceDown, dndMode, quietHoursMode) }
 
-    fun setUnknownNumbersStyle(pattern: PatternMode, color: Long, faceDown: FaceDownMode) =
-        launch { store.setUnknownNumbersStyle(pattern, color, faceDown) }
+    fun setUnknownNumbersStyle(
+        pattern: PatternMode,
+        color: Long,
+        faceDown: FaceDownMode,
+        dndMode: DndMode,
+        quietHoursMode: QuietHoursMode
+    ) = launch { store.setUnknownNumbersStyle(pattern, color, faceDown, dndMode, quietHoursMode) }
 
-    fun setDefaultNotifStyle(pattern: PatternMode, color: Long, faceDown: FaceDownMode, autoColor: Boolean) =
-        launch { store.setDefaultNotifStyle(pattern, color, faceDown, autoColor) }
+    fun setDefaultNotifStyle(
+        pattern: PatternMode,
+        color: Long,
+        faceDown: FaceDownMode,
+        autoColor: Boolean,
+        dndMode: DndMode,
+        quietHoursMode: QuietHoursMode
+    ) = launch { store.setDefaultNotifStyle(pattern, color, faceDown, autoColor, dndMode, quietHoursMode) }
 
     private fun launch(block: suspend () -> Unit) {
         viewModelScope.launch { block() }

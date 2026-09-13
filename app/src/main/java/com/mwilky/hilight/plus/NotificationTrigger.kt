@@ -196,6 +196,13 @@ class NotificationTrigger : NotificationListenerService() {
 
         val unlockBehavior = snapshot.unlockBehavior
         val resolved = resolveAlert(snapshot, pkg, notification) ?: return
+        val dndActive = isSystemDndActive(
+            getSystemService(NotificationManager::class.java).currentInterruptionFilter
+        )
+        if (snapshot.blocksArrival(resolved.dndMode, resolved.quietHoursMode, dndActive)) {
+            Log.i(TAG, "Ignoring notification from $pkg: DND or quiet hours")
+            return
+        }
         val isCycle = snapshot.isCycleNotifications
         val requiresFaceDown = resolved.faceDownMode.requiresFaceDown(snapshot.isOnlyWhenFaceDown)
 
@@ -258,7 +265,9 @@ class NotificationTrigger : NotificationListenerService() {
         val slotId: String,
         val pattern: PatternMode,
         val color: Long,
-        val faceDownMode: FaceDownMode
+        val faceDownMode: FaceDownMode,
+        val dndMode: DndMode,
+        val quietHoursMode: QuietHoursMode
     )
 
     private fun resolveAlert(snapshot: SettingsSnapshot, pkg: String, notification: Notification): ResolvedAlert? {
@@ -270,7 +279,14 @@ class NotificationTrigger : NotificationListenerService() {
                 return null
             }
             Log.i(TAG, "Priority 1 Match: Contact '${contactRule.name}'")
-            return ResolvedAlert("contact_${contactRule.id}", contactRule.pattern, contactRule.color, contactRule.faceDownMode)
+            return ResolvedAlert(
+                "contact_${contactRule.id}",
+                contactRule.pattern,
+                contactRule.color,
+                contactRule.faceDownMode,
+                contactRule.dndMode,
+                contactRule.quietHoursMode
+            )
         }
 
         val appRule = snapshot.findRuleForPackage(pkg)
@@ -285,7 +301,14 @@ class NotificationTrigger : NotificationListenerService() {
                 appRule.color
             }
             Log.i(TAG, "Priority 2 Match: App '${appRule.appName}' ($pkg)")
-            return ResolvedAlert("app_${appRule.packageName}", appRule.pattern, color, appRule.faceDownMode)
+            return ResolvedAlert(
+                "app_${appRule.packageName}",
+                appRule.pattern,
+                color,
+                appRule.faceDownMode,
+                appRule.dndMode,
+                appRule.quietHoursMode
+            )
         }
 
         if (!snapshot.isDefaultNotifEnabled) {
@@ -311,7 +334,9 @@ class NotificationTrigger : NotificationListenerService() {
             slotId = "fallback_$pkg",
             pattern = defaultPattern,
             color = defaultColor,
-            faceDownMode = snapshot.defaultNotifFaceDownMode
+            faceDownMode = snapshot.defaultNotifFaceDownMode,
+            dndMode = snapshot.defaultNotifDndMode,
+            quietHoursMode = snapshot.defaultNotifQuietHoursMode
         )
     }
 
