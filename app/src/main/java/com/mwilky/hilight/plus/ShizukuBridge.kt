@@ -262,10 +262,6 @@ class ShizukuBridge private constructor(private val app: Application) {
 
     // --- Typed Control Methods ---
 
-    fun setAmbient(pattern: String, color: Long, brightness: Float, speedMs: Long) {
-        runRemote("setAmbient") { it.setAmbient(pattern, color, brightness, speedMs) }
-    }
-
     fun triggerAlert(
         pattern: String,
         color: Long,
@@ -380,13 +376,6 @@ class ShizukuBridge private constructor(private val app: Application) {
     fun clearAlert() {
         Log.e("HiLightPlus", "clearAlert called")
         runRemote("clearAlert") { it.clearAlert() }
-    }
-
-    fun getSecureInt(key: String, defaultValue: Int = -1): Int {
-        val s = service ?: return defaultValue
-        return runCatching { s.getSecureInt(key, defaultValue) }
-            .onFailure { markDead("getSecureInt", it) }
-            .getOrDefault(defaultValue)
     }
 
     fun getSecureString(key: String): String? {

@@ -45,11 +45,11 @@ class LightEngine {
     private var quietHoursStartMinutes = 22 * 60
     private var quietHoursEndMinutes = 7 * 60
 
-    // Ambient State
-    private var ambientPattern = "off"
-    private var ambientColor = 0xFF000000
-    private var ambientBrightness = 1.0f
-    private var ambientSpeedMs = 2000L
+    // Ambient state: the idle render when nothing else is active. Always off.
+    private val ambientPattern = "off"
+    private val ambientColor = 0xFF000000
+    private val ambientBrightness = 1.0f
+    private val ambientSpeedMs = 2000L
 
     private data class IncomingCallAlert(
         val pattern: String,
@@ -113,33 +113,6 @@ class LightEngine {
 
     val ledCount: Int
         get() = lights.ledCount
-
-    val isSessionActive: Boolean
-        get() = lights.isSessionOpen
-
-    fun setMasterEnabled(enabled: Boolean) {
-        synchronized(lock) {
-            masterEnabled = enabled
-            if (!enabled) {
-                lights.blank()
-            }
-        }
-    }
-
-    fun setPriority(priority: Int) {
-        synchronized(lock) {
-            sessionPriority = priority
-        }
-    }
-
-    fun setAmbient(pattern: String, color: Long, brightness: Float, speedMs: Long) {
-        synchronized(lock) {
-            ambientPattern = pattern
-            ambientColor = color
-            ambientBrightness = brightness
-            ambientSpeedMs = speedMs
-        }
-    }
 
     /**
      * Starts a call override until explicitly stopped.
@@ -368,7 +341,6 @@ class LightEngine {
 
     fun turnOff() {
         synchronized(lock) {
-            ambientPattern = "off"
             incomingCallAlert = null
             directAlertPattern = null
             directRequiresFaceDown = false

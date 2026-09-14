@@ -76,13 +76,6 @@ enum class QuietHoursMode(val id: String) {
     }
 }
 
-data class LightStyle(
-    val pattern: PatternMode = PatternMode.OFF,
-    val color: Long = 0xFF000000,
-    val speedMs: Long = 2000,
-    val brightness: Float = 1.0f
-)
-
 /**
  * Lighting rule assigned to a specific contact for Incoming Calls.
  */

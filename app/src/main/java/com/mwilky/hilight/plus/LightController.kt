@@ -32,12 +32,6 @@ class LightController private constructor(private val app: Application) {
     val isEnabled: StateFlow<Boolean> = store.isEnabled
         .stateIn(scope, SharingStarted.Eagerly, true)
 
-    val lightStyle: StateFlow<LightStyle> = store.lightStyle
-        .stateIn(scope, SharingStarted.Eagerly, LightStyle())
-
-    val autoOffSeconds: StateFlow<Int> = store.autoOffSeconds
-        .stateIn(scope, SharingStarted.Eagerly, 60)
-
     private val dndReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action != NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED) return
@@ -88,9 +82,6 @@ class LightController private constructor(private val app: Application) {
             }
         }
         scope.launch {
-            store.lightStyle.collect { syncState() }
-        }
-        scope.launch {
             store.suppressDuringDnd.collect { enabled ->
                 shizuku.setDndSuppressEnabled(enabled)
             }
@@ -110,18 +101,6 @@ class LightController private constructor(private val app: Application) {
     fun setEnabled(enabled: Boolean) {
         scope.launch {
             store.setEnabled(enabled)
-        }
-    }
-
-    fun setLightStyle(style: LightStyle) {
-        scope.launch {
-            store.setLightStyle(style)
-        }
-    }
-
-    fun setAutoOffSeconds(seconds: Int) {
-        scope.launch {
-            store.setAutoOffSeconds(seconds)
         }
     }
 
@@ -258,32 +237,12 @@ class LightController private constructor(private val app: Application) {
         syncState()
     }
 
-    /**
-     * Preview helper for testing a style on the hardware.
-     */
-    fun previewEffect(pattern: PatternMode, color: Long, durationMs: Long = 3000L) {
-        triggerAlertEffect(
-            pattern = pattern,
-            color = color,
-            brightness = 1.0f,
-            durationMs = durationMs
-        )
-    }
-
     fun syncState() {
         scope.launch {
             val enabled = store.isEnabled.first()
             if (!enabled) {
                 shizuku.turnOff()
-                return@launch
             }
-            val style = store.lightStyle.first()
-            shizuku.setAmbient(
-                pattern = style.pattern.id,
-                color = style.color,
-                brightness = style.brightness,
-                speedMs = style.speedMs
-            )
         }
     }
 

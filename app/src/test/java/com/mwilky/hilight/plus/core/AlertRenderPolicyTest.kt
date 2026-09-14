@@ -2,9 +2,7 @@ package com.mwilky.hilight.plus.core
 
 import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.QuietHoursMode
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -151,13 +149,5 @@ class AlertRenderPolicyTest {
                 nowMinutes = 12 * 60
             )
         )
-    }
-
-    @Test
-    fun cyclingSkipsRestrictedSlotsWhileFaceUp() {
-        val flags = listOf(true, false, true)
-        assertEquals(1, AlertRenderPolicy.firstEligibleIndex(flags, deviceFaceDown = false, startIndex = 0))
-        assertEquals(0, AlertRenderPolicy.firstEligibleIndex(flags, deviceFaceDown = true, startIndex = 0))
-        assertNull(AlertRenderPolicy.firstEligibleIndex(listOf(true, true), deviceFaceDown = false, startIndex = 0))
     }
 }

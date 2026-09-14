@@ -27,13 +27,6 @@
     <!-- Onboarding Step 3: Shizuku Hardware Access -->
     <string name="onboarding_shizuku_title">Shizuku</string>
     <string name="onboarding_shizuku_desc">Pixel devices do not expose public APIs to directly control rear hardware LEDs. HiLight Plus uses Shizuku to communicate with hardware drivers, without requiring root access.</string>
-    <string name="onboarding_shizuku_session_title">Shizuku access</string>
-    <string name="onboarding_shizuku_status_needs_auth">Authorization needed</string>
-    <string name="onboarding_shizuku_btn_authorize">Authorize shizuku</string>
-    <string name="onboarding_shizuku_btn_install">Install shizuku manager</string>
-    <string name="onboarding_shizuku_btn_open">Open shizuku</string>
-    <string name="onboarding_shizuku_btn_check_again">Check again</string>
-    <string name="onboarding_shizuku_btn_retry">Retry connection</string>
 
     <!-- Onboarding Step 4: Permissions -->
     <string name="onboarding_perms_title">Required permissions</string>
@@ -58,15 +51,7 @@
     <string name="btn_next">Next</string>
     <string name="onboarding_complete_btn">Get started</string>
 
-    <!-- Native HiLight Conflict Warnings -->
-    <string name="stock_hilight_warning_title">Native HiLight settings</string>
-    <string name="stock_hilight_warning_calls"><b>Calls from favourites</b> is enabled in stock HiLight settings. This native feature will conflict with HiLight Plus caller animations.</string>
-    <string name="stock_hilight_open_settings">Disable in settings</string>
-
     <string name="main_title">HiLight Plus</string>
-    <string name="main_test_card_title">Hardware testing</string>
-    <string name="main_test_card_desc">Pick a color and tap \'Test Device\' to illuminate the 8 rear LEDs, or \'Preview\' to watch on your screen.</string>
-    <string name="main_test_btn">Test device</string>
 
     <!-- Navigation Tabs -->
     <string name="nav_home">Home</string>
@@ -96,24 +81,11 @@
     <string name="shizuku_btn_check_again">Check Again</string>
     <string name="shizuku_btn_retry">Retry Connection</string>
 
-    <!-- Permissions Warning Cards -->
-    <string name="perm_card_title">Calls &amp; contacts access required</string>
-    <string name="perm_card_status_needed">Permissions required</string>
-    <string name="perm_card_desc">Phone state, call log, and contacts permissions are required to detect incoming callers and match custom contact rules.</string>
-    <string name="perm_btn_grant">Grant permissions</string>
-    <string name="perm_btn_app_info">App info</string>
-    <string name="notif_access_title">Notification access required</string>
-    <string name="notif_access_status_needed">Access needed</string>
-    <string name="notif_access_desc">Notification listener access is required to detect app notifications and contact messages.</string>
-    <string name="notif_access_btn_grant">Grant notification access</string>
-
     <!-- Incoming Calls Section -->
     <string name="calls_section_title">Incoming calls</string>
     <string name="calls_section_subtitle">Enable lights when there is an incoming call</string>
     <string name="calls_other_contacts_title">All other contacts</string>
-    <string name="calls_other_contacts_desc">Applied to incoming calls from saved contacts without a specific custom rule.</string>
     <string name="calls_unknown_numbers_title">Unknown numbers</string>
-    <string name="calls_unknown_numbers_desc">Applied to incoming calls from unsaved or hidden caller numbers.</string>
     <string name="calls_custom_rules_header">Custom caller rules (%1$d)</string>
     <string name="calls_no_rules">No custom caller rules.</string>
     <string name="calls_add_contact_btn">Add contact</string>
@@ -122,8 +94,6 @@
     <string name="notifs_section_title">Notifications</string>
     <string name="notifs_section_subtitle">Enable lights when notifications arrive</string>
     <string name="notifs_default_title">All other notifications</string>
-    <string name="notifs_default_subtitle">Notifications with no specific contact or app rule</string>
-    <string name="notifs_default_desc">Applied to incoming notifications from apps and senders without a specific custom rule.</string>
     <string name="notifs_contact_rules_header">Custom contact rules (%1$d)</string>
     <string name="notifs_no_contact_rules">No contact message rules.</string>
     <string name="notifs_app_rules_header">Custom app rules (%1$d)</string>
@@ -211,8 +181,4 @@
     <string name="about_version_label">Version</string>
     <string name="about_status_section_header">System Health &amp; Permissions</string>
     <string name="about_stock_ok_desc">Native favourite-caller lighting is off. Gemini and other system lights may still use the LEDs.</string>
-    <string name="about_call_perms_title">Calls &amp; Contacts Permissions</string>
-    <string name="about_call_perms_granted_desc">Phone State, Call Log, and Contacts permissions are active. Incoming caller identification is ready.</string>
-    <string name="about_notif_perms_title">Notification Listener Access</string>
-    <string name="about_notif_perms_granted_desc">Notification Listener service is active. Incoming app notifications and chats trigger seamlessly.</string>
 </resources>

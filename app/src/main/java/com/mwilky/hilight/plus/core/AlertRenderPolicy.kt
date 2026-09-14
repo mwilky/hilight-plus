@@ -72,18 +72,4 @@ internal object AlertRenderPolicy {
             nowMinutes
         )
     }
-
-    fun firstEligibleIndex(
-        requiresFaceDown: List<Boolean>,
-        deviceFaceDown: Boolean,
-        startIndex: Int
-    ): Int? {
-        if (requiresFaceDown.isEmpty()) return null
-        val start = startIndex.coerceAtLeast(0) % requiresFaceDown.size
-        for (offset in requiresFaceDown.indices) {
-            val i = (start + offset) % requiresFaceDown.size
-            if (canShowAlert(requiresFaceDown[i], deviceFaceDown)) return i
-        }
-        return null
-    }
 }

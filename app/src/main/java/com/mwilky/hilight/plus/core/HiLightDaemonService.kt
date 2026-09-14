@@ -26,10 +26,6 @@ class HiLightDaemonService : IHiLightService.Stub() {
         }
     }
 
-    override fun setAmbient(pattern: String?, color: Long, brightness: Float, speedMs: Long) {
-        engine.setAmbient(pattern ?: "off", color, brightness, speedMs)
-    }
-
     override fun triggerAlert(
         pattern: String?,
         color: Long,
@@ -146,16 +142,6 @@ class HiLightDaemonService : IHiLightService.Stub() {
 
     override fun getLedCount(): Int {
         return engine.ledCount
-    }
-
-    override fun isSessionActive(): Boolean {
-        return engine.isSessionActive
-    }
-
-    override fun getSecureInt(key: String?, defaultValue: Int): Int {
-        if (key.isNullOrBlank()) return defaultValue
-        val str = getSecureString(key) ?: return defaultValue
-        return str.trim().toIntOrNull() ?: defaultValue
     }
 
     override fun getSecureString(key: String?): String? {
