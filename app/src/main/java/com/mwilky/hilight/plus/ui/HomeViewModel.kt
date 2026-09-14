@@ -11,7 +11,6 @@ import com.mwilky.hilight.plus.FaceDownMode
 import com.mwilky.hilight.plus.MessageContactRule
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.QuietHoursMode
-import com.mwilky.hilight.plus.UnlockBehavior
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -44,7 +43,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     val isNotifsEnabled = store.isNotificationsEnabled.hot(true)
     val notifDurationSec = store.notificationDurationSeconds.hot(30)
-    val unlockBehavior = store.unlockBehavior.hot(UnlockBehavior.NONE)
     val isCycleNotifications = store.isCycleNotifications.hot(false)
     val isDefaultNotifEnabled = store.isDefaultNotifEnabled.hot(true)
     val defaultNotifColor = store.defaultNotifColor.hot(0xFFFFFFFF)
@@ -63,7 +61,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun setUnknownNumbersEnabled(enabled: Boolean) = launch { store.setUnknownNumbersEnabled(enabled) }
     fun setNotificationsEnabled(enabled: Boolean) = launch { store.setNotificationsEnabled(enabled) }
     fun setNotificationDurationSeconds(seconds: Int) = launch { store.setNotificationDurationSeconds(seconds) }
-    fun setUnlockBehavior(behavior: UnlockBehavior) = launch { store.setUnlockBehavior(behavior) }
     fun setCycleNotifications(enabled: Boolean) = launch { store.setCycleNotifications(enabled) }
     fun setDefaultNotifEnabled(enabled: Boolean) = launch { store.setDefaultNotifEnabled(enabled) }
 

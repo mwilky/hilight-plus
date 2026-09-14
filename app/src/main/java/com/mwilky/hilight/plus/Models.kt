@@ -30,15 +30,6 @@ enum class PatternMode(val id: String, val titleRes: Int) {
 }
 
 /**
- * Behavior when device is unlocked.
- */
-enum class UnlockBehavior(val id: String) {
-    NONE("none"),
-    PAUSE("pause"),
-    CLEAR("clear")
-}
-
-/**
  * Orientation trigger preference for a rule.
  */
 enum class FaceDownMode(val id: String) {

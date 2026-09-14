@@ -140,14 +140,6 @@ class HiLightDaemonService : IHiLightService.Stub() {
         engine.clearAlert()
     }
 
-    override fun pauseAlerts() {
-        engine.pauseAlerts()
-    }
-
-    override fun resumeAlerts() {
-        engine.resumeAlerts()
-    }
-
     override fun turnOff() {
         engine.turnOff()
     }

@@ -38,7 +38,6 @@ class LightEngine {
     // State
     private var masterEnabled = true
     private var sessionPriority = 10
-    private var isAlertsPaused = false
     private var deviceFaceDown = false
     private var dndActive = false
     private var dndSuppressEnabled = false
@@ -271,7 +270,7 @@ class LightEngine {
             if (notificationVisible(requiresFaceDown, dndMode, quietHoursMode, quietStartOverride, quietEndOverride)) {
                 needsSessionReset = true
             }
-            Log.i(TAG, "postAlert [key=$key]: pattern=$pattern, color=$color, speedMs=$speedMs (queue size=${activeAlerts.size}, unlockPaused=$isAlertsPaused, requiresFaceDown=$requiresFaceDown, dndMode=$dndMode, quietHoursMode=$quietHoursMode)")
+            Log.i(TAG, "postAlert [key=$key]: pattern=$pattern, color=$color, speedMs=$speedMs (queue size=${activeAlerts.size}, requiresFaceDown=$requiresFaceDown, dndMode=$dndMode, quietHoursMode=$quietHoursMode)")
         }
     }
 
@@ -348,39 +347,7 @@ class LightEngine {
     }
 
     /**
-     * Pauses active alert rendering (e.g. on device unlock when behavior is PAUSE).
-     * Keeps activeAlerts in memory so they can resume when locked.
-     */
-    fun pauseAlerts() {
-        synchronized(lock) {
-            isAlertsPaused = true
-            syncNotificationTimer(SystemClock.elapsedRealtime())
-            Log.i(TAG, "pauseAlerts: unlock pause, keeping ${activeAlerts.size} queued alerts")
-            if (incomingCallAlert == null && ambientPattern.equals("off", ignoreCase = true)) {
-                lights.blank()
-            }
-        }
-    }
-
-    /**
-     * Resumes paused alert rendering (e.g. when device is locked again).
-     */
-    fun resumeAlerts() {
-        synchronized(lock) {
-            if (isAlertsPaused) {
-                isAlertsPaused = false
-                val now = SystemClock.elapsedRealtime()
-                syncNotificationTimer(now)
-                cycleStartTimeMs = now
-                needsSessionReset = true
-                Log.i(TAG, "resumeAlerts: cleared unlock pause with ${activeAlerts.size} queued alerts")
-            }
-        }
-    }
-
-    /**
      * Clears notification / transient alerts without interrupting a call.
-     * Unlock pause is left as-is so mode switches cannot flash while still unlocked.
      */
     fun clearAlert() {
         synchronized(lock) {
@@ -412,7 +379,6 @@ class LightEngine {
             directAlertTimer.clear()
             activeAlerts.clear()
             currentAlertIndex = 0
-            isAlertsPaused = false
             lights.blank()
         }
     }
@@ -514,7 +480,7 @@ class LightEngine {
                 currentBrightness = directAlertBrightness
                 currentSpeed = directAlertSpeedMs
                 elapsedMs = directAlertTimer.elapsedMs(now)
-            } else if (!isAlertsPaused && activeAlerts.isNotEmpty()) {
+            } else if (activeAlerts.isNotEmpty()) {
                 val eligibleStart = firstEligibleAlertIndex(currentAlertIndex)
                 if (eligibleStart == null) {
                     currentPattern = ambientPattern
@@ -623,7 +589,6 @@ class LightEngine {
         quietEndOverride: Int?,
         nowMinutes: Int = currentMinutesOfDay()
     ): Boolean = AlertRenderPolicy.canShowNotification(
-        unlockPaused = isAlertsPaused,
         callActive = incomingCallAlert != null,
         requiresFaceDown = requiresFaceDown,
         deviceFaceDown = deviceFaceDown,

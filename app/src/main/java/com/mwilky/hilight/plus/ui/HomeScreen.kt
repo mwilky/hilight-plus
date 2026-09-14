@@ -66,7 +66,6 @@ import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.R
 import com.mwilky.hilight.plus.ShizukuBridge
 import com.mwilky.hilight.plus.StockHiLightState
-import com.mwilky.hilight.plus.UnlockBehavior
 import com.mwilky.hilight.plus.core.PatternRenderer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -117,7 +116,6 @@ fun HomeScreen(
 
     val isNotifsEnabled by viewModel.isNotifsEnabled.collectAsStateWithLifecycle()
     val notifDurationSec by viewModel.notifDurationSec.collectAsStateWithLifecycle()
-    val unlockBehavior by viewModel.unlockBehavior.collectAsStateWithLifecycle()
     val isCycleNotifications by viewModel.isCycleNotifications.collectAsStateWithLifecycle()
     val isDefaultNotifEnabled by viewModel.isDefaultNotifEnabled.collectAsStateWithLifecycle()
     val defaultNotifColor by viewModel.defaultNotifColor.collectAsStateWithLifecycle()
@@ -272,8 +270,6 @@ fun HomeScreen(
         onToggleNotifs = viewModel::setNotificationsEnabled,
         notifDurationSec = notifDurationSec,
         onChangeDuration = viewModel::setNotificationDurationSeconds,
-        unlockBehavior = unlockBehavior,
-        onChangeUnlockBehavior = viewModel::setUnlockBehavior,
         isCycleNotifications = isCycleNotifications,
         onToggleCycleNotifications = viewModel::setCycleNotifications,
         isDefaultNotifEnabled = isDefaultNotifEnabled,
@@ -554,8 +550,6 @@ fun HomeContent(
     onToggleNotifs: (Boolean) -> Unit,
     notifDurationSec: Int,
     onChangeDuration: (Int) -> Unit,
-    unlockBehavior: UnlockBehavior = UnlockBehavior.NONE,
-    onChangeUnlockBehavior: (UnlockBehavior) -> Unit = {},
     isCycleNotifications: Boolean = false,
     onToggleCycleNotifications: (Boolean) -> Unit = {},
     isDefaultNotifEnabled: Boolean,
@@ -943,8 +937,6 @@ fun HomeContent(
                     onAddApp = onAddApp,
                     notifDurationSec = notifDurationSec,
                     onChangeDuration = onChangeDuration,
-                    unlockBehavior = unlockBehavior,
-                    onChangeUnlockBehavior = onChangeUnlockBehavior,
                     isCycleNotifications = isCycleNotifications,
                     onToggleCycleNotifications = onToggleCycleNotifications,
                     renderer = renderer

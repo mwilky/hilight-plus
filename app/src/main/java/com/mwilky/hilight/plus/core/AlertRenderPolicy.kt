@@ -5,8 +5,8 @@ import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.quietHoursBlocked
 
 /**
- * Composed visibility for alerts. Unlock pause and an active call hide notifications;
- * face-down, DND, and quiet hours are per-alert and do not use the unlock pause flag.
+ * Composed visibility for alerts. An active call hides notifications;
+ * face-down, DND, and quiet hours are per-alert.
  */
 internal object AlertRenderPolicy {
 
@@ -42,7 +42,6 @@ internal object AlertRenderPolicy {
     }
 
     fun canShowNotification(
-        unlockPaused: Boolean,
         callActive: Boolean,
         requiresFaceDown: Boolean,
         deviceFaceDown: Boolean,
@@ -57,7 +56,7 @@ internal object AlertRenderPolicy {
         quietEndOverride: Int? = null,
         nowMinutes: Int = 0
     ): Boolean {
-        if (unlockPaused || callActive) return false
+        if (callActive) return false
         return canShowAlert(
             requiresFaceDown,
             deviceFaceDown,

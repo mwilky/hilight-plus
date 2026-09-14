@@ -54,7 +54,7 @@ class ShizukuBridge private constructor(private val app: Application) {
         .daemon(false)
         .processNameSuffix("hilight_daemon")
         .debuggable(BuildConfig.DEBUG)
-        .version(5)
+        .version(6)
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -380,16 +380,6 @@ class ShizukuBridge private constructor(private val app: Application) {
     fun clearAlert() {
         Log.e("HiLightPlus", "clearAlert called")
         runRemote("clearAlert") { it.clearAlert() }
-    }
-
-    fun pauseAlerts() {
-        Log.e("HiLightPlus", "pauseAlerts called")
-        runRemote("pauseAlerts") { it.pauseAlerts() }
-    }
-
-    fun resumeAlerts() {
-        Log.e("HiLightPlus", "resumeAlerts called")
-        runRemote("resumeAlerts") { it.resumeAlerts() }
     }
 
     fun getSecureInt(key: String, defaultValue: Int = -1): Int {

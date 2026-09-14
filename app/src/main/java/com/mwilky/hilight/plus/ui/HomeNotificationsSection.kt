@@ -1,10 +1,5 @@
 package com.mwilky.hilight.plus.ui
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,9 +21,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
@@ -48,7 +40,6 @@ import com.mwilky.hilight.plus.FaceDownMode
 import com.mwilky.hilight.plus.MessageContactRule
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.R
-import com.mwilky.hilight.plus.UnlockBehavior
 import com.mwilky.hilight.plus.core.PatternRenderer
 import kotlin.math.roundToInt
 
@@ -112,8 +103,6 @@ fun HomeNotifsSettingsCard(
     onAddApp: () -> Unit,
     notifDurationSec: Int,
     onChangeDuration: (Int) -> Unit,
-    unlockBehavior: UnlockBehavior,
-    onChangeUnlockBehavior: (UnlockBehavior) -> Unit,
     isCycleNotifications: Boolean,
     onToggleCycleNotifications: (Boolean) -> Unit,
     renderer: PatternRenderer
@@ -364,77 +353,6 @@ fun HomeNotifsSettingsCard(
                         steps = 8,
                         modifier = Modifier.fillMaxWidth().height(28.dp)
                     )
-                }
-            }
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = HiLightTheme.CardShape,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 18.dp, vertical = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = stringResource(R.string.settings_unlock_behavior_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        AnimatedContent(
-                            targetState = unlockBehavior,
-                            transitionSpec = {
-                                fadeIn(animationSpec = tween(220)) togetherWith fadeOut(animationSpec = tween(180))
-                            },
-                            label = "UnlockBehaviorSubtitle"
-                        ) { behavior ->
-                            Text(
-                                text = when (behavior) {
-                                    UnlockBehavior.NONE -> stringResource(R.string.settings_unlock_none_desc)
-                                    UnlockBehavior.PAUSE -> stringResource(R.string.settings_unlock_pause_desc)
-                                    UnlockBehavior.CLEAR -> stringResource(R.string.settings_unlock_clear_desc)
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    SingleChoiceSegmentedButtonRow(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        val behaviors = UnlockBehavior.entries
-                        behaviors.forEachIndexed { index, b ->
-                            val isSelected = unlockBehavior == b
-                            SegmentedButton(
-                                selected = isSelected,
-                                onClick = { if (enabled) onChangeUnlockBehavior(b) },
-                                enabled = enabled,
-                                shape = SegmentedButtonDefaults.itemShape(index = index, count = behaviors.size),
-                                icon = {},
-                                colors = SegmentedButtonDefaults.colors(
-                                    activeContainerColor = MaterialTheme.colorScheme.primary,
-                                    activeContentColor = MaterialTheme.colorScheme.onPrimary,
-                                    inactiveContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                ),
-                                label = {
-                                    Text(
-                                        text = when (b) {
-                                            UnlockBehavior.NONE -> stringResource(R.string.settings_unlock_none)
-                                            UnlockBehavior.PAUSE -> stringResource(R.string.settings_unlock_pause)
-                                            UnlockBehavior.CLEAR -> stringResource(R.string.settings_unlock_clear)
-                                        },
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                }
-                            )
-                        }
-                    }
                 }
             }
 

@@ -188,7 +188,6 @@ class ArrivalConditionTest {
         unknownNumbersQuietHoursEndMinutes = null,
         isNotificationsEnabled = true,
         notificationDurationSeconds = 30,
-        unlockBehavior = UnlockBehavior.NONE,
         isCycleNotifications = false,
         isDefaultNotifEnabled = true,
         defaultNotifColor = 0L,

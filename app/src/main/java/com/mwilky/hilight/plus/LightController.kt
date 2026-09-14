@@ -61,7 +61,6 @@ class LightController private constructor(private val app: Application) {
 
         DeviceOrientationDetector.onOrientationChanged = { faceDown ->
             shizuku.setDeviceFaceDown(faceDown)
-            scope.launch { syncUnlockPauseWithOrientation(faceDown) }
         }
 
         shizuku.onAvailabilityChanged = {
@@ -244,15 +243,6 @@ class LightController private constructor(private val app: Application) {
         )
     }
 
-    private suspend fun syncUnlockPauseWithOrientation(faceDown: Boolean) {
-        if (store.unlockBehavior.first() != UnlockBehavior.PAUSE) return
-        if (faceDown || !DevicePresence.isActivelyUsing(app, faceDown)) {
-            shizuku.resumeAlerts()
-        } else {
-            shizuku.pauseAlerts()
-        }
-    }
-
     /**
      * Stops the call override without deleting pending notification alerts.
      */
@@ -266,20 +256,6 @@ class LightController private constructor(private val app: Application) {
     fun clearAlert() {
         shizuku.clearAlert()
         syncState()
-    }
-
-    /**
-     * Pauses alert lighting while retaining queued alerts in memory.
-     */
-    fun pauseAlerts() {
-        shizuku.pauseAlerts()
-    }
-
-    /**
-     * Resumes queued alert lighting when device is locked again.
-     */
-    fun resumeAlerts() {
-        shizuku.resumeAlerts()
     }
 
     /**

@@ -18,18 +18,9 @@ class AlertRenderPolicyTest {
     }
 
     @Test
-    fun unlockPauseAndCallHideNotificationsIndependentlyOfOrientation() {
+    fun callHidesNotificationsIndependentlyOfOrientation() {
         assertFalse(
             AlertRenderPolicy.canShowNotification(
-                unlockPaused = true,
-                callActive = false,
-                requiresFaceDown = false,
-                deviceFaceDown = true
-            )
-        )
-        assertFalse(
-            AlertRenderPolicy.canShowNotification(
-                unlockPaused = false,
                 callActive = true,
                 requiresFaceDown = false,
                 deviceFaceDown = true
@@ -37,7 +28,6 @@ class AlertRenderPolicyTest {
         )
         assertFalse(
             AlertRenderPolicy.canShowNotification(
-                unlockPaused = false,
                 callActive = false,
                 requiresFaceDown = true,
                 deviceFaceDown = false
@@ -45,7 +35,6 @@ class AlertRenderPolicyTest {
         )
         assertTrue(
             AlertRenderPolicy.canShowNotification(
-                unlockPaused = false,
                 callActive = false,
                 requiresFaceDown = false,
                 deviceFaceDown = false
