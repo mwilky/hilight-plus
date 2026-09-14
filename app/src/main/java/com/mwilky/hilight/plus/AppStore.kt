@@ -45,6 +45,8 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_OTHER_CONTACTS_FACE_DOWN = stringPreferencesKey("other_contacts_face_down")
         private val KEY_OTHER_CONTACTS_DND = stringPreferencesKey("other_contacts_dnd")
         private val KEY_OTHER_CONTACTS_QUIET = stringPreferencesKey("other_contacts_quiet")
+        private val KEY_OTHER_CONTACTS_QUIET_START = intPreferencesKey("other_contacts_quiet_start")
+        private val KEY_OTHER_CONTACTS_QUIET_END = intPreferencesKey("other_contacts_quiet_end")
 
         // Call Settings: Unknown / Private Numbers
         private val KEY_UNKNOWN_NUMBERS_ENABLED = booleanPreferencesKey("unknown_numbers_enabled")
@@ -53,6 +55,8 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_UNKNOWN_NUMBERS_FACE_DOWN = stringPreferencesKey("unknown_numbers_face_down")
         private val KEY_UNKNOWN_NUMBERS_DND = stringPreferencesKey("unknown_numbers_dnd")
         private val KEY_UNKNOWN_NUMBERS_QUIET = stringPreferencesKey("unknown_numbers_quiet")
+        private val KEY_UNKNOWN_NUMBERS_QUIET_START = intPreferencesKey("unknown_numbers_quiet_start")
+        private val KEY_UNKNOWN_NUMBERS_QUIET_END = intPreferencesKey("unknown_numbers_quiet_end")
 
         private val KEY_CALL_RULES_JSON = stringPreferencesKey("contact_rules_json")
 
@@ -70,6 +74,8 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_DEFAULT_NOTIF_AUTO_COLOR = booleanPreferencesKey("default_notif_auto_color")
         private val KEY_DEFAULT_NOTIF_DND = stringPreferencesKey("default_notif_dnd")
         private val KEY_DEFAULT_NOTIF_QUIET = stringPreferencesKey("default_notif_quiet")
+        private val KEY_DEFAULT_NOTIF_QUIET_START = intPreferencesKey("default_notif_quiet_start")
+        private val KEY_DEFAULT_NOTIF_QUIET_END = intPreferencesKey("default_notif_quiet_end")
         private val KEY_MESSAGE_CONTACT_RULES_JSON = stringPreferencesKey("message_contact_rules_json")
         private val KEY_APP_RULES_JSON = stringPreferencesKey("app_rules_json")
 
@@ -153,6 +159,12 @@ class AppStore private constructor(private val appContext: Context) {
             runCatching { QuietHoursMode.valueOf(name) }.getOrDefault(QuietHoursMode.INHERIT)
         }
 
+    val otherContactsQuietHoursStartMinutes: Flow<Int?> = appContext.dataStore.data
+        .map { it[KEY_OTHER_CONTACTS_QUIET_START] }
+
+    val otherContactsQuietHoursEndMinutes: Flow<Int?> = appContext.dataStore.data
+        .map { it[KEY_OTHER_CONTACTS_QUIET_END] }
+
     // --- Call Settings: Unknown / Private Numbers ---
 
     val isUnknownNumbersEnabled: Flow<Boolean> = appContext.dataStore.data
@@ -184,6 +196,12 @@ class AppStore private constructor(private val appContext: Context) {
             val name = prefs[KEY_UNKNOWN_NUMBERS_QUIET] ?: QuietHoursMode.INHERIT.name
             runCatching { QuietHoursMode.valueOf(name) }.getOrDefault(QuietHoursMode.INHERIT)
         }
+
+    val unknownNumbersQuietHoursStartMinutes: Flow<Int?> = appContext.dataStore.data
+        .map { it[KEY_UNKNOWN_NUMBERS_QUIET_START] }
+
+    val unknownNumbersQuietHoursEndMinutes: Flow<Int?> = appContext.dataStore.data
+        .map { it[KEY_UNKNOWN_NUMBERS_QUIET_END] }
 
     val contactRules: Flow<List<ContactRule>> = appContext.dataStore.data
         .map { readContactRules(it[KEY_CALL_RULES_JSON]) }
@@ -248,6 +266,12 @@ class AppStore private constructor(private val appContext: Context) {
             val name = prefs[KEY_DEFAULT_NOTIF_QUIET] ?: QuietHoursMode.INHERIT.name
             runCatching { QuietHoursMode.valueOf(name) }.getOrDefault(QuietHoursMode.INHERIT)
         }
+
+    val defaultNotifQuietHoursStartMinutes: Flow<Int?> = appContext.dataStore.data
+        .map { it[KEY_DEFAULT_NOTIF_QUIET_START] }
+
+    val defaultNotifQuietHoursEndMinutes: Flow<Int?> = appContext.dataStore.data
+        .map { it[KEY_DEFAULT_NOTIF_QUIET_END] }
 
     val messageContactRules: Flow<List<MessageContactRule>> = appContext.dataStore.data
         .map { readMessageRules(it[KEY_MESSAGE_CONTACT_RULES_JSON]) }
@@ -382,7 +406,9 @@ class AppStore private constructor(private val appContext: Context) {
         color: Long,
         faceDown: FaceDownMode,
         dndMode: DndMode,
-        quietHoursMode: QuietHoursMode
+        quietHoursMode: QuietHoursMode,
+        quietHoursStartMinutes: Int,
+        quietHoursEndMinutes: Int
     ) {
         appContext.dataStore.edit { prefs ->
             prefs[KEY_OTHER_CONTACTS_PATTERN] = pattern.name
@@ -390,6 +416,8 @@ class AppStore private constructor(private val appContext: Context) {
             prefs[KEY_OTHER_CONTACTS_FACE_DOWN] = faceDown.name
             prefs[KEY_OTHER_CONTACTS_DND] = dndMode.name
             prefs[KEY_OTHER_CONTACTS_QUIET] = quietHoursMode.name
+            prefs[KEY_OTHER_CONTACTS_QUIET_START] = quietHoursStartMinutes
+            prefs[KEY_OTHER_CONTACTS_QUIET_END] = quietHoursEndMinutes
         }
     }
 
@@ -398,7 +426,9 @@ class AppStore private constructor(private val appContext: Context) {
         color: Long,
         faceDown: FaceDownMode,
         dndMode: DndMode,
-        quietHoursMode: QuietHoursMode
+        quietHoursMode: QuietHoursMode,
+        quietHoursStartMinutes: Int,
+        quietHoursEndMinutes: Int
     ) {
         appContext.dataStore.edit { prefs ->
             prefs[KEY_UNKNOWN_NUMBERS_PATTERN] = pattern.name
@@ -406,6 +436,8 @@ class AppStore private constructor(private val appContext: Context) {
             prefs[KEY_UNKNOWN_NUMBERS_FACE_DOWN] = faceDown.name
             prefs[KEY_UNKNOWN_NUMBERS_DND] = dndMode.name
             prefs[KEY_UNKNOWN_NUMBERS_QUIET] = quietHoursMode.name
+            prefs[KEY_UNKNOWN_NUMBERS_QUIET_START] = quietHoursStartMinutes
+            prefs[KEY_UNKNOWN_NUMBERS_QUIET_END] = quietHoursEndMinutes
         }
     }
 
@@ -415,7 +447,9 @@ class AppStore private constructor(private val appContext: Context) {
         faceDown: FaceDownMode,
         autoColor: Boolean,
         dndMode: DndMode,
-        quietHoursMode: QuietHoursMode
+        quietHoursMode: QuietHoursMode,
+        quietHoursStartMinutes: Int,
+        quietHoursEndMinutes: Int
     ) {
         appContext.dataStore.edit { prefs ->
             prefs[KEY_DEFAULT_NOTIF_PATTERN] = pattern.name
@@ -424,6 +458,8 @@ class AppStore private constructor(private val appContext: Context) {
             prefs[KEY_DEFAULT_NOTIF_AUTO_COLOR] = autoColor
             prefs[KEY_DEFAULT_NOTIF_DND] = dndMode.name
             prefs[KEY_DEFAULT_NOTIF_QUIET] = quietHoursMode.name
+            prefs[KEY_DEFAULT_NOTIF_QUIET_START] = quietHoursStartMinutes
+            prefs[KEY_DEFAULT_NOTIF_QUIET_END] = quietHoursEndMinutes
         }
     }
 
@@ -504,12 +540,16 @@ class AppStore private constructor(private val appContext: Context) {
             otherContactsFaceDownMode = enumOr(prefs[KEY_OTHER_CONTACTS_FACE_DOWN], FaceDownMode.INHERIT),
             otherContactsDndMode = enumOr(prefs[KEY_OTHER_CONTACTS_DND], DndMode.INHERIT),
             otherContactsQuietHoursMode = enumOr(prefs[KEY_OTHER_CONTACTS_QUIET], QuietHoursMode.INHERIT),
+            otherContactsQuietHoursStartMinutes = prefs[KEY_OTHER_CONTACTS_QUIET_START],
+            otherContactsQuietHoursEndMinutes = prefs[KEY_OTHER_CONTACTS_QUIET_END],
             isUnknownNumbersEnabled = prefs[KEY_UNKNOWN_NUMBERS_ENABLED] ?: true,
             unknownNumbersColor = prefs[KEY_UNKNOWN_NUMBERS_COLOR] ?: 0xFFFBBC05,
             unknownNumbersPattern = enumOr(prefs[KEY_UNKNOWN_NUMBERS_PATTERN], PatternMode.PULSE),
             unknownNumbersFaceDownMode = enumOr(prefs[KEY_UNKNOWN_NUMBERS_FACE_DOWN], FaceDownMode.INHERIT),
             unknownNumbersDndMode = enumOr(prefs[KEY_UNKNOWN_NUMBERS_DND], DndMode.INHERIT),
             unknownNumbersQuietHoursMode = enumOr(prefs[KEY_UNKNOWN_NUMBERS_QUIET], QuietHoursMode.INHERIT),
+            unknownNumbersQuietHoursStartMinutes = prefs[KEY_UNKNOWN_NUMBERS_QUIET_START],
+            unknownNumbersQuietHoursEndMinutes = prefs[KEY_UNKNOWN_NUMBERS_QUIET_END],
             isNotificationsEnabled = prefs[KEY_NOTIFICATIONS_ENABLED] ?: true,
             notificationDurationSeconds = prefs[KEY_NOTIFICATION_DURATION_SEC] ?: 30,
             unlockBehavior = unlockBehaviorFrom(prefs),
@@ -521,6 +561,8 @@ class AppStore private constructor(private val appContext: Context) {
             isDefaultNotifAutoColor = prefs[KEY_DEFAULT_NOTIF_AUTO_COLOR] ?: true,
             defaultNotifDndMode = enumOr(prefs[KEY_DEFAULT_NOTIF_DND], DndMode.INHERIT),
             defaultNotifQuietHoursMode = enumOr(prefs[KEY_DEFAULT_NOTIF_QUIET], QuietHoursMode.INHERIT),
+            defaultNotifQuietHoursStartMinutes = prefs[KEY_DEFAULT_NOTIF_QUIET_START],
+            defaultNotifQuietHoursEndMinutes = prefs[KEY_DEFAULT_NOTIF_QUIET_END],
             messageContactRules = readMessageRules(prefs[KEY_MESSAGE_CONTACT_RULES_JSON]),
             appRules = readAppRules(prefs[KEY_APP_RULES_JSON])
         )
@@ -571,12 +613,16 @@ data class SettingsSnapshot(
     val otherContactsFaceDownMode: FaceDownMode,
     val otherContactsDndMode: DndMode,
     val otherContactsQuietHoursMode: QuietHoursMode,
+    val otherContactsQuietHoursStartMinutes: Int?,
+    val otherContactsQuietHoursEndMinutes: Int?,
     val isUnknownNumbersEnabled: Boolean,
     val unknownNumbersColor: Long,
     val unknownNumbersPattern: PatternMode,
     val unknownNumbersFaceDownMode: FaceDownMode,
     val unknownNumbersDndMode: DndMode,
     val unknownNumbersQuietHoursMode: QuietHoursMode,
+    val unknownNumbersQuietHoursStartMinutes: Int?,
+    val unknownNumbersQuietHoursEndMinutes: Int?,
     val isNotificationsEnabled: Boolean,
     val notificationDurationSeconds: Int,
     val unlockBehavior: UnlockBehavior,
@@ -588,6 +634,8 @@ data class SettingsSnapshot(
     val isDefaultNotifAutoColor: Boolean,
     val defaultNotifDndMode: DndMode,
     val defaultNotifQuietHoursMode: QuietHoursMode,
+    val defaultNotifQuietHoursStartMinutes: Int?,
+    val defaultNotifQuietHoursEndMinutes: Int?,
     val messageContactRules: List<MessageContactRule>,
     val appRules: List<AppNotificationRule>
 ) {

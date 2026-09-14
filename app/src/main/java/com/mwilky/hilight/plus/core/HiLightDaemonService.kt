@@ -34,9 +34,22 @@ class HiLightDaemonService : IHiLightService.Stub() {
         brightness: Float,
         speedMs: Long,
         durationMs: Long,
-        requiresFaceDown: Boolean
+        requiresFaceDown: Boolean,
+        suppressDuringDnd: Boolean,
+        quietStartMinutes: Int,
+        quietEndMinutes: Int
     ) {
-        engine.triggerAlert(pattern ?: "solid", color, brightness, speedMs, durationMs, requiresFaceDown)
+        engine.triggerAlert(
+            pattern ?: "solid",
+            color,
+            brightness,
+            speedMs,
+            durationMs,
+            requiresFaceDown,
+            suppressDuringDnd,
+            quietStartMinutes.takeIf { it >= 0 },
+            quietEndMinutes.takeIf { it >= 0 }
+        )
     }
 
     override fun postAlert(
@@ -46,10 +59,24 @@ class HiLightDaemonService : IHiLightService.Stub() {
         brightness: Float,
         speedMs: Long,
         durationMs: Long,
-        requiresFaceDown: Boolean
+        requiresFaceDown: Boolean,
+        suppressDuringDnd: Boolean,
+        quietStartMinutes: Int,
+        quietEndMinutes: Int
     ) {
         if (key != null) {
-            engine.postAlert(key, pattern ?: "solid", color, brightness, speedMs, durationMs, requiresFaceDown)
+            engine.postAlert(
+                key,
+                pattern ?: "solid",
+                color,
+                brightness,
+                speedMs,
+                durationMs,
+                requiresFaceDown,
+                suppressDuringDnd,
+                quietStartMinutes.takeIf { it >= 0 },
+                quietEndMinutes.takeIf { it >= 0 }
+            )
         }
     }
 
@@ -58,13 +85,29 @@ class HiLightDaemonService : IHiLightService.Stub() {
         color: Long,
         brightness: Float,
         speedMs: Long,
-        requiresFaceDown: Boolean
+        requiresFaceDown: Boolean,
+        suppressDuringDnd: Boolean,
+        quietStartMinutes: Int,
+        quietEndMinutes: Int
     ) {
-        engine.startIncomingCall(pattern ?: "solid", color, brightness, speedMs, requiresFaceDown)
+        engine.startIncomingCall(
+            pattern ?: "solid",
+            color,
+            brightness,
+            speedMs,
+            requiresFaceDown,
+            suppressDuringDnd,
+            quietStartMinutes.takeIf { it >= 0 },
+            quietEndMinutes.takeIf { it >= 0 }
+        )
     }
 
     override fun setDeviceFaceDown(faceDown: Boolean) {
         engine.setDeviceFaceDown(faceDown)
+    }
+
+    override fun setDndActive(dndActive: Boolean) {
+        engine.setDndActive(dndActive)
     }
 
     override fun stopIncomingCall() {

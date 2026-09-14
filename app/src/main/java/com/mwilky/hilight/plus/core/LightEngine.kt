@@ -2,6 +2,7 @@ package com.mwilky.hilight.plus.core
 
 import android.os.SystemClock
 import android.util.Log
+import com.mwilky.hilight.plus.currentMinutesOfDay
 
 /**
  * Clean, lightweight render engine driving the Pixel 11 rear LEDs.
@@ -17,7 +18,10 @@ class LightEngine {
         val brightness: Float,
         val speedMs: Long,
         val expiresAtMs: Long,
-        val requiresFaceDown: Boolean
+        val requiresFaceDown: Boolean,
+        val suppressDuringDnd: Boolean,
+        val quietStartMinutes: Int?,
+        val quietEndMinutes: Int?
     )
 
     private val lights = PixelLightsManager()
@@ -33,6 +37,7 @@ class LightEngine {
     private var sessionPriority = 10
     private var isAlertsPaused = false
     private var deviceFaceDown = false
+    private var dndActive = false
 
     // Ambient State
     private var ambientPattern = "off"
@@ -46,7 +51,10 @@ class LightEngine {
         val brightness: Float,
         val speedMs: Long,
         val startedAtMs: Long,
-        val requiresFaceDown: Boolean
+        val requiresFaceDown: Boolean,
+        val suppressDuringDnd: Boolean,
+        val quietStartMinutes: Int?,
+        val quietEndMinutes: Int?
     )
 
     // Incoming calls override notification output without deleting its state.
@@ -58,6 +66,9 @@ class LightEngine {
     private var directAlertBrightness = 1.0f
     private var directAlertSpeedMs = 800L
     private var directRequiresFaceDown = false
+    private var directSuppressDuringDnd = false
+    private var directQuietStartMinutes: Int? = null
+    private var directQuietEndMinutes: Int? = null
     private val directAlertTimer = PausableAlertTimer()
 
     // Multi-Notification Cyclic Queue
@@ -130,11 +141,24 @@ class LightEngine {
         color: Long,
         brightness: Float,
         speedMs: Long,
-        requiresFaceDown: Boolean = false
+        requiresFaceDown: Boolean = false,
+        suppressDuringDnd: Boolean = false,
+        quietStartMinutes: Int? = null,
+        quietEndMinutes: Int? = null
     ) {
         synchronized(lock) {
             val now = SystemClock.elapsedRealtime()
-            incomingCallAlert = IncomingCallAlert(pattern, color, brightness, speedMs, now, requiresFaceDown)
+            incomingCallAlert = IncomingCallAlert(
+                pattern,
+                color,
+                brightness,
+                speedMs,
+                now,
+                requiresFaceDown,
+                suppressDuringDnd,
+                quietStartMinutes,
+                quietEndMinutes
+            )
             syncNotificationTimer(now)
             needsSessionReset = true
         }
@@ -161,7 +185,10 @@ class LightEngine {
         brightness: Float,
         speedMs: Long,
         durationMs: Long,
-        requiresFaceDown: Boolean = false
+        requiresFaceDown: Boolean = false,
+        suppressDuringDnd: Boolean = false,
+        quietStartMinutes: Int? = null,
+        quietEndMinutes: Int? = null
     ) {
         synchronized(lock) {
             val now = SystemClock.elapsedRealtime()
@@ -170,6 +197,9 @@ class LightEngine {
             directAlertBrightness = brightness
             directAlertSpeedMs = speedMs
             directRequiresFaceDown = requiresFaceDown
+            directSuppressDuringDnd = suppressDuringDnd
+            directQuietStartMinutes = quietStartMinutes
+            directQuietEndMinutes = quietEndMinutes
             directAlertTimer.start(
                 durationMs = durationMs,
                 nowMs = now,
@@ -178,7 +208,7 @@ class LightEngine {
             activeAlerts.clear()
             currentAlertIndex = 0
             needsSessionReset = true
-            Log.i(TAG, "triggerAlert: pattern=$pattern, color=$color, durationMs=$durationMs, requiresFaceDown=$requiresFaceDown")
+            Log.i(TAG, "triggerAlert: pattern=$pattern, color=$color, durationMs=$durationMs, requiresFaceDown=$requiresFaceDown, suppressDuringDnd=$suppressDuringDnd")
         }
     }
 
@@ -192,7 +222,10 @@ class LightEngine {
         brightness: Float,
         speedMs: Long,
         durationMs: Long,
-        requiresFaceDown: Boolean = false
+        requiresFaceDown: Boolean = false,
+        suppressDuringDnd: Boolean = false,
+        quietStartMinutes: Int? = null,
+        quietEndMinutes: Int? = null
     ) {
         synchronized(lock) {
             val now = SystemClock.elapsedRealtime()
@@ -204,7 +237,10 @@ class LightEngine {
                 brightness = brightness,
                 speedMs = speedMs,
                 expiresAtMs = expiresAt,
-                requiresFaceDown = requiresFaceDown
+                requiresFaceDown = requiresFaceDown,
+                suppressDuringDnd = suppressDuringDnd,
+                quietStartMinutes = quietStartMinutes,
+                quietEndMinutes = quietEndMinutes
             )
 
             // Remove any existing entry with this key
@@ -217,16 +253,10 @@ class LightEngine {
                 currentAlertIndex = 0
                 cycleStartTimeMs = now
             }
-            if (AlertRenderPolicy.canShowNotification(
-                    unlockPaused = isAlertsPaused,
-                    callActive = incomingCallAlert != null,
-                    requiresFaceDown = requiresFaceDown,
-                    deviceFaceDown = deviceFaceDown
-                )
-            ) {
+            if (notificationVisible(requiresFaceDown, suppressDuringDnd, quietStartMinutes, quietEndMinutes)) {
                 needsSessionReset = true
             }
-            Log.i(TAG, "postAlert [key=$key]: pattern=$pattern, color=$color, speedMs=$speedMs (queue size=${activeAlerts.size}, unlockPaused=$isAlertsPaused, requiresFaceDown=$requiresFaceDown)")
+            Log.i(TAG, "postAlert [key=$key]: pattern=$pattern, color=$color, speedMs=$speedMs (queue size=${activeAlerts.size}, unlockPaused=$isAlertsPaused, requiresFaceDown=$requiresFaceDown, suppressDuringDnd=$suppressDuringDnd)")
         }
     }
 
@@ -239,6 +269,18 @@ class LightEngine {
             cycleStartTimeMs = now
             needsSessionReset = true
             Log.i(TAG, "setDeviceFaceDown: $faceDown")
+        }
+    }
+
+    fun setDndActive(active: Boolean) {
+        synchronized(lock) {
+            if (dndActive == active) return
+            dndActive = active
+            val now = SystemClock.elapsedRealtime()
+            syncNotificationTimer(now)
+            cycleStartTimeMs = now
+            needsSessionReset = true
+            Log.i(TAG, "setDndActive: $active")
         }
     }
 
@@ -300,6 +342,9 @@ class LightEngine {
         synchronized(lock) {
             directAlertPattern = null
             directRequiresFaceDown = false
+            directSuppressDuringDnd = false
+            directQuietStartMinutes = null
+            directQuietEndMinutes = null
             directAlertTimer.clear()
             activeAlerts.clear()
             currentAlertIndex = 0
@@ -315,6 +360,9 @@ class LightEngine {
             incomingCallAlert = null
             directAlertPattern = null
             directRequiresFaceDown = false
+            directSuppressDuringDnd = false
+            directQuietStartMinutes = null
+            directQuietEndMinutes = null
             directAlertTimer.clear()
             activeAlerts.clear()
             currentAlertIndex = 0
@@ -351,21 +399,32 @@ class LightEngine {
             }
 
             val now = SystemClock.elapsedRealtime()
+            val nowMinutes = currentMinutesOfDay()
+            syncNotificationTimer(now)
             val call = incomingCallAlert
-            val callVisible = call != null &&
-                AlertRenderPolicy.canShowAlert(call.requiresFaceDown, deviceFaceDown)
+            val callVisible = call != null && alertVisible(
+                call.requiresFaceDown,
+                call.suppressDuringDnd,
+                call.quietStartMinutes,
+                call.quietEndMinutes,
+                nowMinutes
+            )
 
             if (directAlertPattern != null && directAlertTimer.remainingMs(now) == 0L) {
                 directAlertPattern = null
                 directRequiresFaceDown = false
+                directSuppressDuringDnd = false
+                directQuietStartMinutes = null
+                directQuietEndMinutes = null
                 directAlertTimer.clear()
             }
             val isDirectAlertActive = directAlertPattern != null &&
-                AlertRenderPolicy.canShowNotification(
-                    unlockPaused = isAlertsPaused,
-                    callActive = call != null,
-                    requiresFaceDown = directRequiresFaceDown,
-                    deviceFaceDown = deviceFaceDown
+                notificationVisible(
+                    directRequiresFaceDown,
+                    directSuppressDuringDnd,
+                    directQuietStartMinutes,
+                    directQuietEndMinutes,
+                    nowMinutes
                 )
 
             // Prune expired alerts from cyclic queue.
@@ -476,10 +535,19 @@ class LightEngine {
 
     private fun firstEligibleAlertIndex(startIndex: Int): Int? {
         if (activeAlerts.isEmpty()) return null
+        val nowMinutes = currentMinutesOfDay()
         val start = startIndex.coerceAtLeast(0) % activeAlerts.size
         for (offset in activeAlerts.indices) {
             val i = (start + offset) % activeAlerts.size
-            if (AlertRenderPolicy.canShowAlert(activeAlerts[i].requiresFaceDown, deviceFaceDown)) {
+            val alert = activeAlerts[i]
+            if (alertVisible(
+                    alert.requiresFaceDown,
+                    alert.suppressDuringDnd,
+                    alert.quietStartMinutes,
+                    alert.quietEndMinutes,
+                    nowMinutes
+                )
+            ) {
                 return i
             }
         }
@@ -488,13 +556,47 @@ class LightEngine {
 
     private fun shouldRunNotificationTimer(): Boolean {
         if (directAlertPattern == null) return false
-        return AlertRenderPolicy.canShowNotification(
-            unlockPaused = isAlertsPaused,
-            callActive = incomingCallAlert != null,
-            requiresFaceDown = directRequiresFaceDown,
-            deviceFaceDown = deviceFaceDown
+        return notificationVisible(
+            directRequiresFaceDown,
+            directSuppressDuringDnd,
+            directQuietStartMinutes,
+            directQuietEndMinutes
         )
     }
+
+    private fun notificationVisible(
+        requiresFaceDown: Boolean,
+        suppressDuringDnd: Boolean,
+        quietStartMinutes: Int?,
+        quietEndMinutes: Int?,
+        nowMinutes: Int = currentMinutesOfDay()
+    ): Boolean = AlertRenderPolicy.canShowNotification(
+        unlockPaused = isAlertsPaused,
+        callActive = incomingCallAlert != null,
+        requiresFaceDown = requiresFaceDown,
+        deviceFaceDown = deviceFaceDown,
+        suppressDuringDnd = suppressDuringDnd,
+        dndActive = dndActive,
+        quietStartMinutes = quietStartMinutes,
+        quietEndMinutes = quietEndMinutes,
+        nowMinutes = nowMinutes
+    )
+
+    private fun alertVisible(
+        requiresFaceDown: Boolean,
+        suppressDuringDnd: Boolean,
+        quietStartMinutes: Int?,
+        quietEndMinutes: Int?,
+        nowMinutes: Int = currentMinutesOfDay()
+    ): Boolean = AlertRenderPolicy.canShowAlert(
+        requiresFaceDown,
+        deviceFaceDown,
+        suppressDuringDnd,
+        dndActive,
+        quietStartMinutes,
+        quietEndMinutes,
+        nowMinutes
+    )
 
     private fun syncNotificationTimer(now: Long) {
         if (directAlertPattern == null) return

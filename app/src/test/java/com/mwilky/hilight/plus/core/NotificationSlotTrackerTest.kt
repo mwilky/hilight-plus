@@ -114,6 +114,17 @@ class NotificationSlotTrackerTest {
     }
 
     @Test
+    fun updatingDndFlagMarksTheSlotChanged() {
+        val tracker = NotificationSlotTracker()
+        val first = tracker.add("key", "app_a", PatternMode.PULSE, 1, suppressDuringDnd = false)
+        val second = tracker.add("key", "app_a", PatternMode.PULSE, 1, suppressDuringDnd = true)
+
+        assertTrue(first.changed)
+        assertTrue(second.changed)
+        assertTrue(tracker.latestSlot()?.suppressDuringDnd == true)
+    }
+
+    @Test
     fun clearDropsAllSourcesAndSlots() {
         val tracker = NotificationSlotTracker()
         tracker.add("a", "app_a", PatternMode.PULSE, 1)

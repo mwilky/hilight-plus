@@ -54,7 +54,7 @@ class ShizukuBridge private constructor(private val app: Application) {
         .daemon(false)
         .processNameSuffix("hilight_daemon")
         .debuggable(BuildConfig.DEBUG)
-        .version(3)
+        .version(4)
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -272,11 +272,24 @@ class ShizukuBridge private constructor(private val app: Application) {
         brightness: Float,
         speedMs: Long,
         durationMs: Long,
-        requiresFaceDown: Boolean = false
+        requiresFaceDown: Boolean = false,
+        suppressDuringDnd: Boolean = false,
+        quietStartMinutes: Int = -1,
+        quietEndMinutes: Int = -1
     ) {
-        Log.e("HiLightPlus", "triggerAlert: pattern=$pattern, color=$color, durationMs=$durationMs, requiresFaceDown=$requiresFaceDown")
+        Log.e("HiLightPlus", "triggerAlert: pattern=$pattern, color=$color, durationMs=$durationMs, requiresFaceDown=$requiresFaceDown, suppressDuringDnd=$suppressDuringDnd")
         runRemote("triggerAlert") {
-            it.triggerAlert(pattern, color, brightness, speedMs, durationMs, requiresFaceDown)
+            it.triggerAlert(
+                pattern,
+                color,
+                brightness,
+                speedMs,
+                durationMs,
+                requiresFaceDown,
+                suppressDuringDnd,
+                quietStartMinutes,
+                quietEndMinutes
+            )
         }
     }
 
@@ -287,11 +300,25 @@ class ShizukuBridge private constructor(private val app: Application) {
         brightness: Float,
         speedMs: Long,
         durationMs: Long,
-        requiresFaceDown: Boolean = false
+        requiresFaceDown: Boolean = false,
+        suppressDuringDnd: Boolean = false,
+        quietStartMinutes: Int = -1,
+        quietEndMinutes: Int = -1
     ) {
-        Log.e("HiLightPlus", "postAlert [key=$key]: pattern=$pattern, color=$color, durationMs=$durationMs, requiresFaceDown=$requiresFaceDown")
+        Log.e("HiLightPlus", "postAlert [key=$key]: pattern=$pattern, color=$color, durationMs=$durationMs, requiresFaceDown=$requiresFaceDown, suppressDuringDnd=$suppressDuringDnd")
         runRemote("postAlert") {
-            it.postAlert(key, pattern, color, brightness, speedMs, durationMs, requiresFaceDown)
+            it.postAlert(
+                key,
+                pattern,
+                color,
+                brightness,
+                speedMs,
+                durationMs,
+                requiresFaceDown,
+                suppressDuringDnd,
+                quietStartMinutes,
+                quietEndMinutes
+            )
         }
     }
 
@@ -300,15 +327,31 @@ class ShizukuBridge private constructor(private val app: Application) {
         color: Long,
         brightness: Float,
         speedMs: Long,
-        requiresFaceDown: Boolean = false
+        requiresFaceDown: Boolean = false,
+        suppressDuringDnd: Boolean = false,
+        quietStartMinutes: Int = -1,
+        quietEndMinutes: Int = -1
     ) {
         runRemote("startIncomingCall") {
-            it.startIncomingCall(pattern, color, brightness, speedMs, requiresFaceDown)
+            it.startIncomingCall(
+                pattern,
+                color,
+                brightness,
+                speedMs,
+                requiresFaceDown,
+                suppressDuringDnd,
+                quietStartMinutes,
+                quietEndMinutes
+            )
         }
     }
 
     fun setDeviceFaceDown(faceDown: Boolean) {
         runRemote("setDeviceFaceDown") { it.setDeviceFaceDown(faceDown) }
+    }
+
+    fun setDndActive(dndActive: Boolean) {
+        runRemote("setDndActive") { it.setDndActive(dndActive) }
     }
 
     fun stopIncomingCall() {

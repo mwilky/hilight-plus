@@ -13,7 +13,10 @@ internal class NotificationSlotTracker {
         val pattern: PatternMode,
         val color: Long,
         val contributors: Set<String>,
-        val requiresFaceDown: Boolean
+        val requiresFaceDown: Boolean,
+        val suppressDuringDnd: Boolean,
+        val quietStartMinutes: Int?,
+        val quietEndMinutes: Int?
     )
 
     data class AddResult(
@@ -36,7 +39,10 @@ internal class NotificationSlotTracker {
         slotId: String,
         pattern: PatternMode,
         color: Long,
-        requiresFaceDown: Boolean = false
+        requiresFaceDown: Boolean = false,
+        suppressDuringDnd: Boolean = false,
+        quietStartMinutes: Int? = null,
+        quietEndMinutes: Int? = null
     ): AddResult {
         val previous = sourceToSlot[sourceKey]?.let { slots[it] }
         val unchanged = previous != null &&
@@ -44,6 +50,9 @@ internal class NotificationSlotTracker {
             previous.pattern == pattern &&
             previous.color == color &&
             previous.requiresFaceDown == requiresFaceDown &&
+            previous.suppressDuringDnd == suppressDuringDnd &&
+            previous.quietStartMinutes == quietStartMinutes &&
+            previous.quietEndMinutes == quietEndMinutes &&
             sourceKey in previous.contributors
 
         val previousSlotId = sourceToSlot[sourceKey]
@@ -51,10 +60,15 @@ internal class NotificationSlotTracker {
             detach(sourceKey, previousSlotId)
         }
 
-        val slot = slots.getOrPut(slotId) { MutableSlot(slotId, pattern, color, requiresFaceDown) }
+        val slot = slots.getOrPut(slotId) {
+            MutableSlot(slotId, pattern, color, requiresFaceDown, suppressDuringDnd, quietStartMinutes, quietEndMinutes)
+        }
         slot.pattern = pattern
         slot.color = color
         slot.requiresFaceDown = requiresFaceDown
+        slot.suppressDuringDnd = suppressDuringDnd
+        slot.quietStartMinutes = quietStartMinutes
+        slot.quietEndMinutes = quietEndMinutes
         slot.contributors.add(sourceKey)
         sourceToSlot[sourceKey] = slotId
         latestSourceKey = sourceKey
@@ -108,8 +122,20 @@ internal class NotificationSlotTracker {
         var pattern: PatternMode,
         var color: Long,
         var requiresFaceDown: Boolean,
+        var suppressDuringDnd: Boolean,
+        var quietStartMinutes: Int?,
+        var quietEndMinutes: Int?,
         val contributors: MutableSet<String> = linkedSetOf()
     ) {
-        fun snapshot(): Slot = Slot(id, pattern, color, contributors.toSet(), requiresFaceDown)
+        fun snapshot(): Slot = Slot(
+            id,
+            pattern,
+            color,
+            contributors.toSet(),
+            requiresFaceDown,
+            suppressDuringDnd,
+            quietStartMinutes,
+            quietEndMinutes
+        )
     }
 }

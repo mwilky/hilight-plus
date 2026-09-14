@@ -139,7 +139,7 @@
     <string name="settings_unlock_none">None</string>
     <string name="settings_unlock_none_desc">Lights continue playing until the notification duration expires.</string>
     <string name="settings_unlock_pause">Pause</string>
-    <string name="settings_unlock_pause_desc">Lights stop while unlocked, and resume playing when locked again.</string>
+    <string name="settings_unlock_pause_desc">Lights stop while you are using the phone, and resume when you lock it or place it face down.</string>
     <string name="settings_unlock_clear">Clear</string>
     <string name="settings_unlock_clear_desc">Lights stop immediately and the active alert queue is cleared.</string>
     <string name="settings_cycle_title">Cycle multiple alerts</string>
@@ -161,9 +161,13 @@
     <string name="dialog_dnd_title">Do Not Disturb</string>
     <string name="dialog_dnd_desc_default">Reads the Do Not Disturb setting from the conditions page.</string>
     <string name="dialog_dnd_desc_always">Lights even when Do Not Disturb is on.</string>
+    <string name="dialog_dnd_desc_skip">Skips lights whenever Do Not Disturb is on, even if that switch is off on the conditions page.</string>
+    <string name="dialog_dnd_skip">Skip</string>
     <string name="dialog_quiet_hours_title">Quiet hours</string>
     <string name="dialog_quiet_hours_desc_default">Reads the quiet hours setting from the conditions page.</string>
     <string name="dialog_quiet_hours_desc_always">Lights even during the quiet hours window.</string>
+    <string name="dialog_quiet_hours_desc_skip">Skips lights during this rule’s own window. Starts from the times on the conditions page; you can change them here.</string>
+    <string name="dialog_quiet_hours_skip">Skip</string>
     <string name="dialog_mode_default">Default</string>
     <string name="dialog_mode_always">Still light</string>
     <string name="dialog_btn_save">Save</string>

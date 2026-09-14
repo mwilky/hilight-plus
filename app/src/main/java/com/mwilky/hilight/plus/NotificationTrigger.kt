@@ -36,6 +36,8 @@ class NotificationTrigger : NotificationListenerService() {
 
     @Volatile
     private var lastKnownCycling: Boolean? = null
+    @Volatile
+    private var lastUnlockBehavior = UnlockBehavior.NONE
 
     private val screenStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -68,6 +70,12 @@ class NotificationTrigger : NotificationListenerService() {
         scope.launch {
             AppStore.get(applicationContext).isCycleNotifications.collect { cycling ->
                 enqueue(ListenerEvent.CycleMode(cycling))
+            }
+        }
+        scope.launch {
+            AppStore.get(applicationContext).unlockBehavior.collect { behavior ->
+                lastUnlockBehavior = behavior
+                syncNotificationMonitor()
             }
         }
     }
@@ -104,6 +112,11 @@ class NotificationTrigger : NotificationListenerService() {
 
         val notification = sbn.notification ?: return
         enqueue(ListenerEvent.Posted(sbn.key, pkg, notification))
+    }
+
+    override fun onInterruptionFilterChanged(interruptionFilter: Int) {
+        super.onInterruptionFilterChanged(interruptionFilter)
+        LightController.get(this).setDndActive(isSystemDndActive(interruptionFilter))
     }
 
     private fun enqueue(event: ListenerEvent) {
@@ -143,6 +156,7 @@ class NotificationTrigger : NotificationListenerService() {
         val controller = LightController.get(applicationContext)
         val store = AppStore.get(applicationContext)
         val behavior = store.snapshot().unlockBehavior
+        lastUnlockBehavior = behavior
         when (action) {
             Intent.ACTION_USER_PRESENT -> {
                 when (behavior) {
@@ -150,8 +164,16 @@ class NotificationTrigger : NotificationListenerService() {
                         Log.d(TAG, "Screen unlocked -> UnlockBehavior.NONE: lights continue until timeout")
                     }
                     UnlockBehavior.PAUSE -> {
-                        Log.i(TAG, "Screen unlocked -> UnlockBehavior.PAUSE: pausing notification lights")
-                        controller.pauseAlerts()
+                        val faceDown = DeviceOrientationDetector.isDeviceFaceDown(applicationContext)
+                        controller.setDeviceFaceDown(faceDown)
+                        if (DevicePresence.isActivelyUsing(applicationContext, faceDown)) {
+                            Log.i(TAG, "Screen unlocked -> UnlockBehavior.PAUSE: pausing notification lights")
+                            controller.pauseAlerts()
+                        } else {
+                            Log.i(TAG, "Screen unlocked face down or idle -> leaving notification lights running")
+                            controller.resumeAlerts()
+                        }
+                        syncNotificationMonitor()
                     }
                     UnlockBehavior.CLEAR -> {
                         Log.i(TAG, "Screen unlocked -> UnlockBehavior.CLEAR: stopping lights and clearing alerts")
@@ -177,7 +199,12 @@ class NotificationTrigger : NotificationListenerService() {
             }
             Intent.ACTION_DREAMING_STOPPED -> {
                 DevicePresence.dreaming = false
-                if (behavior == UnlockBehavior.PAUSE && DevicePresence.isActivelyUsing(applicationContext)) {
+                if (behavior == UnlockBehavior.PAUSE &&
+                    DevicePresence.isActivelyUsing(
+                        applicationContext,
+                        DeviceOrientationDetector.lastKnownFaceDown
+                    )
+                ) {
                     Log.i(TAG, "Screensaver stopped -> restoring unlock pause")
                     controller.pauseAlerts()
                 }
@@ -195,26 +222,31 @@ class NotificationTrigger : NotificationListenerService() {
         if (!snapshot.isEnabled || !snapshot.isNotificationsEnabled) return
 
         val unlockBehavior = snapshot.unlockBehavior
+        lastUnlockBehavior = unlockBehavior
         val resolved = resolveAlert(snapshot, pkg, notification) ?: return
         val dndActive = isSystemDndActive(
             getSystemService(NotificationManager::class.java).currentInterruptionFilter
         )
-        if (snapshot.blocksArrival(resolved.dndMode, resolved.quietHoursMode, dndActive)) {
-            Log.i(TAG, "Ignoring notification from $pkg: DND or quiet hours")
-            return
-        }
+        controller.setDndActive(dndActive)
         val isCycle = snapshot.isCycleNotifications
         val requiresFaceDown = resolved.faceDownMode.requiresFaceDown(snapshot.isOnlyWhenFaceDown)
+        val suppressDuringDnd = snapshot.suppressesDuringDnd(resolved.dndMode)
+        val quietWindow = snapshot.quietWindowFor(
+            resolved.quietHoursMode,
+            resolved.quietStartMinutes,
+            resolved.quietEndMinutes
+        )
 
-        if (requiresFaceDown) {
+        val watchOrientation = requiresFaceDown || unlockBehavior == UnlockBehavior.PAUSE
+        if (watchOrientation) {
             DeviceOrientationDetector.retainMonitoring(applicationContext, DeviceOrientationDetector.TOKEN_NOTIFICATIONS)
         }
-        val faceDown = if (requiresFaceDown || unlockBehavior != UnlockBehavior.NONE) {
+        val faceDown = if (watchOrientation || unlockBehavior != UnlockBehavior.NONE) {
             DeviceOrientationDetector.isDeviceFaceDown(applicationContext)
         } else {
             DeviceOrientationDetector.lastKnownFaceDown
         }
-        if (requiresFaceDown) {
+        if (watchOrientation) {
             controller.setDeviceFaceDown(faceDown)
         }
 
@@ -232,7 +264,16 @@ class NotificationTrigger : NotificationListenerService() {
             }
         }
 
-        val added = tracker.add(event.key, resolved.slotId, resolved.pattern, resolved.color, requiresFaceDown)
+        val added = tracker.add(
+            event.key,
+            resolved.slotId,
+            resolved.pattern,
+            resolved.color,
+            requiresFaceDown,
+            suppressDuringDnd,
+            quietWindow?.first,
+            quietWindow?.second
+        )
         if (added.changed) {
             dispatchSlot(controller, snapshot, added.slot, isCycle)
         } else {
@@ -267,7 +308,9 @@ class NotificationTrigger : NotificationListenerService() {
         val color: Long,
         val faceDownMode: FaceDownMode,
         val dndMode: DndMode,
-        val quietHoursMode: QuietHoursMode
+        val quietHoursMode: QuietHoursMode,
+        val quietStartMinutes: Int? = null,
+        val quietEndMinutes: Int? = null
     )
 
     private fun resolveAlert(snapshot: SettingsSnapshot, pkg: String, notification: Notification): ResolvedAlert? {
@@ -285,7 +328,9 @@ class NotificationTrigger : NotificationListenerService() {
                 contactRule.color,
                 contactRule.faceDownMode,
                 contactRule.dndMode,
-                contactRule.quietHoursMode
+                contactRule.quietHoursMode,
+                contactRule.quietHoursStartMinutes,
+                contactRule.quietHoursEndMinutes
             )
         }
 
@@ -307,7 +352,9 @@ class NotificationTrigger : NotificationListenerService() {
                 color,
                 appRule.faceDownMode,
                 appRule.dndMode,
-                appRule.quietHoursMode
+                appRule.quietHoursMode,
+                appRule.quietHoursStartMinutes,
+                appRule.quietHoursEndMinutes
             )
         }
 
@@ -336,7 +383,9 @@ class NotificationTrigger : NotificationListenerService() {
             color = defaultColor,
             faceDownMode = snapshot.defaultNotifFaceDownMode,
             dndMode = snapshot.defaultNotifDndMode,
-            quietHoursMode = snapshot.defaultNotifQuietHoursMode
+            quietHoursMode = snapshot.defaultNotifQuietHoursMode,
+            quietStartMinutes = snapshot.defaultNotifQuietHoursStartMinutes,
+            quietEndMinutes = snapshot.defaultNotifQuietHoursEndMinutes
         )
     }
 
@@ -352,7 +401,10 @@ class NotificationTrigger : NotificationListenerService() {
                 pattern = slot.pattern,
                 color = slot.color,
                 durationMs = 0L,
-                requiresFaceDown = slot.requiresFaceDown
+                requiresFaceDown = slot.requiresFaceDown,
+                suppressDuringDnd = slot.suppressDuringDnd,
+                quietStartMinutes = slot.quietStartMinutes,
+                quietEndMinutes = slot.quietEndMinutes
             )
         } else {
             val durationMs = snapshot.notificationDurationSeconds.coerceIn(5, 300) * 1000L
@@ -360,7 +412,10 @@ class NotificationTrigger : NotificationListenerService() {
                 pattern = slot.pattern,
                 color = slot.color,
                 durationMs = durationMs,
-                requiresFaceDown = slot.requiresFaceDown
+                requiresFaceDown = slot.requiresFaceDown,
+                suppressDuringDnd = slot.suppressDuringDnd,
+                quietStartMinutes = slot.quietStartMinutes,
+                quietEndMinutes = slot.quietEndMinutes
             )
         }
     }
@@ -368,13 +423,17 @@ class NotificationTrigger : NotificationListenerService() {
     private suspend fun applyModeChange(cycling: Boolean) {
         val controller = LightController.get(applicationContext)
         val snapshot = AppStore.get(applicationContext).snapshot()
-        if (snapshot.unlockBehavior == UnlockBehavior.PAUSE &&
-            DevicePresence.isActivelyUsing(applicationContext)
-        ) {
-            controller.pauseAlerts()
-        }
-        if (tracker.hasRestrictedSlot()) {
-            controller.setDeviceFaceDown(DeviceOrientationDetector.isDeviceFaceDown(applicationContext))
+        lastUnlockBehavior = snapshot.unlockBehavior
+        val faceDown = DeviceOrientationDetector.isDeviceFaceDown(applicationContext)
+        if (snapshot.unlockBehavior == UnlockBehavior.PAUSE) {
+            controller.setDeviceFaceDown(faceDown)
+            if (DevicePresence.isActivelyUsing(applicationContext, faceDown)) {
+                controller.pauseAlerts()
+            } else {
+                controller.resumeAlerts()
+            }
+        } else if (tracker.hasRestrictedSlot()) {
+            controller.setDeviceFaceDown(faceDown)
         }
         controller.clearAlert()
         if (cycling) {
@@ -408,7 +467,9 @@ class NotificationTrigger : NotificationListenerService() {
     }
 
     private fun syncNotificationMonitor() {
-        if (tracker.hasRestrictedSlot()) {
+        val watchOrientation = tracker.hasRestrictedSlot() ||
+            (tracker.sourceCount > 0 && lastUnlockBehavior == UnlockBehavior.PAUSE)
+        if (watchOrientation) {
             DeviceOrientationDetector.retainMonitoring(applicationContext, DeviceOrientationDetector.TOKEN_NOTIFICATIONS)
         } else {
             DeviceOrientationDetector.releaseMonitoring(DeviceOrientationDetector.TOKEN_NOTIFICATIONS)

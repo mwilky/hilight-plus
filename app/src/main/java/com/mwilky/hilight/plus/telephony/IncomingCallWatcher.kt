@@ -16,9 +16,10 @@ import com.mwilky.hilight.plus.LightController
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.SettingsSnapshot
-import com.mwilky.hilight.plus.blocksArrival
 import com.mwilky.hilight.plus.core.DeviceOrientationDetector
 import com.mwilky.hilight.plus.isSystemDndActive
+import com.mwilky.hilight.plus.quietWindowFor
+import com.mwilky.hilight.plus.suppressesDuringDnd
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -134,6 +135,8 @@ internal object IncomingCallProcessor {
                 matchedRule.faceDownMode,
                 matchedRule.dndMode,
                 matchedRule.quietHoursMode,
+                matchedRule.quietHoursStartMinutes,
+                matchedRule.quietHoursEndMinutes,
                 matchedRule.pattern,
                 matchedRule.color
             )
@@ -160,24 +163,32 @@ internal object IncomingCallProcessor {
         faceDownMode: FaceDownMode,
         dndMode: DndMode,
         quietHoursMode: QuietHoursMode,
+        quietStartMinutes: Int?,
+        quietEndMinutes: Int?,
         pattern: PatternMode,
         color: Long
     ) {
         val dndActive = isSystemDndActive(
             context.getSystemService(NotificationManager::class.java).currentInterruptionFilter
         )
-        if (snapshot.blocksArrival(dndMode, quietHoursMode, dndActive)) {
-            Log.i(TAG, "Call lights suppressed by DND or quiet hours")
-            return
-        }
+        controller.setDndActive(dndActive)
         val requiresFaceDown = faceDownMode.requiresFaceDown(snapshot.isOnlyWhenFaceDown)
+        val suppressDuringDnd = snapshot.suppressesDuringDnd(dndMode)
+        val quietWindow = snapshot.quietWindowFor(quietHoursMode, quietStartMinutes, quietEndMinutes)
         if (requiresFaceDown) {
             DeviceOrientationDetector.retainMonitoring(context, DeviceOrientationDetector.TOKEN_CALL)
             controller.setDeviceFaceDown(DeviceOrientationDetector.isDeviceFaceDown(context))
         } else {
             DeviceOrientationDetector.releaseMonitoring(DeviceOrientationDetector.TOKEN_CALL)
         }
-        controller.startIncomingCallAlert(pattern = pattern, color = color, requiresFaceDown = requiresFaceDown)
+        controller.startIncomingCallAlert(
+            pattern = pattern,
+            color = color,
+            requiresFaceDown = requiresFaceDown,
+            suppressDuringDnd = suppressDuringDnd,
+            quietStartMinutes = quietWindow?.first,
+            quietEndMinutes = quietWindow?.second
+        )
     }
 
     private suspend fun triggerOtherContactsAlert(
@@ -196,6 +207,8 @@ internal object IncomingCallProcessor {
                 snapshot.otherContactsFaceDownMode,
                 snapshot.otherContactsDndMode,
                 snapshot.otherContactsQuietHoursMode,
+                snapshot.otherContactsQuietHoursStartMinutes,
+                snapshot.otherContactsQuietHoursEndMinutes,
                 pattern,
                 color
             )
@@ -220,6 +233,8 @@ internal object IncomingCallProcessor {
                 snapshot.unknownNumbersFaceDownMode,
                 snapshot.unknownNumbersDndMode,
                 snapshot.unknownNumbersQuietHoursMode,
+                snapshot.unknownNumbersQuietHoursStartMinutes,
+                snapshot.unknownNumbersQuietHoursEndMinutes,
                 pattern,
                 color
             )

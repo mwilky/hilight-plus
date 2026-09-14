@@ -1,6 +1,5 @@
 package com.mwilky.hilight.plus.ui
 
-import android.text.format.DateFormat
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -21,7 +20,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mwilky.hilight.plus.LightController
 import com.mwilky.hilight.plus.R
 import kotlinx.coroutines.launch
-import java.util.Calendar
 
 /**
  * Conditions Screen:
@@ -281,45 +279,6 @@ private fun QuietHoursCard(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun QuietHoursTimePickerDialog(
-    title: String,
-    initialMinutes: Int,
-    onDismiss: () -> Unit,
-    onConfirm: (Int) -> Unit
-) {
-    val context = LocalContext.current
-    val state = rememberTimePickerState(
-        initialHour = (initialMinutes / 60).mod(24),
-        initialMinute = initialMinutes.mod(60),
-        is24Hour = DateFormat.is24HourFormat(context)
-    )
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = { TimePicker(state = state) },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(state.hour * 60 + state.minute) }) {
-                Text(stringResource(R.string.dialog_btn_save))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.dialog_btn_cancel))
-            }
-        }
-    )
-}
-
-private fun formatClockMinutes(context: android.content.Context, minutes: Int): String {
-    val cal = Calendar.getInstance().apply {
-        set(Calendar.HOUR_OF_DAY, (minutes / 60).mod(24))
-        set(Calendar.MINUTE, minutes.mod(60))
-        set(Calendar.SECOND, 0)
-    }
-    return DateFormat.getTimeFormat(context).format(cal.time)
-}
 
 @Preview(name = "Conditions Screen Preview", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable

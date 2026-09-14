@@ -1,23 +1,53 @@
 package com.mwilky.hilight.plus.core
 
+import com.mwilky.hilight.plus.isInQuietHoursWindow
+
 /**
  * Composed visibility for alerts. Unlock pause and an active call hide notifications;
- * face-down restriction is per-alert and does not use the unlock pause flag.
+ * face-down, DND, and quiet hours are per-alert and do not use the unlock pause flag.
  */
 internal object AlertRenderPolicy {
 
-    fun canShowAlert(requiresFaceDown: Boolean, deviceFaceDown: Boolean): Boolean {
-        return !requiresFaceDown || deviceFaceDown
+    fun canShowAlert(
+        requiresFaceDown: Boolean,
+        deviceFaceDown: Boolean,
+        suppressDuringDnd: Boolean = false,
+        dndActive: Boolean = false,
+        quietStartMinutes: Int? = null,
+        quietEndMinutes: Int? = null,
+        nowMinutes: Int = 0
+    ): Boolean {
+        if (requiresFaceDown && !deviceFaceDown) return false
+        if (suppressDuringDnd && dndActive) return false
+        if (quietStartMinutes != null && quietEndMinutes != null &&
+            isInQuietHoursWindow(nowMinutes, quietStartMinutes, quietEndMinutes)
+        ) {
+            return false
+        }
+        return true
     }
 
     fun canShowNotification(
         unlockPaused: Boolean,
         callActive: Boolean,
         requiresFaceDown: Boolean,
-        deviceFaceDown: Boolean
+        deviceFaceDown: Boolean,
+        suppressDuringDnd: Boolean = false,
+        dndActive: Boolean = false,
+        quietStartMinutes: Int? = null,
+        quietEndMinutes: Int? = null,
+        nowMinutes: Int = 0
     ): Boolean {
         if (unlockPaused || callActive) return false
-        return canShowAlert(requiresFaceDown, deviceFaceDown)
+        return canShowAlert(
+            requiresFaceDown,
+            deviceFaceDown,
+            suppressDuringDnd,
+            dndActive,
+            quietStartMinutes,
+            quietEndMinutes,
+            nowMinutes
+        )
     }
 
     fun firstEligibleIndex(

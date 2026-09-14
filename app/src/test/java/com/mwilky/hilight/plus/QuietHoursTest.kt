@@ -1,7 +1,9 @@
 package com.mwilky.hilight.plus
 
 import android.app.NotificationManager
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -50,6 +52,12 @@ class DndModeTest {
         assertFalse(DndMode.ALWAYS.blockedBy(globalEnabled = true, dndActive = true))
         assertFalse(DndMode.ALWAYS.blockedBy(globalEnabled = false, dndActive = false))
     }
+
+    @Test
+    fun skipBlocksWheneverDndIsActive() {
+        assertTrue(DndMode.SKIP.blockedBy(globalEnabled = false, dndActive = true))
+        assertFalse(DndMode.SKIP.blockedBy(globalEnabled = true, dndActive = false))
+    }
 }
 
 class QuietHoursModeTest {
@@ -64,6 +72,12 @@ class QuietHoursModeTest {
     @Test
     fun alwaysNeverBlocks() {
         assertFalse(QuietHoursMode.ALWAYS.blockedBy(globalEnabled = true, inQuietHours = true))
+    }
+
+    @Test
+    fun skipBlocksWheneverTheWindowIsActive() {
+        assertTrue(QuietHoursMode.SKIP.blockedBy(globalEnabled = false, inQuietHours = true))
+        assertFalse(QuietHoursMode.SKIP.blockedBy(globalEnabled = true, inQuietHours = false))
     }
 }
 
@@ -81,6 +95,56 @@ class ArrivalConditionTest {
     fun alwaysBypassesBothConditions() {
         val snapshot = snapshot(suppressDnd = true, quietEnabled = true, quietStart = 22 * 60, quietEnd = 7 * 60)
         assertFalse(snapshot.blocksArrival(DndMode.ALWAYS, QuietHoursMode.ALWAYS, dndActive = true, nowMinutes = 23 * 60))
+    }
+
+    @Test
+    fun skipAppliesEvenWhenTheGlobalSwitchIsOff() {
+        val snapshot = snapshot(suppressDnd = false, quietEnabled = false, quietStart = 22 * 60, quietEnd = 7 * 60)
+        assertTrue(snapshot.blocksArrival(DndMode.SKIP, QuietHoursMode.INHERIT, dndActive = true, nowMinutes = 12 * 60))
+        assertTrue(snapshot.blocksArrival(DndMode.INHERIT, QuietHoursMode.SKIP, dndActive = false, nowMinutes = 23 * 60))
+        assertFalse(snapshot.blocksArrival(DndMode.SKIP, QuietHoursMode.SKIP, dndActive = false, nowMinutes = 12 * 60))
+    }
+
+    @Test
+    fun inheritStoresALiveDndSuppressFlagWhenTheSwitchIsOn() {
+        val snapshot = snapshot(suppressDnd = true, quietEnabled = false, quietStart = 22 * 60, quietEnd = 7 * 60)
+        assertTrue(snapshot.suppressesDuringDnd(DndMode.INHERIT))
+        assertFalse(snapshot.suppressesDuringDnd(DndMode.ALWAYS))
+        assertNull(snapshot.quietWindowFor(QuietHoursMode.INHERIT))
+    }
+
+    @Test
+    fun skipStoresAQuietWindowEvenWhenTheSwitchIsOff() {
+        val snapshot = snapshot(suppressDnd = false, quietEnabled = false, quietStart = 22 * 60, quietEnd = 7 * 60)
+        assertEquals(12 * 60 to 14 * 60, snapshot.quietWindowFor(QuietHoursMode.SKIP, 12 * 60, 14 * 60))
+        assertEquals(22 * 60 to 7 * 60, snapshot.quietWindowFor(QuietHoursMode.SKIP))
+        assertTrue(snapshot.suppressesDuringDnd(DndMode.SKIP))
+        assertFalse(snapshot.suppressesDuringDnd(DndMode.INHERIT))
+    }
+
+    @Test
+    fun skipUsesTheRuleWindowInsteadOfTheConditionsPage() {
+        val snapshot = snapshot(suppressDnd = false, quietEnabled = false, quietStart = 22 * 60, quietEnd = 7 * 60)
+        assertTrue(
+            snapshot.blocksArrival(
+                DndMode.INHERIT,
+                QuietHoursMode.SKIP,
+                dndActive = false,
+                nowMinutes = 13 * 60,
+                quietStartMinutes = 12 * 60,
+                quietEndMinutes = 14 * 60
+            )
+        )
+        assertFalse(
+            snapshot.blocksArrival(
+                DndMode.INHERIT,
+                QuietHoursMode.SKIP,
+                dndActive = false,
+                nowMinutes = 23 * 60,
+                quietStartMinutes = 12 * 60,
+                quietEndMinutes = 14 * 60
+            )
+        )
     }
 
     @Test
@@ -112,12 +176,16 @@ class ArrivalConditionTest {
         otherContactsFaceDownMode = FaceDownMode.INHERIT,
         otherContactsDndMode = DndMode.INHERIT,
         otherContactsQuietHoursMode = QuietHoursMode.INHERIT,
+        otherContactsQuietHoursStartMinutes = null,
+        otherContactsQuietHoursEndMinutes = null,
         isUnknownNumbersEnabled = true,
         unknownNumbersColor = 0L,
         unknownNumbersPattern = PatternMode.PULSE,
         unknownNumbersFaceDownMode = FaceDownMode.INHERIT,
         unknownNumbersDndMode = DndMode.INHERIT,
         unknownNumbersQuietHoursMode = QuietHoursMode.INHERIT,
+        unknownNumbersQuietHoursStartMinutes = null,
+        unknownNumbersQuietHoursEndMinutes = null,
         isNotificationsEnabled = true,
         notificationDurationSeconds = 30,
         unlockBehavior = UnlockBehavior.NONE,
@@ -129,6 +197,8 @@ class ArrivalConditionTest {
         isDefaultNotifAutoColor = true,
         defaultNotifDndMode = DndMode.INHERIT,
         defaultNotifQuietHoursMode = QuietHoursMode.INHERIT,
+        defaultNotifQuietHoursStartMinutes = null,
+        defaultNotifQuietHoursEndMinutes = null,
         messageContactRules = emptyList(),
         appRules = emptyList()
     )

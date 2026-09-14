@@ -55,18 +55,26 @@ enum class FaceDownMode(val id: String) {
 
 enum class DndMode(val id: String) {
     INHERIT("inherit"),
-    ALWAYS("always");
+    ALWAYS("always"),
+    SKIP("skip");
 
-    fun blockedBy(globalEnabled: Boolean, dndActive: Boolean): Boolean =
-        this == INHERIT && globalEnabled && dndActive
+    fun blockedBy(globalEnabled: Boolean, dndActive: Boolean): Boolean = when (this) {
+        ALWAYS -> false
+        SKIP -> dndActive
+        INHERIT -> globalEnabled && dndActive
+    }
 }
 
 enum class QuietHoursMode(val id: String) {
     INHERIT("inherit"),
-    ALWAYS("always");
+    ALWAYS("always"),
+    SKIP("skip");
 
-    fun blockedBy(globalEnabled: Boolean, inQuietHours: Boolean): Boolean =
-        this == INHERIT && globalEnabled && inQuietHours
+    fun blockedBy(globalEnabled: Boolean, inQuietHours: Boolean): Boolean = when (this) {
+        ALWAYS -> false
+        SKIP -> inQuietHours
+        INHERIT -> globalEnabled && inQuietHours
+    }
 }
 
 data class LightStyle(
@@ -87,7 +95,9 @@ data class ContactRule(
     val isEnabled: Boolean = true,
     val faceDownMode: FaceDownMode = FaceDownMode.INHERIT,
     val dndMode: DndMode = DndMode.INHERIT,
-    val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT
+    val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT,
+    val quietHoursStartMinutes: Int? = null,
+    val quietHoursEndMinutes: Int? = null
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
@@ -98,6 +108,8 @@ data class ContactRule(
         put("faceDownMode", faceDownMode.name)
         put("dndMode", dndMode.name)
         put("quietHoursMode", quietHoursMode.name)
+        putOptionalMinutes("quietHoursStartMinutes", quietHoursStartMinutes)
+        putOptionalMinutes("quietHoursEndMinutes", quietHoursEndMinutes)
     }
 
     companion object {
@@ -118,7 +130,9 @@ data class ContactRule(
                 isEnabled = json.optBoolean("isEnabled", true),
                 faceDownMode = faceDown,
                 dndMode = dnd,
-                quietHoursMode = quiet
+                quietHoursMode = quiet,
+                quietHoursStartMinutes = json.optionalMinutes("quietHoursStartMinutes"),
+                quietHoursEndMinutes = json.optionalMinutes("quietHoursEndMinutes")
             )
         }
     }
@@ -135,7 +149,9 @@ data class MessageContactRule(
     val isEnabled: Boolean = true,
     val faceDownMode: FaceDownMode = FaceDownMode.INHERIT,
     val dndMode: DndMode = DndMode.INHERIT,
-    val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT
+    val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT,
+    val quietHoursStartMinutes: Int? = null,
+    val quietHoursEndMinutes: Int? = null
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
@@ -146,6 +162,8 @@ data class MessageContactRule(
         put("faceDownMode", faceDownMode.name)
         put("dndMode", dndMode.name)
         put("quietHoursMode", quietHoursMode.name)
+        putOptionalMinutes("quietHoursStartMinutes", quietHoursStartMinutes)
+        putOptionalMinutes("quietHoursEndMinutes", quietHoursEndMinutes)
     }
 
     companion object {
@@ -166,7 +184,9 @@ data class MessageContactRule(
                 isEnabled = json.optBoolean("isEnabled", true),
                 faceDownMode = faceDown,
                 dndMode = dnd,
-                quietHoursMode = quiet
+                quietHoursMode = quiet,
+                quietHoursStartMinutes = json.optionalMinutes("quietHoursStartMinutes"),
+                quietHoursEndMinutes = json.optionalMinutes("quietHoursEndMinutes")
             )
         }
     }
@@ -184,7 +204,9 @@ data class AppNotificationRule(
     val faceDownMode: FaceDownMode = FaceDownMode.INHERIT,
     val isAutoColor: Boolean = true,
     val dndMode: DndMode = DndMode.INHERIT,
-    val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT
+    val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT,
+    val quietHoursStartMinutes: Int? = null,
+    val quietHoursEndMinutes: Int? = null
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("packageName", packageName)
@@ -196,6 +218,8 @@ data class AppNotificationRule(
         put("isAutoColor", isAutoColor)
         put("dndMode", dndMode.name)
         put("quietHoursMode", quietHoursMode.name)
+        putOptionalMinutes("quietHoursStartMinutes", quietHoursStartMinutes)
+        putOptionalMinutes("quietHoursEndMinutes", quietHoursEndMinutes)
     }
 
     companion object {
@@ -217,8 +241,17 @@ data class AppNotificationRule(
                 faceDownMode = faceDown,
                 isAutoColor = json.optBoolean("isAutoColor", true),
                 dndMode = dnd,
-                quietHoursMode = quiet
+                quietHoursMode = quiet,
+                quietHoursStartMinutes = json.optionalMinutes("quietHoursStartMinutes"),
+                quietHoursEndMinutes = json.optionalMinutes("quietHoursEndMinutes")
             )
         }
     }
+}
+
+private fun JSONObject.optionalMinutes(key: String): Int? =
+    if (has(key) && !isNull(key)) optInt(key) else null
+
+private fun JSONObject.putOptionalMinutes(key: String, value: Int?) {
+    if (value != null) put(key, value)
 }

@@ -52,6 +52,56 @@ class AlertRenderPolicyTest {
     }
 
     @Test
+    fun dndHidesEvenWhenFaceDown() {
+        assertFalse(
+            AlertRenderPolicy.canShowAlert(
+                requiresFaceDown = true,
+                deviceFaceDown = true,
+                suppressDuringDnd = true,
+                dndActive = true
+            )
+        )
+        assertTrue(
+            AlertRenderPolicy.canShowAlert(
+                requiresFaceDown = true,
+                deviceFaceDown = true,
+                suppressDuringDnd = true,
+                dndActive = false
+            )
+        )
+        assertTrue(
+            AlertRenderPolicy.canShowAlert(
+                requiresFaceDown = false,
+                deviceFaceDown = false,
+                suppressDuringDnd = false,
+                dndActive = true
+            )
+        )
+    }
+
+    @Test
+    fun quietHoursHideWhileInsideTheWindow() {
+        assertFalse(
+            AlertRenderPolicy.canShowAlert(
+                requiresFaceDown = false,
+                deviceFaceDown = false,
+                quietStartMinutes = 22 * 60,
+                quietEndMinutes = 7 * 60,
+                nowMinutes = 23 * 60
+            )
+        )
+        assertTrue(
+            AlertRenderPolicy.canShowAlert(
+                requiresFaceDown = false,
+                deviceFaceDown = false,
+                quietStartMinutes = 22 * 60,
+                quietEndMinutes = 7 * 60,
+                nowMinutes = 12 * 60
+            )
+        )
+    }
+
+    @Test
     fun cyclingSkipsRestrictedSlotsWhileFaceUp() {
         val flags = listOf(true, false, true)
         assertEquals(1, AlertRenderPolicy.firstEligibleIndex(flags, deviceFaceDown = false, startIndex = 0))

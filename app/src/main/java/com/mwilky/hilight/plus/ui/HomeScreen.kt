@@ -102,12 +102,18 @@ fun HomeScreen(
     val otherContactsFaceDown by viewModel.otherContactsFaceDownMode.collectAsStateWithLifecycle()
     val otherContactsDnd by viewModel.otherContactsDndMode.collectAsStateWithLifecycle()
     val otherContactsQuiet by viewModel.otherContactsQuietHoursMode.collectAsStateWithLifecycle()
+    val otherContactsQuietStart by viewModel.otherContactsQuietHoursStartMinutes.collectAsStateWithLifecycle()
+    val otherContactsQuietEnd by viewModel.otherContactsQuietHoursEndMinutes.collectAsStateWithLifecycle()
+    val conditionsQuietStart by viewModel.quietHoursStartMinutes.collectAsStateWithLifecycle()
+    val conditionsQuietEnd by viewModel.quietHoursEndMinutes.collectAsStateWithLifecycle()
     val isUnknownNumbersEnabled by viewModel.isUnknownNumbersEnabled.collectAsStateWithLifecycle()
     val unknownNumbersColor by viewModel.unknownNumbersColor.collectAsStateWithLifecycle()
     val unknownNumbersPattern by viewModel.unknownNumbersPattern.collectAsStateWithLifecycle()
     val unknownNumbersFaceDown by viewModel.unknownNumbersFaceDownMode.collectAsStateWithLifecycle()
     val unknownNumbersDnd by viewModel.unknownNumbersDndMode.collectAsStateWithLifecycle()
     val unknownNumbersQuiet by viewModel.unknownNumbersQuietHoursMode.collectAsStateWithLifecycle()
+    val unknownNumbersQuietStart by viewModel.unknownNumbersQuietHoursStartMinutes.collectAsStateWithLifecycle()
+    val unknownNumbersQuietEnd by viewModel.unknownNumbersQuietHoursEndMinutes.collectAsStateWithLifecycle()
     val callContactRules by viewModel.callContactRules.collectAsStateWithLifecycle()
 
     val isNotifsEnabled by viewModel.isNotifsEnabled.collectAsStateWithLifecycle()
@@ -121,6 +127,8 @@ fun HomeScreen(
     val isDefaultNotifAutoColor by viewModel.isDefaultNotifAutoColor.collectAsStateWithLifecycle()
     val defaultNotifDnd by viewModel.defaultNotifDndMode.collectAsStateWithLifecycle()
     val defaultNotifQuiet by viewModel.defaultNotifQuietHoursMode.collectAsStateWithLifecycle()
+    val defaultNotifQuietStart by viewModel.defaultNotifQuietHoursStartMinutes.collectAsStateWithLifecycle()
+    val defaultNotifQuietEnd by viewModel.defaultNotifQuietHoursEndMinutes.collectAsStateWithLifecycle()
     val messageContactRules by viewModel.messageContactRules.collectAsStateWithLifecycle()
     val appRules by viewModel.appRules.collectAsStateWithLifecycle()
 
@@ -302,6 +310,8 @@ fun HomeScreen(
             initialFaceDown = rule.faceDownMode,
             initialDnd = rule.dndMode,
             initialQuietHours = rule.quietHoursMode,
+            initialQuietStart = rule.quietHoursStartMinutes ?: conditionsQuietStart,
+            initialQuietEnd = rule.quietHoursEndMinutes ?: conditionsQuietEnd,
             renderer = renderer,
             onDismiss = { callRuleBeingEdited = null },
             onSave = { result ->
@@ -311,7 +321,9 @@ fun HomeScreen(
                         color = result.color,
                         faceDownMode = result.faceDown,
                         dndMode = result.dndMode,
-                        quietHoursMode = result.quietHoursMode
+                        quietHoursMode = result.quietHoursMode,
+                        quietHoursStartMinutes = result.quietHoursStartMinutes,
+                        quietHoursEndMinutes = result.quietHoursEndMinutes
                     )
                 )
                 callRuleBeingEdited = null
@@ -328,6 +340,8 @@ fun HomeScreen(
             initialFaceDown = otherContactsFaceDown,
             initialDnd = otherContactsDnd,
             initialQuietHours = otherContactsQuiet,
+            initialQuietStart = otherContactsQuietStart ?: conditionsQuietStart,
+            initialQuietEnd = otherContactsQuietEnd ?: conditionsQuietEnd,
             renderer = renderer,
             onDismiss = { isConfiguringOtherContacts = false },
             onSave = { result ->
@@ -336,7 +350,9 @@ fun HomeScreen(
                     result.color,
                     result.faceDown,
                     result.dndMode,
-                    result.quietHoursMode
+                    result.quietHoursMode,
+                    result.quietHoursStartMinutes,
+                    result.quietHoursEndMinutes
                 )
                 isConfiguringOtherContacts = false
             }
@@ -352,6 +368,8 @@ fun HomeScreen(
             initialFaceDown = unknownNumbersFaceDown,
             initialDnd = unknownNumbersDnd,
             initialQuietHours = unknownNumbersQuiet,
+            initialQuietStart = unknownNumbersQuietStart ?: conditionsQuietStart,
+            initialQuietEnd = unknownNumbersQuietEnd ?: conditionsQuietEnd,
             renderer = renderer,
             onDismiss = { isConfiguringUnknownNumbers = false },
             onSave = { result ->
@@ -360,7 +378,9 @@ fun HomeScreen(
                     result.color,
                     result.faceDown,
                     result.dndMode,
-                    result.quietHoursMode
+                    result.quietHoursMode,
+                    result.quietHoursStartMinutes,
+                    result.quietHoursEndMinutes
                 )
                 isConfiguringUnknownNumbers = false
             }
@@ -397,6 +417,8 @@ fun HomeScreen(
             initialFaceDown = rule.faceDownMode,
             initialDnd = rule.dndMode,
             initialQuietHours = rule.quietHoursMode,
+            initialQuietStart = rule.quietHoursStartMinutes ?: conditionsQuietStart,
+            initialQuietEnd = rule.quietHoursEndMinutes ?: conditionsQuietEnd,
             renderer = renderer,
             onDismiss = { msgRuleBeingEdited = null },
             onSave = { result ->
@@ -406,7 +428,9 @@ fun HomeScreen(
                         color = result.color,
                         faceDownMode = result.faceDown,
                         dndMode = result.dndMode,
-                        quietHoursMode = result.quietHoursMode
+                        quietHoursMode = result.quietHoursMode,
+                        quietHoursStartMinutes = result.quietHoursStartMinutes,
+                        quietHoursEndMinutes = result.quietHoursEndMinutes
                     )
                 )
                 msgRuleBeingEdited = null
@@ -427,6 +451,8 @@ fun HomeScreen(
             initialFaceDown = rule.faceDownMode,
             initialDnd = rule.dndMode,
             initialQuietHours = rule.quietHoursMode,
+            initialQuietStart = rule.quietHoursStartMinutes ?: conditionsQuietStart,
+            initialQuietEnd = rule.quietHoursEndMinutes ?: conditionsQuietEnd,
             showAutoColorToggle = true,
             initialAutoColor = rule.isAutoColor,
             autoExtractedColor = autoColor,
@@ -440,7 +466,9 @@ fun HomeScreen(
                         faceDownMode = result.faceDown,
                         isAutoColor = result.autoColor,
                         dndMode = result.dndMode,
-                        quietHoursMode = result.quietHoursMode
+                        quietHoursMode = result.quietHoursMode,
+                        quietHoursStartMinutes = result.quietHoursStartMinutes,
+                        quietHoursEndMinutes = result.quietHoursEndMinutes
                     )
                 )
                 appRuleBeingEdited = null
@@ -457,6 +485,8 @@ fun HomeScreen(
             initialFaceDown = defaultNotifFaceDown,
             initialDnd = defaultNotifDnd,
             initialQuietHours = defaultNotifQuiet,
+            initialQuietStart = defaultNotifQuietStart ?: conditionsQuietStart,
+            initialQuietEnd = defaultNotifQuietEnd ?: conditionsQuietEnd,
             showAutoColorToggle = true,
             initialAutoColor = isDefaultNotifAutoColor,
             autoExtractedColor = null,
@@ -469,7 +499,9 @@ fun HomeScreen(
                     result.faceDown,
                     result.autoColor,
                     result.dndMode,
-                    result.quietHoursMode
+                    result.quietHoursMode,
+                    result.quietHoursStartMinutes,
+                    result.quietHoursEndMinutes
                 )
                 isConfiguringDefaultNotif = false
             }
@@ -601,43 +633,19 @@ fun HomeContent(
                     },
                     scrollBehavior = scrollBehavior
                 )
-                SingleChoiceSegmentedButtonRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
-                        .padding(bottom = 12.dp)
-                ) {
-                    val panes = listOf(
-                        Triple(0, Icons.Rounded.Call, R.string.home_tab_calls),
-                        Triple(1, Icons.Rounded.Notifications, R.string.home_tab_notifications)
+                PrimaryTabRow(selectedTabIndex = selectedTab) {
+                    Tab(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        text = { Text(stringResource(R.string.home_tab_calls)) },
+                        icon = { Icon(Icons.Rounded.Call, contentDescription = null) }
                     )
-                    panes.forEach { (index, icon, labelRes) ->
-                        val selected = selectedTab == index
-                        SegmentedButton(
-                            selected = selected,
-                            onClick = { selectedTab = index },
-                            shape = SegmentedButtonDefaults.itemShape(index = index, count = panes.size),
-                            icon = {
-                                Icon(
-                                    icon,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            },
-                            colors = SegmentedButtonDefaults.colors(
-                                activeContainerColor = MaterialTheme.colorScheme.primary,
-                                activeContentColor = MaterialTheme.colorScheme.onPrimary,
-                                inactiveContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                            ),
-                            label = {
-                                Text(
-                                    text = stringResource(labelRes),
-                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
-                                )
-                            }
-                        )
-                    }
+                    Tab(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        text = { Text(stringResource(R.string.home_tab_notifications)) },
+                        icon = { Icon(Icons.Rounded.Notifications, contentDescription = null) }
+                    )
                 }
             }
         }
@@ -1098,7 +1106,9 @@ data class RuleEditorResult(
     val faceDown: FaceDownMode,
     val autoColor: Boolean,
     val dndMode: DndMode,
-    val quietHoursMode: QuietHoursMode
+    val quietHoursMode: QuietHoursMode,
+    val quietHoursStartMinutes: Int,
+    val quietHoursEndMinutes: Int
 )
 
 /**
@@ -1116,6 +1126,8 @@ fun CustomRuleDialog(
     initialFaceDown: FaceDownMode = FaceDownMode.INHERIT,
     initialDnd: DndMode = DndMode.INHERIT,
     initialQuietHours: QuietHoursMode = QuietHoursMode.INHERIT,
+    initialQuietStart: Int = 22 * 60,
+    initialQuietEnd: Int = 7 * 60,
     showAutoColorToggle: Boolean = false,
     initialAutoColor: Boolean = true,
     autoExtractedColor: Long? = null
@@ -1130,6 +1142,10 @@ fun CustomRuleDialog(
     var selectedFaceDown by remember(initialFaceDown) { mutableStateOf(initialFaceDown) }
     var selectedDnd by remember(initialDnd) { mutableStateOf(initialDnd) }
     var selectedQuietHours by remember(initialQuietHours) { mutableStateOf(initialQuietHours) }
+    var quietStartMinutes by remember(initialQuietStart) { mutableIntStateOf(initialQuietStart) }
+    var quietEndMinutes by remember(initialQuietEnd) { mutableIntStateOf(initialQuietEnd) }
+    var editingQuietStart by remember { mutableStateOf(false) }
+    var editingQuietEnd by remember { mutableStateOf(false) }
     var dialogPreviewFrames by remember { mutableStateOf(IntArray(8) { 0x00000000 }) }
 
     val palette = listOf(
@@ -1176,7 +1192,9 @@ fun CustomRuleDialog(
                 faceDown = selectedFaceDown,
                 autoColor = isAutoColor,
                 dndMode = selectedDnd,
-                quietHoursMode = selectedQuietHours
+                quietHoursMode = selectedQuietHours,
+                quietHoursStartMinutes = quietStartMinutes,
+                quietHoursEndMinutes = quietEndMinutes
             )
         )
     }
@@ -1393,44 +1411,98 @@ fun CustomRuleDialog(
                     }
                 }
 
-                InheritAlwaysRow(
+                ConditionModeRow(
                     title = stringResource(R.string.dialog_dnd_title),
                     description = stringResource(
-                        if (selectedDnd == DndMode.INHERIT) {
-                            R.string.dialog_dnd_desc_default
-                        } else {
-                            R.string.dialog_dnd_desc_always
+                        when (selectedDnd) {
+                            DndMode.INHERIT -> R.string.dialog_dnd_desc_default
+                            DndMode.ALWAYS -> R.string.dialog_dnd_desc_always
+                            DndMode.SKIP -> R.string.dialog_dnd_desc_skip
                         }
                     ),
-                    inheritSelected = selectedDnd == DndMode.INHERIT,
-                    onInherit = { selectedDnd = DndMode.INHERIT },
-                    onAlways = { selectedDnd = DndMode.ALWAYS }
+                    options = DndMode.entries.map { mode ->
+                        mode to when (mode) {
+                            DndMode.INHERIT -> stringResource(R.string.dialog_mode_default)
+                            DndMode.ALWAYS -> stringResource(R.string.dialog_mode_always)
+                            DndMode.SKIP -> stringResource(R.string.dialog_dnd_skip)
+                        }
+                    },
+                    selected = selectedDnd,
+                    onSelect = { selectedDnd = it }
                 )
-                InheritAlwaysRow(
+                ConditionModeRow(
                     title = stringResource(R.string.dialog_quiet_hours_title),
                     description = stringResource(
-                        if (selectedQuietHours == QuietHoursMode.INHERIT) {
-                            R.string.dialog_quiet_hours_desc_default
-                        } else {
-                            R.string.dialog_quiet_hours_desc_always
+                        when (selectedQuietHours) {
+                            QuietHoursMode.INHERIT -> R.string.dialog_quiet_hours_desc_default
+                            QuietHoursMode.ALWAYS -> R.string.dialog_quiet_hours_desc_always
+                            QuietHoursMode.SKIP -> R.string.dialog_quiet_hours_desc_skip
                         }
                     ),
-                    inheritSelected = selectedQuietHours == QuietHoursMode.INHERIT,
-                    onInherit = { selectedQuietHours = QuietHoursMode.INHERIT },
-                    onAlways = { selectedQuietHours = QuietHoursMode.ALWAYS }
+                    options = QuietHoursMode.entries.map { mode ->
+                        mode to when (mode) {
+                            QuietHoursMode.INHERIT -> stringResource(R.string.dialog_mode_default)
+                            QuietHoursMode.ALWAYS -> stringResource(R.string.dialog_mode_always)
+                            QuietHoursMode.SKIP -> stringResource(R.string.dialog_quiet_hours_skip)
+                        }
+                    },
+                    selected = selectedQuietHours,
+                    onSelect = { selectedQuietHours = it }
                 )
+                if (selectedQuietHours == QuietHoursMode.SKIP) {
+                    val context = LocalContext.current
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { editingQuietStart = true },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("${stringResource(R.string.conditions_quiet_hours_start)} ${formatClockMinutes(context, quietStartMinutes)}")
+                        }
+                        OutlinedButton(
+                            onClick = { editingQuietEnd = true },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("${stringResource(R.string.conditions_quiet_hours_end)} ${formatClockMinutes(context, quietEndMinutes)}")
+                        }
+                    }
+                }
             }
         }
+    }
+    if (editingQuietStart) {
+        QuietHoursTimePickerDialog(
+            title = stringResource(R.string.conditions_quiet_hours_start),
+            initialMinutes = quietStartMinutes,
+            onDismiss = { editingQuietStart = false },
+            onConfirm = { minutes ->
+                quietStartMinutes = minutes
+                editingQuietStart = false
+            }
+        )
+    }
+    if (editingQuietEnd) {
+        QuietHoursTimePickerDialog(
+            title = stringResource(R.string.conditions_quiet_hours_end),
+            initialMinutes = quietEndMinutes,
+            onDismiss = { editingQuietEnd = false },
+            onConfirm = { minutes ->
+                quietEndMinutes = minutes
+                editingQuietEnd = false
+            }
+        )
     }
 }
 
 @Composable
-private fun InheritAlwaysRow(
+private fun <T> ConditionModeRow(
     title: String,
     description: String,
-    inheritSelected: Boolean,
-    onInherit: () -> Unit,
-    onAlways: () -> Unit
+    options: List<Pair<T, String>>,
+    selected: T,
+    onSelect: (T) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -1447,44 +1519,28 @@ private fun InheritAlwaysRow(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            SegmentedButton(
-                selected = inheritSelected,
-                onClick = onInherit,
-                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                icon = {},
-                colors = SegmentedButtonDefaults.colors(
-                    activeContainerColor = MaterialTheme.colorScheme.primary,
-                    activeContentColor = MaterialTheme.colorScheme.onPrimary,
-                    inactiveContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                ),
-                label = {
-                    Text(
-                        text = stringResource(R.string.dialog_mode_default),
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = if (inheritSelected) FontWeight.Bold else FontWeight.Normal
-                    )
-                }
-            )
-            SegmentedButton(
-                selected = !inheritSelected,
-                onClick = onAlways,
-                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                icon = {},
-                colors = SegmentedButtonDefaults.colors(
-                    activeContainerColor = MaterialTheme.colorScheme.primary,
-                    activeContentColor = MaterialTheme.colorScheme.onPrimary,
-                    inactiveContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                ),
-                label = {
-                    Text(
-                        text = stringResource(R.string.dialog_mode_always),
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = if (!inheritSelected) FontWeight.Bold else FontWeight.Normal
-                    )
-                }
-            )
+            options.forEachIndexed { index, (mode, label) ->
+                val isSelected = selected == mode
+                SegmentedButton(
+                    selected = isSelected,
+                    onClick = { onSelect(mode) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                    icon = {},
+                    colors = SegmentedButtonDefaults.colors(
+                        activeContainerColor = MaterialTheme.colorScheme.primary,
+                        activeContentColor = MaterialTheme.colorScheme.onPrimary,
+                        inactiveContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    label = {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                )
+            }
         }
     }
 }

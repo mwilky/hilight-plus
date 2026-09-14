@@ -1,7 +1,11 @@
 package com.mwilky.hilight.plus
 
 import android.app.Application
+import android.app.NotificationManager
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import com.mwilky.hilight.plus.core.DeviceOrientationDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +25,8 @@ class LightController private constructor(private val app: Application) {
     val shizuku = ShizukuBridge.get(app)
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    @Volatile
+    private var lastDndActive = false
 
     val isEnabled: StateFlow<Boolean> = store.isEnabled
         .stateIn(scope, SharingStarted.Eagerly, true)
@@ -31,7 +37,27 @@ class LightController private constructor(private val app: Application) {
     val autoOffSeconds: StateFlow<Int> = store.autoOffSeconds
         .stateIn(scope, SharingStarted.Eagerly, 60)
 
+    private val dndReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action != NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED) return
+            setDndActive(
+                isSystemDndActive(
+                    context.getSystemService(NotificationManager::class.java).currentInterruptionFilter
+                )
+            )
+        }
+    }
+
     init {
+        lastDndActive = isSystemDndActive(
+            app.getSystemService(NotificationManager::class.java).currentInterruptionFilter
+        )
+        app.registerReceiver(
+            dndReceiver,
+            IntentFilter(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED),
+            Context.RECEIVER_EXPORTED
+        )
+
         DeviceOrientationDetector.onOrientationChanged = { faceDown ->
             shizuku.setDeviceFaceDown(faceDown)
             scope.launch { syncUnlockPauseWithOrientation(faceDown) }
@@ -39,6 +65,7 @@ class LightController private constructor(private val app: Application) {
 
         shizuku.onAvailabilityChanged = {
             shizuku.setDeviceFaceDown(DeviceOrientationDetector.lastKnownFaceDown)
+            shizuku.setDndActive(lastDndActive)
             NativeHiLightDetector.check(app)
             syncState()
         }
@@ -83,7 +110,10 @@ class LightController private constructor(private val app: Application) {
         brightness: Float = 1.0f,
         speedMs: Long = 1000L,
         durationMs: Long = 3000L,
-        requiresFaceDown: Boolean = false
+        requiresFaceDown: Boolean = false,
+        suppressDuringDnd: Boolean = false,
+        quietStartMinutes: Int? = null,
+        quietEndMinutes: Int? = null
     ) {
         val calculatedSpeed = pattern.speedMs(speedMs)
         shizuku.triggerAlert(
@@ -92,7 +122,10 @@ class LightController private constructor(private val app: Application) {
             brightness = brightness,
             speedMs = calculatedSpeed,
             durationMs = durationMs,
-            requiresFaceDown = requiresFaceDown
+            requiresFaceDown = requiresFaceDown,
+            suppressDuringDnd = suppressDuringDnd,
+            quietStartMinutes = quietStartMinutes ?: -1,
+            quietEndMinutes = quietEndMinutes ?: -1
         )
     }
 
@@ -106,7 +139,10 @@ class LightController private constructor(private val app: Application) {
         brightness: Float = 1.0f,
         speedMs: Long = 1000L,
         durationMs: Long = 0L,
-        requiresFaceDown: Boolean = false
+        requiresFaceDown: Boolean = false,
+        suppressDuringDnd: Boolean = false,
+        quietStartMinutes: Int? = null,
+        quietEndMinutes: Int? = null
     ) {
         val calculatedSpeed = pattern.speedMs(speedMs)
         shizuku.postAlert(
@@ -116,7 +152,10 @@ class LightController private constructor(private val app: Application) {
             brightness = brightness,
             speedMs = calculatedSpeed,
             durationMs = durationMs,
-            requiresFaceDown = requiresFaceDown
+            requiresFaceDown = requiresFaceDown,
+            suppressDuringDnd = suppressDuringDnd,
+            quietStartMinutes = quietStartMinutes ?: -1,
+            quietEndMinutes = quietEndMinutes ?: -1
         )
     }
 
@@ -135,7 +174,10 @@ class LightController private constructor(private val app: Application) {
         color: Long = 0xFF4285F4,
         brightness: Float = 1.0f,
         speedMs: Long = 1000L,
-        requiresFaceDown: Boolean = false
+        requiresFaceDown: Boolean = false,
+        suppressDuringDnd: Boolean = false,
+        quietStartMinutes: Int? = null,
+        quietEndMinutes: Int? = null
     ) {
         val calculatedSpeed = pattern.speedMs(speedMs)
         shizuku.startIncomingCall(
@@ -143,12 +185,20 @@ class LightController private constructor(private val app: Application) {
             color = color,
             brightness = brightness,
             speedMs = calculatedSpeed,
-            requiresFaceDown = requiresFaceDown
+            requiresFaceDown = requiresFaceDown,
+            suppressDuringDnd = suppressDuringDnd,
+            quietStartMinutes = quietStartMinutes ?: -1,
+            quietEndMinutes = quietEndMinutes ?: -1
         )
     }
 
     fun setDeviceFaceDown(faceDown: Boolean) {
         shizuku.setDeviceFaceDown(faceDown)
+    }
+
+    fun setDndActive(dndActive: Boolean) {
+        lastDndActive = dndActive
+        shizuku.setDndActive(dndActive)
     }
 
     private suspend fun syncUnlockPauseWithOrientation(faceDown: Boolean) {

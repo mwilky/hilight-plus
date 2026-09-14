@@ -28,12 +28,18 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val otherContactsFaceDownMode = store.otherContactsFaceDownMode.hot(FaceDownMode.INHERIT)
     val otherContactsDndMode = store.otherContactsDndMode.hot(DndMode.INHERIT)
     val otherContactsQuietHoursMode = store.otherContactsQuietHoursMode.hot(QuietHoursMode.INHERIT)
+    val otherContactsQuietHoursStartMinutes = store.otherContactsQuietHoursStartMinutes.hot(null)
+    val otherContactsQuietHoursEndMinutes = store.otherContactsQuietHoursEndMinutes.hot(null)
+    val quietHoursStartMinutes = store.quietHoursStartMinutes.hot(22 * 60)
+    val quietHoursEndMinutes = store.quietHoursEndMinutes.hot(7 * 60)
     val isUnknownNumbersEnabled = store.isUnknownNumbersEnabled.hot(true)
     val unknownNumbersColor = store.unknownNumbersColor.hot(0xFFFBBC05)
     val unknownNumbersPattern = store.unknownNumbersPattern.hot(PatternMode.PULSE)
     val unknownNumbersFaceDownMode = store.unknownNumbersFaceDownMode.hot(FaceDownMode.INHERIT)
     val unknownNumbersDndMode = store.unknownNumbersDndMode.hot(DndMode.INHERIT)
     val unknownNumbersQuietHoursMode = store.unknownNumbersQuietHoursMode.hot(QuietHoursMode.INHERIT)
+    val unknownNumbersQuietHoursStartMinutes = store.unknownNumbersQuietHoursStartMinutes.hot(null)
+    val unknownNumbersQuietHoursEndMinutes = store.unknownNumbersQuietHoursEndMinutes.hot(null)
     val callContactRules = store.contactRules.hot(emptyList())
 
     val isNotifsEnabled = store.isNotificationsEnabled.hot(true)
@@ -47,6 +53,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val isDefaultNotifAutoColor = store.isDefaultNotifAutoColor.hot(true)
     val defaultNotifDndMode = store.defaultNotifDndMode.hot(DndMode.INHERIT)
     val defaultNotifQuietHoursMode = store.defaultNotifQuietHoursMode.hot(QuietHoursMode.INHERIT)
+    val defaultNotifQuietHoursStartMinutes = store.defaultNotifQuietHoursStartMinutes.hot(null)
+    val defaultNotifQuietHoursEndMinutes = store.defaultNotifQuietHoursEndMinutes.hot(null)
     val messageContactRules = store.messageContactRules.hot(emptyList())
     val appRules = store.appRules.hot(emptyList())
 
@@ -71,16 +79,40 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         color: Long,
         faceDown: FaceDownMode,
         dndMode: DndMode,
-        quietHoursMode: QuietHoursMode
-    ) = launch { store.setOtherContactsStyle(pattern, color, faceDown, dndMode, quietHoursMode) }
+        quietHoursMode: QuietHoursMode,
+        quietHoursStartMinutes: Int,
+        quietHoursEndMinutes: Int
+    ) = launch {
+        store.setOtherContactsStyle(
+            pattern,
+            color,
+            faceDown,
+            dndMode,
+            quietHoursMode,
+            quietHoursStartMinutes,
+            quietHoursEndMinutes
+        )
+    }
 
     fun setUnknownNumbersStyle(
         pattern: PatternMode,
         color: Long,
         faceDown: FaceDownMode,
         dndMode: DndMode,
-        quietHoursMode: QuietHoursMode
-    ) = launch { store.setUnknownNumbersStyle(pattern, color, faceDown, dndMode, quietHoursMode) }
+        quietHoursMode: QuietHoursMode,
+        quietHoursStartMinutes: Int,
+        quietHoursEndMinutes: Int
+    ) = launch {
+        store.setUnknownNumbersStyle(
+            pattern,
+            color,
+            faceDown,
+            dndMode,
+            quietHoursMode,
+            quietHoursStartMinutes,
+            quietHoursEndMinutes
+        )
+    }
 
     fun setDefaultNotifStyle(
         pattern: PatternMode,
@@ -88,8 +120,21 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         faceDown: FaceDownMode,
         autoColor: Boolean,
         dndMode: DndMode,
-        quietHoursMode: QuietHoursMode
-    ) = launch { store.setDefaultNotifStyle(pattern, color, faceDown, autoColor, dndMode, quietHoursMode) }
+        quietHoursMode: QuietHoursMode,
+        quietHoursStartMinutes: Int,
+        quietHoursEndMinutes: Int
+    ) = launch {
+        store.setDefaultNotifStyle(
+            pattern,
+            color,
+            faceDown,
+            autoColor,
+            dndMode,
+            quietHoursMode,
+            quietHoursStartMinutes,
+            quietHoursEndMinutes
+        )
+    }
 
     private fun launch(block: suspend () -> Unit) {
         viewModelScope.launch { block() }
