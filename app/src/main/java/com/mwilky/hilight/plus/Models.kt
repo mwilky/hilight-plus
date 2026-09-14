@@ -82,7 +82,7 @@ enum class QuietHoursMode(val id: String) {
 data class ContactRule(
     val id: String,
     val name: String,
-    val color: Long = 0xFF4285F4,
+    val color: Long = DEFAULT_CONTACT_COLOR,
     val pattern: PatternMode = PatternMode.PULSE,
     val isEnabled: Boolean = true,
     val faceDownMode: FaceDownMode = FaceDownMode.INHERIT,
@@ -94,37 +94,23 @@ data class ContactRule(
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
         put("name", name)
-        put("color", color)
-        put("pattern", pattern.name)
-        put("isEnabled", isEnabled)
-        put("faceDownMode", faceDownMode.name)
-        put("dndMode", dndMode.name)
-        put("quietHoursMode", quietHoursMode.name)
-        putOptionalMinutes("quietHoursStartMinutes", quietHoursStartMinutes)
-        putOptionalMinutes("quietHoursEndMinutes", quietHoursEndMinutes)
+        putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes)
     }
 
     companion object {
         fun fromJson(json: JSONObject): ContactRule {
-            val patternName = json.optString("pattern", PatternMode.PULSE.name)
-            val pattern = runCatching { PatternMode.valueOf(patternName) }.getOrDefault(PatternMode.PULSE)
-            val faceDownName = json.optString("faceDownMode", FaceDownMode.INHERIT.name)
-            val faceDown = runCatching { FaceDownMode.valueOf(faceDownName) }.getOrDefault(FaceDownMode.INHERIT)
-            val dndName = json.optString("dndMode", DndMode.INHERIT.name)
-            val dnd = runCatching { DndMode.valueOf(dndName) }.getOrDefault(DndMode.INHERIT)
-            val quietName = json.optString("quietHoursMode", QuietHoursMode.INHERIT.name)
-            val quiet = runCatching { QuietHoursMode.valueOf(quietName) }.getOrDefault(QuietHoursMode.INHERIT)
+            val shared = json.readSharedRuleFields(DEFAULT_CONTACT_COLOR)
             return ContactRule(
                 id = json.optString("id", ""),
                 name = json.optString("name", "Unknown Contact"),
-                color = json.optLong("color", 0xFF4285F4),
-                pattern = pattern,
-                isEnabled = json.optBoolean("isEnabled", true),
-                faceDownMode = faceDown,
-                dndMode = dnd,
-                quietHoursMode = quiet,
-                quietHoursStartMinutes = json.optionalMinutes("quietHoursStartMinutes"),
-                quietHoursEndMinutes = json.optionalMinutes("quietHoursEndMinutes")
+                color = shared.color,
+                pattern = shared.pattern,
+                isEnabled = shared.isEnabled,
+                faceDownMode = shared.faceDownMode,
+                dndMode = shared.dndMode,
+                quietHoursMode = shared.quietHoursMode,
+                quietHoursStartMinutes = shared.quietHoursStartMinutes,
+                quietHoursEndMinutes = shared.quietHoursEndMinutes
             )
         }
     }
@@ -136,7 +122,7 @@ data class ContactRule(
 data class MessageContactRule(
     val id: String,
     val name: String,
-    val color: Long = 0xFF00E5FF,
+    val color: Long = DEFAULT_MESSAGE_COLOR,
     val pattern: PatternMode = PatternMode.PULSE,
     val isEnabled: Boolean = true,
     val faceDownMode: FaceDownMode = FaceDownMode.INHERIT,
@@ -148,37 +134,23 @@ data class MessageContactRule(
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
         put("name", name)
-        put("color", color)
-        put("pattern", pattern.name)
-        put("isEnabled", isEnabled)
-        put("faceDownMode", faceDownMode.name)
-        put("dndMode", dndMode.name)
-        put("quietHoursMode", quietHoursMode.name)
-        putOptionalMinutes("quietHoursStartMinutes", quietHoursStartMinutes)
-        putOptionalMinutes("quietHoursEndMinutes", quietHoursEndMinutes)
+        putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes)
     }
 
     companion object {
         fun fromJson(json: JSONObject): MessageContactRule {
-            val patternName = json.optString("pattern", PatternMode.PULSE.name)
-            val pattern = runCatching { PatternMode.valueOf(patternName) }.getOrDefault(PatternMode.PULSE)
-            val faceDownName = json.optString("faceDownMode", FaceDownMode.INHERIT.name)
-            val faceDown = runCatching { FaceDownMode.valueOf(faceDownName) }.getOrDefault(FaceDownMode.INHERIT)
-            val dndName = json.optString("dndMode", DndMode.INHERIT.name)
-            val dnd = runCatching { DndMode.valueOf(dndName) }.getOrDefault(DndMode.INHERIT)
-            val quietName = json.optString("quietHoursMode", QuietHoursMode.INHERIT.name)
-            val quiet = runCatching { QuietHoursMode.valueOf(quietName) }.getOrDefault(QuietHoursMode.INHERIT)
+            val shared = json.readSharedRuleFields(DEFAULT_MESSAGE_COLOR)
             return MessageContactRule(
                 id = json.optString("id", ""),
                 name = json.optString("name", "Unknown Contact"),
-                color = json.optLong("color", 0xFF00E5FF),
-                pattern = pattern,
-                isEnabled = json.optBoolean("isEnabled", true),
-                faceDownMode = faceDown,
-                dndMode = dnd,
-                quietHoursMode = quiet,
-                quietHoursStartMinutes = json.optionalMinutes("quietHoursStartMinutes"),
-                quietHoursEndMinutes = json.optionalMinutes("quietHoursEndMinutes")
+                color = shared.color,
+                pattern = shared.pattern,
+                isEnabled = shared.isEnabled,
+                faceDownMode = shared.faceDownMode,
+                dndMode = shared.dndMode,
+                quietHoursMode = shared.quietHoursMode,
+                quietHoursStartMinutes = shared.quietHoursStartMinutes,
+                quietHoursEndMinutes = shared.quietHoursEndMinutes
             )
         }
     }
@@ -190,7 +162,7 @@ data class MessageContactRule(
 data class AppNotificationRule(
     val packageName: String,
     val appName: String,
-    val color: Long = 0xFF34A853,
+    val color: Long = DEFAULT_APP_COLOR,
     val pattern: PatternMode = PatternMode.PULSE,
     val isEnabled: Boolean = true,
     val faceDownMode: FaceDownMode = FaceDownMode.INHERIT,
@@ -203,42 +175,78 @@ data class AppNotificationRule(
     fun toJson(): JSONObject = JSONObject().apply {
         put("packageName", packageName)
         put("appName", appName)
-        put("color", color)
-        put("pattern", pattern.name)
-        put("isEnabled", isEnabled)
-        put("faceDownMode", faceDownMode.name)
         put("isAutoColor", isAutoColor)
-        put("dndMode", dndMode.name)
-        put("quietHoursMode", quietHoursMode.name)
-        putOptionalMinutes("quietHoursStartMinutes", quietHoursStartMinutes)
-        putOptionalMinutes("quietHoursEndMinutes", quietHoursEndMinutes)
+        putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes)
     }
 
     companion object {
         fun fromJson(json: JSONObject): AppNotificationRule {
-            val patternName = json.optString("pattern", PatternMode.PULSE.name)
-            val pattern = runCatching { PatternMode.valueOf(patternName) }.getOrDefault(PatternMode.PULSE)
-            val faceDownName = json.optString("faceDownMode", FaceDownMode.INHERIT.name)
-            val faceDown = runCatching { FaceDownMode.valueOf(faceDownName) }.getOrDefault(FaceDownMode.INHERIT)
-            val dndName = json.optString("dndMode", DndMode.INHERIT.name)
-            val dnd = runCatching { DndMode.valueOf(dndName) }.getOrDefault(DndMode.INHERIT)
-            val quietName = json.optString("quietHoursMode", QuietHoursMode.INHERIT.name)
-            val quiet = runCatching { QuietHoursMode.valueOf(quietName) }.getOrDefault(QuietHoursMode.INHERIT)
+            val shared = json.readSharedRuleFields(DEFAULT_APP_COLOR)
             return AppNotificationRule(
                 packageName = json.optString("packageName", ""),
                 appName = json.optString("appName", ""),
-                color = json.optLong("color", 0xFF34A853),
-                pattern = pattern,
-                isEnabled = json.optBoolean("isEnabled", true),
-                faceDownMode = faceDown,
+                color = shared.color,
+                pattern = shared.pattern,
+                isEnabled = shared.isEnabled,
+                faceDownMode = shared.faceDownMode,
                 isAutoColor = json.optBoolean("isAutoColor", true),
-                dndMode = dnd,
-                quietHoursMode = quiet,
-                quietHoursStartMinutes = json.optionalMinutes("quietHoursStartMinutes"),
-                quietHoursEndMinutes = json.optionalMinutes("quietHoursEndMinutes")
+                dndMode = shared.dndMode,
+                quietHoursMode = shared.quietHoursMode,
+                quietHoursStartMinutes = shared.quietHoursStartMinutes,
+                quietHoursEndMinutes = shared.quietHoursEndMinutes
             )
         }
     }
+}
+
+private const val DEFAULT_CONTACT_COLOR = 0xFF4285F4L
+private const val DEFAULT_MESSAGE_COLOR = 0xFF00E5FFL
+private const val DEFAULT_APP_COLOR = 0xFF34A853L
+
+/**
+ * The pattern/color/enable/condition fields every rule type shares, read and written
+ * identically regardless of what the rule targets (a contact, a sender, or an app).
+ */
+private data class SharedRuleFields(
+    val color: Long,
+    val pattern: PatternMode,
+    val isEnabled: Boolean,
+    val faceDownMode: FaceDownMode,
+    val dndMode: DndMode,
+    val quietHoursMode: QuietHoursMode,
+    val quietHoursStartMinutes: Int?,
+    val quietHoursEndMinutes: Int?
+)
+
+private fun JSONObject.readSharedRuleFields(defaultColor: Long): SharedRuleFields = SharedRuleFields(
+    color = optLong("color", defaultColor),
+    pattern = runCatching { PatternMode.valueOf(optString("pattern", PatternMode.PULSE.name)) }.getOrDefault(PatternMode.PULSE),
+    isEnabled = optBoolean("isEnabled", true),
+    faceDownMode = runCatching { FaceDownMode.valueOf(optString("faceDownMode", FaceDownMode.INHERIT.name)) }.getOrDefault(FaceDownMode.INHERIT),
+    dndMode = runCatching { DndMode.valueOf(optString("dndMode", DndMode.INHERIT.name)) }.getOrDefault(DndMode.INHERIT),
+    quietHoursMode = runCatching { QuietHoursMode.valueOf(optString("quietHoursMode", QuietHoursMode.INHERIT.name)) }.getOrDefault(QuietHoursMode.INHERIT),
+    quietHoursStartMinutes = optionalMinutes("quietHoursStartMinutes"),
+    quietHoursEndMinutes = optionalMinutes("quietHoursEndMinutes")
+)
+
+private fun JSONObject.putSharedRuleFields(
+    color: Long,
+    pattern: PatternMode,
+    isEnabled: Boolean,
+    faceDownMode: FaceDownMode,
+    dndMode: DndMode,
+    quietHoursMode: QuietHoursMode,
+    quietHoursStartMinutes: Int?,
+    quietHoursEndMinutes: Int?
+) {
+    put("color", color)
+    put("pattern", pattern.name)
+    put("isEnabled", isEnabled)
+    put("faceDownMode", faceDownMode.name)
+    put("dndMode", dndMode.name)
+    put("quietHoursMode", quietHoursMode.name)
+    putOptionalMinutes("quietHoursStartMinutes", quietHoursStartMinutes)
+    putOptionalMinutes("quietHoursEndMinutes", quietHoursEndMinutes)
 }
 
 private fun JSONObject.optionalMinutes(key: String): Int? =

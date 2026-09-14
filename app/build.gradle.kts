@@ -54,4 +54,5 @@ dependencies {
     implementation(libs.api)
     implementation(libs.provider)
     testImplementation(libs.junit)
+    testImplementation(libs.json)
 }

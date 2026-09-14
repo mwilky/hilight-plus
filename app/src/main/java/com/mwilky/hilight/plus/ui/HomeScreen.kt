@@ -52,6 +52,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mwilky.hilight.plus.AppNotificationRule
 import com.mwilky.hilight.plus.ContactRule
+import com.mwilky.hilight.plus.DEFAULT_SETTINGS_SNAPSHOT
 import com.mwilky.hilight.plus.LightController
 import com.mwilky.hilight.plus.MessageContactRule
 import com.mwilky.hilight.plus.NativeHiLightDetector
@@ -1460,43 +1461,8 @@ fun HomeScreenPreviewContent(
             onRequestPhonePerms = {},
             onOpenAppSettings = {},
             onOpenNotifSettings = {},
-            state = SettingsSnapshot(
-                isEnabled = true,
-                isOnlyWhenFaceDown = false,
-                suppressDuringDnd = false,
-                quietHoursEnabled = false,
-                quietHoursStartMinutes = 22 * 60,
-                quietHoursEndMinutes = 7 * 60,
-                isCallLightsEnabled = true,
+            state = DEFAULT_SETTINGS_SNAPSHOT.copy(
                 contactRules = mockCallContacts,
-                isOtherContactsEnabled = true,
-                otherContactsColor = 0xFF4285F4,
-                otherContactsPattern = PatternMode.PULSE,
-                otherContactsFaceDownMode = FaceDownMode.INHERIT,
-                otherContactsDndMode = DndMode.INHERIT,
-                otherContactsQuietHoursMode = QuietHoursMode.INHERIT,
-                otherContactsQuietHoursStartMinutes = null,
-                otherContactsQuietHoursEndMinutes = null,
-                isUnknownNumbersEnabled = true,
-                unknownNumbersColor = 0xFFFBBC05,
-                unknownNumbersPattern = PatternMode.PULSE,
-                unknownNumbersFaceDownMode = FaceDownMode.INHERIT,
-                unknownNumbersDndMode = DndMode.INHERIT,
-                unknownNumbersQuietHoursMode = QuietHoursMode.INHERIT,
-                unknownNumbersQuietHoursStartMinutes = null,
-                unknownNumbersQuietHoursEndMinutes = null,
-                isNotificationsEnabled = true,
-                notificationDurationSeconds = 30,
-                isCycleNotifications = false,
-                isDefaultNotifEnabled = true,
-                defaultNotifColor = 0xFFFFFFFF,
-                defaultNotifPattern = PatternMode.PULSE,
-                defaultNotifFaceDownMode = FaceDownMode.INHERIT,
-                isDefaultNotifAutoColor = true,
-                defaultNotifDndMode = DndMode.INHERIT,
-                defaultNotifQuietHoursMode = QuietHoursMode.INHERIT,
-                defaultNotifQuietHoursStartMinutes = null,
-                defaultNotifQuietHoursEndMinutes = null,
                 messageContactRules = mockMsgContacts,
                 appRules = mockApps
             ),
