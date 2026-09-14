@@ -103,143 +103,21 @@ class AppStore private constructor(private val appContext: Context) {
     val quietHoursEndMinutes: Flow<Int> = appContext.dataStore.data
         .map { it[KEY_QUIET_HOURS_END] ?: 7 * 60 }
 
-    // --- Call Settings: All Other Contacts ---
-
     val isCallLightsEnabled: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_CALL_LIGHTS_ENABLED] ?: true }
-
-    val isOtherContactsEnabled: Flow<Boolean> = appContext.dataStore.data
-        .map { it[KEY_OTHER_CONTACTS_ENABLED] ?: true }
-
-    val otherContactsColor: Flow<Long> = appContext.dataStore.data
-        .map { it[KEY_OTHER_CONTACTS_COLOR] ?: 0xFF4285F4 }
-
-    val otherContactsPattern: Flow<PatternMode> = appContext.dataStore.data
-        .map { prefs ->
-            val name = prefs[KEY_OTHER_CONTACTS_PATTERN] ?: PatternMode.PULSE.name
-            runCatching { PatternMode.valueOf(name) }.getOrDefault(PatternMode.PULSE)
-        }
-
-    val otherContactsFaceDownMode: Flow<FaceDownMode> = appContext.dataStore.data
-        .map { prefs ->
-            val name = prefs[KEY_OTHER_CONTACTS_FACE_DOWN] ?: FaceDownMode.INHERIT.name
-            runCatching { FaceDownMode.valueOf(name) }.getOrDefault(FaceDownMode.INHERIT)
-        }
-
-    val otherContactsDndMode: Flow<DndMode> = appContext.dataStore.data
-        .map { prefs ->
-            val name = prefs[KEY_OTHER_CONTACTS_DND] ?: DndMode.INHERIT.name
-            runCatching { DndMode.valueOf(name) }.getOrDefault(DndMode.INHERIT)
-        }
-
-    val otherContactsQuietHoursMode: Flow<QuietHoursMode> = appContext.dataStore.data
-        .map { prefs ->
-            val name = prefs[KEY_OTHER_CONTACTS_QUIET] ?: QuietHoursMode.INHERIT.name
-            runCatching { QuietHoursMode.valueOf(name) }.getOrDefault(QuietHoursMode.INHERIT)
-        }
-
-    val otherContactsQuietHoursStartMinutes: Flow<Int?> = appContext.dataStore.data
-        .map { it[KEY_OTHER_CONTACTS_QUIET_START] }
-
-    val otherContactsQuietHoursEndMinutes: Flow<Int?> = appContext.dataStore.data
-        .map { it[KEY_OTHER_CONTACTS_QUIET_END] }
-
-    // --- Call Settings: Unknown / Private Numbers ---
-
-    val isUnknownNumbersEnabled: Flow<Boolean> = appContext.dataStore.data
-        .map { it[KEY_UNKNOWN_NUMBERS_ENABLED] ?: true }
-
-    val unknownNumbersColor: Flow<Long> = appContext.dataStore.data
-        .map { it[KEY_UNKNOWN_NUMBERS_COLOR] ?: 0xFFFBBC05 }
-
-    val unknownNumbersPattern: Flow<PatternMode> = appContext.dataStore.data
-        .map { prefs ->
-            val name = prefs[KEY_UNKNOWN_NUMBERS_PATTERN] ?: PatternMode.PULSE.name
-            runCatching { PatternMode.valueOf(name) }.getOrDefault(PatternMode.PULSE)
-        }
-
-    val unknownNumbersFaceDownMode: Flow<FaceDownMode> = appContext.dataStore.data
-        .map { prefs ->
-            val name = prefs[KEY_UNKNOWN_NUMBERS_FACE_DOWN] ?: FaceDownMode.INHERIT.name
-            runCatching { FaceDownMode.valueOf(name) }.getOrDefault(FaceDownMode.INHERIT)
-        }
-
-    val unknownNumbersDndMode: Flow<DndMode> = appContext.dataStore.data
-        .map { prefs ->
-            val name = prefs[KEY_UNKNOWN_NUMBERS_DND] ?: DndMode.INHERIT.name
-            runCatching { DndMode.valueOf(name) }.getOrDefault(DndMode.INHERIT)
-        }
-
-    val unknownNumbersQuietHoursMode: Flow<QuietHoursMode> = appContext.dataStore.data
-        .map { prefs ->
-            val name = prefs[KEY_UNKNOWN_NUMBERS_QUIET] ?: QuietHoursMode.INHERIT.name
-            runCatching { QuietHoursMode.valueOf(name) }.getOrDefault(QuietHoursMode.INHERIT)
-        }
-
-    val unknownNumbersQuietHoursStartMinutes: Flow<Int?> = appContext.dataStore.data
-        .map { it[KEY_UNKNOWN_NUMBERS_QUIET_START] }
-
-    val unknownNumbersQuietHoursEndMinutes: Flow<Int?> = appContext.dataStore.data
-        .map { it[KEY_UNKNOWN_NUMBERS_QUIET_END] }
-
-    val contactRules: Flow<List<ContactRule>> = appContext.dataStore.data
-        .map { readContactRules(it[KEY_CALL_RULES_JSON]) }
-
-    // --- Notification & Messaging Settings ---
 
     val isNotificationsEnabled: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_NOTIFICATIONS_ENABLED] ?: true }
 
-    val notificationDurationSeconds: Flow<Int> = appContext.dataStore.data
-        .map { it[KEY_NOTIFICATION_DURATION_SEC] ?: 30 }
-
     val isCycleNotifications: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_CYCLE_NOTIFICATIONS] ?: false }
 
-    val isDefaultNotifEnabled: Flow<Boolean> = appContext.dataStore.data
-        .map { it[KEY_DEFAULT_NOTIF_ENABLED] ?: true }
-
-    val defaultNotifColor: Flow<Long> = appContext.dataStore.data
-        .map { it[KEY_DEFAULT_NOTIF_COLOR] ?: 0xFFFFFFFF }
-
-    val defaultNotifPattern: Flow<PatternMode> = appContext.dataStore.data
-        .map { prefs ->
-            val name = prefs[KEY_DEFAULT_NOTIF_PATTERN] ?: PatternMode.PULSE.name
-            runCatching { PatternMode.valueOf(name) }.getOrDefault(PatternMode.PULSE)
-        }
-
-    val defaultNotifFaceDownMode: Flow<FaceDownMode> = appContext.dataStore.data
-        .map { prefs ->
-            val name = prefs[KEY_DEFAULT_NOTIF_FACE_DOWN] ?: FaceDownMode.INHERIT.name
-            runCatching { FaceDownMode.valueOf(name) }.getOrDefault(FaceDownMode.INHERIT)
-        }
-
-    val isDefaultNotifAutoColor: Flow<Boolean> = appContext.dataStore.data
-        .map { it[KEY_DEFAULT_NOTIF_AUTO_COLOR] ?: true }
-
-    val defaultNotifDndMode: Flow<DndMode> = appContext.dataStore.data
-        .map { prefs ->
-            val name = prefs[KEY_DEFAULT_NOTIF_DND] ?: DndMode.INHERIT.name
-            runCatching { DndMode.valueOf(name) }.getOrDefault(DndMode.INHERIT)
-        }
-
-    val defaultNotifQuietHoursMode: Flow<QuietHoursMode> = appContext.dataStore.data
-        .map { prefs ->
-            val name = prefs[KEY_DEFAULT_NOTIF_QUIET] ?: QuietHoursMode.INHERIT.name
-            runCatching { QuietHoursMode.valueOf(name) }.getOrDefault(QuietHoursMode.INHERIT)
-        }
-
-    val defaultNotifQuietHoursStartMinutes: Flow<Int?> = appContext.dataStore.data
-        .map { it[KEY_DEFAULT_NOTIF_QUIET_START] }
-
-    val defaultNotifQuietHoursEndMinutes: Flow<Int?> = appContext.dataStore.data
-        .map { it[KEY_DEFAULT_NOTIF_QUIET_END] }
-
-    val messageContactRules: Flow<List<MessageContactRule>> = appContext.dataStore.data
-        .map { readMessageRules(it[KEY_MESSAGE_CONTACT_RULES_JSON]) }
-
-    val appRules: Flow<List<AppNotificationRule>> = appContext.dataStore.data
-        .map { readAppRules(it[KEY_APP_RULES_JSON]) }
+    /**
+     * Every Home-screen-relevant setting in one snapshot, rebuilt whenever any of them
+     * change. Replaces per-field flows for values that only ever change and get read
+     * together (call/notification rules and their styling).
+     */
+    val settingsFlow: Flow<SettingsSnapshot> = appContext.dataStore.data.map(::buildSnapshot)
 
     // --- Preferences Updaters ---
 
@@ -278,32 +156,8 @@ class AppStore private constructor(private val appContext: Context) {
         appContext.dataStore.edit { it[KEY_OTHER_CONTACTS_ENABLED] = enabled }
     }
 
-    suspend fun setOtherContactsColor(color: Long) {
-        appContext.dataStore.edit { it[KEY_OTHER_CONTACTS_COLOR] = color }
-    }
-
-    suspend fun setOtherContactsPattern(pattern: PatternMode) {
-        appContext.dataStore.edit { it[KEY_OTHER_CONTACTS_PATTERN] = pattern.name }
-    }
-
-    suspend fun setOtherContactsFaceDownMode(mode: FaceDownMode) {
-        appContext.dataStore.edit { it[KEY_OTHER_CONTACTS_FACE_DOWN] = mode.name }
-    }
-
     suspend fun setUnknownNumbersEnabled(enabled: Boolean) {
         appContext.dataStore.edit { it[KEY_UNKNOWN_NUMBERS_ENABLED] = enabled }
-    }
-
-    suspend fun setUnknownNumbersColor(color: Long) {
-        appContext.dataStore.edit { it[KEY_UNKNOWN_NUMBERS_COLOR] = color }
-    }
-
-    suspend fun setUnknownNumbersPattern(pattern: PatternMode) {
-        appContext.dataStore.edit { it[KEY_UNKNOWN_NUMBERS_PATTERN] = pattern.name }
-    }
-
-    suspend fun setUnknownNumbersFaceDownMode(mode: FaceDownMode) {
-        appContext.dataStore.edit { it[KEY_UNKNOWN_NUMBERS_FACE_DOWN] = mode.name }
     }
 
     suspend fun setNotificationsEnabled(enabled: Boolean) {
@@ -320,22 +174,6 @@ class AppStore private constructor(private val appContext: Context) {
 
     suspend fun setDefaultNotifEnabled(enabled: Boolean) {
         appContext.dataStore.edit { it[KEY_DEFAULT_NOTIF_ENABLED] = enabled }
-    }
-
-    suspend fun setDefaultNotifColor(color: Long) {
-        appContext.dataStore.edit { it[KEY_DEFAULT_NOTIF_COLOR] = color }
-    }
-
-    suspend fun setDefaultNotifPattern(pattern: PatternMode) {
-        appContext.dataStore.edit { it[KEY_DEFAULT_NOTIF_PATTERN] = pattern.name }
-    }
-
-    suspend fun setDefaultNotifFaceDownMode(mode: FaceDownMode) {
-        appContext.dataStore.edit { it[KEY_DEFAULT_NOTIF_FACE_DOWN] = mode.name }
-    }
-
-    suspend fun setDefaultNotifAutoColor(enabled: Boolean) {
-        appContext.dataStore.edit { it[KEY_DEFAULT_NOTIF_AUTO_COLOR] = enabled }
     }
 
     suspend fun setOtherContactsStyle(
@@ -460,8 +298,9 @@ class AppStore private constructor(private val appContext: Context) {
         }
     }
 
-    suspend fun snapshot(): SettingsSnapshot {
-        val prefs = appContext.dataStore.data.first()
+    suspend fun snapshot(): SettingsSnapshot = buildSnapshot(appContext.dataStore.data.first())
+
+    private fun buildSnapshot(prefs: Preferences): SettingsSnapshot {
         return SettingsSnapshot(
             isEnabled = prefs[KEY_ENABLED] ?: true,
             isOnlyWhenFaceDown = prefs[KEY_ONLY_WHEN_FACE_DOWN] ?: false,

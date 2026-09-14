@@ -57,6 +57,7 @@ import com.mwilky.hilight.plus.MessageContactRule
 import com.mwilky.hilight.plus.NativeHiLightDetector
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.R
+import com.mwilky.hilight.plus.SettingsSnapshot
 import com.mwilky.hilight.plus.ShizukuBridge
 import com.mwilky.hilight.plus.StockHiLightState
 import com.mwilky.hilight.plus.core.PatternRenderer
@@ -92,42 +93,7 @@ fun HomeScreen(
 
     val stockState by NativeHiLightDetector.state.collectAsStateWithLifecycle()
     val shizukuState by controller.shizuku.state.collectAsStateWithLifecycle()
-
-    val isCallLightsEnabled by viewModel.isCallLightsEnabled.collectAsStateWithLifecycle()
-    val isOtherContactsEnabled by viewModel.isOtherContactsEnabled.collectAsStateWithLifecycle()
-    val otherContactsColor by viewModel.otherContactsColor.collectAsStateWithLifecycle()
-    val otherContactsPattern by viewModel.otherContactsPattern.collectAsStateWithLifecycle()
-    val otherContactsFaceDown by viewModel.otherContactsFaceDownMode.collectAsStateWithLifecycle()
-    val otherContactsDnd by viewModel.otherContactsDndMode.collectAsStateWithLifecycle()
-    val otherContactsQuiet by viewModel.otherContactsQuietHoursMode.collectAsStateWithLifecycle()
-    val otherContactsQuietStart by viewModel.otherContactsQuietHoursStartMinutes.collectAsStateWithLifecycle()
-    val otherContactsQuietEnd by viewModel.otherContactsQuietHoursEndMinutes.collectAsStateWithLifecycle()
-    val conditionsQuietStart by viewModel.quietHoursStartMinutes.collectAsStateWithLifecycle()
-    val conditionsQuietEnd by viewModel.quietHoursEndMinutes.collectAsStateWithLifecycle()
-    val isUnknownNumbersEnabled by viewModel.isUnknownNumbersEnabled.collectAsStateWithLifecycle()
-    val unknownNumbersColor by viewModel.unknownNumbersColor.collectAsStateWithLifecycle()
-    val unknownNumbersPattern by viewModel.unknownNumbersPattern.collectAsStateWithLifecycle()
-    val unknownNumbersFaceDown by viewModel.unknownNumbersFaceDownMode.collectAsStateWithLifecycle()
-    val unknownNumbersDnd by viewModel.unknownNumbersDndMode.collectAsStateWithLifecycle()
-    val unknownNumbersQuiet by viewModel.unknownNumbersQuietHoursMode.collectAsStateWithLifecycle()
-    val unknownNumbersQuietStart by viewModel.unknownNumbersQuietHoursStartMinutes.collectAsStateWithLifecycle()
-    val unknownNumbersQuietEnd by viewModel.unknownNumbersQuietHoursEndMinutes.collectAsStateWithLifecycle()
-    val callContactRules by viewModel.callContactRules.collectAsStateWithLifecycle()
-
-    val isNotifsEnabled by viewModel.isNotifsEnabled.collectAsStateWithLifecycle()
-    val notifDurationSec by viewModel.notifDurationSec.collectAsStateWithLifecycle()
-    val isCycleNotifications by viewModel.isCycleNotifications.collectAsStateWithLifecycle()
-    val isDefaultNotifEnabled by viewModel.isDefaultNotifEnabled.collectAsStateWithLifecycle()
-    val defaultNotifColor by viewModel.defaultNotifColor.collectAsStateWithLifecycle()
-    val defaultNotifPattern by viewModel.defaultNotifPattern.collectAsStateWithLifecycle()
-    val defaultNotifFaceDown by viewModel.defaultNotifFaceDownMode.collectAsStateWithLifecycle()
-    val isDefaultNotifAutoColor by viewModel.isDefaultNotifAutoColor.collectAsStateWithLifecycle()
-    val defaultNotifDnd by viewModel.defaultNotifDndMode.collectAsStateWithLifecycle()
-    val defaultNotifQuiet by viewModel.defaultNotifQuietHoursMode.collectAsStateWithLifecycle()
-    val defaultNotifQuietStart by viewModel.defaultNotifQuietHoursStartMinutes.collectAsStateWithLifecycle()
-    val defaultNotifQuietEnd by viewModel.defaultNotifQuietHoursEndMinutes.collectAsStateWithLifecycle()
-    val messageContactRules by viewModel.messageContactRules.collectAsStateWithLifecycle()
-    val appRules by viewModel.appRules.collectAsStateWithLifecycle()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     val permissionState = rememberPermissionState()
     val requestCallPermissions = rememberCallPermissionLauncher(permissionState)
@@ -203,49 +169,29 @@ fun HomeScreen(
         onRequestPhonePerms = requestCallPermissions,
         onOpenAppSettings = { openAppSettings() },
         onOpenNotifSettings = { openNotifSettings() },
-        // Calls Section
-        isCallLightsEnabled = isCallLightsEnabled,
+        state = state,
         onToggleCallLights = viewModel::setCallLightsEnabled,
-        isOtherContactsEnabled = isOtherContactsEnabled,
-        otherContactsColor = otherContactsColor,
-        otherContactsPattern = otherContactsPattern,
-        otherContactsFaceDownMode = otherContactsFaceDown,
         onToggleOtherContacts = viewModel::setOtherContactsEnabled,
         onEditOtherContacts = { isConfiguringOtherContacts = true },
-        isUnknownNumbersEnabled = isUnknownNumbersEnabled,
-        unknownNumbersColor = unknownNumbersColor,
-        unknownNumbersPattern = unknownNumbersPattern,
-        unknownNumbersFaceDownMode = unknownNumbersFaceDown,
         onToggleUnknownNumbers = viewModel::setUnknownNumbersEnabled,
         onEditUnknownNumbers = { isConfiguringUnknownNumbers = true },
-        callContactRules = callContactRules,
         onToggleCallContactRule = { rule, isEnabled ->
             viewModel.saveContactRule(rule.copy(isEnabled = isEnabled))
         },
         onEditCallContactRule = { rule -> callRuleBeingEdited = rule },
         onDeleteCallContactRule = viewModel::deleteContactRule,
         onAddCallContact = { callContactPickerLauncher.launch(null) },
-        // Notifications Section
-        isNotifsEnabled = isNotifsEnabled,
         onToggleNotifs = viewModel::setNotificationsEnabled,
-        notifDurationSec = notifDurationSec,
         onChangeDuration = viewModel::setNotificationDurationSeconds,
-        isCycleNotifications = isCycleNotifications,
         onToggleCycleNotifications = viewModel::setCycleNotifications,
-        isDefaultNotifEnabled = isDefaultNotifEnabled,
-        defaultNotifColor = defaultNotifColor,
-        defaultNotifPattern = defaultNotifPattern,
-        defaultNotifFaceDownMode = defaultNotifFaceDown,
         onToggleDefaultNotif = viewModel::setDefaultNotifEnabled,
         onEditDefaultNotif = { isConfiguringDefaultNotif = true },
-        messageContactRules = messageContactRules,
         onToggleMessageRule = { rule, isEnabled ->
             viewModel.saveMessageContactRule(rule.copy(isEnabled = isEnabled))
         },
         onEditMessageRule = { rule -> msgRuleBeingEdited = rule },
         onDeleteMessageRule = viewModel::deleteMessageContactRule,
         onAddMessageContact = { msgContactPickerLauncher.launch(null) },
-        appRules = appRules,
         onToggleAppRule = { rule, isEnabled ->
             viewModel.saveAppRule(rule.copy(isEnabled = isEnabled))
         },
@@ -265,8 +211,8 @@ fun HomeScreen(
             initialFaceDown = rule.faceDownMode,
             initialDnd = rule.dndMode,
             initialQuietHours = rule.quietHoursMode,
-            initialQuietStart = rule.quietHoursStartMinutes ?: conditionsQuietStart,
-            initialQuietEnd = rule.quietHoursEndMinutes ?: conditionsQuietEnd,
+            initialQuietStart = rule.quietHoursStartMinutes ?: state.quietHoursStartMinutes,
+            initialQuietEnd = rule.quietHoursEndMinutes ?: state.quietHoursEndMinutes,
             renderer = renderer,
             onDismiss = { callRuleBeingEdited = null },
             onSave = { result ->
@@ -290,13 +236,13 @@ fun HomeScreen(
     if (isConfiguringOtherContacts) {
         CustomRuleDialog(
             title = stringResource(R.string.calls_other_contacts_title),
-            initialColor = otherContactsColor,
-            initialPattern = otherContactsPattern,
-            initialFaceDown = otherContactsFaceDown,
-            initialDnd = otherContactsDnd,
-            initialQuietHours = otherContactsQuiet,
-            initialQuietStart = otherContactsQuietStart ?: conditionsQuietStart,
-            initialQuietEnd = otherContactsQuietEnd ?: conditionsQuietEnd,
+            initialColor = state.otherContactsColor,
+            initialPattern = state.otherContactsPattern,
+            initialFaceDown = state.otherContactsFaceDownMode,
+            initialDnd = state.otherContactsDndMode,
+            initialQuietHours = state.otherContactsQuietHoursMode,
+            initialQuietStart = state.otherContactsQuietHoursStartMinutes ?: state.quietHoursStartMinutes,
+            initialQuietEnd = state.otherContactsQuietHoursEndMinutes ?: state.quietHoursEndMinutes,
             renderer = renderer,
             onDismiss = { isConfiguringOtherContacts = false },
             onSave = { result ->
@@ -318,13 +264,13 @@ fun HomeScreen(
     if (isConfiguringUnknownNumbers) {
         CustomRuleDialog(
             title = stringResource(R.string.calls_unknown_numbers_title),
-            initialColor = unknownNumbersColor,
-            initialPattern = unknownNumbersPattern,
-            initialFaceDown = unknownNumbersFaceDown,
-            initialDnd = unknownNumbersDnd,
-            initialQuietHours = unknownNumbersQuiet,
-            initialQuietStart = unknownNumbersQuietStart ?: conditionsQuietStart,
-            initialQuietEnd = unknownNumbersQuietEnd ?: conditionsQuietEnd,
+            initialColor = state.unknownNumbersColor,
+            initialPattern = state.unknownNumbersPattern,
+            initialFaceDown = state.unknownNumbersFaceDownMode,
+            initialDnd = state.unknownNumbersDndMode,
+            initialQuietHours = state.unknownNumbersQuietHoursMode,
+            initialQuietStart = state.unknownNumbersQuietHoursStartMinutes ?: state.quietHoursStartMinutes,
+            initialQuietEnd = state.unknownNumbersQuietHoursEndMinutes ?: state.quietHoursEndMinutes,
             renderer = renderer,
             onDismiss = { isConfiguringUnknownNumbers = false },
             onSave = { result ->
@@ -346,7 +292,7 @@ fun HomeScreen(
     if (isPickingApp) {
         AppPickerDialog(
             context = context,
-            alreadyAdded = appRules.map { it.packageName }.toSet(),
+            alreadyAdded = state.appRules.map { it.packageName }.toSet(),
             onDismiss = { isPickingApp = false },
             onAppSelected = { pkg, name ->
                 isPickingApp = false
@@ -372,8 +318,8 @@ fun HomeScreen(
             initialFaceDown = rule.faceDownMode,
             initialDnd = rule.dndMode,
             initialQuietHours = rule.quietHoursMode,
-            initialQuietStart = rule.quietHoursStartMinutes ?: conditionsQuietStart,
-            initialQuietEnd = rule.quietHoursEndMinutes ?: conditionsQuietEnd,
+            initialQuietStart = rule.quietHoursStartMinutes ?: state.quietHoursStartMinutes,
+            initialQuietEnd = rule.quietHoursEndMinutes ?: state.quietHoursEndMinutes,
             renderer = renderer,
             onDismiss = { msgRuleBeingEdited = null },
             onSave = { result ->
@@ -406,8 +352,8 @@ fun HomeScreen(
             initialFaceDown = rule.faceDownMode,
             initialDnd = rule.dndMode,
             initialQuietHours = rule.quietHoursMode,
-            initialQuietStart = rule.quietHoursStartMinutes ?: conditionsQuietStart,
-            initialQuietEnd = rule.quietHoursEndMinutes ?: conditionsQuietEnd,
+            initialQuietStart = rule.quietHoursStartMinutes ?: state.quietHoursStartMinutes,
+            initialQuietEnd = rule.quietHoursEndMinutes ?: state.quietHoursEndMinutes,
             showAutoColorToggle = true,
             initialAutoColor = rule.isAutoColor,
             autoExtractedColor = autoColor,
@@ -435,15 +381,15 @@ fun HomeScreen(
     if (isConfiguringDefaultNotif) {
         CustomRuleDialog(
             title = stringResource(R.string.notifs_default_title),
-            initialColor = defaultNotifColor,
-            initialPattern = defaultNotifPattern,
-            initialFaceDown = defaultNotifFaceDown,
-            initialDnd = defaultNotifDnd,
-            initialQuietHours = defaultNotifQuiet,
-            initialQuietStart = defaultNotifQuietStart ?: conditionsQuietStart,
-            initialQuietEnd = defaultNotifQuietEnd ?: conditionsQuietEnd,
+            initialColor = state.defaultNotifColor,
+            initialPattern = state.defaultNotifPattern,
+            initialFaceDown = state.defaultNotifFaceDownMode,
+            initialDnd = state.defaultNotifDndMode,
+            initialQuietHours = state.defaultNotifQuietHoursMode,
+            initialQuietStart = state.defaultNotifQuietHoursStartMinutes ?: state.quietHoursStartMinutes,
+            initialQuietEnd = state.defaultNotifQuietHoursEndMinutes ?: state.quietHoursEndMinutes,
             showAutoColorToggle = true,
-            initialAutoColor = isDefaultNotifAutoColor,
+            initialAutoColor = state.isDefaultNotifAutoColor,
             autoExtractedColor = null,
             renderer = renderer,
             onDismiss = { isConfiguringDefaultNotif = false },
@@ -483,45 +429,27 @@ fun HomeContent(
     onRequestPhonePerms: () -> Unit,
     onOpenAppSettings: () -> Unit,
     onOpenNotifSettings: () -> Unit,
+    state: SettingsSnapshot,
     // Calls
-    isCallLightsEnabled: Boolean,
     onToggleCallLights: (Boolean) -> Unit,
-    isOtherContactsEnabled: Boolean,
-    otherContactsColor: Long,
-    otherContactsPattern: PatternMode,
     onToggleOtherContacts: (Boolean) -> Unit,
     onEditOtherContacts: () -> Unit,
-    isUnknownNumbersEnabled: Boolean,
-    unknownNumbersColor: Long,
-    unknownNumbersPattern: PatternMode,
     onToggleUnknownNumbers: (Boolean) -> Unit,
     onEditUnknownNumbers: () -> Unit,
-    callContactRules: List<ContactRule>,
     onToggleCallContactRule: (ContactRule, Boolean) -> Unit,
     onEditCallContactRule: (ContactRule) -> Unit,
     onDeleteCallContactRule: (String) -> Unit,
     onAddCallContact: () -> Unit,
     // Notifications
-    isNotifsEnabled: Boolean,
     onToggleNotifs: (Boolean) -> Unit,
-    notifDurationSec: Int,
     onChangeDuration: (Int) -> Unit,
-    isCycleNotifications: Boolean = false,
     onToggleCycleNotifications: (Boolean) -> Unit = {},
-    isDefaultNotifEnabled: Boolean,
-    defaultNotifColor: Long,
-    defaultNotifPattern: PatternMode,
-    defaultNotifFaceDownMode: com.mwilky.hilight.plus.FaceDownMode = com.mwilky.hilight.plus.FaceDownMode.INHERIT,
-    otherContactsFaceDownMode: com.mwilky.hilight.plus.FaceDownMode = com.mwilky.hilight.plus.FaceDownMode.INHERIT,
-    unknownNumbersFaceDownMode: com.mwilky.hilight.plus.FaceDownMode = com.mwilky.hilight.plus.FaceDownMode.INHERIT,
     onToggleDefaultNotif: (Boolean) -> Unit,
     onEditDefaultNotif: () -> Unit,
-    messageContactRules: List<MessageContactRule>,
     onToggleMessageRule: (MessageContactRule, Boolean) -> Unit,
     onEditMessageRule: (MessageContactRule) -> Unit,
     onDeleteMessageRule: (String) -> Unit,
     onAddMessageContact: () -> Unit,
-    appRules: List<AppNotificationRule>,
     onToggleAppRule: (AppNotificationRule, Boolean) -> Unit,
     onEditAppRule: (AppNotificationRule) -> Unit,
     onDeleteAppRule: (String) -> Unit,
@@ -531,25 +459,25 @@ fun HomeContent(
     val effectsSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val spatialSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     val callAlpha by animateFloatAsState(
-        targetValue = if (isCallLightsEnabled) 1.0f else 0.40f,
+        targetValue = if (state.isCallLightsEnabled) 1.0f else 0.40f,
         animationSpec = effectsSpec,
         label = "callAlpha"
     )
 
     val notifAlpha by animateFloatAsState(
-        targetValue = if (isNotifsEnabled) 1.0f else 0.40f,
+        targetValue = if (state.isNotificationsEnabled) 1.0f else 0.40f,
         animationSpec = effectsSpec,
         label = "notifAlpha"
     )
 
     val callScale by animateFloatAsState(
-        targetValue = if (isCallLightsEnabled) 1.0f else 0.985f,
+        targetValue = if (state.isCallLightsEnabled) 1.0f else 0.985f,
         animationSpec = spatialSpec,
         label = "callScale"
     )
 
     val notifScale by animateFloatAsState(
-        targetValue = if (isNotifsEnabled) 1.0f else 0.985f,
+        targetValue = if (state.isNotificationsEnabled) 1.0f else 0.985f,
         animationSpec = spatialSpec,
         label = "notifScale"
     )
@@ -648,29 +576,29 @@ fun HomeContent(
 
             item {
                 HomeCallsMasterCard(
-                    enabled = isCallLightsEnabled,
+                    enabled = state.isCallLightsEnabled,
                     onToggle = onToggleCallLights
                 )
             }
 
             item {
                 HomeCallsSettingsCard(
-                    enabled = isCallLightsEnabled,
+                    enabled = state.isCallLightsEnabled,
                     alpha = callAlpha,
                     scale = callScale,
-                    isOtherContactsEnabled = isOtherContactsEnabled,
-                    otherContactsColor = otherContactsColor,
-                    otherContactsPattern = otherContactsPattern,
-                    otherContactsFaceDownMode = otherContactsFaceDownMode,
+                    isOtherContactsEnabled = state.isOtherContactsEnabled,
+                    otherContactsColor = state.otherContactsColor,
+                    otherContactsPattern = state.otherContactsPattern,
+                    otherContactsFaceDownMode = state.otherContactsFaceDownMode,
                     onToggleOtherContacts = onToggleOtherContacts,
                     onEditOtherContacts = onEditOtherContacts,
-                    isUnknownNumbersEnabled = isUnknownNumbersEnabled,
-                    unknownNumbersColor = unknownNumbersColor,
-                    unknownNumbersPattern = unknownNumbersPattern,
-                    unknownNumbersFaceDownMode = unknownNumbersFaceDownMode,
+                    isUnknownNumbersEnabled = state.isUnknownNumbersEnabled,
+                    unknownNumbersColor = state.unknownNumbersColor,
+                    unknownNumbersPattern = state.unknownNumbersPattern,
+                    unknownNumbersFaceDownMode = state.unknownNumbersFaceDownMode,
                     onToggleUnknownNumbers = onToggleUnknownNumbers,
                     onEditUnknownNumbers = onEditUnknownNumbers,
-                    callContactRules = callContactRules,
+                    callContactRules = state.contactRules,
                     onToggleCallContactRule = onToggleCallContactRule,
                     onEditCallContactRule = onEditCallContactRule,
                     onDeleteCallContactRule = onDeleteCallContactRule,
@@ -696,35 +624,35 @@ fun HomeContent(
 
             item {
                 HomeNotifsMasterCard(
-                    enabled = isNotifsEnabled,
+                    enabled = state.isNotificationsEnabled,
                     onToggle = onToggleNotifs
                 )
             }
 
             item {
                 HomeNotifsSettingsCard(
-                    enabled = isNotifsEnabled,
+                    enabled = state.isNotificationsEnabled,
                     alpha = notifAlpha,
                     scale = notifScale,
-                    isDefaultNotifEnabled = isDefaultNotifEnabled,
-                    defaultNotifColor = defaultNotifColor,
-                    defaultNotifPattern = defaultNotifPattern,
-                    defaultNotifFaceDownMode = defaultNotifFaceDownMode,
+                    isDefaultNotifEnabled = state.isDefaultNotifEnabled,
+                    defaultNotifColor = state.defaultNotifColor,
+                    defaultNotifPattern = state.defaultNotifPattern,
+                    defaultNotifFaceDownMode = state.defaultNotifFaceDownMode,
                     onToggleDefaultNotif = onToggleDefaultNotif,
                     onEditDefaultNotif = onEditDefaultNotif,
-                    messageContactRules = messageContactRules,
+                    messageContactRules = state.messageContactRules,
                     onToggleMessageRule = onToggleMessageRule,
                     onEditMessageRule = onEditMessageRule,
                     onDeleteMessageRule = onDeleteMessageRule,
                     onAddMessageContact = onAddMessageContact,
-                    appRules = appRules,
+                    appRules = state.appRules,
                     onToggleAppRule = onToggleAppRule,
                     onEditAppRule = onEditAppRule,
                     onDeleteAppRule = onDeleteAppRule,
                     onAddApp = onAddApp,
-                    notifDurationSec = notifDurationSec,
+                    notifDurationSec = state.notificationDurationSeconds,
                     onChangeDuration = onChangeDuration,
-                    isCycleNotifications = isCycleNotifications,
+                    isCycleNotifications = state.isCycleNotifications,
                     onToggleCycleNotifications = onToggleCycleNotifications,
                     renderer = renderer
                 )
@@ -1532,38 +1460,63 @@ fun HomeScreenPreviewContent(
             onRequestPhonePerms = {},
             onOpenAppSettings = {},
             onOpenNotifSettings = {},
-            isCallLightsEnabled = true,
+            state = SettingsSnapshot(
+                isEnabled = true,
+                isOnlyWhenFaceDown = false,
+                suppressDuringDnd = false,
+                quietHoursEnabled = false,
+                quietHoursStartMinutes = 22 * 60,
+                quietHoursEndMinutes = 7 * 60,
+                isCallLightsEnabled = true,
+                contactRules = mockCallContacts,
+                isOtherContactsEnabled = true,
+                otherContactsColor = 0xFF4285F4,
+                otherContactsPattern = PatternMode.PULSE,
+                otherContactsFaceDownMode = FaceDownMode.INHERIT,
+                otherContactsDndMode = DndMode.INHERIT,
+                otherContactsQuietHoursMode = QuietHoursMode.INHERIT,
+                otherContactsQuietHoursStartMinutes = null,
+                otherContactsQuietHoursEndMinutes = null,
+                isUnknownNumbersEnabled = true,
+                unknownNumbersColor = 0xFFFBBC05,
+                unknownNumbersPattern = PatternMode.PULSE,
+                unknownNumbersFaceDownMode = FaceDownMode.INHERIT,
+                unknownNumbersDndMode = DndMode.INHERIT,
+                unknownNumbersQuietHoursMode = QuietHoursMode.INHERIT,
+                unknownNumbersQuietHoursStartMinutes = null,
+                unknownNumbersQuietHoursEndMinutes = null,
+                isNotificationsEnabled = true,
+                notificationDurationSeconds = 30,
+                isCycleNotifications = false,
+                isDefaultNotifEnabled = true,
+                defaultNotifColor = 0xFFFFFFFF,
+                defaultNotifPattern = PatternMode.PULSE,
+                defaultNotifFaceDownMode = FaceDownMode.INHERIT,
+                isDefaultNotifAutoColor = true,
+                defaultNotifDndMode = DndMode.INHERIT,
+                defaultNotifQuietHoursMode = QuietHoursMode.INHERIT,
+                defaultNotifQuietHoursStartMinutes = null,
+                defaultNotifQuietHoursEndMinutes = null,
+                messageContactRules = mockMsgContacts,
+                appRules = mockApps
+            ),
             onToggleCallLights = {},
-            isOtherContactsEnabled = true,
-            otherContactsColor = 0xFF4285F4,
-            otherContactsPattern = PatternMode.PULSE,
             onToggleOtherContacts = {},
             onEditOtherContacts = {},
-            isUnknownNumbersEnabled = true,
-            unknownNumbersColor = 0xFFFBBC05,
-            unknownNumbersPattern = PatternMode.PULSE,
             onToggleUnknownNumbers = {},
             onEditUnknownNumbers = {},
-            callContactRules = mockCallContacts,
             onToggleCallContactRule = { _, _ -> },
             onEditCallContactRule = {},
             onDeleteCallContactRule = {},
             onAddCallContact = {},
-            isNotifsEnabled = true,
             onToggleNotifs = {},
-            notifDurationSec = 30,
             onChangeDuration = {},
-            isDefaultNotifEnabled = true,
-            defaultNotifColor = 0xFFFFFFFF,
-            defaultNotifPattern = PatternMode.PULSE,
             onToggleDefaultNotif = {},
             onEditDefaultNotif = {},
-            messageContactRules = mockMsgContacts,
             onToggleMessageRule = { _, _ -> },
             onEditMessageRule = {},
             onDeleteMessageRule = {},
             onAddMessageContact = {},
-            appRules = mockApps,
             onToggleAppRule = { _, _ -> },
             onEditAppRule = {},
             onDeleteAppRule = {},

@@ -11,50 +11,58 @@ import com.mwilky.hilight.plus.FaceDownMode
 import com.mwilky.hilight.plus.MessageContactRule
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.QuietHoursMode
-import kotlinx.coroutines.flow.Flow
+import com.mwilky.hilight.plus.SettingsSnapshot
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+private val INITIAL_STATE = SettingsSnapshot(
+    isEnabled = true,
+    isOnlyWhenFaceDown = false,
+    suppressDuringDnd = false,
+    quietHoursEnabled = false,
+    quietHoursStartMinutes = 22 * 60,
+    quietHoursEndMinutes = 7 * 60,
+    isCallLightsEnabled = true,
+    contactRules = emptyList(),
+    isOtherContactsEnabled = true,
+    otherContactsColor = 0xFF4285F4,
+    otherContactsPattern = PatternMode.PULSE,
+    otherContactsFaceDownMode = FaceDownMode.INHERIT,
+    otherContactsDndMode = DndMode.INHERIT,
+    otherContactsQuietHoursMode = QuietHoursMode.INHERIT,
+    otherContactsQuietHoursStartMinutes = null,
+    otherContactsQuietHoursEndMinutes = null,
+    isUnknownNumbersEnabled = true,
+    unknownNumbersColor = 0xFFFBBC05,
+    unknownNumbersPattern = PatternMode.PULSE,
+    unknownNumbersFaceDownMode = FaceDownMode.INHERIT,
+    unknownNumbersDndMode = DndMode.INHERIT,
+    unknownNumbersQuietHoursMode = QuietHoursMode.INHERIT,
+    unknownNumbersQuietHoursStartMinutes = null,
+    unknownNumbersQuietHoursEndMinutes = null,
+    isNotificationsEnabled = true,
+    notificationDurationSeconds = 30,
+    isCycleNotifications = false,
+    isDefaultNotifEnabled = true,
+    defaultNotifColor = 0xFFFFFFFF,
+    defaultNotifPattern = PatternMode.PULSE,
+    defaultNotifFaceDownMode = FaceDownMode.INHERIT,
+    isDefaultNotifAutoColor = true,
+    defaultNotifDndMode = DndMode.INHERIT,
+    defaultNotifQuietHoursMode = QuietHoursMode.INHERIT,
+    defaultNotifQuietHoursStartMinutes = null,
+    defaultNotifQuietHoursEndMinutes = null,
+    messageContactRules = emptyList(),
+    appRules = emptyList()
+)
+
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val store = AppStore.get(application)
 
-    val isCallLightsEnabled = store.isCallLightsEnabled.hot(true)
-    val isOtherContactsEnabled = store.isOtherContactsEnabled.hot(true)
-    val otherContactsColor = store.otherContactsColor.hot(0xFF4285F4)
-    val otherContactsPattern = store.otherContactsPattern.hot(PatternMode.PULSE)
-    val otherContactsFaceDownMode = store.otherContactsFaceDownMode.hot(FaceDownMode.INHERIT)
-    val otherContactsDndMode = store.otherContactsDndMode.hot(DndMode.INHERIT)
-    val otherContactsQuietHoursMode = store.otherContactsQuietHoursMode.hot(QuietHoursMode.INHERIT)
-    val otherContactsQuietHoursStartMinutes = store.otherContactsQuietHoursStartMinutes.hot(null)
-    val otherContactsQuietHoursEndMinutes = store.otherContactsQuietHoursEndMinutes.hot(null)
-    val quietHoursStartMinutes = store.quietHoursStartMinutes.hot(22 * 60)
-    val quietHoursEndMinutes = store.quietHoursEndMinutes.hot(7 * 60)
-    val isUnknownNumbersEnabled = store.isUnknownNumbersEnabled.hot(true)
-    val unknownNumbersColor = store.unknownNumbersColor.hot(0xFFFBBC05)
-    val unknownNumbersPattern = store.unknownNumbersPattern.hot(PatternMode.PULSE)
-    val unknownNumbersFaceDownMode = store.unknownNumbersFaceDownMode.hot(FaceDownMode.INHERIT)
-    val unknownNumbersDndMode = store.unknownNumbersDndMode.hot(DndMode.INHERIT)
-    val unknownNumbersQuietHoursMode = store.unknownNumbersQuietHoursMode.hot(QuietHoursMode.INHERIT)
-    val unknownNumbersQuietHoursStartMinutes = store.unknownNumbersQuietHoursStartMinutes.hot(null)
-    val unknownNumbersQuietHoursEndMinutes = store.unknownNumbersQuietHoursEndMinutes.hot(null)
-    val callContactRules = store.contactRules.hot(emptyList())
-
-    val isNotifsEnabled = store.isNotificationsEnabled.hot(true)
-    val notifDurationSec = store.notificationDurationSeconds.hot(30)
-    val isCycleNotifications = store.isCycleNotifications.hot(false)
-    val isDefaultNotifEnabled = store.isDefaultNotifEnabled.hot(true)
-    val defaultNotifColor = store.defaultNotifColor.hot(0xFFFFFFFF)
-    val defaultNotifPattern = store.defaultNotifPattern.hot(PatternMode.PULSE)
-    val defaultNotifFaceDownMode = store.defaultNotifFaceDownMode.hot(FaceDownMode.INHERIT)
-    val isDefaultNotifAutoColor = store.isDefaultNotifAutoColor.hot(true)
-    val defaultNotifDndMode = store.defaultNotifDndMode.hot(DndMode.INHERIT)
-    val defaultNotifQuietHoursMode = store.defaultNotifQuietHoursMode.hot(QuietHoursMode.INHERIT)
-    val defaultNotifQuietHoursStartMinutes = store.defaultNotifQuietHoursStartMinutes.hot(null)
-    val defaultNotifQuietHoursEndMinutes = store.defaultNotifQuietHoursEndMinutes.hot(null)
-    val messageContactRules = store.messageContactRules.hot(emptyList())
-    val appRules = store.appRules.hot(emptyList())
+    val uiState: StateFlow<SettingsSnapshot> = store.settingsFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), INITIAL_STATE)
 
     fun setCallLightsEnabled(enabled: Boolean) = launch { store.setCallLightsEnabled(enabled) }
     fun setOtherContactsEnabled(enabled: Boolean) = launch { store.setOtherContactsEnabled(enabled) }
@@ -136,7 +144,4 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private fun launch(block: suspend () -> Unit) {
         viewModelScope.launch { block() }
     }
-
-    private fun <T> Flow<T>.hot(initial: T): StateFlow<T> =
-        stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), initial)
 }
