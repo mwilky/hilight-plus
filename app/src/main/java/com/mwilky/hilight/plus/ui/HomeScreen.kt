@@ -42,7 +42,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -606,13 +605,13 @@ fun HomeContent(
     )
 
     var selectedTab by remember { mutableIntStateOf(0) }
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    val headerColors = TopAppBarDefaults.topAppBarColors()
+    val headerColor = headerColors.containerColor
 
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
         topBar = {
-            Column {
+            Column(modifier = Modifier.background(headerColor)) {
                 CenterAlignedTopAppBar(
                     title = {
                         Row(
@@ -631,20 +630,22 @@ fun HomeContent(
                             )
                         }
                     },
-                    scrollBehavior = scrollBehavior
+                    colors = headerColors
                 )
-                PrimaryTabRow(selectedTabIndex = selectedTab) {
+                SecondaryTabRow(
+                    selectedTabIndex = selectedTab,
+                    containerColor = headerColor,
+                    divider = {}
+                ) {
                     Tab(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
-                        text = { Text(stringResource(R.string.home_tab_calls)) },
-                        icon = { Icon(Icons.Rounded.Call, contentDescription = null) }
+                        text = { Text(stringResource(R.string.home_tab_calls)) }
                     )
                     Tab(
                         selected = selectedTab == 1,
                         onClick = { selectedTab = 1 },
-                        text = { Text(stringResource(R.string.home_tab_notifications)) },
-                        icon = { Icon(Icons.Rounded.Notifications, contentDescription = null) }
+                        text = { Text(stringResource(R.string.home_tab_notifications)) }
                     )
                 }
             }
