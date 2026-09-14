@@ -63,6 +63,10 @@ enum class DndMode(val id: String) {
         SKIP -> dndActive
         INHERIT -> globalEnabled && dndActive
     }
+
+    companion object {
+        fun fromId(id: String?) = entries.find { it.id == id } ?: INHERIT
+    }
 }
 
 enum class QuietHoursMode(val id: String) {
@@ -74,6 +78,10 @@ enum class QuietHoursMode(val id: String) {
         ALWAYS -> false
         SKIP -> inQuietHours
         INHERIT -> globalEnabled && inQuietHours
+    }
+
+    companion object {
+        fun fromId(id: String?) = entries.find { it.id == id } ?: INHERIT
     }
 }
 

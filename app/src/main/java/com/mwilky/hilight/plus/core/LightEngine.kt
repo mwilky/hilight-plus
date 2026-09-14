@@ -2,6 +2,8 @@ package com.mwilky.hilight.plus.core
 
 import android.os.SystemClock
 import android.util.Log
+import com.mwilky.hilight.plus.DndMode
+import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.currentMinutesOfDay
 
 /**
@@ -19,9 +21,10 @@ class LightEngine {
         val speedMs: Long,
         val expiresAtMs: Long,
         val requiresFaceDown: Boolean,
-        val suppressDuringDnd: Boolean,
-        val quietStartMinutes: Int?,
-        val quietEndMinutes: Int?
+        val dndMode: DndMode,
+        val quietHoursMode: QuietHoursMode,
+        val quietStartOverride: Int?,
+        val quietEndOverride: Int?
     )
 
     private val lights = PixelLightsManager()
@@ -38,6 +41,10 @@ class LightEngine {
     private var isAlertsPaused = false
     private var deviceFaceDown = false
     private var dndActive = false
+    private var dndSuppressEnabled = false
+    private var quietHoursEnabled = false
+    private var quietHoursStartMinutes = 22 * 60
+    private var quietHoursEndMinutes = 7 * 60
 
     // Ambient State
     private var ambientPattern = "off"
@@ -52,9 +59,10 @@ class LightEngine {
         val speedMs: Long,
         val startedAtMs: Long,
         val requiresFaceDown: Boolean,
-        val suppressDuringDnd: Boolean,
-        val quietStartMinutes: Int?,
-        val quietEndMinutes: Int?
+        val dndMode: DndMode,
+        val quietHoursMode: QuietHoursMode,
+        val quietStartOverride: Int?,
+        val quietEndOverride: Int?
     )
 
     // Incoming calls override notification output without deleting its state.
@@ -66,9 +74,10 @@ class LightEngine {
     private var directAlertBrightness = 1.0f
     private var directAlertSpeedMs = 800L
     private var directRequiresFaceDown = false
-    private var directSuppressDuringDnd = false
-    private var directQuietStartMinutes: Int? = null
-    private var directQuietEndMinutes: Int? = null
+    private var directDndMode = DndMode.ALWAYS
+    private var directQuietHoursMode = QuietHoursMode.ALWAYS
+    private var directQuietStartOverride: Int? = null
+    private var directQuietEndOverride: Int? = null
     private val directAlertTimer = PausableAlertTimer()
 
     // Multi-Notification Cyclic Queue
@@ -142,9 +151,10 @@ class LightEngine {
         brightness: Float,
         speedMs: Long,
         requiresFaceDown: Boolean = false,
-        suppressDuringDnd: Boolean = false,
-        quietStartMinutes: Int? = null,
-        quietEndMinutes: Int? = null
+        dndMode: DndMode = DndMode.ALWAYS,
+        quietHoursMode: QuietHoursMode = QuietHoursMode.ALWAYS,
+        quietStartOverride: Int? = null,
+        quietEndOverride: Int? = null
     ) {
         synchronized(lock) {
             val now = SystemClock.elapsedRealtime()
@@ -155,9 +165,10 @@ class LightEngine {
                 speedMs,
                 now,
                 requiresFaceDown,
-                suppressDuringDnd,
-                quietStartMinutes,
-                quietEndMinutes
+                dndMode,
+                quietHoursMode,
+                quietStartOverride,
+                quietEndOverride
             )
             syncNotificationTimer(now)
             needsSessionReset = true
@@ -186,9 +197,10 @@ class LightEngine {
         speedMs: Long,
         durationMs: Long,
         requiresFaceDown: Boolean = false,
-        suppressDuringDnd: Boolean = false,
-        quietStartMinutes: Int? = null,
-        quietEndMinutes: Int? = null
+        dndMode: DndMode = DndMode.ALWAYS,
+        quietHoursMode: QuietHoursMode = QuietHoursMode.ALWAYS,
+        quietStartOverride: Int? = null,
+        quietEndOverride: Int? = null
     ) {
         synchronized(lock) {
             val now = SystemClock.elapsedRealtime()
@@ -197,9 +209,10 @@ class LightEngine {
             directAlertBrightness = brightness
             directAlertSpeedMs = speedMs
             directRequiresFaceDown = requiresFaceDown
-            directSuppressDuringDnd = suppressDuringDnd
-            directQuietStartMinutes = quietStartMinutes
-            directQuietEndMinutes = quietEndMinutes
+            directDndMode = dndMode
+            directQuietHoursMode = quietHoursMode
+            directQuietStartOverride = quietStartOverride
+            directQuietEndOverride = quietEndOverride
             directAlertTimer.start(
                 durationMs = durationMs,
                 nowMs = now,
@@ -208,7 +221,7 @@ class LightEngine {
             activeAlerts.clear()
             currentAlertIndex = 0
             needsSessionReset = true
-            Log.i(TAG, "triggerAlert: pattern=$pattern, color=$color, durationMs=$durationMs, requiresFaceDown=$requiresFaceDown, suppressDuringDnd=$suppressDuringDnd")
+            Log.i(TAG, "triggerAlert: pattern=$pattern, color=$color, durationMs=$durationMs, requiresFaceDown=$requiresFaceDown, dndMode=$dndMode, quietHoursMode=$quietHoursMode")
         }
     }
 
@@ -223,9 +236,10 @@ class LightEngine {
         speedMs: Long,
         durationMs: Long,
         requiresFaceDown: Boolean = false,
-        suppressDuringDnd: Boolean = false,
-        quietStartMinutes: Int? = null,
-        quietEndMinutes: Int? = null
+        dndMode: DndMode = DndMode.ALWAYS,
+        quietHoursMode: QuietHoursMode = QuietHoursMode.ALWAYS,
+        quietStartOverride: Int? = null,
+        quietEndOverride: Int? = null
     ) {
         synchronized(lock) {
             val now = SystemClock.elapsedRealtime()
@@ -238,9 +252,10 @@ class LightEngine {
                 speedMs = speedMs,
                 expiresAtMs = expiresAt,
                 requiresFaceDown = requiresFaceDown,
-                suppressDuringDnd = suppressDuringDnd,
-                quietStartMinutes = quietStartMinutes,
-                quietEndMinutes = quietEndMinutes
+                dndMode = dndMode,
+                quietHoursMode = quietHoursMode,
+                quietStartOverride = quietStartOverride,
+                quietEndOverride = quietEndOverride
             )
 
             // Remove any existing entry with this key
@@ -253,10 +268,10 @@ class LightEngine {
                 currentAlertIndex = 0
                 cycleStartTimeMs = now
             }
-            if (notificationVisible(requiresFaceDown, suppressDuringDnd, quietStartMinutes, quietEndMinutes)) {
+            if (notificationVisible(requiresFaceDown, dndMode, quietHoursMode, quietStartOverride, quietEndOverride)) {
                 needsSessionReset = true
             }
-            Log.i(TAG, "postAlert [key=$key]: pattern=$pattern, color=$color, speedMs=$speedMs (queue size=${activeAlerts.size}, unlockPaused=$isAlertsPaused, requiresFaceDown=$requiresFaceDown, suppressDuringDnd=$suppressDuringDnd)")
+            Log.i(TAG, "postAlert [key=$key]: pattern=$pattern, color=$color, speedMs=$speedMs (queue size=${activeAlerts.size}, unlockPaused=$isAlertsPaused, requiresFaceDown=$requiresFaceDown, dndMode=$dndMode, quietHoursMode=$quietHoursMode)")
         }
     }
 
@@ -276,12 +291,41 @@ class LightEngine {
         synchronized(lock) {
             if (dndActive == active) return
             dndActive = active
-            val now = SystemClock.elapsedRealtime()
-            syncNotificationTimer(now)
-            cycleStartTimeMs = now
-            needsSessionReset = true
+            onLiveConditionChanged()
             Log.i(TAG, "setDndActive: $active")
         }
+    }
+
+    fun setDndSuppressEnabled(enabled: Boolean) {
+        synchronized(lock) {
+            if (dndSuppressEnabled == enabled) return
+            dndSuppressEnabled = enabled
+            onLiveConditionChanged()
+            Log.i(TAG, "setDndSuppressEnabled: $enabled")
+        }
+    }
+
+    fun setQuietHours(enabled: Boolean, startMinutes: Int, endMinutes: Int) {
+        synchronized(lock) {
+            if (quietHoursEnabled == enabled &&
+                quietHoursStartMinutes == startMinutes &&
+                quietHoursEndMinutes == endMinutes
+            ) {
+                return
+            }
+            quietHoursEnabled = enabled
+            quietHoursStartMinutes = startMinutes
+            quietHoursEndMinutes = endMinutes
+            onLiveConditionChanged()
+            Log.i(TAG, "setQuietHours: enabled=$enabled, start=$startMinutes, end=$endMinutes")
+        }
+    }
+
+    private fun onLiveConditionChanged() {
+        val now = SystemClock.elapsedRealtime()
+        syncNotificationTimer(now)
+        cycleStartTimeMs = now
+        needsSessionReset = true
     }
 
     /**
@@ -342,9 +386,10 @@ class LightEngine {
         synchronized(lock) {
             directAlertPattern = null
             directRequiresFaceDown = false
-            directSuppressDuringDnd = false
-            directQuietStartMinutes = null
-            directQuietEndMinutes = null
+            directDndMode = DndMode.ALWAYS
+            directQuietHoursMode = QuietHoursMode.ALWAYS
+            directQuietStartOverride = null
+            directQuietEndOverride = null
             directAlertTimer.clear()
             activeAlerts.clear()
             currentAlertIndex = 0
@@ -360,9 +405,10 @@ class LightEngine {
             incomingCallAlert = null
             directAlertPattern = null
             directRequiresFaceDown = false
-            directSuppressDuringDnd = false
-            directQuietStartMinutes = null
-            directQuietEndMinutes = null
+            directDndMode = DndMode.ALWAYS
+            directQuietHoursMode = QuietHoursMode.ALWAYS
+            directQuietStartOverride = null
+            directQuietEndOverride = null
             directAlertTimer.clear()
             activeAlerts.clear()
             currentAlertIndex = 0
@@ -404,26 +450,29 @@ class LightEngine {
             val call = incomingCallAlert
             val callVisible = call != null && alertVisible(
                 call.requiresFaceDown,
-                call.suppressDuringDnd,
-                call.quietStartMinutes,
-                call.quietEndMinutes,
+                call.dndMode,
+                call.quietHoursMode,
+                call.quietStartOverride,
+                call.quietEndOverride,
                 nowMinutes
             )
 
             if (directAlertPattern != null && directAlertTimer.remainingMs(now) == 0L) {
                 directAlertPattern = null
                 directRequiresFaceDown = false
-                directSuppressDuringDnd = false
-                directQuietStartMinutes = null
-                directQuietEndMinutes = null
+                directDndMode = DndMode.ALWAYS
+                directQuietHoursMode = QuietHoursMode.ALWAYS
+                directQuietStartOverride = null
+                directQuietEndOverride = null
                 directAlertTimer.clear()
             }
             val isDirectAlertActive = directAlertPattern != null &&
                 notificationVisible(
                     directRequiresFaceDown,
-                    directSuppressDuringDnd,
-                    directQuietStartMinutes,
-                    directQuietEndMinutes,
+                    directDndMode,
+                    directQuietHoursMode,
+                    directQuietStartOverride,
+                    directQuietEndOverride,
                     nowMinutes
                 )
 
@@ -542,9 +591,10 @@ class LightEngine {
             val alert = activeAlerts[i]
             if (alertVisible(
                     alert.requiresFaceDown,
-                    alert.suppressDuringDnd,
-                    alert.quietStartMinutes,
-                    alert.quietEndMinutes,
+                    alert.dndMode,
+                    alert.quietHoursMode,
+                    alert.quietStartOverride,
+                    alert.quietEndOverride,
                     nowMinutes
                 )
             ) {
@@ -558,43 +608,56 @@ class LightEngine {
         if (directAlertPattern == null) return false
         return notificationVisible(
             directRequiresFaceDown,
-            directSuppressDuringDnd,
-            directQuietStartMinutes,
-            directQuietEndMinutes
+            directDndMode,
+            directQuietHoursMode,
+            directQuietStartOverride,
+            directQuietEndOverride
         )
     }
 
     private fun notificationVisible(
         requiresFaceDown: Boolean,
-        suppressDuringDnd: Boolean,
-        quietStartMinutes: Int?,
-        quietEndMinutes: Int?,
+        dndMode: DndMode,
+        quietHoursMode: QuietHoursMode,
+        quietStartOverride: Int?,
+        quietEndOverride: Int?,
         nowMinutes: Int = currentMinutesOfDay()
     ): Boolean = AlertRenderPolicy.canShowNotification(
         unlockPaused = isAlertsPaused,
         callActive = incomingCallAlert != null,
         requiresFaceDown = requiresFaceDown,
         deviceFaceDown = deviceFaceDown,
-        suppressDuringDnd = suppressDuringDnd,
+        dndMode = dndMode,
+        dndSuppressEnabled = dndSuppressEnabled,
         dndActive = dndActive,
-        quietStartMinutes = quietStartMinutes,
-        quietEndMinutes = quietEndMinutes,
+        quietHoursMode = quietHoursMode,
+        quietHoursEnabled = quietHoursEnabled,
+        quietHoursStartMinutes = quietHoursStartMinutes,
+        quietHoursEndMinutes = quietHoursEndMinutes,
+        quietStartOverride = quietStartOverride,
+        quietEndOverride = quietEndOverride,
         nowMinutes = nowMinutes
     )
 
     private fun alertVisible(
         requiresFaceDown: Boolean,
-        suppressDuringDnd: Boolean,
-        quietStartMinutes: Int?,
-        quietEndMinutes: Int?,
+        dndMode: DndMode,
+        quietHoursMode: QuietHoursMode,
+        quietStartOverride: Int?,
+        quietEndOverride: Int?,
         nowMinutes: Int = currentMinutesOfDay()
     ): Boolean = AlertRenderPolicy.canShowAlert(
         requiresFaceDown,
         deviceFaceDown,
-        suppressDuringDnd,
+        dndMode,
+        dndSuppressEnabled,
         dndActive,
-        quietStartMinutes,
-        quietEndMinutes,
+        quietHoursMode,
+        quietHoursEnabled,
+        quietHoursStartMinutes,
+        quietHoursEndMinutes,
+        quietStartOverride,
+        quietEndOverride,
         nowMinutes
     )
 

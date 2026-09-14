@@ -37,6 +37,20 @@ internal fun isSystemDndActive(interruptionFilter: Int): Boolean =
     interruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL &&
         interruptionFilter != NotificationManager.INTERRUPTION_FILTER_UNKNOWN
 
+internal fun quietHoursBlocked(
+    mode: QuietHoursMode,
+    globalEnabled: Boolean,
+    globalStart: Int,
+    globalEnd: Int,
+    overrideStart: Int?,
+    overrideEnd: Int?,
+    nowMinutes: Int
+): Boolean {
+    val start = if (mode == QuietHoursMode.SKIP) overrideStart ?: globalStart else globalStart
+    val end = if (mode == QuietHoursMode.SKIP) overrideEnd ?: globalEnd else globalEnd
+    return mode.blockedBy(globalEnabled, isInQuietHoursWindow(nowMinutes, start, end))
+}
+
 internal fun SettingsSnapshot.suppressesDuringDnd(mode: DndMode): Boolean =
     mode.blockedBy(suppressDuringDnd, dndActive = true)
 

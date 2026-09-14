@@ -1,6 +1,8 @@
 package com.mwilky.hilight.plus.core
 
-import com.mwilky.hilight.plus.isInQuietHoursWindow
+import com.mwilky.hilight.plus.DndMode
+import com.mwilky.hilight.plus.QuietHoursMode
+import com.mwilky.hilight.plus.quietHoursBlocked
 
 /**
  * Composed visibility for alerts. Unlock pause and an active call hide notifications;
@@ -11,16 +13,28 @@ internal object AlertRenderPolicy {
     fun canShowAlert(
         requiresFaceDown: Boolean,
         deviceFaceDown: Boolean,
-        suppressDuringDnd: Boolean = false,
+        dndMode: DndMode = DndMode.ALWAYS,
+        dndSuppressEnabled: Boolean = false,
         dndActive: Boolean = false,
-        quietStartMinutes: Int? = null,
-        quietEndMinutes: Int? = null,
+        quietHoursMode: QuietHoursMode = QuietHoursMode.ALWAYS,
+        quietHoursEnabled: Boolean = false,
+        quietHoursStartMinutes: Int = 0,
+        quietHoursEndMinutes: Int = 0,
+        quietStartOverride: Int? = null,
+        quietEndOverride: Int? = null,
         nowMinutes: Int = 0
     ): Boolean {
         if (requiresFaceDown && !deviceFaceDown) return false
-        if (suppressDuringDnd && dndActive) return false
-        if (quietStartMinutes != null && quietEndMinutes != null &&
-            isInQuietHoursWindow(nowMinutes, quietStartMinutes, quietEndMinutes)
+        if (dndMode.blockedBy(dndSuppressEnabled, dndActive)) return false
+        if (quietHoursBlocked(
+                quietHoursMode,
+                quietHoursEnabled,
+                quietHoursStartMinutes,
+                quietHoursEndMinutes,
+                quietStartOverride,
+                quietEndOverride,
+                nowMinutes
+            )
         ) {
             return false
         }
@@ -32,20 +46,30 @@ internal object AlertRenderPolicy {
         callActive: Boolean,
         requiresFaceDown: Boolean,
         deviceFaceDown: Boolean,
-        suppressDuringDnd: Boolean = false,
+        dndMode: DndMode = DndMode.ALWAYS,
+        dndSuppressEnabled: Boolean = false,
         dndActive: Boolean = false,
-        quietStartMinutes: Int? = null,
-        quietEndMinutes: Int? = null,
+        quietHoursMode: QuietHoursMode = QuietHoursMode.ALWAYS,
+        quietHoursEnabled: Boolean = false,
+        quietHoursStartMinutes: Int = 0,
+        quietHoursEndMinutes: Int = 0,
+        quietStartOverride: Int? = null,
+        quietEndOverride: Int? = null,
         nowMinutes: Int = 0
     ): Boolean {
         if (unlockPaused || callActive) return false
         return canShowAlert(
             requiresFaceDown,
             deviceFaceDown,
-            suppressDuringDnd,
+            dndMode,
+            dndSuppressEnabled,
             dndActive,
-            quietStartMinutes,
-            quietEndMinutes,
+            quietHoursMode,
+            quietHoursEnabled,
+            quietHoursStartMinutes,
+            quietHoursEndMinutes,
+            quietStartOverride,
+            quietEndOverride,
             nowMinutes
         )
     }

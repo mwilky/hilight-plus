@@ -22,8 +22,13 @@ class IncomingCallSessionTest {
         val session = IncomingCallSession()
         session.onRinging("+15551212", nowMs = 1_000L)
 
+        assertTrue(session.isRinging)
+        assertEquals("+15551212", session.number)
         assertEquals(IncomingCallSession.Effect.Ignore, session.onRinging("+15551212", nowMs = 1_200L))
         assertEquals(IncomingCallSession.Effect.Ignore, session.onRinging("", nowMs = 1_300L))
+        session.onEnded(nowMs = 1_400L)
+        assertTrue(!session.isRinging)
+        assertEquals("", session.number)
     }
 
     @Test

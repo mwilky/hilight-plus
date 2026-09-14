@@ -54,7 +54,7 @@ class ShizukuBridge private constructor(private val app: Application) {
         .daemon(false)
         .processNameSuffix("hilight_daemon")
         .debuggable(BuildConfig.DEBUG)
-        .version(4)
+        .version(5)
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -273,11 +273,12 @@ class ShizukuBridge private constructor(private val app: Application) {
         speedMs: Long,
         durationMs: Long,
         requiresFaceDown: Boolean = false,
-        suppressDuringDnd: Boolean = false,
+        dndMode: DndMode = DndMode.ALWAYS,
+        quietHoursMode: QuietHoursMode = QuietHoursMode.ALWAYS,
         quietStartMinutes: Int = -1,
         quietEndMinutes: Int = -1
     ) {
-        Log.e("HiLightPlus", "triggerAlert: pattern=$pattern, color=$color, durationMs=$durationMs, requiresFaceDown=$requiresFaceDown, suppressDuringDnd=$suppressDuringDnd")
+        Log.e("HiLightPlus", "triggerAlert: pattern=$pattern, color=$color, durationMs=$durationMs, requiresFaceDown=$requiresFaceDown, dndMode=$dndMode, quietHoursMode=$quietHoursMode")
         runRemote("triggerAlert") {
             it.triggerAlert(
                 pattern,
@@ -286,7 +287,8 @@ class ShizukuBridge private constructor(private val app: Application) {
                 speedMs,
                 durationMs,
                 requiresFaceDown,
-                suppressDuringDnd,
+                dndMode.id,
+                quietHoursMode.id,
                 quietStartMinutes,
                 quietEndMinutes
             )
@@ -301,11 +303,12 @@ class ShizukuBridge private constructor(private val app: Application) {
         speedMs: Long,
         durationMs: Long,
         requiresFaceDown: Boolean = false,
-        suppressDuringDnd: Boolean = false,
+        dndMode: DndMode = DndMode.ALWAYS,
+        quietHoursMode: QuietHoursMode = QuietHoursMode.ALWAYS,
         quietStartMinutes: Int = -1,
         quietEndMinutes: Int = -1
     ) {
-        Log.e("HiLightPlus", "postAlert [key=$key]: pattern=$pattern, color=$color, durationMs=$durationMs, requiresFaceDown=$requiresFaceDown, suppressDuringDnd=$suppressDuringDnd")
+        Log.e("HiLightPlus", "postAlert [key=$key]: pattern=$pattern, color=$color, durationMs=$durationMs, requiresFaceDown=$requiresFaceDown, dndMode=$dndMode, quietHoursMode=$quietHoursMode")
         runRemote("postAlert") {
             it.postAlert(
                 key,
@@ -315,7 +318,8 @@ class ShizukuBridge private constructor(private val app: Application) {
                 speedMs,
                 durationMs,
                 requiresFaceDown,
-                suppressDuringDnd,
+                dndMode.id,
+                quietHoursMode.id,
                 quietStartMinutes,
                 quietEndMinutes
             )
@@ -328,7 +332,8 @@ class ShizukuBridge private constructor(private val app: Application) {
         brightness: Float,
         speedMs: Long,
         requiresFaceDown: Boolean = false,
-        suppressDuringDnd: Boolean = false,
+        dndMode: DndMode = DndMode.ALWAYS,
+        quietHoursMode: QuietHoursMode = QuietHoursMode.ALWAYS,
         quietStartMinutes: Int = -1,
         quietEndMinutes: Int = -1
     ) {
@@ -339,7 +344,8 @@ class ShizukuBridge private constructor(private val app: Application) {
                 brightness,
                 speedMs,
                 requiresFaceDown,
-                suppressDuringDnd,
+                dndMode.id,
+                quietHoursMode.id,
                 quietStartMinutes,
                 quietEndMinutes
             )
@@ -352,6 +358,14 @@ class ShizukuBridge private constructor(private val app: Application) {
 
     fun setDndActive(dndActive: Boolean) {
         runRemote("setDndActive") { it.setDndActive(dndActive) }
+    }
+
+    fun setDndSuppressEnabled(enabled: Boolean) {
+        runRemote("setDndSuppressEnabled") { it.setDndSuppressEnabled(enabled) }
+    }
+
+    fun setQuietHours(enabled: Boolean, startMinutes: Int, endMinutes: Int) {
+        runRemote("setQuietHours") { it.setQuietHours(enabled, startMinutes, endMinutes) }
     }
 
     fun stopIncomingCall() {

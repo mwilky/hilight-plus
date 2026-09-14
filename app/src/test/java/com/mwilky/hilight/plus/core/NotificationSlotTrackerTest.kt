@@ -1,5 +1,6 @@
 package com.mwilky.hilight.plus.core
 
+import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.PatternMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -82,10 +83,30 @@ class NotificationSlotTrackerTest {
     fun movingASourceToANewSlotEmptiesTheOldSlot() {
         val tracker = NotificationSlotTracker()
         tracker.add("key", "contact_ann", PatternMode.PULSE, 1)
-        tracker.add("key", "app_sms", PatternMode.WAVE, 2)
+        val moved = tracker.add("key", "app_sms", PatternMode.WAVE, 2)
 
+        assertEquals("contact_ann", moved.emptiedSlotId)
         assertEquals(listOf("app_sms"), tracker.slotsInOrder().map { it.id })
         assertEquals("app_sms", tracker.latestSlot()?.id)
+    }
+
+    @Test
+    fun movingOneContributorDoesNotEmptyASharedSlot() {
+        val tracker = NotificationSlotTracker()
+        tracker.add("keep", "contact_ann", PatternMode.PULSE, 1)
+        tracker.add("move", "contact_ann", PatternMode.PULSE, 1)
+
+        val moved = tracker.add(
+            "move",
+            "fallback_sms",
+            PatternMode.WAVE,
+            2,
+            becomeLatest = false
+        )
+
+        assertEquals(null, moved.emptiedSlotId)
+        assertEquals(1, tracker.contributorCount("contact_ann"))
+        assertEquals("fallback_sms", tracker.latestSlot()?.id)
     }
 
     @Test
@@ -114,14 +135,34 @@ class NotificationSlotTrackerTest {
     }
 
     @Test
-    fun updatingDndFlagMarksTheSlotChanged() {
+    fun updatingDndModeMarksTheSlotChanged() {
         val tracker = NotificationSlotTracker()
-        val first = tracker.add("key", "app_a", PatternMode.PULSE, 1, suppressDuringDnd = false)
-        val second = tracker.add("key", "app_a", PatternMode.PULSE, 1, suppressDuringDnd = true)
+        val first = tracker.add("key", "app_a", PatternMode.PULSE, 1, dndMode = DndMode.INHERIT)
+        val second = tracker.add("key", "app_a", PatternMode.PULSE, 1, dndMode = DndMode.SKIP)
 
         assertTrue(first.changed)
         assertTrue(second.changed)
-        assertTrue(tracker.latestSlot()?.suppressDuringDnd == true)
+        assertEquals(DndMode.SKIP, tracker.latestSlot()?.dndMode)
+    }
+
+    @Test
+    fun updatingWithoutBecomingLatestKeepsTheCurrentLatest() {
+        val tracker = NotificationSlotTracker()
+        tracker.add("old", "app_a", PatternMode.PULSE, 1)
+        tracker.add("latest", "app_b", PatternMode.PULSE, 2)
+
+        val update = tracker.add(
+            "old",
+            "app_a",
+            PatternMode.PULSE,
+            1,
+            dndMode = DndMode.SKIP,
+            becomeLatest = false
+        )
+
+        assertTrue(update.changed)
+        assertEquals("app_b", tracker.latestSlot()?.id)
+        assertEquals(DndMode.SKIP, tracker.slotsInOrder().single { it.id == "app_a" }.dndMode)
     }
 
     @Test

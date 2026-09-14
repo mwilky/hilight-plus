@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -68,6 +69,7 @@ class LightController private constructor(private val app: Application) {
             shizuku.setDndActive(lastDndActive)
             NativeHiLightDetector.check(app)
             syncState()
+            scope.launch { pushLiveConditions() }
         }
 
         scope.launch {
@@ -77,7 +79,32 @@ class LightController private constructor(private val app: Application) {
             store.isEnabled.collect { syncState() }
         }
         scope.launch {
+            store.isNotificationsEnabled.collect { enabled ->
+                if (!enabled) shizuku.clearAlert()
+            }
+        }
+        scope.launch {
+            store.isCallLightsEnabled.collect { enabled ->
+                if (!enabled) shizuku.stopIncomingCall()
+            }
+        }
+        scope.launch {
             store.lightStyle.collect { syncState() }
+        }
+        scope.launch {
+            store.suppressDuringDnd.collect { enabled ->
+                shizuku.setDndSuppressEnabled(enabled)
+            }
+        }
+        scope.launch {
+            combine(
+                store.quietHoursEnabled,
+                store.quietHoursStartMinutes,
+                store.quietHoursEndMinutes
+            ) { enabled, start, end -> Triple(enabled, start, end) }
+                .collect { (enabled, start, end) ->
+                    shizuku.setQuietHours(enabled, start, end)
+                }
         }
     }
 
@@ -111,7 +138,8 @@ class LightController private constructor(private val app: Application) {
         speedMs: Long = 1000L,
         durationMs: Long = 3000L,
         requiresFaceDown: Boolean = false,
-        suppressDuringDnd: Boolean = false,
+        dndMode: DndMode = DndMode.ALWAYS,
+        quietHoursMode: QuietHoursMode = QuietHoursMode.ALWAYS,
         quietStartMinutes: Int? = null,
         quietEndMinutes: Int? = null
     ) {
@@ -123,7 +151,8 @@ class LightController private constructor(private val app: Application) {
             speedMs = calculatedSpeed,
             durationMs = durationMs,
             requiresFaceDown = requiresFaceDown,
-            suppressDuringDnd = suppressDuringDnd,
+            dndMode = dndMode,
+            quietHoursMode = quietHoursMode,
             quietStartMinutes = quietStartMinutes ?: -1,
             quietEndMinutes = quietEndMinutes ?: -1
         )
@@ -140,7 +169,8 @@ class LightController private constructor(private val app: Application) {
         speedMs: Long = 1000L,
         durationMs: Long = 0L,
         requiresFaceDown: Boolean = false,
-        suppressDuringDnd: Boolean = false,
+        dndMode: DndMode = DndMode.ALWAYS,
+        quietHoursMode: QuietHoursMode = QuietHoursMode.ALWAYS,
         quietStartMinutes: Int? = null,
         quietEndMinutes: Int? = null
     ) {
@@ -153,7 +183,8 @@ class LightController private constructor(private val app: Application) {
             speedMs = calculatedSpeed,
             durationMs = durationMs,
             requiresFaceDown = requiresFaceDown,
-            suppressDuringDnd = suppressDuringDnd,
+            dndMode = dndMode,
+            quietHoursMode = quietHoursMode,
             quietStartMinutes = quietStartMinutes ?: -1,
             quietEndMinutes = quietEndMinutes ?: -1
         )
@@ -175,7 +206,8 @@ class LightController private constructor(private val app: Application) {
         brightness: Float = 1.0f,
         speedMs: Long = 1000L,
         requiresFaceDown: Boolean = false,
-        suppressDuringDnd: Boolean = false,
+        dndMode: DndMode = DndMode.ALWAYS,
+        quietHoursMode: QuietHoursMode = QuietHoursMode.ALWAYS,
         quietStartMinutes: Int? = null,
         quietEndMinutes: Int? = null
     ) {
@@ -186,7 +218,8 @@ class LightController private constructor(private val app: Application) {
             brightness = brightness,
             speedMs = calculatedSpeed,
             requiresFaceDown = requiresFaceDown,
-            suppressDuringDnd = suppressDuringDnd,
+            dndMode = dndMode,
+            quietHoursMode = quietHoursMode,
             quietStartMinutes = quietStartMinutes ?: -1,
             quietEndMinutes = quietEndMinutes ?: -1
         )
@@ -199,6 +232,16 @@ class LightController private constructor(private val app: Application) {
     fun setDndActive(dndActive: Boolean) {
         lastDndActive = dndActive
         shizuku.setDndActive(dndActive)
+    }
+
+    private suspend fun pushLiveConditions() {
+        shizuku.setDndActive(lastDndActive)
+        shizuku.setDndSuppressEnabled(store.suppressDuringDnd.first())
+        shizuku.setQuietHours(
+            store.quietHoursEnabled.first(),
+            store.quietHoursStartMinutes.first(),
+            store.quietHoursEndMinutes.first()
+        )
     }
 
     private suspend fun syncUnlockPauseWithOrientation(faceDown: Boolean) {

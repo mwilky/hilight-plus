@@ -18,6 +18,9 @@ internal class IncomingCallSession(
     private var endedAtMs = 0L
     private var endedNumber = ""
 
+    val isRinging: Boolean get() = ringing
+    val number: String get() = currentNumber
+
     fun onRinging(number: String, nowMs: Long): Effect {
         val normalized = number.trim()
         if (!ringing) {

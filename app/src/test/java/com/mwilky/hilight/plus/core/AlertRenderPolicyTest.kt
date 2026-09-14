@@ -1,5 +1,7 @@
 package com.mwilky.hilight.plus.core
 
+import com.mwilky.hilight.plus.DndMode
+import com.mwilky.hilight.plus.QuietHoursMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -57,7 +59,7 @@ class AlertRenderPolicyTest {
             AlertRenderPolicy.canShowAlert(
                 requiresFaceDown = true,
                 deviceFaceDown = true,
-                suppressDuringDnd = true,
+                dndMode = DndMode.SKIP,
                 dndActive = true
             )
         )
@@ -65,7 +67,7 @@ class AlertRenderPolicyTest {
             AlertRenderPolicy.canShowAlert(
                 requiresFaceDown = true,
                 deviceFaceDown = true,
-                suppressDuringDnd = true,
+                dndMode = DndMode.SKIP,
                 dndActive = false
             )
         )
@@ -73,7 +75,66 @@ class AlertRenderPolicyTest {
             AlertRenderPolicy.canShowAlert(
                 requiresFaceDown = false,
                 deviceFaceDown = false,
-                suppressDuringDnd = false,
+                dndMode = DndMode.ALWAYS,
+                dndActive = true
+            )
+        )
+    }
+
+    @Test
+    fun inheritQuietHoursFollowTheLiveSwitchAndWindow() {
+        assertTrue(
+            AlertRenderPolicy.canShowAlert(
+                requiresFaceDown = true,
+                deviceFaceDown = true,
+                quietHoursMode = QuietHoursMode.INHERIT,
+                quietHoursEnabled = false,
+                quietHoursStartMinutes = 9 * 60,
+                quietHoursEndMinutes = 17 * 60,
+                nowMinutes = 15 * 60
+            )
+        )
+        assertFalse(
+            AlertRenderPolicy.canShowAlert(
+                requiresFaceDown = true,
+                deviceFaceDown = true,
+                quietHoursMode = QuietHoursMode.INHERIT,
+                quietHoursEnabled = true,
+                quietHoursStartMinutes = 9 * 60,
+                quietHoursEndMinutes = 17 * 60,
+                nowMinutes = 15 * 60
+            )
+        )
+        assertTrue(
+            AlertRenderPolicy.canShowAlert(
+                requiresFaceDown = true,
+                deviceFaceDown = true,
+                quietHoursMode = QuietHoursMode.INHERIT,
+                quietHoursEnabled = true,
+                quietHoursStartMinutes = 9 * 60,
+                quietHoursEndMinutes = 17 * 60,
+                nowMinutes = 18 * 60
+            )
+        )
+    }
+
+    @Test
+    fun inheritDndFollowsTheLiveSwitch() {
+        assertTrue(
+            AlertRenderPolicy.canShowAlert(
+                requiresFaceDown = false,
+                deviceFaceDown = false,
+                dndMode = DndMode.INHERIT,
+                dndSuppressEnabled = false,
+                dndActive = true
+            )
+        )
+        assertFalse(
+            AlertRenderPolicy.canShowAlert(
+                requiresFaceDown = false,
+                deviceFaceDown = false,
+                dndMode = DndMode.INHERIT,
+                dndSuppressEnabled = true,
                 dndActive = true
             )
         )
@@ -85,8 +146,9 @@ class AlertRenderPolicyTest {
             AlertRenderPolicy.canShowAlert(
                 requiresFaceDown = false,
                 deviceFaceDown = false,
-                quietStartMinutes = 22 * 60,
-                quietEndMinutes = 7 * 60,
+                quietHoursMode = QuietHoursMode.SKIP,
+                quietHoursStartMinutes = 22 * 60,
+                quietHoursEndMinutes = 7 * 60,
                 nowMinutes = 23 * 60
             )
         )
@@ -94,8 +156,9 @@ class AlertRenderPolicyTest {
             AlertRenderPolicy.canShowAlert(
                 requiresFaceDown = false,
                 deviceFaceDown = false,
-                quietStartMinutes = 22 * 60,
-                quietEndMinutes = 7 * 60,
+                quietHoursMode = QuietHoursMode.SKIP,
+                quietHoursStartMinutes = 22 * 60,
+                quietHoursEndMinutes = 7 * 60,
                 nowMinutes = 12 * 60
             )
         )

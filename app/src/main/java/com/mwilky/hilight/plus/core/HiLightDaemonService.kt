@@ -2,6 +2,8 @@ package com.mwilky.hilight.plus.core
 
 import android.os.Process
 import android.util.Log
+import com.mwilky.hilight.plus.DndMode
+import com.mwilky.hilight.plus.QuietHoursMode
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.concurrent.TimeUnit
@@ -35,7 +37,8 @@ class HiLightDaemonService : IHiLightService.Stub() {
         speedMs: Long,
         durationMs: Long,
         requiresFaceDown: Boolean,
-        suppressDuringDnd: Boolean,
+        dndMode: String?,
+        quietHoursMode: String?,
         quietStartMinutes: Int,
         quietEndMinutes: Int
     ) {
@@ -46,7 +49,8 @@ class HiLightDaemonService : IHiLightService.Stub() {
             speedMs,
             durationMs,
             requiresFaceDown,
-            suppressDuringDnd,
+            DndMode.fromId(dndMode),
+            QuietHoursMode.fromId(quietHoursMode),
             quietStartMinutes.takeIf { it >= 0 },
             quietEndMinutes.takeIf { it >= 0 }
         )
@@ -60,7 +64,8 @@ class HiLightDaemonService : IHiLightService.Stub() {
         speedMs: Long,
         durationMs: Long,
         requiresFaceDown: Boolean,
-        suppressDuringDnd: Boolean,
+        dndMode: String?,
+        quietHoursMode: String?,
         quietStartMinutes: Int,
         quietEndMinutes: Int
     ) {
@@ -73,7 +78,8 @@ class HiLightDaemonService : IHiLightService.Stub() {
                 speedMs,
                 durationMs,
                 requiresFaceDown,
-                suppressDuringDnd,
+                DndMode.fromId(dndMode),
+                QuietHoursMode.fromId(quietHoursMode),
                 quietStartMinutes.takeIf { it >= 0 },
                 quietEndMinutes.takeIf { it >= 0 }
             )
@@ -86,7 +92,8 @@ class HiLightDaemonService : IHiLightService.Stub() {
         brightness: Float,
         speedMs: Long,
         requiresFaceDown: Boolean,
-        suppressDuringDnd: Boolean,
+        dndMode: String?,
+        quietHoursMode: String?,
         quietStartMinutes: Int,
         quietEndMinutes: Int
     ) {
@@ -96,7 +103,8 @@ class HiLightDaemonService : IHiLightService.Stub() {
             brightness,
             speedMs,
             requiresFaceDown,
-            suppressDuringDnd,
+            DndMode.fromId(dndMode),
+            QuietHoursMode.fromId(quietHoursMode),
             quietStartMinutes.takeIf { it >= 0 },
             quietEndMinutes.takeIf { it >= 0 }
         )
@@ -108,6 +116,14 @@ class HiLightDaemonService : IHiLightService.Stub() {
 
     override fun setDndActive(dndActive: Boolean) {
         engine.setDndActive(dndActive)
+    }
+
+    override fun setDndSuppressEnabled(enabled: Boolean) {
+        engine.setDndSuppressEnabled(enabled)
+    }
+
+    override fun setQuietHours(enabled: Boolean, startMinutes: Int, endMinutes: Int) {
+        engine.setQuietHours(enabled, startMinutes, endMinutes)
     }
 
     override fun stopIncomingCall() {

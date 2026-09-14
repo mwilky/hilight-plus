@@ -1,6 +1,8 @@
 package com.mwilky.hilight.plus.core
 
+import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.PatternMode
+import com.mwilky.hilight.plus.QuietHoursMode
 
 /**
  * Tracks source notification keys separately from the display slots they share.
@@ -14,14 +16,16 @@ internal class NotificationSlotTracker {
         val color: Long,
         val contributors: Set<String>,
         val requiresFaceDown: Boolean,
-        val suppressDuringDnd: Boolean,
+        val dndMode: DndMode,
+        val quietHoursMode: QuietHoursMode,
         val quietStartMinutes: Int?,
         val quietEndMinutes: Int?
     )
 
     data class AddResult(
         val slot: Slot,
-        val changed: Boolean
+        val changed: Boolean,
+        val emptiedSlotId: String? = null
     )
 
     data class Removal(
@@ -40,9 +44,11 @@ internal class NotificationSlotTracker {
         pattern: PatternMode,
         color: Long,
         requiresFaceDown: Boolean = false,
-        suppressDuringDnd: Boolean = false,
+        dndMode: DndMode = DndMode.INHERIT,
+        quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT,
         quietStartMinutes: Int? = null,
-        quietEndMinutes: Int? = null
+        quietEndMinutes: Int? = null,
+        becomeLatest: Boolean = true
     ): AddResult {
         val previous = sourceToSlot[sourceKey]?.let { slots[it] }
         val unchanged = previous != null &&
@@ -50,29 +56,35 @@ internal class NotificationSlotTracker {
             previous.pattern == pattern &&
             previous.color == color &&
             previous.requiresFaceDown == requiresFaceDown &&
-            previous.suppressDuringDnd == suppressDuringDnd &&
+            previous.dndMode == dndMode &&
+            previous.quietHoursMode == quietHoursMode &&
             previous.quietStartMinutes == quietStartMinutes &&
             previous.quietEndMinutes == quietEndMinutes &&
             sourceKey in previous.contributors
 
         val previousSlotId = sourceToSlot[sourceKey]
-        if (previousSlotId != null && previousSlotId != slotId) {
-            detach(sourceKey, previousSlotId)
+        val emptiedSlotId = if (previousSlotId != null && previousSlotId != slotId && detach(sourceKey, previousSlotId)) {
+            previousSlotId
+        } else {
+            null
         }
 
         val slot = slots.getOrPut(slotId) {
-            MutableSlot(slotId, pattern, color, requiresFaceDown, suppressDuringDnd, quietStartMinutes, quietEndMinutes)
+            MutableSlot(slotId, pattern, color, requiresFaceDown, dndMode, quietHoursMode, quietStartMinutes, quietEndMinutes)
         }
         slot.pattern = pattern
         slot.color = color
         slot.requiresFaceDown = requiresFaceDown
-        slot.suppressDuringDnd = suppressDuringDnd
+        slot.dndMode = dndMode
+        slot.quietHoursMode = quietHoursMode
         slot.quietStartMinutes = quietStartMinutes
         slot.quietEndMinutes = quietEndMinutes
         slot.contributors.add(sourceKey)
         sourceToSlot[sourceKey] = slotId
-        latestSourceKey = sourceKey
-        return AddResult(slot.snapshot(), changed = !unchanged)
+        if (becomeLatest) {
+            latestSourceKey = sourceKey
+        }
+        return AddResult(slot.snapshot(), changed = !unchanged, emptiedSlotId = emptiedSlotId)
     }
 
     fun remove(sourceKey: String): Removal {
@@ -107,6 +119,8 @@ internal class NotificationSlotTracker {
 
     val sourceCount: Int get() = sourceToSlot.size
 
+    fun sourceKeys(): Set<String> = sourceToSlot.keys.toSet()
+
     private fun detach(sourceKey: String, slotId: String): Boolean {
         val slot = slots[slotId] ?: return false
         slot.contributors.remove(sourceKey)
@@ -122,7 +136,8 @@ internal class NotificationSlotTracker {
         var pattern: PatternMode,
         var color: Long,
         var requiresFaceDown: Boolean,
-        var suppressDuringDnd: Boolean,
+        var dndMode: DndMode,
+        var quietHoursMode: QuietHoursMode,
         var quietStartMinutes: Int?,
         var quietEndMinutes: Int?,
         val contributors: MutableSet<String> = linkedSetOf()
@@ -133,7 +148,8 @@ internal class NotificationSlotTracker {
             color,
             contributors.toSet(),
             requiresFaceDown,
-            suppressDuringDnd,
+            dndMode,
+            quietHoursMode,
             quietStartMinutes,
             quietEndMinutes
         )

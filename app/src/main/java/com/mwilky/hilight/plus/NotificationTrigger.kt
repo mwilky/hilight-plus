@@ -78,6 +78,11 @@ class NotificationTrigger : NotificationListenerService() {
                 syncNotificationMonitor()
             }
         }
+        scope.launch {
+            applicationContext.dataStore.data.collect {
+                enqueue(ListenerEvent.SettingsChanged)
+            }
+        }
     }
 
     override fun onListenerConnected() {
@@ -149,6 +154,7 @@ class NotificationTrigger : NotificationListenerService() {
                     applyModeChange(event.cycling)
                 }
             }
+            is ListenerEvent.SettingsChanged -> handleSettingsChanged()
         }
     }
 
@@ -230,12 +236,6 @@ class NotificationTrigger : NotificationListenerService() {
         controller.setDndActive(dndActive)
         val isCycle = snapshot.isCycleNotifications
         val requiresFaceDown = resolved.faceDownMode.requiresFaceDown(snapshot.isOnlyWhenFaceDown)
-        val suppressDuringDnd = snapshot.suppressesDuringDnd(resolved.dndMode)
-        val quietWindow = snapshot.quietWindowFor(
-            resolved.quietHoursMode,
-            resolved.quietStartMinutes,
-            resolved.quietEndMinutes
-        )
 
         val watchOrientation = requiresFaceDown || unlockBehavior == UnlockBehavior.PAUSE
         if (watchOrientation) {
@@ -264,20 +264,48 @@ class NotificationTrigger : NotificationListenerService() {
             }
         }
 
-        val added = tracker.add(
-            event.key,
-            resolved.slotId,
-            resolved.pattern,
-            resolved.color,
-            requiresFaceDown,
-            suppressDuringDnd,
-            quietWindow?.first,
-            quietWindow?.second
-        )
-        if (added.changed) {
-            dispatchSlot(controller, snapshot, added.slot, isCycle)
-        } else {
-            Log.d(TAG, "Ignoring update for existing slot ${added.slot.id}")
+        val added = bindResolved(event.key, resolved, snapshot, becomeLatest = true)
+        applyBoundSlot(controller, snapshot, added, isCycle)
+        syncNotificationMonitor()
+    }
+
+    private suspend fun handleSettingsChanged() {
+        val snapshot = AppStore.get(applicationContext).snapshot()
+        lastUnlockBehavior = snapshot.unlockBehavior
+        if (!snapshot.isEnabled || !snapshot.isNotificationsEnabled) {
+            Log.i(TAG, "Notifications disabled -> stopping queued lights")
+            tracker.clear()
+            LightController.get(applicationContext).clearAlert()
+            syncNotificationMonitor()
+            return
+        }
+        if (!isListenerConnected || tracker.sourceCount == 0) return
+
+        val shade = try {
+            activeNotifications?.associateBy { it.key }
+        } catch (_: Throwable) {
+            return
+        } ?: return
+
+        val controller = LightController.get(applicationContext)
+        val isCycle = snapshot.isCycleNotifications
+        for (key in tracker.sourceKeys()) {
+            val sbn = shade[key]
+            if (sbn == null) {
+                applyRemovals(listOf(tracker.remove(key)), isCycle)
+                continue
+            }
+            val resolved = resolveAlert(snapshot, sbn.packageName, sbn.notification)
+            if (resolved == null) {
+                applyRemovals(listOf(tracker.remove(key)), isCycle)
+                continue
+            }
+            applyBoundSlot(
+                controller,
+                snapshot,
+                bindResolved(key, resolved, snapshot, becomeLatest = false),
+                isCycle
+            )
         }
         syncNotificationMonitor()
     }
@@ -389,6 +417,53 @@ class NotificationTrigger : NotificationListenerService() {
         )
     }
 
+    private fun bindResolved(
+        sourceKey: String,
+        resolved: ResolvedAlert,
+        snapshot: SettingsSnapshot,
+        becomeLatest: Boolean
+    ): NotificationSlotTracker.AddResult {
+        val quietStartOverride = if (resolved.quietHoursMode == QuietHoursMode.SKIP) {
+            resolved.quietStartMinutes
+        } else {
+            null
+        }
+        val quietEndOverride = if (resolved.quietHoursMode == QuietHoursMode.SKIP) {
+            resolved.quietEndMinutes
+        } else {
+            null
+        }
+        return tracker.add(
+            sourceKey,
+            resolved.slotId,
+            resolved.pattern,
+            resolved.color,
+            resolved.faceDownMode.requiresFaceDown(snapshot.isOnlyWhenFaceDown),
+            resolved.dndMode,
+            resolved.quietHoursMode,
+            quietStartOverride,
+            quietEndOverride,
+            becomeLatest
+        )
+    }
+
+    private fun applyBoundSlot(
+        controller: LightController,
+        snapshot: SettingsSnapshot,
+        added: NotificationSlotTracker.AddResult,
+        isCycle: Boolean
+    ) {
+        if (added.emptiedSlotId != null && isCycle) {
+            Log.i(TAG, "Slot ${added.emptiedSlotId} emptied after rule change -> removing from cycle")
+            controller.removeNotificationAlert(added.emptiedSlotId)
+        }
+        if (added.changed && (isCycle || added.slot.id == tracker.latestSlot()?.id)) {
+            dispatchSlot(controller, snapshot, added.slot, isCycle)
+        } else if (!added.changed) {
+            Log.d(TAG, "Ignoring update for existing slot ${added.slot.id}")
+        }
+    }
+
     private fun dispatchSlot(
         controller: LightController,
         snapshot: SettingsSnapshot,
@@ -402,7 +477,8 @@ class NotificationTrigger : NotificationListenerService() {
                 color = slot.color,
                 durationMs = 0L,
                 requiresFaceDown = slot.requiresFaceDown,
-                suppressDuringDnd = slot.suppressDuringDnd,
+                dndMode = slot.dndMode,
+                quietHoursMode = slot.quietHoursMode,
                 quietStartMinutes = slot.quietStartMinutes,
                 quietEndMinutes = slot.quietEndMinutes
             )
@@ -413,7 +489,8 @@ class NotificationTrigger : NotificationListenerService() {
                 color = slot.color,
                 durationMs = durationMs,
                 requiresFaceDown = slot.requiresFaceDown,
-                suppressDuringDnd = slot.suppressDuringDnd,
+                dndMode = slot.dndMode,
+                quietHoursMode = slot.quietHoursMode,
                 quietStartMinutes = slot.quietStartMinutes,
                 quietEndMinutes = slot.quietEndMinutes
             )
@@ -508,6 +585,7 @@ class NotificationTrigger : NotificationListenerService() {
         data class Screen(val action: String) : ListenerEvent
         data class Reconnect(val shadeKeys: Set<String>?) : ListenerEvent
         data class CycleMode(val cycling: Boolean) : ListenerEvent
+        data object SettingsChanged : ListenerEvent
     }
 
     companion object {

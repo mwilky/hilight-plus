@@ -17,14 +17,15 @@ import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.SettingsSnapshot
 import com.mwilky.hilight.plus.core.DeviceOrientationDetector
+import com.mwilky.hilight.plus.dataStore
 import com.mwilky.hilight.plus.isSystemDndActive
-import com.mwilky.hilight.plus.quietWindowFor
-import com.mwilky.hilight.plus.suppressesDuringDnd
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Listens for incoming phone calls and activates custom rear LED lighting:
@@ -55,12 +56,14 @@ internal object IncomingCallProcessor {
     private val session = IncomingCallSession()
     private val events = Channel<Queued>(Channel.UNLIMITED)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val lock = Mutex()
+    @Volatile private var settingsWatchStarted = false
 
     init {
         scope.launch {
             for (queued in events) {
                 try {
-                    handle(queued)
+                    lock.withLock { handle(queued) }
                 } catch (t: Throwable) {
                     Log.e(TAG, "Call event failed", t)
                 } finally {
@@ -76,9 +79,28 @@ internal object IncomingCallProcessor {
         number: String,
         pending: BroadcastReceiver.PendingResult
     ) {
+        ensureSettingsWatch(appContext)
         val queued = Queued(appContext, state, number, pending)
         if (!events.trySend(queued).isSuccess) {
             pending.finish()
+        }
+    }
+
+    private fun ensureSettingsWatch(appContext: Context) {
+        if (settingsWatchStarted) return
+        settingsWatchStarted = true
+        scope.launch {
+            appContext.dataStore.data.collect {
+                lock.withLock {
+                    if (!session.isRinging) return@withLock
+                    startResolvedCall(
+                        appContext,
+                        AppStore.get(appContext),
+                        LightController.get(appContext),
+                        session.number
+                    )
+                }
+            }
         }
     }
 
@@ -104,8 +126,7 @@ internal object IncomingCallProcessor {
             TelephonyManager.EXTRA_STATE_IDLE -> {
                 if (session.onEnded(now) == IncomingCallSession.Effect.Stop) {
                     Log.i(TAG, "Call ended or answered (${queued.state}), stopping call lights")
-                    DeviceOrientationDetector.releaseMonitoring(DeviceOrientationDetector.TOKEN_CALL)
-                    controller.stopIncomingCallAlert()
+                    stopCallLights(controller)
                 }
             }
         }
@@ -119,7 +140,8 @@ internal object IncomingCallProcessor {
     ) {
         val snapshot = store.snapshot()
         if (!snapshot.isEnabled || !snapshot.isCallLightsEnabled) {
-            Log.d(TAG, "Call lights are disabled; keeping session but not starting lights")
+            Log.d(TAG, "Call lights are disabled; keeping session but stopping lights")
+            stopCallLights(controller)
             return
         }
 
@@ -156,6 +178,11 @@ internal object IncomingCallProcessor {
         }
     }
 
+    private fun stopCallLights(controller: LightController) {
+        DeviceOrientationDetector.releaseMonitoring(DeviceOrientationDetector.TOKEN_CALL)
+        controller.stopIncomingCallAlert()
+    }
+
     private suspend fun startCallAlert(
         context: Context,
         snapshot: SettingsSnapshot,
@@ -173,8 +200,8 @@ internal object IncomingCallProcessor {
         )
         controller.setDndActive(dndActive)
         val requiresFaceDown = faceDownMode.requiresFaceDown(snapshot.isOnlyWhenFaceDown)
-        val suppressDuringDnd = snapshot.suppressesDuringDnd(dndMode)
-        val quietWindow = snapshot.quietWindowFor(quietHoursMode, quietStartMinutes, quietEndMinutes)
+        val quietStartOverride = if (quietHoursMode == QuietHoursMode.SKIP) quietStartMinutes else null
+        val quietEndOverride = if (quietHoursMode == QuietHoursMode.SKIP) quietEndMinutes else null
         if (requiresFaceDown) {
             DeviceOrientationDetector.retainMonitoring(context, DeviceOrientationDetector.TOKEN_CALL)
             controller.setDeviceFaceDown(DeviceOrientationDetector.isDeviceFaceDown(context))
@@ -185,9 +212,10 @@ internal object IncomingCallProcessor {
             pattern = pattern,
             color = color,
             requiresFaceDown = requiresFaceDown,
-            suppressDuringDnd = suppressDuringDnd,
-            quietStartMinutes = quietWindow?.first,
-            quietEndMinutes = quietWindow?.second
+            dndMode = dndMode,
+            quietHoursMode = quietHoursMode,
+            quietStartMinutes = quietStartOverride,
+            quietEndMinutes = quietEndOverride
         )
     }
 
@@ -214,6 +242,7 @@ internal object IncomingCallProcessor {
             )
         } else {
             Log.i(TAG, "Other Contacts lights are disabled")
+            stopCallLights(controller)
         }
     }
 
@@ -240,6 +269,7 @@ internal object IncomingCallProcessor {
             )
         } else {
             Log.i(TAG, "Unknown/Private lights are disabled")
+            stopCallLights(controller)
         }
     }
 
