@@ -1413,18 +1413,16 @@ fun CustomRuleDialog(
 
                 ConditionModeRow(
                     title = stringResource(R.string.dialog_dnd_title),
-                    description = stringResource(
-                        when (selectedDnd) {
-                            DndMode.INHERIT -> R.string.dialog_dnd_desc_default
-                            DndMode.ALWAYS -> R.string.dialog_dnd_desc_always
-                            DndMode.SKIP -> R.string.dialog_dnd_desc_skip
-                        }
-                    ),
+                    description = when (selectedDnd) {
+                        DndMode.INHERIT -> stringResource(R.string.dialog_dnd_desc_default)
+                        DndMode.ALWAYS -> stringResource(R.string.dialog_dnd_desc_always)
+                        DndMode.SKIP -> ""
+                    },
                     options = DndMode.entries.map { mode ->
                         mode to when (mode) {
                             DndMode.INHERIT -> stringResource(R.string.dialog_mode_default)
                             DndMode.ALWAYS -> stringResource(R.string.dialog_mode_always)
-                            DndMode.SKIP -> stringResource(R.string.dialog_dnd_skip)
+                            DndMode.SKIP -> stringResource(R.string.dialog_mode_skip)
                         }
                     },
                     selected = selectedDnd,
@@ -1432,18 +1430,16 @@ fun CustomRuleDialog(
                 )
                 ConditionModeRow(
                     title = stringResource(R.string.dialog_quiet_hours_title),
-                    description = stringResource(
-                        when (selectedQuietHours) {
-                            QuietHoursMode.INHERIT -> R.string.dialog_quiet_hours_desc_default
-                            QuietHoursMode.ALWAYS -> R.string.dialog_quiet_hours_desc_always
-                            QuietHoursMode.SKIP -> R.string.dialog_quiet_hours_desc_skip
-                        }
-                    ),
+                    description = when (selectedQuietHours) {
+                        QuietHoursMode.INHERIT -> stringResource(R.string.dialog_quiet_hours_desc_default)
+                        QuietHoursMode.ALWAYS -> stringResource(R.string.dialog_quiet_hours_desc_always)
+                        QuietHoursMode.SKIP -> ""
+                    },
                     options = QuietHoursMode.entries.map { mode ->
                         mode to when (mode) {
                             QuietHoursMode.INHERIT -> stringResource(R.string.dialog_mode_default)
                             QuietHoursMode.ALWAYS -> stringResource(R.string.dialog_mode_always)
-                            QuietHoursMode.SKIP -> stringResource(R.string.dialog_quiet_hours_skip)
+                            QuietHoursMode.SKIP -> stringResource(R.string.dialog_mode_skip)
                         }
                     },
                     selected = selectedQuietHours,
@@ -1513,11 +1509,13 @@ private fun <T> ConditionModeRow(
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold
         )
-        Text(
-            text = description,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        if (description.isNotEmpty()) {
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
             options.forEachIndexed { index, (mode, label) ->
                 val isSelected = selected == mode
