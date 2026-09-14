@@ -67,16 +67,20 @@ class LightEngine {
     // Incoming calls override notification output without deleting its state.
     private var incomingCallAlert: IncomingCallAlert? = null
 
+    private data class DirectAlert(
+        val pattern: String,
+        val color: Long,
+        val brightness: Float,
+        val speedMs: Long,
+        val requiresFaceDown: Boolean,
+        val dndMode: DndMode,
+        val quietHoursMode: QuietHoursMode,
+        val quietStartOverride: Int?,
+        val quietEndOverride: Int?
+    )
+
     // Standard-mode notification / transient alert state.
-    private var directAlertPattern: String? = null
-    private var directAlertColor = 0xFF000000
-    private var directAlertBrightness = 1.0f
-    private var directAlertSpeedMs = 800L
-    private var directRequiresFaceDown = false
-    private var directDndMode = DndMode.ALWAYS
-    private var directQuietHoursMode = QuietHoursMode.ALWAYS
-    private var directQuietStartOverride: Int? = null
-    private var directQuietEndOverride: Int? = null
+    private var directAlert: DirectAlert? = null
     private val directAlertTimer = PausableAlertTimer()
 
     // Multi-Notification Cyclic Queue
@@ -176,15 +180,10 @@ class LightEngine {
     ) {
         synchronized(lock) {
             val now = SystemClock.elapsedRealtime()
-            directAlertPattern = pattern
-            directAlertColor = color
-            directAlertBrightness = brightness
-            directAlertSpeedMs = speedMs
-            directRequiresFaceDown = requiresFaceDown
-            directDndMode = dndMode
-            directQuietHoursMode = quietHoursMode
-            directQuietStartOverride = quietStartOverride
-            directQuietEndOverride = quietEndOverride
+            directAlert = DirectAlert(
+                pattern, color, brightness, speedMs,
+                requiresFaceDown, dndMode, quietHoursMode, quietStartOverride, quietEndOverride
+            )
             directAlertTimer.start(
                 durationMs = durationMs,
                 nowMs = now,
@@ -312,7 +311,7 @@ class LightEngine {
                     cycleStartTimeMs = SystemClock.elapsedRealtime()
                 }
                 Log.i(TAG, "removeAlert [key=$key] (remaining queue=${activeAlerts.size})")
-                if (incomingCallAlert == null && activeAlerts.isEmpty() && directAlertPattern == null && ambientPattern.equals("off", ignoreCase = true)) {
+                if (incomingCallAlert == null && activeAlerts.isEmpty() && directAlert == null && ambientPattern.equals("off", ignoreCase = true)) {
                     lights.blank()
                 }
             }
@@ -324,12 +323,7 @@ class LightEngine {
      */
     fun clearAlert() {
         synchronized(lock) {
-            directAlertPattern = null
-            directRequiresFaceDown = false
-            directDndMode = DndMode.ALWAYS
-            directQuietHoursMode = QuietHoursMode.ALWAYS
-            directQuietStartOverride = null
-            directQuietEndOverride = null
+            directAlert = null
             directAlertTimer.clear()
             activeAlerts.clear()
             currentAlertIndex = 0
@@ -342,12 +336,7 @@ class LightEngine {
     fun turnOff() {
         synchronized(lock) {
             incomingCallAlert = null
-            directAlertPattern = null
-            directRequiresFaceDown = false
-            directDndMode = DndMode.ALWAYS
-            directQuietHoursMode = QuietHoursMode.ALWAYS
-            directQuietStartOverride = null
-            directQuietEndOverride = null
+            directAlert = null
             directAlertTimer.clear()
             activeAlerts.clear()
             currentAlertIndex = 0
@@ -395,24 +384,11 @@ class LightEngine {
                 nowMinutes
             )
 
-            if (directAlertPattern != null && directAlertTimer.remainingMs(now) == 0L) {
-                directAlertPattern = null
-                directRequiresFaceDown = false
-                directDndMode = DndMode.ALWAYS
-                directQuietHoursMode = QuietHoursMode.ALWAYS
-                directQuietStartOverride = null
-                directQuietEndOverride = null
+            if (directAlert != null && directAlertTimer.remainingMs(now) == 0L) {
+                directAlert = null
                 directAlertTimer.clear()
             }
-            val isDirectAlertActive = directAlertPattern != null &&
-                notificationVisible(
-                    directRequiresFaceDown,
-                    directDndMode,
-                    directQuietHoursMode,
-                    directQuietStartOverride,
-                    directQuietEndOverride,
-                    nowMinutes
-                )
+            val direct = directAlert
 
             // Prune expired alerts from cyclic queue.
             if (activeAlerts.isNotEmpty()) {
@@ -446,11 +422,15 @@ class LightEngine {
                     currentSpeed = ambientSpeedMs
                     elapsedMs = now
                 }
-            } else if (isDirectAlertActive) {
-                currentPattern = directAlertPattern ?: "off"
-                currentColor = directAlertColor
-                currentBrightness = directAlertBrightness
-                currentSpeed = directAlertSpeedMs
+            } else if (direct != null && notificationVisible(
+                    direct.requiresFaceDown, direct.dndMode, direct.quietHoursMode,
+                    direct.quietStartOverride, direct.quietEndOverride, nowMinutes
+                )
+            ) {
+                currentPattern = direct.pattern
+                currentColor = direct.color
+                currentBrightness = direct.brightness
+                currentSpeed = direct.speedMs
                 elapsedMs = directAlertTimer.elapsedMs(now)
             } else if (activeAlerts.isNotEmpty()) {
                 val eligibleStart = firstEligibleAlertIndex(currentAlertIndex)
@@ -543,13 +523,13 @@ class LightEngine {
     }
 
     private fun shouldRunNotificationTimer(): Boolean {
-        if (directAlertPattern == null) return false
+        val direct = directAlert ?: return false
         return notificationVisible(
-            directRequiresFaceDown,
-            directDndMode,
-            directQuietHoursMode,
-            directQuietStartOverride,
-            directQuietEndOverride
+            direct.requiresFaceDown,
+            direct.dndMode,
+            direct.quietHoursMode,
+            direct.quietStartOverride,
+            direct.quietEndOverride
         )
     }
 
@@ -599,7 +579,7 @@ class LightEngine {
     )
 
     private fun syncNotificationTimer(now: Long) {
-        if (directAlertPattern == null) return
+        if (directAlert == null) return
         if (shouldRunNotificationTimer()) {
             directAlertTimer.resume(now)
         } else {

@@ -45,11 +45,6 @@ class NotificationTrigger : NotificationListenerService() {
             }
         }
         scope.launch {
-            AppStore.get(applicationContext).isCycleNotifications.collect { cycling ->
-                enqueue(ListenerEvent.CycleMode(cycling))
-            }
-        }
-        scope.launch {
             applicationContext.dataStore.data.collect {
                 enqueue(ListenerEvent.SettingsChanged)
             }
@@ -89,11 +84,6 @@ class NotificationTrigger : NotificationListenerService() {
         enqueue(ListenerEvent.Posted(sbn.key, pkg, notification))
     }
 
-    override fun onInterruptionFilterChanged(interruptionFilter: Int) {
-        super.onInterruptionFilterChanged(interruptionFilter)
-        LightController.get(this).setDndActive(isSystemDndActive(interruptionFilter))
-    }
-
     private fun enqueue(event: ListenerEvent) {
         if (!events.trySend(event).isSuccess) {
             Log.w(TAG, "Dropped listener event after shutdown")
@@ -116,13 +106,6 @@ class NotificationTrigger : NotificationListenerService() {
                     AppStore.get(applicationContext).snapshot().isCycleNotifications
                 )
             }
-            is ListenerEvent.CycleMode -> {
-                val previous = lastKnownCycling
-                lastKnownCycling = event.cycling
-                if (previous != null && previous != event.cycling) {
-                    applyModeChange(event.cycling)
-                }
-            }
             is ListenerEvent.SettingsChanged -> handleSettingsChanged()
         }
     }
@@ -137,10 +120,6 @@ class NotificationTrigger : NotificationListenerService() {
         if (!snapshot.isEnabled || !snapshot.isNotificationsEnabled) return
 
         val resolved = resolveAlert(snapshot, pkg, notification) ?: return
-        val dndActive = isSystemDndActive(
-            getSystemService(NotificationManager::class.java).currentInterruptionFilter
-        )
-        controller.setDndActive(dndActive)
         val isCycle = snapshot.isCycleNotifications
         val requiresFaceDown = resolved.faceDownMode.requiresFaceDown(snapshot.isOnlyWhenFaceDown)
         if (requiresFaceDown) {
@@ -155,6 +134,9 @@ class NotificationTrigger : NotificationListenerService() {
 
     private suspend fun handleSettingsChanged() {
         val snapshot = AppStore.get(applicationContext).snapshot()
+        val previousCycling = lastKnownCycling
+        lastKnownCycling = snapshot.isCycleNotifications
+
         if (!snapshot.isEnabled || !snapshot.isNotificationsEnabled) {
             Log.i(TAG, "Notifications disabled -> stopping queued lights")
             tracker.clear()
@@ -162,6 +144,12 @@ class NotificationTrigger : NotificationListenerService() {
             syncNotificationMonitor()
             return
         }
+
+        if (previousCycling != null && previousCycling != snapshot.isCycleNotifications) {
+            applyModeChange(snapshot.isCycleNotifications, snapshot)
+            return
+        }
+
         if (!isListenerConnected || tracker.sourceCount == 0) return
 
         val shade = try {
@@ -380,9 +368,8 @@ class NotificationTrigger : NotificationListenerService() {
         }
     }
 
-    private suspend fun applyModeChange(cycling: Boolean) {
+    private suspend fun applyModeChange(cycling: Boolean, snapshot: SettingsSnapshot) {
         val controller = LightController.get(applicationContext)
-        val snapshot = AppStore.get(applicationContext).snapshot()
         if (tracker.hasRestrictedSlot()) {
             controller.setDeviceFaceDown(DeviceOrientationDetector.isDeviceFaceDown(applicationContext))
         }
@@ -455,7 +442,6 @@ class NotificationTrigger : NotificationListenerService() {
         data class Posted(val key: String, val pkg: String, val notification: Notification) : ListenerEvent
         data class Removed(val key: String) : ListenerEvent
         data class Reconnect(val shadeKeys: Set<String>?) : ListenerEvent
-        data class CycleMode(val cycling: Boolean) : ListenerEvent
         data object SettingsChanged : ListenerEvent
     }
 

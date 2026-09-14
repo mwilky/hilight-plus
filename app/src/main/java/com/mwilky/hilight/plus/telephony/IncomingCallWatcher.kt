@@ -1,6 +1,5 @@
 package com.mwilky.hilight.plus.telephony
 
-import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -18,7 +17,6 @@ import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.SettingsSnapshot
 import com.mwilky.hilight.plus.core.DeviceOrientationDetector
 import com.mwilky.hilight.plus.dataStore
-import com.mwilky.hilight.plus.isSystemDndActive
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -195,10 +193,6 @@ internal object IncomingCallProcessor {
         pattern: PatternMode,
         color: Long
     ) {
-        val dndActive = isSystemDndActive(
-            context.getSystemService(NotificationManager::class.java).currentInterruptionFilter
-        )
-        controller.setDndActive(dndActive)
         val requiresFaceDown = faceDownMode.requiresFaceDown(snapshot.isOnlyWhenFaceDown)
         val quietStartOverride = if (quietHoursMode == QuietHoursMode.SKIP) quietStartMinutes else null
         val quietEndOverride = if (quietHoursMode == QuietHoursMode.SKIP) quietEndMinutes else null
