@@ -17,7 +17,6 @@
     <string name="onboarding_stock_desc2">Turn off native \'Calls from favourites\' so it does not fight HiLight Plus for the rear lights. Gemini and other system features may still use them.</string>
     <string name="onboarding_stock_card_title">Native HiLight settings</string>
     <string name="onboarding_stock_conflict_active_desc">Calls from favourites is currently active in system settings and will conflict with HiLight Plus. Please tap below to disable it.</string>
-    <string name="onboarding_stock_ready_desc">Native favourite-caller lighting is off. Gemini and other system lights may still use the LEDs.</string>
     <string name="onboarding_stock_unknown_desc">Could not read the native favourite-caller setting. Connect Shizuku to check it.</string>
     <string name="onboarding_stock_status_conflict">Conflict Active</string>
     <string name="onboarding_stock_status_ready">Ready</string>

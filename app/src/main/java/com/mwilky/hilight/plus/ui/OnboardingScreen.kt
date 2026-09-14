@@ -1,12 +1,8 @@
 package com.mwilky.hilight.plus.ui
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -18,29 +14,34 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
-import androidx.compose.material.icons.automirrored.rounded.Launch
-import androidx.compose.material.icons.rounded.*
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.PhoneInTalk
+import androidx.compose.material.icons.rounded.ScreenRotation
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.repeatOnLifecycle
 import com.mwilky.hilight.plus.LightController
 import com.mwilky.hilight.plus.NativeHiLightDetector
 import com.mwilky.hilight.plus.R
 import com.mwilky.hilight.plus.ShizukuBridge
+import com.mwilky.hilight.plus.StockHiLightState
+import com.mwilky.hilight.plus.ui.diagnostics.CallPermissionsCard
+import com.mwilky.hilight.plus.ui.diagnostics.NotificationAccessCard
+import com.mwilky.hilight.plus.ui.diagnostics.PermissionState
+import com.mwilky.hilight.plus.ui.diagnostics.ShizukuStatusCard
+import com.mwilky.hilight.plus.ui.diagnostics.StockConflictCard
+import com.mwilky.hilight.plus.ui.diagnostics.rememberCallPermissionLauncher
+import com.mwilky.hilight.plus.ui.diagnostics.rememberPermissionState
 
 enum class OnboardingStep {
     WELCOME,
@@ -60,39 +61,8 @@ fun OnboardingScreen(
     val stockState by NativeHiLightDetector.state.collectAsStateWithLifecycle()
     val shizukuState by controller.shizuku.state.collectAsStateWithLifecycle()
 
-    fun hasPhonePermission(): Boolean =
-        ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
-
-    fun hasCallLogPermission(): Boolean =
-        ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED
-
-    fun hasContactsPermission(): Boolean =
-        ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
-
-    var isPhoneGranted by remember { mutableStateOf(hasPhonePermission()) }
-    var isCallLogGranted by remember { mutableStateOf(hasCallLogPermission()) }
-    var isContactsGranted by remember { mutableStateOf(hasContactsPermission()) }
-    var isNotifListenerGranted by remember { mutableStateOf(isNotificationListenerEnabled(context)) }
-    var isNotifListenerRunning by remember { mutableStateOf(isNotificationListenerRunning()) }
-
-    val lifecycleOwner = LocalLifecycleOwner.current
-    LaunchedEffect(lifecycleOwner) {
-        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            isPhoneGranted = hasPhonePermission()
-            isCallLogGranted = hasCallLogPermission()
-            isContactsGranted = hasContactsPermission()
-            isNotifListenerGranted = isNotificationListenerEnabled(context)
-            isNotifListenerRunning = isNotificationListenerRunning()
-        }
-    }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) {
-        isPhoneGranted = hasPhonePermission()
-        isCallLogGranted = hasCallLogPermission()
-        isContactsGranted = hasContactsPermission()
-    }
+    val permissionState = rememberPermissionState()
+    val requestCallPermissions = rememberCallPermissionLauncher(permissionState)
 
     fun openAppSettings() {
         val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
@@ -151,7 +121,7 @@ fun OnboardingScreen(
                         OnboardingStep.WELCOME -> true
                         OnboardingStep.SHIZUKU -> shizukuState == ShizukuBridge.State.CONNECTED
                         OnboardingStep.STOCK_CONFLICT -> !stockState.favoriteCallsActive
-                        OnboardingStep.PERMISSIONS -> isPhoneGranted && isCallLogGranted && isContactsGranted && isNotifListenerGranted
+                        OnboardingStep.PERMISSIONS -> permissionState.hasAllCallPermissions && permissionState.isNotifAccessGranted
                     }
 
                     // Next / Get Started Button (Anchored Right)
@@ -201,8 +171,7 @@ fun OnboardingScreen(
                 }
                 OnboardingStep.STOCK_CONFLICT -> {
                     StockConflictStepContent(
-                        stockConflictActive = stockState.favoriteCallsActive,
-                        stockSettingKnown = stockState.known,
+                        stockState = stockState,
                         onOpenSettings = { NativeHiLightDetector.openHiLightSettings(context) }
                     )
                 }
@@ -213,25 +182,13 @@ fun OnboardingScreen(
                         onRequestPermission = { controller.shizuku.requestPermission() },
                         onConnect = { controller.shizuku.connectManually() },
                         onDisconnect = { controller.shizuku.unbind() },
-                        onOpenShizuku = { controller.shizuku.openShizukuApp(context) },
-                        onRefresh = { controller.shizuku.connectManually() }
+                        onOpenShizuku = { controller.shizuku.openShizukuApp(context) }
                     )
                 }
                 OnboardingStep.PERMISSIONS -> {
                     PermissionsStepContent(
-                        isPhoneGranted = isPhoneGranted,
-                        isCallLogGranted = isCallLogGranted,
-                        isContactsGranted = isContactsGranted,
-                        isNotifListenerGranted = isNotifListenerGranted,
-                        isNotifListenerRunning = isNotifListenerRunning,
-                        onRequestCallPerms = {
-                            val perms = arrayOf(
-                                Manifest.permission.READ_PHONE_STATE,
-                                Manifest.permission.READ_CALL_LOG,
-                                Manifest.permission.READ_CONTACTS
-                            )
-                            permissionLauncher.launch(perms)
-                        },
+                        permissionState = permissionState,
+                        onRequestCallPerms = requestCallPermissions,
                         onOpenAppSettings = { openAppSettings() },
                         onOpenNotifListenerSettings = { openNotificationListenerSettings() }
                     )
@@ -276,8 +233,7 @@ private fun WelcomeStepContent() {
 
 @Composable
 private fun StockConflictStepContent(
-    stockConflictActive: Boolean,
-    stockSettingKnown: Boolean = true,
+    stockState: StockHiLightState,
     onOpenSettings: () -> Unit
 ) {
     Column(
@@ -311,36 +267,9 @@ private fun StockConflictStepContent(
             textAlign = TextAlign.Center
         )
 
-        StandardDiagnosticCard(
-            title = stringResource(R.string.onboarding_stock_card_title),
-            subtitle = when {
-                stockConflictActive -> stringResource(R.string.onboarding_stock_conflict_active_desc)
-                !stockSettingKnown -> stringResource(R.string.onboarding_stock_unknown_desc)
-                else -> stringResource(R.string.onboarding_stock_ready_desc)
-            },
-            icon = if (stockConflictActive || !stockSettingKnown) Icons.Rounded.Warning else Icons.Rounded.CheckCircle,
-            statusText = when {
-                stockConflictActive -> stringResource(R.string.onboarding_stock_status_conflict)
-                !stockSettingKnown -> stringResource(R.string.onboarding_stock_status_unknown)
-                else -> stringResource(R.string.onboarding_stock_status_ready)
-            },
-            isOk = stockSettingKnown && !stockConflictActive,
-            bottomAction = if (stockConflictActive) {
-                {
-                    Button(
-                        onClick = onOpenSettings,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError
-                        )
-                    ) {
-                        Icon(Icons.Rounded.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.onboarding_stock_btn_open))
-                    }
-                }
-            } else null
+        StockConflictCard(
+            stockState = stockState,
+            onOpenSettings = onOpenSettings
         )
     }
 }
@@ -352,12 +281,8 @@ private fun ShizukuStepContent(
     onRequestPermission: () -> Unit,
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
-    onOpenShizuku: () -> Unit,
-    onRefresh: () -> Unit
+    onOpenShizuku: () -> Unit
 ) {
-    val isConnected = shizukuState == ShizukuBridge.State.CONNECTED
-    val isExplicitlyDisconnected = shizukuState == ShizukuBridge.State.DISCONNECTED
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -383,128 +308,24 @@ private fun ShizukuStepContent(
             textAlign = TextAlign.Center
         )
 
-        ExpressiveStatusCard(
-            title = stringResource(R.string.shizuku_card_title),
-            subtitle = when (shizukuState) {
-                ShizukuBridge.State.CONNECTED -> stringResource(R.string.shizuku_desc_connected)
-                ShizukuBridge.State.DISCONNECTED -> stringResource(R.string.shizuku_desc_disconnected)
-                ShizukuBridge.State.NEEDS_PERMISSION -> stringResource(R.string.shizuku_desc_needs_permission)
-                ShizukuBridge.State.NOT_RUNNING -> stringResource(R.string.shizuku_desc_not_running)
-                ShizukuBridge.State.NOT_INSTALLED -> stringResource(R.string.shizuku_desc_not_installed)
-                ShizukuBridge.State.CONNECTING -> stringResource(R.string.shizuku_desc_connecting)
-                else -> errorText ?: stringResource(R.string.shizuku_status_disconnected)
-            },
-            icon = if (isConnected) Icons.Rounded.VerifiedUser else Icons.Rounded.AdminPanelSettings,
-            statusText = when (shizukuState) {
-                ShizukuBridge.State.CONNECTED -> stringResource(R.string.shizuku_status_connected)
-                ShizukuBridge.State.DISCONNECTED -> stringResource(R.string.shizuku_status_disconnected_paused)
-                ShizukuBridge.State.CONNECTING -> stringResource(R.string.shizuku_status_connecting)
-                ShizukuBridge.State.NEEDS_PERMISSION -> stringResource(R.string.shizuku_status_needs_permission)
-                ShizukuBridge.State.NOT_RUNNING -> stringResource(R.string.shizuku_status_not_running)
-                ShizukuBridge.State.NOT_INSTALLED -> stringResource(R.string.shizuku_status_not_installed)
-                else -> stringResource(R.string.shizuku_status_disconnected)
-            },
-            accentColor = if (isConnected) MaterialTheme.colorScheme.primary else if (isExplicitlyDisconnected) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
-            containerColor = if (isConnected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f) else MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = if (isConnected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-            bottomAction = {
-                when (shizukuState) {
-                    ShizukuBridge.State.CONNECTED -> {
-                        OutlinedButton(
-                            onClick = onDisconnect,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Icon(Icons.Rounded.PowerSettingsNew, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.shizuku_btn_disconnect))
-                        }
-                    }
-                    ShizukuBridge.State.DISCONNECTED -> {
-                        Button(
-                            onClick = onConnect,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.Rounded.PowerSettingsNew, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.shizuku_btn_connect))
-                        }
-                    }
-                    ShizukuBridge.State.NEEDS_PERMISSION -> {
-                        Button(
-                            onClick = onRequestPermission,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.Rounded.Key, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.shizuku_btn_authorize))
-                        }
-                    }
-                    ShizukuBridge.State.NOT_INSTALLED -> {
-                        Button(
-                            onClick = onOpenShizuku,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.shizuku_btn_install))
-                        }
-                    }
-                    ShizukuBridge.State.NOT_RUNNING -> {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Button(
-                                onClick = onOpenShizuku,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(Icons.AutoMirrored.Rounded.Launch, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text(stringResource(R.string.shizuku_btn_open))
-                            }
-                            OutlinedButton(
-                                onClick = onRefresh,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text(stringResource(R.string.shizuku_btn_check_again))
-                            }
-                        }
-                    }
-                    ShizukuBridge.State.CONNECTING -> null
-                    else -> {
-                        Button(
-                            onClick = onConnect,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.shizuku_btn_retry))
-                        }
-                    }
-                }
-            }
+        ShizukuStatusCard(
+            shizukuState = shizukuState,
+            shizukuError = errorText,
+            onDisconnect = onDisconnect,
+            onConnect = onConnect,
+            onRequestPermission = onRequestPermission,
+            onOpenShizukuApp = onOpenShizuku
         )
     }
 }
 
 @Composable
 private fun PermissionsStepContent(
-    isPhoneGranted: Boolean,
-    isCallLogGranted: Boolean,
-    isContactsGranted: Boolean,
-    isNotifListenerGranted: Boolean,
-    isNotifListenerRunning: Boolean = true,
+    permissionState: PermissionState,
     onRequestCallPerms: () -> Unit,
     onOpenAppSettings: () -> Unit,
     onOpenNotifListenerSettings: () -> Unit
 ) {
-    val hasCallPerms = isPhoneGranted && isCallLogGranted && isContactsGranted
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -530,75 +351,15 @@ private fun PermissionsStepContent(
             textAlign = TextAlign.Center
         )
 
-        // 1. Phone & Contacts Permissions Card
-        StandardDiagnosticCard(
-            title = stringResource(R.string.onboarding_perms_calls_title),
-            subtitle = if (hasCallPerms) {
-                stringResource(R.string.onboarding_perms_calls_granted_desc)
-            } else {
-                stringResource(R.string.onboarding_perms_calls_needed_desc)
-            },
-            icon = if (hasCallPerms) Icons.Rounded.CheckCircle else Icons.Rounded.PermPhoneMsg,
-            statusText = if (hasCallPerms) stringResource(R.string.onboarding_perms_calls_status_granted) else stringResource(R.string.onboarding_perms_calls_status_needed),
-            isOk = hasCallPerms,
-            bottomAction = if (!hasCallPerms) {
-                {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = onRequestCallPerms,
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error,
-                                contentColor = MaterialTheme.colorScheme.onError
-                            )
-                        ) {
-                            Text(stringResource(R.string.onboarding_perms_calls_btn_grant))
-                        }
-                        OutlinedButton(
-                            onClick = onOpenAppSettings,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(stringResource(R.string.onboarding_perms_calls_btn_app_info))
-                        }
-                    }
-                }
-            } else null
+        CallPermissionsCard(
+            state = permissionState,
+            onRequestPermissions = onRequestCallPerms,
+            onOpenAppSettings = onOpenAppSettings
         )
 
-        // 2. Notification Listener Permission Card
-        StandardDiagnosticCard(
-            title = stringResource(R.string.onboarding_perms_notif_title),
-            subtitle = when {
-                !isNotifListenerGranted -> stringResource(R.string.onboarding_perms_notif_needed_desc)
-                !isNotifListenerRunning -> stringResource(R.string.onboarding_perms_notif_not_running_desc)
-                else -> stringResource(R.string.onboarding_perms_notif_granted_desc)
-            },
-            icon = if (isNotifListenerGranted && isNotifListenerRunning) Icons.Rounded.CheckCircle else Icons.Rounded.NotificationAdd,
-            statusText = when {
-                !isNotifListenerGranted -> stringResource(R.string.onboarding_perms_notif_status_needed)
-                !isNotifListenerRunning -> stringResource(R.string.onboarding_perms_notif_status_not_running)
-                else -> stringResource(R.string.onboarding_perms_calls_status_granted)
-            },
-            isOk = isNotifListenerGranted && isNotifListenerRunning,
-            bottomAction = if (!isNotifListenerGranted || !isNotifListenerRunning) {
-                {
-                    Button(
-                        onClick = onOpenNotifListenerSettings,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError
-                        )
-                    ) {
-                        Icon(Icons.Rounded.NotificationsActive, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.onboarding_perms_notif_btn_enable))
-                    }
-                }
-            } else null
+        NotificationAccessCard(
+            state = permissionState,
+            onOpenNotifSettings = onOpenNotifListenerSettings
         )
     }
 }
@@ -788,8 +549,7 @@ fun OnboardingStep2Preview() {
                     onRequestPermission = {},
                     onConnect = {},
                     onDisconnect = {},
-                    onOpenShizuku = {},
-                    onRefresh = {}
+                    onOpenShizuku = {}
                 )
             }
         }
@@ -807,7 +567,7 @@ fun OnboardingStep3Preview() {
         ) { padding ->
             Box(modifier = Modifier.padding(padding)) {
                 StockConflictStepContent(
-                    stockConflictActive = true,
+                    stockState = StockHiLightState(favoriteCallsActive = true, known = true),
                     onOpenSettings = {}
                 )
             }
@@ -826,10 +586,14 @@ fun OnboardingStep4Preview() {
         ) { padding ->
             Box(modifier = Modifier.padding(padding)) {
                 PermissionsStepContent(
-                    isPhoneGranted = true,
-                    isCallLogGranted = false,
-                    isContactsGranted = false,
-                    isNotifListenerGranted = false,
+                    permissionState = PermissionState(
+                        context = LocalContext.current,
+                        isPhoneGranted = true,
+                        isCallLogGranted = false,
+                        isContactsGranted = false,
+                        isNotifAccessGranted = false,
+                        isNotifListenerRunning = false
+                    ),
                     onRequestCallPerms = {},
                     onOpenAppSettings = {},
                     onOpenNotifListenerSettings = {}
