@@ -110,13 +110,28 @@ class PixelLightsManager {
     }
 
     fun blank() {
-        if (isSessionOpen && ledIds.isNotEmpty()) {
-            pushFrame(IntArray(ledIds.size) { 0x00000000 })
+        if (ledIds.isEmpty()) {
+            closeSession()
+            return
+        }
+        if (!isSessionOpen && !openSession()) {
+            return
+        }
+        val off = IntArray(ledIds.size) { 0x00000000 }
+        pushFrame(off)
+        try {
+            Thread.sleep(BLANK_FRAME_GAP_MS)
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+        }
+        if (isSessionOpen) {
+            pushFrame(off)
         }
         closeSession()
     }
 
     companion object {
         private const val TAG = "PixelLightsManager"
+        private const val BLANK_FRAME_GAP_MS = 20L
     }
 }
