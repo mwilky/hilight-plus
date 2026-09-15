@@ -587,6 +587,14 @@ private fun HomePageToggle(
                     pressedShape = RoundedCornerShape(14.dp),
                     checkedShape = RoundedCornerShape(18.dp)
                 ),
+                // Surface tones rather than primary: the selected tab is a step darker than the
+                // unselected ones instead of a colour change.
+                colors = ToggleButtonDefaults.toggleButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    checkedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    checkedContentColor = MaterialTheme.colorScheme.onSurface
+                ),
                 // 24dp icon plus 12dp either side makes an exact circle at this height. No width
                 // is set, so a selected tab is only as wide as its own label needs.
                 contentPadding = PaddingValues(horizontal = 12.dp),
