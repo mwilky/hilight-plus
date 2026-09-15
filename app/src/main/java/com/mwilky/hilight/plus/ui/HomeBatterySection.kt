@@ -2,11 +2,17 @@
 
 package com.mwilky.hilight.plus.ui
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
@@ -49,6 +55,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.mwilky.hilight.plus.BatteryFullTimeout
 import com.mwilky.hilight.plus.BatteryPattern
@@ -160,18 +167,16 @@ fun HomeBatteryPage(
 
 /**
  * Every battery setting as one segmented list group, matching how the Notifications page
- * presents its additional settings. Rows that only apply to another setting's "on" state
- * (the fixed colour swatches, the low-battery threshold) join and leave the group, so the
- * segmented corner shapes are derived from the rows actually shown.
+ * presents its additional settings. A setting that only applies while another is on (the
+ * fixed colour swatches, the low-battery threshold) expands inside that setting's own row,
+ * so the group keeps a fixed six rows and nothing pops in as a separate card.
  */
 @Composable
 private fun BatterySettingsGroup(
     battery: BatterySettings,
     onBatteryChange: (BatterySettings) -> Unit
 ) {
-    val rowCount = 6 +
-        (if (battery.autoColor) 0 else 1) +
-        (if (battery.lowWarningEnabled) 1 else 0)
+    val rowCount = 6
     var index = 0
 
     Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
@@ -181,34 +186,23 @@ private fun BatterySettingsGroup(
             title = stringResource(R.string.battery_section_auto_color),
             description = stringResource(R.string.battery_section_auto_color_desc),
             checked = battery.autoColor,
-            onCheckedChange = { onBatteryChange(battery.copy(autoColor = it)) }
-        )
-
-        if (!battery.autoColor) {
-            SegmentedListItem(
-                shapes = ListItemDefaults.segmentedShapes(index = index++, count = rowCount),
-                colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                supportingContent = {
-                    FlowRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 12.dp),
-                        maxItemsInEachRow = 4,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        PALETTE.forEach { swatch ->
-                            ColorSwatch(
-                                color = swatch,
-                                selected = battery.color == swatch,
-                                enabled = true,
-                                onClick = { onBatteryChange(battery.copy(color = swatch)) }
-                            )
-                        }
-                    }
-                }
+            onCheckedChange = { onBatteryChange(battery.copy(autoColor = it)) },
+            expandedVisible = !battery.autoColor
+        ) {
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                maxItemsInEachRow = 4,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(stringResource(R.string.battery_fixed_color_title))
+                PALETTE.forEach { swatch ->
+                    ColorSwatch(
+                        color = swatch,
+                        selected = battery.color == swatch,
+                        enabled = true,
+                        onClick = { onBatteryChange(battery.copy(color = swatch)) }
+                    )
+                }
             }
         }
 
@@ -219,34 +213,32 @@ private fun BatterySettingsGroup(
             description = stringResource(R.string.battery_section_low_desc),
             checked = battery.lowWarningEnabled,
             onCheckedChange = { onBatteryChange(battery.copy(lowWarningEnabled = it)) }
-        )
-
-        if (battery.lowWarningEnabled) {
-            SegmentedListItem(
-                shapes = ListItemDefaults.segmentedShapes(index = index++, count = rowCount),
-                colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                trailingContent = {
-                    Text(
-                        text = stringResource(R.string.battery_threshold_value, battery.lowThresholdPercent),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                },
-                supportingContent = {
-                    Slider(
-                        value = battery.lowThresholdPercent.toFloat(),
-                        onValueChange = { value ->
-                            val rounded = (value / 5f).roundToInt() * 5
-                            onBatteryChange(battery.copy(lowThresholdPercent = rounded.coerceIn(5, 50)))
-                        },
-                        valueRange = 5f..50f,
-                        steps = 8,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(stringResource(R.string.battery_threshold_title))
+                Text(
+                    text = stringResource(R.string.battery_threshold_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = stringResource(R.string.battery_threshold_value, battery.lowThresholdPercent),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
+            Slider(
+                value = battery.lowThresholdPercent.toFloat(),
+                onValueChange = { value ->
+                    val rounded = (value / 5f).roundToInt() * 5
+                    onBatteryChange(battery.copy(lowThresholdPercent = rounded.coerceIn(5, 50)))
+                },
+                valueRange = 5f..50f,
+                steps = 8,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
 
         SwitchRow(
@@ -310,11 +302,12 @@ private fun BatterySettingsGroup(
 }
 
 /**
- * A segmented row whose trailing control is a switch.
+ * A segmented row with a switch, and optionally a control that expands inside the same row
+ * while the setting is on (the threshold slider, the fixed colour swatches).
  *
- * The description lives in the headline slot rather than the supporting slot: a description
- * long enough to wrap makes Material treat the row as a three-line list item, which top-aligns
- * the trailing switch instead of centring it against the text.
+ * The text and switch are laid out directly rather than through the list item's headline and
+ * trailing slots: a description long enough to wrap makes Material treat the row as a
+ * three-line list item, which top-aligns the trailing slot instead of centring it.
  */
 @Composable
 private fun SwitchRow(
@@ -323,21 +316,51 @@ private fun SwitchRow(
     title: String,
     description: String,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    expandedVisible: Boolean = checked,
+    expandedContent: (@Composable ColumnScope.() -> Unit)? = null
 ) {
+    val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+    val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
+
     SegmentedListItem(
         onClick = { onCheckedChange(!checked) },
         shapes = ListItemDefaults.segmentedShapes(index = index, count = count),
-        colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        trailingContent = { Switch(checked = checked, onCheckedChange = onCheckedChange) }
+        colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title)
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(title)
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(checked = checked, onCheckedChange = onCheckedChange)
+            }
+
+            if (expandedContent != null) {
+                AnimatedVisibility(
+                    visible = expandedVisible,
+                    enter = fadeIn(effects) + expandVertically(spatial),
+                    exit = fadeOut(effects) + shrinkVertically(spatial)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(top = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        content = expandedContent
+                    )
+                }
+            }
         }
     }
 }
@@ -355,54 +378,52 @@ private fun <T> OptionsRow(
 ) {
     SegmentedListItem(
         shapes = ListItemDefaults.segmentedShapes(index = index, count = count),
-        colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        supportingContent = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                AnimatedText(
-                    text = description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
-                ) {
-                    options.forEachIndexed { optionIndex, (option, label) ->
-                        ToggleButton(
-                            checked = selected == option,
-                            onCheckedChange = { onSelect(option) },
-                            modifier = Modifier
-                                .weight(1f)
-                                .semantics { role = Role.RadioButton },
-                            // The row's own container is surfaceContainer, which the default
-                            // unchecked button colour matches, leaving unselected options invisible.
-                            colors = ToggleButtonDefaults.toggleButtonColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                            ),
-                            shapes = when (optionIndex) {
-                                0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                                options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
-                                else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-                            },
-                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.labelMedium,
-                                maxLines = 1,
-                                softWrap = false,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
+        colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title)
+            AnimatedText(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
+            ) {
+                options.forEachIndexed { optionIndex, (option, label) ->
+                    ToggleButton(
+                        checked = selected == option,
+                        onCheckedChange = { onSelect(option) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .semantics { role = Role.RadioButton },
+                        // The row's own container is surfaceContainer, which the default
+                        // unchecked button colour matches, leaving unselected options invisible.
+                        colors = ToggleButtonDefaults.toggleButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        shapes = when (optionIndex) {
+                            0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                            options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                            else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                        },
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelMedium,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }
         }
-    ) {
-        Text(title)
     }
 }
 
