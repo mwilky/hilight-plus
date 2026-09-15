@@ -32,6 +32,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun setCycleNotifications(enabled: Boolean) = launch { store.setCycleNotifications(enabled) }
     fun setDefaultNotifEnabled(enabled: Boolean) = launch { store.setDefaultNotifEnabled(enabled) }
 
+    fun setOnlyWhenFaceDown(enabled: Boolean) = launch { store.setOnlyWhenFaceDown(enabled) }
+    fun setSuppressDuringDnd(enabled: Boolean) = launch { store.setSuppressDuringDnd(enabled) }
+    fun setQuietHoursEnabled(enabled: Boolean) = launch { store.setQuietHoursEnabled(enabled) }
+    fun setQuietHoursWindow(startMinutes: Int, endMinutes: Int) = launch { store.setQuietHoursWindow(startMinutes, endMinutes) }
+
     fun saveContactRule(rule: ContactRule) = launch { store.saveContactRule(rule) }
     fun deleteContactRule(ruleId: String) = launch { store.deleteContactRule(ruleId) }
     fun saveMessageContactRule(rule: MessageContactRule) = launch { store.saveMessageContactRule(rule) }

@@ -1,61 +1,60 @@
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+
 package com.mwilky.hilight.plus.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.*
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.DoNotDisturbOn
+import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.ScreenRotation
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.mwilky.hilight.plus.LightController
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mwilky.hilight.plus.R
-import kotlinx.coroutines.launch
 
 /**
  * Conditions Screen:
  * Smart suppression and trigger rules for hardware lights.
  */
 @Composable
-fun ConditionsScreen(controller: LightController) {
-    val scope = rememberCoroutineScope()
-    val isOnlyWhenFaceDown by controller.store.isOnlyWhenFaceDown.collectAsStateWithLifecycle(initialValue = false)
-    val suppressDuringDnd by controller.store.suppressDuringDnd.collectAsStateWithLifecycle(initialValue = false)
-    val quietHoursEnabled by controller.store.quietHoursEnabled.collectAsStateWithLifecycle(initialValue = false)
-    val quietHoursStart by controller.store.quietHoursStartMinutes.collectAsStateWithLifecycle(initialValue = 22 * 60)
-    val quietHoursEnd by controller.store.quietHoursEndMinutes.collectAsStateWithLifecycle(initialValue = 7 * 60)
+fun ConditionsScreen(viewModel: HomeViewModel = viewModel()) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     ConditionsContent(
-        isOnlyWhenFaceDown = isOnlyWhenFaceDown,
-        onToggleFaceDown = { enabled ->
-            scope.launch { controller.store.setOnlyWhenFaceDown(enabled) }
-        },
-        suppressDuringDnd = suppressDuringDnd,
-        onToggleDnd = { enabled ->
-            scope.launch { controller.store.setSuppressDuringDnd(enabled) }
-        },
-        quietHoursEnabled = quietHoursEnabled,
-        onToggleQuietHours = { enabled ->
-            scope.launch { controller.store.setQuietHoursEnabled(enabled) }
-        },
-        quietHoursStartMinutes = quietHoursStart,
-        quietHoursEndMinutes = quietHoursEnd,
-        onChangeQuietHoursWindow = { start, end ->
-            scope.launch { controller.store.setQuietHoursWindow(start, end) }
-        }
+        isOnlyWhenFaceDown = state.isOnlyWhenFaceDown,
+        onToggleFaceDown = viewModel::setOnlyWhenFaceDown,
+        suppressDuringDnd = state.suppressDuringDnd,
+        onToggleDnd = viewModel::setSuppressDuringDnd,
+        quietHoursEnabled = state.quietHoursEnabled,
+        onToggleQuietHours = viewModel::setQuietHoursEnabled,
+        quietHoursStartMinutes = state.quietHoursStartMinutes,
+        quietHoursEndMinutes = state.quietHoursEndMinutes,
+        onChangeQuietHoursWindow = viewModel::setQuietHoursWindow
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConditionsContent(
     isOnlyWhenFaceDown: Boolean,
@@ -69,6 +68,7 @@ fun ConditionsContent(
     onChangeQuietHoursWindow: (Int, Int) -> Unit
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    val context = LocalContext.current
     var editingStart by remember { mutableStateOf(false) }
     var editingEnd by remember { mutableStateOf(false) }
 
@@ -90,36 +90,87 @@ fun ConditionsContent(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = stringResource(R.string.conditions_defaults_desc),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            ListItem(
+                leadingContent = {
+                    Icon(
+                        Icons.Outlined.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                },
+                colors = ListItemDefaults.colors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                ),
+                shapes = ListItemDefaults.shapes(shape = MaterialTheme.shapes.large)
+            ) {
+                Text(
+                    text = stringResource(R.string.conditions_defaults_desc),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
 
-            ConditionCard(
-                title = stringResource(R.string.conditions_face_down_title),
-                subtitle = stringResource(R.string.conditions_face_down_desc),
-                icon = Icons.Rounded.ScreenRotation,
-                checked = isOnlyWhenFaceDown,
-                onCheckedChange = onToggleFaceDown
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+                ConditionRow(
+                    index = 0,
+                    count = 3,
+                    title = stringResource(R.string.conditions_face_down_title),
+                    subtitle = stringResource(R.string.conditions_face_down_desc),
+                    icon = Icons.Rounded.ScreenRotation,
+                    checked = isOnlyWhenFaceDown,
+                    onCheckedChange = onToggleFaceDown
+                )
+                ConditionRow(
+                    index = 1,
+                    count = 3,
+                    title = stringResource(R.string.conditions_dnd_title),
+                    subtitle = stringResource(R.string.conditions_dnd_desc),
+                    icon = Icons.Rounded.DoNotDisturbOn,
+                    checked = suppressDuringDnd,
+                    onCheckedChange = onToggleDnd
+                )
+                ConditionRow(
+                    index = 2,
+                    count = 3,
+                    title = stringResource(R.string.conditions_quiet_hours_title),
+                    subtitle = stringResource(R.string.conditions_quiet_hours_desc),
+                    icon = Icons.Rounded.Bedtime,
+                    checked = quietHoursEnabled,
+                    onCheckedChange = onToggleQuietHours
+                )
+            }
 
-            ConditionCard(
-                title = stringResource(R.string.conditions_dnd_title),
-                subtitle = stringResource(R.string.conditions_dnd_desc),
-                icon = Icons.Rounded.DoNotDisturbOn,
-                checked = suppressDuringDnd,
-                onCheckedChange = onToggleDnd
-            )
-
-            QuietHoursCard(
-                enabled = quietHoursEnabled,
-                onToggle = onToggleQuietHours,
-                startMinutes = quietHoursStartMinutes,
-                endMinutes = quietHoursEndMinutes,
-                onEditStart = { editingStart = true },
-                onEditEnd = { editingEnd = true }
-            )
+            AnimatedVisibility(
+                visible = quietHoursEnabled,
+                enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
+                    fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+                exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
+                    fadeOut(MaterialTheme.motionScheme.defaultEffectsSpec())
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { editingStart = true },
+                        shapes = ButtonDefaults.shapes(),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Rounded.Schedule, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                        Text("${stringResource(R.string.conditions_quiet_hours_start)} ${formatClockMinutes(context, quietHoursStartMinutes)}")
+                    }
+                    OutlinedButton(
+                        onClick = { editingEnd = true },
+                        shapes = ButtonDefaults.shapes(),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Rounded.Schedule, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                        Text("${stringResource(R.string.conditions_quiet_hours_end)} ${formatClockMinutes(context, quietHoursEndMinutes)}")
+                    }
+                }
+            }
         }
     }
 
@@ -148,137 +199,46 @@ fun ConditionsContent(
 }
 
 @Composable
-private fun ConditionCard(
+private fun ConditionRow(
+    index: Int,
+    count: Int,
     title: String,
     subtitle: String,
     icon: ImageVector,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = HiLightTheme.CardShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
+    SegmentedListItem(
+        onClick = { onCheckedChange(!checked) },
+        shapes = ListItemDefaults.segmentedShapes(index = index, count = count),
+        colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        verticalAlignment = Alignment.CenterVertically,
+        leadingContent = {
+            val container by animateColorAsState(
+                targetValue = if (checked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
+                animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+                label = "conditionIconContainer"
+            )
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(container),
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     icon,
                     contentDescription = null,
-                    tint = if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(28.dp)
+                    tint = if (checked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             }
-            Spacer(Modifier.width(8.dp))
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange
-            )
-        }
-    }
-}
-
-@Composable
-private fun QuietHoursCard(
-    enabled: Boolean,
-    onToggle: (Boolean) -> Unit,
-    startMinutes: Int,
-    endMinutes: Int,
-    onEditStart: () -> Unit,
-    onEditEnd: () -> Unit
-) {
-    val context = LocalContext.current
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = HiLightTheme.CardShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        },
+        supportingContent = { Text(subtitle) },
+        trailingContent = { Switch(checked = checked, onCheckedChange = onCheckedChange) }
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Icon(
-                        Icons.Rounded.Bedtime,
-                        contentDescription = null,
-                        tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            text = stringResource(R.string.conditions_quiet_hours_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = stringResource(R.string.conditions_quiet_hours_desc),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                Spacer(Modifier.width(8.dp))
-                Switch(
-                    checked = enabled,
-                    onCheckedChange = onToggle
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onEditStart,
-                    enabled = enabled,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("${stringResource(R.string.conditions_quiet_hours_start)} ${formatClockMinutes(context, startMinutes)}")
-                }
-                OutlinedButton(
-                    onClick = onEditEnd,
-                    enabled = enabled,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("${stringResource(R.string.conditions_quiet_hours_end)} ${formatClockMinutes(context, endMinutes)}")
-                }
-            }
-        }
+        Text(title)
     }
 }
-
 
 @Preview(name = "Conditions Screen Preview", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable

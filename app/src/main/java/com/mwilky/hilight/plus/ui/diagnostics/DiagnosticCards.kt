@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.mwilky.hilight.plus.ui.diagnostics
 
 import androidx.compose.foundation.layout.Arrangement
@@ -22,12 +24,14 @@ import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mwilky.hilight.plus.R
@@ -35,6 +39,30 @@ import com.mwilky.hilight.plus.ShizukuBridge
 import com.mwilky.hilight.plus.StockHiLightState
 import com.mwilky.hilight.plus.ui.ExpressiveStatusCard
 import com.mwilky.hilight.plus.ui.StandardDiagnosticCard
+
+@Composable
+private fun ButtonLabel(icon: ImageVector?, text: String) {
+    if (icon != null) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+    }
+    Text(text)
+}
+
+@Composable
+private fun ErrorButton(onClick: () -> Unit, icon: ImageVector?, text: String, modifier: Modifier = Modifier) {
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        shapes = ButtonDefaults.shapes(),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.error,
+            contentColor = MaterialTheme.colorScheme.onError
+        )
+    ) {
+        ButtonLabel(icon, text)
+    }
+}
 
 /**
  * Shizuku privileged-access status: connection state, why it's not connected, and the
@@ -96,34 +124,27 @@ fun ShizukuStatusCard(
                     OutlinedButton(
                         onClick = onDisconnect,
                         modifier = Modifier.fillMaxWidth(),
+                        shapes = ButtonDefaults.shapes(),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = MaterialTheme.colorScheme.primary
                         )
                     ) {
-                        Icon(Icons.Rounded.PowerSettingsNew, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.shizuku_btn_disconnect))
+                        ButtonLabel(Icons.Rounded.PowerSettingsNew, stringResource(R.string.shizuku_btn_disconnect))
                     }
                 }
                 ShizukuBridge.State.DISCONNECTED -> {
-                    Button(onClick = onConnect, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Rounded.PowerSettingsNew, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.shizuku_btn_connect))
+                    Button(onClick = onConnect, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) {
+                        ButtonLabel(Icons.Rounded.PowerSettingsNew, stringResource(R.string.shizuku_btn_connect))
                     }
                 }
                 ShizukuBridge.State.NEEDS_PERMISSION -> {
-                    Button(onClick = onRequestPermission, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Rounded.Key, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.shizuku_btn_authorize))
+                    Button(onClick = onRequestPermission, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) {
+                        ButtonLabel(Icons.Rounded.Key, stringResource(R.string.shizuku_btn_authorize))
                     }
                 }
                 ShizukuBridge.State.NOT_INSTALLED -> {
-                    Button(onClick = onOpenShizukuApp, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.shizuku_btn_install))
+                    Button(onClick = onOpenShizukuApp, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) {
+                        ButtonLabel(Icons.Rounded.Download, stringResource(R.string.shizuku_btn_install))
                     }
                 }
                 ShizukuBridge.State.NOT_RUNNING -> {
@@ -131,24 +152,18 @@ fun ShizukuStatusCard(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Button(onClick = onOpenShizukuApp, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.AutoMirrored.Rounded.Launch, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text(stringResource(R.string.shizuku_btn_open))
+                        Button(onClick = onOpenShizukuApp, modifier = Modifier.weight(1f), shapes = ButtonDefaults.shapes()) {
+                            ButtonLabel(Icons.AutoMirrored.Rounded.Launch, stringResource(R.string.shizuku_btn_open))
                         }
-                        OutlinedButton(onClick = onConnect, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text(stringResource(R.string.shizuku_btn_check_again))
+                        OutlinedButton(onClick = onConnect, modifier = Modifier.weight(1f), shapes = ButtonDefaults.shapes()) {
+                            ButtonLabel(Icons.Rounded.Refresh, stringResource(R.string.shizuku_btn_check_again))
                         }
                     }
                 }
                 ShizukuBridge.State.CONNECTING -> null
                 else -> {
-                    Button(onClick = onConnect, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.shizuku_btn_retry))
+                    Button(onClick = onConnect, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) {
+                        ButtonLabel(Icons.Rounded.Refresh, stringResource(R.string.shizuku_btn_retry))
                     }
                 }
             }
@@ -184,18 +199,12 @@ fun StockConflictCard(
         isOk = isKnown && !isConflict,
         bottomAction = if (isConflict) {
             {
-                Button(
+                ErrorButton(
                     onClick = onOpenSettings,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    )
-                ) {
-                    Icon(Icons.Rounded.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.onboarding_stock_btn_open))
-                }
+                    icon = Icons.Rounded.Settings,
+                    text = stringResource(R.string.onboarding_stock_btn_open),
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         } else null
     )
@@ -233,19 +242,16 @@ fun CallPermissionsCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Button(
+                    ErrorButton(
                         onClick = onRequestPermissions,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError
-                        )
-                    ) {
-                        Text(stringResource(R.string.onboarding_perms_calls_btn_grant))
-                    }
+                        icon = null,
+                        text = stringResource(R.string.onboarding_perms_calls_btn_grant),
+                        modifier = Modifier.weight(1f)
+                    )
                     OutlinedButton(
                         onClick = onOpenAppSettings,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        shapes = ButtonDefaults.shapes()
                     ) {
                         Text(stringResource(R.string.onboarding_perms_calls_btn_app_info))
                     }
@@ -281,18 +287,12 @@ fun NotificationAccessCard(
         isOk = hasAccess,
         bottomAction = if (!hasAccess) {
             {
-                Button(
+                ErrorButton(
                     onClick = onOpenNotifSettings,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    )
-                ) {
-                    Icon(Icons.Rounded.NotificationsActive, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.onboarding_perms_notif_btn_enable))
-                }
+                    icon = Icons.Rounded.NotificationsActive,
+                    text = stringResource(R.string.onboarding_perms_notif_btn_enable),
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         } else null
     )

@@ -81,8 +81,6 @@
     <string name="shizuku_btn_retry">Retry Connection</string>
 
     <!-- Incoming Calls Section -->
-    <string name="calls_section_title">Incoming calls</string>
-    <string name="calls_section_subtitle">Enable lights when there is an incoming call</string>
     <string name="calls_other_contacts_title">All other contacts</string>
     <string name="calls_unknown_numbers_title">Unknown numbers</string>
     <string name="calls_custom_rules_header">Custom caller rules (%1$d)</string>
@@ -90,8 +88,6 @@
     <string name="calls_add_contact_btn">Add contact</string>
 
     <!-- Notifications Section -->
-    <string name="notifs_section_title">Notifications</string>
-    <string name="notifs_section_subtitle">Enable lights when notifications arrive</string>
     <string name="notifs_default_title">All other notifications</string>
     <string name="notifs_contact_rules_header">Custom contact rules (%1$d)</string>
     <string name="notifs_no_contact_rules">No contact message rules.</string>
@@ -108,33 +104,46 @@
     <string name="settings_cycle_desc">Rotate lighting patterns through each active unread notification</string>
 
     <!-- Dialogs & Customization -->
+    <string name="dialog_section_look">Look</string>
+    <string name="dialog_section_when">When</string>
     <string name="dialog_pattern_label">Pattern</string>
     <string name="dialog_color_label">Colour</string>
     <string name="dialog_color_auto_label">Colour (auto from icon)</string>
     <string name="dialog_auto_color_title">Auto colour</string>
     <string name="dialog_auto_color_desc">Extract dynamic vibrant color directly from app icon</string>
     <string name="dialog_orientation_title">Phone position</string>
-    <string name="dialog_orientation_desc_default">Reads the face-down setting from the conditions page.</string>
-    <string name="dialog_orientation_desc_always">Lights whether the phone is face down or in your hand.</string>
-    <string name="dialog_orientation_desc_face_down">Lights only when the phone is placed face down.</string>
+    <string name="dialog_orientation_desc_default">Follows the face-down setting on the Conditions page.</string>
+    <string name="dialog_orientation_desc_always">Lights whether the phone is face down, face up or in your hand.</string>
+    <string name="dialog_orientation_desc_face_down">Lights only while the phone is lying face down.</string>
     <string name="dialog_orientation_default">Default</string>
     <string name="dialog_orientation_always">Any position</string>
     <string name="dialog_orientation_face_down">Face down</string>
     <string name="dialog_dnd_title">Do Not Disturb</string>
-    <string name="dialog_dnd_desc_default">Reads the Do Not Disturb setting from the conditions page.</string>
-    <string name="dialog_dnd_desc_always">Lights even when Do Not Disturb is on.</string>
+    <string name="dialog_dnd_desc_default">Follows the Do Not Disturb setting on the Conditions page.</string>
+    <string name="dialog_dnd_desc_always">Lights even while Do Not Disturb is on.</string>
+    <string name="dialog_dnd_desc_skip">Stays dark while Do Not Disturb is on, even if the Conditions page allows it.</string>
     <string name="dialog_quiet_hours_title">Quiet hours</string>
-    <string name="dialog_quiet_hours_desc_default">Reads the quiet hours setting from the conditions page.</string>
-    <string name="dialog_quiet_hours_desc_always">Lights even during the quiet hours window.</string>
+    <string name="dialog_quiet_hours_desc_default">Follows the quiet hours setting on the Conditions page.</string>
+    <string name="dialog_quiet_hours_desc_always">Lights even during quiet hours.</string>
+    <string name="dialog_quiet_hours_desc_skip">Stays dark during the window below, even if quiet hours are off on the Conditions page.</string>
     <string name="dialog_mode_default">Default</string>
-    <string name="dialog_mode_always">Still light</string>
-    <string name="dialog_mode_skip">Skip</string>
+    <string name="dialog_mode_always">Always light</string>
+    <string name="dialog_mode_skip">Stay dark</string>
     <string name="dialog_btn_save">Save</string>
     <string name="dialog_btn_cancel">Cancel</string>
     <string name="dialog_btn_close">Close</string>
     <string name="dialog_configure_title">Configure %1$s</string>
     <string name="home_tab_calls">Calls</string>
     <string name="home_tab_notifications">Notifications</string>
+    <string name="hero_calls_title">Call lights</string>
+    <string name="hero_notifs_title">Notification lights</string>
+    <string name="hero_status_on">On · %1$s</string>
+    <string name="hero_status_off">Off</string>
+    <plurals name="hero_rule_count">
+        <item quantity="one">%d rule</item>
+        <item quantity="other">%d rules</item>
+    </plurals>
+    <string name="section_off_hint">Turned off. Your rules are kept and apply again when you switch back on.</string>
     <string name="rule_edit_cd">Edit rule</string>
     <string name="rule_delete_cd">Delete rule</string>
     <string name="duration_seconds">%1$ds</string>
@@ -157,20 +166,22 @@
     <string name="dialog_app_picker_no_apps">No applications found</string>
 
     <!-- Rule Item Labels -->
-    <string name="rule_pattern_label">Pattern:</string>
-    <string name="rule_trigger_label">Trigger:</string>
-    <string name="rule_trigger_always">Any position</string>
+    <string name="rule_trigger_always">Lights in any position</string>
     <string name="rule_trigger_face_down">Face down only</string>
+    <string name="rule_dnd_always">Lights during Do Not Disturb</string>
+    <string name="rule_dnd_skip">Dark during Do Not Disturb</string>
+    <string name="rule_quiet_hours_always">Lights during quiet hours</string>
+    <string name="rule_quiet_hours_skip">Dark during quiet hours</string>
 
     <!-- Conditions Screen -->
     <string name="conditions_title">Conditions</string>
-    <string name="conditions_defaults_desc">Rules read these values unless you pick something else on the rule. Still light ignores that condition.</string>
+    <string name="conditions_defaults_desc">These apply to every rule. Each rule can override them in its own settings.</string>
     <string name="conditions_face_down_title">Face down only</string>
-    <string name="conditions_face_down_desc">Only show lights when your Pixel is placed face down on a flat surface. A rule can read this, require it, or light in any position.</string>
+    <string name="conditions_face_down_desc">Only light while the phone is lying face down.</string>
     <string name="conditions_dnd_title">Do Not Disturb</string>
-    <string name="conditions_dnd_desc">Skip lights while Do Not Disturb is on. A rule can still light during DND.</string>
+    <string name="conditions_dnd_desc">Stay dark while Do Not Disturb is on.</string>
     <string name="conditions_quiet_hours_title">Quiet hours</string>
-    <string name="conditions_quiet_hours_desc">Skip lights during this window. Overnight ranges are allowed. A rule can still light during the window.</string>
+    <string name="conditions_quiet_hours_desc">Stay dark between the times below. Overnight windows are fine.</string>
     <string name="conditions_quiet_hours_start">Starts</string>
     <string name="conditions_quiet_hours_end">Ends</string>
 

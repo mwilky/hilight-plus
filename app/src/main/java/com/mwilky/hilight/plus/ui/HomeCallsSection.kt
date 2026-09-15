@@ -1,211 +1,197 @@
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+
 package com.mwilky.hilight.plus.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PersonAdd
-import androidx.compose.material.icons.rounded.PhoneCallback
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
+import androidx.compose.material.icons.automirrored.rounded.PhoneCallback
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.mwilky.hilight.plus.ContactRule
-import com.mwilky.hilight.plus.FaceDownMode
-import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.R
+import com.mwilky.hilight.plus.SettingsSnapshot
+import com.mwilky.hilight.plus.ShizukuBridge
+import com.mwilky.hilight.plus.StockHiLightState
 import com.mwilky.hilight.plus.core.PatternRenderer
+import com.mwilky.hilight.plus.ui.diagnostics.CallPermissionsCard
+import com.mwilky.hilight.plus.ui.diagnostics.PermissionState
+import com.mwilky.hilight.plus.ui.diagnostics.ShizukuStatusCard
+import com.mwilky.hilight.plus.ui.diagnostics.StockConflictCard
 
 @Composable
-fun HomeCallsMasterCard(
-    enabled: Boolean,
-    onToggle: (Boolean) -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = HiLightTheme.PillShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 16.dp, horizontal = 32.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.calls_section_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                Text(
-                    text = stringResource(R.string.calls_section_subtitle),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-            Switch(
-                checked = enabled,
-                onCheckedChange = onToggle
-            )
-        }
-    }
-}
-
-@Composable
-fun HomeCallsSettingsCard(
-    enabled: Boolean,
-    alpha: Float,
-    scale: Float,
-    isOtherContactsEnabled: Boolean,
-    otherContactsColor: Long,
-    otherContactsPattern: PatternMode,
-    otherContactsFaceDownMode: FaceDownMode,
+fun HomeCallsPage(
+    shizukuState: ShizukuBridge.State,
+    shizukuError: String?,
+    onDisconnectShizuku: () -> Unit,
+    onConnectShizuku: () -> Unit,
+    onRequestShizukuPermission: () -> Unit,
+    onOpenShizukuApp: () -> Unit,
+    stockState: StockHiLightState,
+    onOpenStockSettings: () -> Unit,
+    permissionState: PermissionState,
+    onRequestPhonePerms: () -> Unit,
+    onOpenAppSettings: () -> Unit,
+    state: SettingsSnapshot,
+    onToggleCallLights: (Boolean) -> Unit,
     onToggleOtherContacts: (Boolean) -> Unit,
     onEditOtherContacts: () -> Unit,
-    isUnknownNumbersEnabled: Boolean,
-    unknownNumbersColor: Long,
-    unknownNumbersPattern: PatternMode,
-    unknownNumbersFaceDownMode: FaceDownMode,
     onToggleUnknownNumbers: (Boolean) -> Unit,
     onEditUnknownNumbers: () -> Unit,
-    callContactRules: List<ContactRule>,
     onToggleCallContactRule: (ContactRule, Boolean) -> Unit,
     onEditCallContactRule: (ContactRule) -> Unit,
     onDeleteCallContactRule: (String) -> Unit,
     onAddCallContact: () -> Unit,
     renderer: PatternRenderer
 ) {
-    Surface(
+    val rules = state.contactRules
+    Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .scale(scale)
-            .alpha(alpha),
-        shape = HiLightTheme.SectionShape,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        tonalElevation = 0.dp
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            TonalRuleCard(
-                title = stringResource(R.string.calls_other_contacts_title),
-                pattern = otherContactsPattern,
-                color = otherContactsColor,
-                renderer = renderer,
-                isEnabled = isOtherContactsEnabled,
-                controlsEnabled = enabled,
-                faceDownMode = otherContactsFaceDownMode,
-                onToggle = onToggleOtherContacts,
-                onEdit = onEditOtherContacts
+        if (shizukuState != ShizukuBridge.State.CONNECTED) {
+            ShizukuStatusCard(
+                shizukuState = shizukuState,
+                shizukuError = shizukuError,
+                onDisconnect = onDisconnectShizuku,
+                onConnect = onConnectShizuku,
+                onRequestPermission = onRequestShizukuPermission,
+                onOpenShizukuApp = onOpenShizukuApp
             )
-
-            TonalRuleCard(
-                title = stringResource(R.string.calls_unknown_numbers_title),
-                pattern = unknownNumbersPattern,
-                color = unknownNumbersColor,
-                renderer = renderer,
-                isEnabled = isUnknownNumbersEnabled,
-                controlsEnabled = enabled,
-                faceDownMode = unknownNumbersFaceDownMode,
-                onToggle = onToggleUnknownNumbers,
-                onEdit = onEditUnknownNumbers
+        }
+        if (stockState.known && stockState.favoriteCallsActive) {
+            StockConflictCard(stockState = stockState, onOpenSettings = onOpenStockSettings)
+        }
+        if (!permissionState.hasAllCallPermissions) {
+            CallPermissionsCard(
+                state = permissionState,
+                onRequestPermissions = onRequestPhonePerms,
+                onOpenAppSettings = onOpenAppSettings
             )
+        }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = stringResource(R.string.calls_custom_rules_header, callContactRules.size),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
+        SectionHero(
+            title = stringResource(R.string.hero_calls_title),
+            statusText = heroStatusText(enabled = state.isCallLightsEnabled, ruleCount = rules.size),
+            checked = state.isCallLightsEnabled,
+            onCheckedChange = onToggleCallLights
+        )
 
-            if (callContactRules.isEmpty()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+        SectionBody(enabled = state.isCallLightsEnabled) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+                    RuleListItem(
+                        index = 0,
+                        count = 2,
+                        title = stringResource(R.string.calls_other_contacts_title),
+                        pattern = state.otherContactsPattern,
+                        color = state.otherContactsColor,
+                        faceDownMode = state.otherContactsFaceDownMode,
+                        dndMode = state.otherContactsDndMode,
+                        quietHoursMode = state.otherContactsQuietHoursMode,
+                        renderer = renderer,
+                        isEnabled = state.isOtherContactsEnabled,
+                        onToggle = onToggleOtherContacts,
+                        onEdit = onEditOtherContacts
                     )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Icon(
-                            Icons.Rounded.PhoneCallback,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            text = stringResource(R.string.calls_no_rules),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
+                    RuleListItem(
+                        index = 1,
+                        count = 2,
+                        title = stringResource(R.string.calls_unknown_numbers_title),
+                        pattern = state.unknownNumbersPattern,
+                        color = state.unknownNumbersColor,
+                        faceDownMode = state.unknownNumbersFaceDownMode,
+                        dndMode = state.unknownNumbersDndMode,
+                        quietHoursMode = state.unknownNumbersQuietHoursMode,
+                        renderer = renderer,
+                        isEnabled = state.isUnknownNumbersEnabled,
+                        onToggle = onToggleUnknownNumbers,
+                        onEdit = onEditUnknownNumbers
+                    )
+                }
+
+                RuleGroupHeader(stringResource(R.string.calls_custom_rules_header, rules.size))
+                if (rules.isEmpty()) {
+                    EmptyRuleHint(stringResource(R.string.calls_no_rules), Icons.AutoMirrored.Rounded.PhoneCallback)
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+                        rules.forEachIndexed { index, rule ->
+                            RuleListItem(
+                                index = index,
+                                count = rules.size,
+                                title = rule.name,
+                                pattern = rule.pattern,
+                                color = rule.color,
+                                faceDownMode = rule.faceDownMode,
+                                dndMode = rule.dndMode,
+                                quietHoursMode = rule.quietHoursMode,
+                                renderer = renderer,
+                                isEnabled = rule.isEnabled,
+                                onToggle = { isEnabled -> onToggleCallContactRule(rule, isEnabled) },
+                                onEdit = { onEditCallContactRule(rule) },
+                                onDelete = { onDeleteCallContactRule(rule.id) }
+                            )
+                        }
                     }
                 }
-            } else {
-                callContactRules.forEach { rule ->
-                    TonalRuleCard(
-                        title = rule.name,
-                        pattern = rule.pattern,
-                        color = rule.color,
-                        renderer = renderer,
-                        isEnabled = rule.isEnabled,
-                        controlsEnabled = enabled,
-                        faceDownMode = rule.faceDownMode,
-                        onToggle = { isEnabled -> onToggleCallContactRule(rule, isEnabled) },
-                        onEdit = { onEditCallContactRule(rule) },
-                        onDelete = { onDeleteCallContactRule(rule.id) }
-                    )
-                }
-            }
-
-            OutlinedButton(
-                onClick = { if (enabled) onAddCallContact() },
-                enabled = enabled,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.primary
-                )
-            ) {
-                Icon(Icons.Rounded.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.calls_add_contact_btn))
+                AddRuleButton(stringResource(R.string.calls_add_contact_btn), Icons.Rounded.PersonAdd, onAddCallContact)
             }
         }
+
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+@Composable
+internal fun heroStatusText(enabled: Boolean, ruleCount: Int): String {
+    return if (enabled) {
+        stringResource(R.string.hero_status_on, pluralStringResource(R.plurals.hero_rule_count, ruleCount, ruleCount))
+    } else {
+        stringResource(R.string.hero_status_off)
+    }
+}
+
+/**
+ * Collapses a section's rules into a short "turned off" hint when the feature is disabled.
+ */
+@Composable
+internal fun SectionBody(enabled: Boolean, content: @Composable () -> Unit) {
+    val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+    val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
+    AnimatedContent(
+        targetState = enabled,
+        transitionSpec = {
+            (fadeIn(effects) + expandVertically(spatial))
+                .togetherWith(fadeOut(effects) + shrinkVertically(spatial))
+                .using(SizeTransform(clip = false) { _, _ -> spatial })
+        },
+        label = "sectionBody"
+    ) { on ->
+        if (on) content() else SectionOffHint(stringResource(R.string.section_off_hint))
     }
 }

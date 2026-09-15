@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+
 package com.mwilky.hilight.plus.ui
 
 import android.content.Context
@@ -8,44 +10,31 @@ import android.provider.ContactsContract
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.*
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import com.mwilky.hilight.plus.DndMode
-import com.mwilky.hilight.plus.FaceDownMode
-import com.mwilky.hilight.plus.QuietHoursMode
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Launch
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -62,27 +51,18 @@ import com.mwilky.hilight.plus.SettingsSnapshot
 import com.mwilky.hilight.plus.ShizukuBridge
 import com.mwilky.hilight.plus.StockHiLightState
 import com.mwilky.hilight.plus.core.PatternRenderer
-import com.mwilky.hilight.plus.ui.diagnostics.CallPermissionsCard
-import com.mwilky.hilight.plus.ui.diagnostics.NotificationAccessCard
 import com.mwilky.hilight.plus.ui.diagnostics.PermissionState
-import com.mwilky.hilight.plus.ui.diagnostics.ShizukuStatusCard
-import com.mwilky.hilight.plus.ui.diagnostics.StockConflictCard
 import com.mwilky.hilight.plus.ui.diagnostics.rememberCallPermissionLauncher
 import com.mwilky.hilight.plus.ui.diagnostics.rememberPermissionState
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
 /**
- * Modern Unified Home Screen:
- * - Persistent Shizuku Privileged Control status card.
- * - Dynamic warning cards (ONLY shown when permissions are missing or stock conflicts occur).
- * - Calls & Notifications sections with nested Material 3 elevation hierarchy.
- * - Master toggles outside containers with smooth alpha dimming & disabled interaction when switched off.
- * - Custom low-profile compact slider with smaller thumb.
- * - Android 11+ launcher intent query app picker with app icons.
+ * Home screen: Calls and Notifications pages behind a connected toggle group + pager.
+ * Each page has a hero toggle, diagnostics shown only when something needs attention,
+ * and a flat segmented list of rules.
  */
 @Composable
 fun HomeScreen(
@@ -415,7 +395,6 @@ fun HomeScreen(
  * Pure stateless Composable rendering the unified Home UI.
  * Directly consumed by both the live runtime screen and the Compose Preview.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun HomeContent(
     shizukuState: ShizukuBridge.State,
@@ -457,797 +436,128 @@ fun HomeContent(
     onAddApp: () -> Unit,
     renderer: PatternRenderer
 ) {
-    val effectsSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
-    val spatialSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
-    val callAlpha by animateFloatAsState(
-        targetValue = if (state.isCallLightsEnabled) 1.0f else 0.40f,
-        animationSpec = effectsSpec,
-        label = "callAlpha"
-    )
-
-    val notifAlpha by animateFloatAsState(
-        targetValue = if (state.isNotificationsEnabled) 1.0f else 0.40f,
-        animationSpec = effectsSpec,
-        label = "notifAlpha"
-    )
-
-    val callScale by animateFloatAsState(
-        targetValue = if (state.isCallLightsEnabled) 1.0f else 0.985f,
-        animationSpec = spatialSpec,
-        label = "callScale"
-    )
-
-    val notifScale by animateFloatAsState(
-        targetValue = if (state.isNotificationsEnabled) 1.0f else 0.985f,
-        animationSpec = spatialSpec,
-        label = "notifScale"
-    )
-
-    var selectedTab by remember { mutableIntStateOf(0) }
-    val headerColors = TopAppBarDefaults.topAppBarColors()
-    val headerColor = headerColors.containerColor
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    val pagerState = rememberPagerState { 2 }
+    val scope = rememberCoroutineScope()
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
         topBar = {
-            Column(modifier = Modifier.background(headerColor)) {
-                CenterAlignedTopAppBar(
-                    title = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Icon(
-                                Icons.Rounded.Lightbulb,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(28.dp)
-                            )
-                            Text(
-                                text = stringResource(R.string.main_title),
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    },
-                    colors = headerColors
-                )
-                SecondaryTabRow(
-                    selectedTabIndex = selectedTab,
-                    containerColor = headerColor,
-                    divider = {}
-                ) {
-                    Tab(
-                        selected = selectedTab == 0,
-                        onClick = { selectedTab = 0 },
-                        text = { Text(stringResource(R.string.home_tab_calls)) }
-                    )
-                    Tab(
-                        selected = selectedTab == 1,
-                        onClick = { selectedTab = 1 },
-                        text = { Text(stringResource(R.string.home_tab_notifications)) }
-                    )
-                }
-            }
+            TopAppBar(
+                title = { Text(stringResource(R.string.main_title)) },
+                scrollBehavior = scrollBehavior
+            )
         }
     ) { padding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(bottom = 24.dp, top = 8.dp)
         ) {
-            // 1. Shizuku Privileged Access Card (Persistent)
-            item {
-                ShizukuStatusCard(
-                    shizukuState = shizukuState,
-                    shizukuError = shizukuError,
-                    onDisconnect = onDisconnectShizuku,
-                    onConnect = onConnectShizuku,
-                    onRequestPermission = onRequestShizukuPermission,
-                    onOpenShizukuApp = onOpenShizukuApp
-                )
-            }
-
-            // 2. Conditional Warning Banners (tab-specific)
-            if (selectedTab == 0) {
-            val isNativeConflict = stockState.known && stockState.favoriteCallsActive
-            if (isNativeConflict) {
-                item {
-                    StockConflictCard(
+            HomePageToggle(
+                selectedIndex = pagerState.currentPage,
+                onSelect = { page -> scope.launch { pagerState.animateScrollToPage(page) } }
+            )
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.Top
+            ) { page ->
+                if (page == 0) {
+                    HomeCallsPage(
+                        shizukuState = shizukuState,
+                        shizukuError = shizukuError,
+                        onDisconnectShizuku = onDisconnectShizuku,
+                        onConnectShizuku = onConnectShizuku,
+                        onRequestShizukuPermission = onRequestShizukuPermission,
+                        onOpenShizukuApp = onOpenShizukuApp,
                         stockState = stockState,
-                        onOpenSettings = onOpenStockSettings
+                        onOpenStockSettings = onOpenStockSettings,
+                        permissionState = permissionState,
+                        onRequestPhonePerms = onRequestPhonePerms,
+                        onOpenAppSettings = onOpenAppSettings,
+                        state = state,
+                        onToggleCallLights = onToggleCallLights,
+                        onToggleOtherContacts = onToggleOtherContacts,
+                        onEditOtherContacts = onEditOtherContacts,
+                        onToggleUnknownNumbers = onToggleUnknownNumbers,
+                        onEditUnknownNumbers = onEditUnknownNumbers,
+                        onToggleCallContactRule = onToggleCallContactRule,
+                        onEditCallContactRule = onEditCallContactRule,
+                        onDeleteCallContactRule = onDeleteCallContactRule,
+                        onAddCallContact = onAddCallContact,
+                        renderer = renderer
+                    )
+                } else {
+                    HomeNotifsPage(
+                        shizukuState = shizukuState,
+                        shizukuError = shizukuError,
+                        onDisconnectShizuku = onDisconnectShizuku,
+                        onConnectShizuku = onConnectShizuku,
+                        onRequestShizukuPermission = onRequestShizukuPermission,
+                        onOpenShizukuApp = onOpenShizukuApp,
+                        permissionState = permissionState,
+                        onOpenNotifSettings = onOpenNotifSettings,
+                        state = state,
+                        onToggleNotifs = onToggleNotifs,
+                        onToggleDefaultNotif = onToggleDefaultNotif,
+                        onEditDefaultNotif = onEditDefaultNotif,
+                        onToggleMessageRule = onToggleMessageRule,
+                        onEditMessageRule = onEditMessageRule,
+                        onDeleteMessageRule = onDeleteMessageRule,
+                        onAddMessageContact = onAddMessageContact,
+                        onToggleAppRule = onToggleAppRule,
+                        onEditAppRule = onEditAppRule,
+                        onDeleteAppRule = onDeleteAppRule,
+                        onAddApp = onAddApp,
+                        onChangeDuration = onChangeDuration,
+                        onToggleCycleNotifications = onToggleCycleNotifications,
+                        renderer = renderer
                     )
                 }
-            }
-            if (!permissionState.hasAllCallPermissions) {
-                item {
-                    CallPermissionsCard(
-                        state = permissionState,
-                        onRequestPermissions = onRequestPhonePerms,
-                        onOpenAppSettings = onOpenAppSettings
-                    )
-                }
-            }
-
-            item {
-                Spacer(Modifier.height(8.dp))
-            }
-
-            item {
-                HomeCallsMasterCard(
-                    enabled = state.isCallLightsEnabled,
-                    onToggle = onToggleCallLights
-                )
-            }
-
-            item {
-                HomeCallsSettingsCard(
-                    enabled = state.isCallLightsEnabled,
-                    alpha = callAlpha,
-                    scale = callScale,
-                    isOtherContactsEnabled = state.isOtherContactsEnabled,
-                    otherContactsColor = state.otherContactsColor,
-                    otherContactsPattern = state.otherContactsPattern,
-                    otherContactsFaceDownMode = state.otherContactsFaceDownMode,
-                    onToggleOtherContacts = onToggleOtherContacts,
-                    onEditOtherContacts = onEditOtherContacts,
-                    isUnknownNumbersEnabled = state.isUnknownNumbersEnabled,
-                    unknownNumbersColor = state.unknownNumbersColor,
-                    unknownNumbersPattern = state.unknownNumbersPattern,
-                    unknownNumbersFaceDownMode = state.unknownNumbersFaceDownMode,
-                    onToggleUnknownNumbers = onToggleUnknownNumbers,
-                    onEditUnknownNumbers = onEditUnknownNumbers,
-                    callContactRules = state.contactRules,
-                    onToggleCallContactRule = onToggleCallContactRule,
-                    onEditCallContactRule = onEditCallContactRule,
-                    onDeleteCallContactRule = onDeleteCallContactRule,
-                    onAddCallContact = onAddCallContact,
-                    renderer = renderer
-                )
-            }
-            }
-
-            if (selectedTab == 1) {
-            if (!permissionState.hasNotifAccess) {
-                item {
-                    NotificationAccessCard(
-                        state = permissionState,
-                        onOpenNotifSettings = onOpenNotifSettings
-                    )
-                }
-            }
-
-            item {
-                Spacer(Modifier.height(8.dp))
-            }
-
-            item {
-                HomeNotifsMasterCard(
-                    enabled = state.isNotificationsEnabled,
-                    onToggle = onToggleNotifs
-                )
-            }
-
-            item {
-                HomeNotifsSettingsCard(
-                    enabled = state.isNotificationsEnabled,
-                    alpha = notifAlpha,
-                    scale = notifScale,
-                    isDefaultNotifEnabled = state.isDefaultNotifEnabled,
-                    defaultNotifColor = state.defaultNotifColor,
-                    defaultNotifPattern = state.defaultNotifPattern,
-                    defaultNotifFaceDownMode = state.defaultNotifFaceDownMode,
-                    onToggleDefaultNotif = onToggleDefaultNotif,
-                    onEditDefaultNotif = onEditDefaultNotif,
-                    messageContactRules = state.messageContactRules,
-                    onToggleMessageRule = onToggleMessageRule,
-                    onEditMessageRule = onEditMessageRule,
-                    onDeleteMessageRule = onDeleteMessageRule,
-                    onAddMessageContact = onAddMessageContact,
-                    appRules = state.appRules,
-                    onToggleAppRule = onToggleAppRule,
-                    onEditAppRule = onEditAppRule,
-                    onDeleteAppRule = onDeleteAppRule,
-                    onAddApp = onAddApp,
-                    notifDurationSec = state.notificationDurationSeconds,
-                    onChangeDuration = onChangeDuration,
-                    isCycleNotifications = state.isCycleNotifications,
-                    onToggleCycleNotifications = onToggleCycleNotifications,
-                    renderer = renderer
-                )
-            }
             }
         }
     }
 }
 
 /**
- * Universal Tonal Rule Card:
- * Replaces redundant ContactRuleItem, MessageContactRuleItem, AppRuleItem, and CategoryCards.
+ * Connected two-button toggle group that mirrors the pager position.
  */
 @Composable
-fun TonalRuleCard(
-    title: String,
-    pattern: PatternMode,
-    color: Long,
-    renderer: PatternRenderer,
-    isEnabled: Boolean,
-    onToggle: (Boolean) -> Unit,
-    onEdit: () -> Unit,
-    faceDownMode: com.mwilky.hilight.plus.FaceDownMode = com.mwilky.hilight.plus.FaceDownMode.INHERIT,
-    onDelete: (() -> Unit)? = null,
-    controlsEnabled: Boolean = true
+private fun HomePageToggle(
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = HiLightTheme.CardShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(HiLightTheme.RuleRowPadding),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                AnimatedRingBadge(
-                    pattern = pattern,
-                    color = color,
-                    renderer = renderer,
-                    size = 36.dp,
-                    animate = controlsEnabled
-                )
-
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.rule_pattern_label),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = stringResource(pattern.titleRes),
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-
-                    if (faceDownMode != com.mwilky.hilight.plus.FaceDownMode.INHERIT) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.rule_trigger_label),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = if (faceDownMode == com.mwilky.hilight.plus.FaceDownMode.ONLY_FACE_DOWN) stringResource(R.string.rule_trigger_face_down) else stringResource(R.string.rule_trigger_always),
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                }
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onEdit, enabled = controlsEnabled) {
-                    Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.rule_edit_cd))
-                }
-                if (onDelete != null) {
-                    IconButton(onClick = onDelete, enabled = controlsEnabled) {
-                        Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.rule_delete_cd), tint = MaterialTheme.colorScheme.error)
-                    }
-                }
-                Switch(
-                    checked = isEnabled,
-                    onCheckedChange = onToggle,
-                    enabled = controlsEnabled
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun AnimatedRingBadge(
-    pattern: PatternMode,
-    color: Long,
-    renderer: PatternRenderer,
-    size: Dp,
-    animate: Boolean = true
-) {
-    var miniFrames by remember { mutableStateOf(IntArray(8) { 0x00000000 }) }
-    val shouldAnimate = animate && pattern != PatternMode.OFF && pattern != PatternMode.SOLID
-
-    LaunchedEffect(pattern, color, shouldAnimate) {
-        val speed = pattern.speedMs()
-        fun frame(elapsed: Long) = renderer.renderFrame(
-            pattern = pattern.id,
-            colorLong = color,
-            brightness = 1.0f,
-            speedMs = speed,
-            elapsedTimeMs = elapsed,
-            ledCount = 8
-        )
-        if (!shouldAnimate) {
-            miniFrames = frame(0L)
-            return@LaunchedEffect
-        }
-        val startMs = System.currentTimeMillis()
-        while (isActive) {
-            miniFrames = frame(System.currentTimeMillis() - startMs)
-            delay(33)
-        }
-    }
-
-    DiffusedRingPreview(
-        frames = miniFrames,
+    Row(
         modifier = Modifier
-            .size(size)
-            .clip(CircleShape),
-        size = size
-    )
-}
-
-data class RuleEditorResult(
-    val pattern: PatternMode,
-    val color: Long,
-    val faceDown: FaceDownMode,
-    val autoColor: Boolean,
-    val dndMode: DndMode,
-    val quietHoursMode: QuietHoursMode,
-    val quietHoursStartMinutes: Int,
-    val quietHoursEndMinutes: Int
-)
-
-/**
- * Full-screen Look / When editor for a call or notification rule.
- */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-fun CustomRuleDialog(
-    title: String,
-    initialColor: Long,
-    initialPattern: PatternMode,
-    renderer: PatternRenderer,
-    onDismiss: () -> Unit,
-    onSave: (RuleEditorResult) -> Unit,
-    initialFaceDown: FaceDownMode = FaceDownMode.INHERIT,
-    initialDnd: DndMode = DndMode.INHERIT,
-    initialQuietHours: QuietHoursMode = QuietHoursMode.INHERIT,
-    initialQuietStart: Int = 22 * 60,
-    initialQuietEnd: Int = 7 * 60,
-    showAutoColorToggle: Boolean = false,
-    initialAutoColor: Boolean = true,
-    autoExtractedColor: Long? = null
-) {
-    var isAutoColor by remember(initialAutoColor) { mutableStateOf(initialAutoColor) }
-    var selectedColor by remember(initialColor) {
-        mutableLongStateOf(
-            if (showAutoColorToggle && initialAutoColor && autoExtractedColor != null) autoExtractedColor else initialColor
-        )
-    }
-    var selectedPattern by remember(initialPattern) { mutableStateOf(initialPattern) }
-    var selectedFaceDown by remember(initialFaceDown) { mutableStateOf(initialFaceDown) }
-    var selectedDnd by remember(initialDnd) { mutableStateOf(initialDnd) }
-    var selectedQuietHours by remember(initialQuietHours) { mutableStateOf(initialQuietHours) }
-    var quietStartMinutes by remember(initialQuietStart) { mutableIntStateOf(initialQuietStart) }
-    var quietEndMinutes by remember(initialQuietEnd) { mutableIntStateOf(initialQuietEnd) }
-    var editingQuietStart by remember { mutableStateOf(false) }
-    var editingQuietEnd by remember { mutableStateOf(false) }
-    var dialogPreviewFrames by remember { mutableStateOf(IntArray(8) { 0x00000000 }) }
-
-    val palette = listOf(
-        0xFF4285F4, // Google Blue
-        0xFFEA4335, // Google Red
-        0xFFFBBC05, // Google Yellow
-        0xFF34A853, // Google Green
-        0xFFFF007F, // Neon Pink
-        0xFF8A2BE2, // Purple
-        0xFF00E5FF, // Cyan
-        0xFFFFFFFF  // Pure White
-    )
-
-    LaunchedEffect(selectedPattern, selectedColor) {
-        val speed = selectedPattern.speedMs()
-        fun frame(elapsed: Long) = renderer.renderFrame(
-            pattern = selectedPattern.id,
-            colorLong = selectedColor,
-            brightness = 1.0f,
-            speedMs = speed,
-            elapsedTimeMs = elapsed,
-            ledCount = 8
-        )
-        if (selectedPattern == PatternMode.OFF || selectedPattern == PatternMode.SOLID) {
-            dialogPreviewFrames = frame(0L)
-            return@LaunchedEffect
-        }
-        val startMs = System.currentTimeMillis()
-        while (isActive) {
-            dialogPreviewFrames = frame(System.currentTimeMillis() - startMs)
-            delay(33)
-        }
-    }
-
-    val isColorEnabled = selectedPattern != PatternMode.RAINBOW
-
-    val patterns = PatternMode.entries.filter { it != PatternMode.OFF }
-
-    fun save() {
-        onSave(
-            RuleEditorResult(
-                pattern = selectedPattern,
-                color = selectedColor,
-                faceDown = selectedFaceDown,
-                autoColor = isAutoColor,
-                dndMode = selectedDnd,
-                quietHoursMode = selectedQuietHours,
-                quietHoursStartMinutes = quietStartMinutes,
-                quietHoursEndMinutes = quietEndMinutes
-            )
-        )
-    }
-
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
     ) {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            contentWindowInsets = WindowInsets.safeDrawing,
-            topBar = {
-                TopAppBar(
-                    title = { Text(title) },
-                    navigationIcon = {
-                        IconButton(onClick = onDismiss) {
-                            Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.dialog_btn_close))
-                        }
-                    },
-                    actions = {
-                        TextButton(onClick = { save() }) {
-                            Text(stringResource(R.string.dialog_btn_save))
-                        }
-                    }
-                )
-            }
-        ) { padding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Surface(
-                        modifier = Modifier.size(148.dp),
-                        shape = HiLightTheme.DialogCardShape,
-                        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.6f)
-                    ) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            DiffusedRingPreview(
-                                frames = dialogPreviewFrames,
-                                size = 112.dp
-                            )
-                        }
-                    }
-                }
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.dialog_pattern_label),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-
-                    FlowRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                    ) {
-                        patterns.forEach { p ->
-                            FilterChip(
-                                selected = selectedPattern == p,
-                                onClick = { selectedPattern = p },
-                                label = { Text(stringResource(p.titleRes)) },
-                                modifier = Modifier.padding(horizontal = 4.dp)
-                            )
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(4.dp))
-
-                if (showAutoColorToggle) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = HiLightTheme.DialogCardShape,
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = stringResource(R.string.dialog_auto_color_title),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Text(
-                                    text = stringResource(R.string.dialog_auto_color_desc),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Switch(
-                                checked = isAutoColor,
-                                onCheckedChange = { auto ->
-                                    isAutoColor = auto
-                                    if (auto && autoExtractedColor != null) {
-                                        selectedColor = autoExtractedColor
-                                    }
-                                }
-                            )
-                        }
-                    }
-                }
-
-                val canPickManualColor = isColorEnabled && (!showAutoColorToggle || !isAutoColor)
-                val manualColorAlpha by animateFloatAsState(
-                    targetValue = if (canPickManualColor) 1.0f else 0.35f,
-                    animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-                    label = "manualColorAlpha"
-                )
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .alpha(manualColorAlpha),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = if (showAutoColorToggle && isAutoColor) stringResource(R.string.dialog_color_auto_label) else stringResource(R.string.dialog_color_label),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                       )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        palette.forEach { c ->
-                            val isSelected = selectedColor == c && canPickManualColor
-                            Box(
-                                modifier = Modifier
-                                    .size(HiLightTheme.PaletteSwatch)
-                                    .clip(CircleShape)
-                                    .background(Color(c))
-                                    .border(
-                                        width = if (isSelected) 3.dp else 1.dp,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                                        shape = CircleShape
-                                    )
-                                    .clickable(enabled = canPickManualColor) { selectedColor = c }
-                            )
-                        }
-                    }
-                }
-
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.dialog_orientation_title),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = stringResource(
-                            when (selectedFaceDown) {
-                                FaceDownMode.INHERIT -> R.string.dialog_orientation_desc_default
-                                FaceDownMode.ALWAYS -> R.string.dialog_orientation_desc_always
-                                FaceDownMode.ONLY_FACE_DOWN -> R.string.dialog_orientation_desc_face_down
-                            }
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                        val modes = FaceDownMode.entries
-                        modes.forEachIndexed { index, mode ->
-                            val isSelected = selectedFaceDown == mode
-                            SegmentedButton(
-                                selected = isSelected,
-                                onClick = { selectedFaceDown = mode },
-                                shape = SegmentedButtonDefaults.itemShape(index = index, count = modes.size),
-                                icon = {},
-                                colors = SegmentedButtonDefaults.colors(
-                                    activeContainerColor = MaterialTheme.colorScheme.primary,
-                                    activeContentColor = MaterialTheme.colorScheme.onPrimary,
-                                    inactiveContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                ),
-                                label = {
-                                    Text(
-                                        text = when (mode) {
-                                            FaceDownMode.INHERIT -> stringResource(R.string.dialog_orientation_default)
-                                            FaceDownMode.ALWAYS -> stringResource(R.string.dialog_orientation_always)
-                                            FaceDownMode.ONLY_FACE_DOWN -> stringResource(R.string.dialog_orientation_face_down)
-                                        },
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                }
-                            )
-                        }
-                    }
-                }
-
-                ConditionModeRow(
-                    title = stringResource(R.string.dialog_dnd_title),
-                    description = when (selectedDnd) {
-                        DndMode.INHERIT -> stringResource(R.string.dialog_dnd_desc_default)
-                        DndMode.ALWAYS -> stringResource(R.string.dialog_dnd_desc_always)
-                        DndMode.SKIP -> ""
-                    },
-                    options = DndMode.entries.map { mode ->
-                        mode to when (mode) {
-                            DndMode.INHERIT -> stringResource(R.string.dialog_mode_default)
-                            DndMode.ALWAYS -> stringResource(R.string.dialog_mode_always)
-                            DndMode.SKIP -> stringResource(R.string.dialog_mode_skip)
-                        }
-                    },
-                    selected = selectedDnd,
-                    onSelect = { selectedDnd = it }
-                )
-                ConditionModeRow(
-                    title = stringResource(R.string.dialog_quiet_hours_title),
-                    description = when (selectedQuietHours) {
-                        QuietHoursMode.INHERIT -> stringResource(R.string.dialog_quiet_hours_desc_default)
-                        QuietHoursMode.ALWAYS -> stringResource(R.string.dialog_quiet_hours_desc_always)
-                        QuietHoursMode.SKIP -> ""
-                    },
-                    options = QuietHoursMode.entries.map { mode ->
-                        mode to when (mode) {
-                            QuietHoursMode.INHERIT -> stringResource(R.string.dialog_mode_default)
-                            QuietHoursMode.ALWAYS -> stringResource(R.string.dialog_mode_always)
-                            QuietHoursMode.SKIP -> stringResource(R.string.dialog_mode_skip)
-                        }
-                    },
-                    selected = selectedQuietHours,
-                    onSelect = { selectedQuietHours = it }
-                )
-                if (selectedQuietHours == QuietHoursMode.SKIP) {
-                    val context = LocalContext.current
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = { editingQuietStart = true },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("${stringResource(R.string.conditions_quiet_hours_start)} ${formatClockMinutes(context, quietStartMinutes)}")
-                        }
-                        OutlinedButton(
-                            onClick = { editingQuietEnd = true },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("${stringResource(R.string.conditions_quiet_hours_end)} ${formatClockMinutes(context, quietEndMinutes)}")
-                        }
-                    }
-                }
-            }
+        ToggleButton(
+            checked = selectedIndex == 0,
+            onCheckedChange = { onSelect(0) },
+            shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
+            modifier = Modifier
+                .weight(1f)
+                .semantics { role = Role.RadioButton }
+        ) {
+            Icon(Icons.Rounded.Call, contentDescription = null, modifier = Modifier.size(ToggleButtonDefaults.IconSize))
+            Spacer(Modifier.width(ToggleButtonDefaults.IconSpacing))
+            Text(stringResource(R.string.home_tab_calls))
         }
-    }
-    if (editingQuietStart) {
-        QuietHoursTimePickerDialog(
-            title = stringResource(R.string.conditions_quiet_hours_start),
-            initialMinutes = quietStartMinutes,
-            onDismiss = { editingQuietStart = false },
-            onConfirm = { minutes ->
-                quietStartMinutes = minutes
-                editingQuietStart = false
-            }
-        )
-    }
-    if (editingQuietEnd) {
-        QuietHoursTimePickerDialog(
-            title = stringResource(R.string.conditions_quiet_hours_end),
-            initialMinutes = quietEndMinutes,
-            onDismiss = { editingQuietEnd = false },
-            onConfirm = { minutes ->
-                quietEndMinutes = minutes
-                editingQuietEnd = false
-            }
-        )
-    }
-}
-
-@Composable
-private fun <T> ConditionModeRow(
-    title: String,
-    description: String,
-    options: List<Pair<T, String>>,
-    selected: T,
-    onSelect: (T) -> Unit
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold
-        )
-        if (description.isNotEmpty()) {
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            options.forEachIndexed { index, (mode, label) ->
-                val isSelected = selected == mode
-                SegmentedButton(
-                    selected = isSelected,
-                    onClick = { onSelect(mode) },
-                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
-                    icon = {},
-                    colors = SegmentedButtonDefaults.colors(
-                        activeContainerColor = MaterialTheme.colorScheme.primary,
-                        activeContentColor = MaterialTheme.colorScheme.onPrimary,
-                        inactiveContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    ),
-                    label = {
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                        )
-                    }
-                )
-            }
+        ToggleButton(
+            checked = selectedIndex == 1,
+            onCheckedChange = { onSelect(1) },
+            shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
+            modifier = Modifier
+                .weight(1f)
+                .semantics { role = Role.RadioButton }
+        ) {
+            Icon(Icons.Rounded.Notifications, contentDescription = null, modifier = Modifier.size(ToggleButtonDefaults.IconSize))
+            Spacer(Modifier.width(ToggleButtonDefaults.IconSpacing))
+            Text(stringResource(R.string.home_tab_notifications))
         }
     }
 }
@@ -1326,7 +636,7 @@ fun AppPickerDialog(
                             .height(200.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(modifier = Modifier.size(36.dp))
+                        LoadingIndicator()
                     }
                 } else if (filteredApps.isEmpty()) {
                     Box(
@@ -1415,11 +725,18 @@ fun HomeScreenPreviewEmptyState() {
     HomeScreenPreviewContent(hasCallRules = false, hasMsgRules = false, hasAppRules = false)
 }
 
+@Preview(name = "Home Screen - Turned Off", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+fun HomeScreenPreviewOff() {
+    HomeScreenPreviewContent(hasCallRules = true, callLightsEnabled = false)
+}
+
 @Composable
 fun HomeScreenPreviewContent(
     hasCallRules: Boolean = false,
     hasMsgRules: Boolean = true,
-    hasAppRules: Boolean = true
+    hasAppRules: Boolean = true,
+    callLightsEnabled: Boolean = true
 ) {
     val mockCallContacts = if (hasCallRules) {
         listOf(
@@ -1462,6 +779,7 @@ fun HomeScreenPreviewContent(
             onOpenAppSettings = {},
             onOpenNotifSettings = {},
             state = DEFAULT_SETTINGS_SNAPSHOT.copy(
+                isCallLightsEnabled = callLightsEnabled,
                 contactRules = mockCallContacts,
                 messageContactRules = mockMsgContacts,
                 appRules = mockApps

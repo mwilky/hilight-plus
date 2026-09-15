@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.mwilky.hilight.plus.ui
 
 import androidx.compose.foundation.BorderStroke
@@ -87,7 +89,7 @@ fun ExpressiveStatusCard(
                     Box(
                         modifier = Modifier
                             .size(46.dp)
-                            .clip(CircleShape)
+                            .clip(MaterialShapes.Cookie9Sided.toShape())
                             .background(accentColor.copy(alpha = 0.18f)),
                         contentAlignment = Alignment.Center
                     ) {

@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.mwilky.hilight.plus
 
 import android.os.Bundle
@@ -44,7 +46,7 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            CircularProgressIndicator()
+                            LoadingIndicator()
                         }
                     }
 
@@ -92,10 +94,10 @@ private fun MainAppNavigation(controller: LightController) {
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            ShortNavigationBar {
                 NavTab.entries.forEach { tab ->
                     val tabTitle = stringResource(tab.titleRes)
-                    NavigationBarItem(
+                    ShortNavigationBarItem(
                         selected = selectedTab == tab,
                         onClick = { selectedTab = tab },
                         icon = { Icon(tab.icon, contentDescription = tabTitle) },
@@ -112,7 +114,7 @@ private fun MainAppNavigation(controller: LightController) {
         ) {
             when (selectedTab) {
                 NavTab.HOME -> HomeScreen(controller = controller)
-                NavTab.CONDITIONS -> ConditionsScreen(controller = controller)
+                NavTab.CONDITIONS -> ConditionsScreen()
                 NavTab.ABOUT -> AboutScreen(controller = controller)
             }
         }
