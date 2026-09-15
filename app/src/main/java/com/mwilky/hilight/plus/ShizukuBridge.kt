@@ -84,6 +84,10 @@ class ShizukuBridge private constructor(private val app: Application) {
             _state.value = State.CONNECTED
             lastError = null
             Log.i("HiLightPlus", "Connected to HiLightDaemonService! ($count LEDs)")
+            // Fresh daemon process, or a reconnect after one died: replay whatever battery
+            // config/state was last set so it can't be lost to a connection that wasn't ready yet.
+            lastBatteryConfig?.let { sendBatteryConfig(it) }
+            lastBatteryState?.let { sendBatteryState(it) }
             onAvailabilityChanged?.invoke()
         }
 
@@ -377,6 +381,29 @@ class ShizukuBridge private constructor(private val app: Application) {
         runRemote("cancelTestAlert") { it.cancelTestAlert() }
     }
 
+    /**
+     * Battery config/state setters can be called before the daemon has finished (re)connecting
+     * — there's no notification-style event to naturally retry on. So the latest values are
+     * cached here and replayed automatically as soon as [onServiceConnected] fires, instead of
+     * being silently dropped by [runRemote] until something else happens to resend them.
+     */
+    private var lastBatteryConfig: CachedBatteryConfig? = null
+    private var lastBatteryState: CachedBatteryState? = null
+
+    private data class CachedBatteryConfig(
+        val visibility: BatteryVisibility,
+        val chargingPattern: BatteryPattern,
+        val autoColor: Boolean,
+        val color: Long,
+        val lowWarningEnabled: Boolean,
+        val lowThresholdPercent: Int,
+        val fullTimeoutMinutes: Int?,
+        val overridesNotifications: Boolean,
+        val quietHoursMode: QuietHoursMode
+    )
+
+    private data class CachedBatteryState(val levelPercent: Int, val charging: Boolean, val full: Boolean)
+
     fun setBatteryConfig(
         visibility: BatteryVisibility,
         chargingPattern: BatteryPattern,
@@ -388,23 +415,39 @@ class ShizukuBridge private constructor(private val app: Application) {
         overridesNotifications: Boolean,
         quietHoursMode: QuietHoursMode
     ) {
+        val config = CachedBatteryConfig(
+            visibility, chargingPattern, autoColor, color,
+            lowWarningEnabled, lowThresholdPercent, fullTimeoutMinutes,
+            overridesNotifications, quietHoursMode
+        )
+        lastBatteryConfig = config
+        sendBatteryConfig(config)
+    }
+
+    private fun sendBatteryConfig(config: CachedBatteryConfig) {
         runRemote("setBatteryConfig") {
             it.setBatteryConfig(
-                visibility.id,
-                chargingPattern.id,
-                autoColor,
-                color,
-                lowWarningEnabled,
-                lowThresholdPercent,
-                fullTimeoutMinutes ?: -1,
-                overridesNotifications,
-                quietHoursMode.name
+                config.visibility.id,
+                config.chargingPattern.id,
+                config.autoColor,
+                config.color,
+                config.lowWarningEnabled,
+                config.lowThresholdPercent,
+                config.fullTimeoutMinutes ?: -1,
+                config.overridesNotifications,
+                config.quietHoursMode.name
             )
         }
     }
 
     fun setBatteryState(levelPercent: Int, charging: Boolean, full: Boolean) {
-        runRemote("setBatteryState") { it.setBatteryState(levelPercent, charging, full) }
+        val state = CachedBatteryState(levelPercent, charging, full)
+        lastBatteryState = state
+        sendBatteryState(state)
+    }
+
+    private fun sendBatteryState(state: CachedBatteryState) {
+        runRemote("setBatteryState") { it.setBatteryState(state.levelPercent, state.charging, state.full) }
     }
 
     fun removeAlert(key: String) {
