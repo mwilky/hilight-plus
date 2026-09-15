@@ -221,10 +221,10 @@ enum class BatteryVisibility(val id: String) {
  * Pattern used for the battery indicator while charging. The full and low-battery
  * states always override this with their own fixed look.
  */
-enum class BatteryPattern(val id: String, val titleRes: Int, val subtitleRes: Int) {
-    GAUGE("gauge", R.string.battery_pattern_gauge, R.string.battery_pattern_gauge_desc),
-    CHARGE_FILL("charge_fill", R.string.battery_pattern_charge_fill, R.string.battery_pattern_charge_fill_desc),
-    GRADIENT_RING("gradient_ring", R.string.battery_pattern_gradient_ring, R.string.battery_pattern_gradient_ring_desc);
+enum class BatteryPattern(val id: String, val titleRes: Int) {
+    GAUGE("gauge", R.string.battery_pattern_gauge),
+    CHARGE_FILL("charge_fill", R.string.battery_pattern_charge_fill),
+    GRADIENT_RING("gradient_ring", R.string.battery_pattern_gradient_ring);
 
     companion object {
         fun fromId(id: String?) = entries.find { it.id == id } ?: GAUGE

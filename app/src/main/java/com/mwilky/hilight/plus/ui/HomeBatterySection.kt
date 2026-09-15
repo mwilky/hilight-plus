@@ -33,6 +33,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,7 +48,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mwilky.hilight.plus.BatteryFullTimeout
@@ -148,12 +148,6 @@ fun HomeBatteryPage(
                         )
                     }
                 }
-                Text(
-                    text = stringResource(R.string.battery_pattern_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 4.dp)
-                )
 
                 RuleGroupHeader(stringResource(R.string.settings_additional_header))
                 BatterySettingsGroup(battery = battery, onBatteryChange = onBatteryChange)
@@ -315,7 +309,13 @@ private fun BatterySettingsGroup(
     }
 }
 
-/** A segmented row whose trailing control is a switch, as used on the Notifications page. */
+/**
+ * A segmented row whose trailing control is a switch.
+ *
+ * The description lives in the headline slot rather than the supporting slot: a description
+ * long enough to wrap makes Material treat the row as a three-line list item, which top-aligns
+ * the trailing switch instead of centring it against the text.
+ */
 @Composable
 private fun SwitchRow(
     index: Int,
@@ -329,10 +329,16 @@ private fun SwitchRow(
         onClick = { onCheckedChange(!checked) },
         shapes = ListItemDefaults.segmentedShapes(index = index, count = count),
         colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        supportingContent = { Text(description) },
         trailingContent = { Switch(checked = checked, onCheckedChange = onCheckedChange) }
     ) {
-        Text(title)
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title)
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -370,6 +376,12 @@ private fun <T> OptionsRow(
                             modifier = Modifier
                                 .weight(1f)
                                 .semantics { role = Role.RadioButton },
+                            // The row's own container is surfaceContainer, which the default
+                            // unchecked button colour matches, leaving unselected options invisible.
+                            colors = ToggleButtonDefaults.toggleButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
                             shapes = when (optionIndex) {
                                 0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
                                 options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
@@ -519,10 +531,10 @@ private fun BatteryPatternCard(
         onClick = onClick,
         shape = RoundedCornerShape(corner),
         color = container,
-        modifier = Modifier.width(108.dp)
+        modifier = Modifier.width(96.dp)
     ) {
         Column(
-            modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
+            modifier = Modifier.padding(vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
@@ -537,14 +549,6 @@ private fun BatteryPatternCard(
                 text = stringResource(pattern.titleRes),
                 style = MaterialTheme.typography.labelMedium,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = stringResource(pattern.subtitleRes),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
         }

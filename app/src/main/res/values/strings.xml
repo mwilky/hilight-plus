@@ -168,11 +168,8 @@
     <string name="pattern_sparkle">Sparkle</string>
     <string name="pattern_rainbow">Rainbow</string>
     <string name="battery_pattern_gauge">Gauge</string>
-    <string name="battery_pattern_gauge_desc">Static, no pulse</string>
     <string name="battery_pattern_charge_fill">Charge fill</string>
-    <string name="battery_pattern_charge_fill_desc">Gentle breathing</string>
     <string name="battery_pattern_gradient_ring">Gradient ring</string>
-    <string name="battery_pattern_gradient_ring_desc">Full ring, breathing</string>
     <string name="battery_full_timeout_stay_on">Stay on</string>
     <string name="battery_full_timeout_1m">1 min</string>
     <string name="battery_full_timeout_5m">5 min</string>
@@ -212,13 +209,12 @@
     <string name="battery_section_pattern_title">Charging pattern</string>
     <string name="battery_section_auto_color">Colour by level</string>
     <string name="battery_section_auto_color_desc">Red to green as the battery charges. Turn off to pick a fixed colour.</string>
-    <string name="battery_pattern_hint">Used while charging. Full and low battery always use their own look.</string>
     <string name="battery_fixed_color_title">Fixed colour</string>
     <string name="battery_face_down_desc">Only show battery lights while the phone is lying face down.</string>
     <string name="battery_threshold_title">Warn below</string>
     <string name="battery_threshold_value">%1$d%%</string>
     <string name="battery_section_low_title">Low battery warning</string>
-    <string name="battery_section_low_desc">Pulses red when unplugged and below the threshold below.</string>
+    <string name="battery_section_low_desc">Pulses when unplugged and below the threshold.</string>
     <string name="battery_section_full_timeout_title">After fully charged</string>
     <string name="battery_section_full_timeout_desc">How long the full-battery display stays on once charging finishes.</string>
     <string name="battery_section_overrides_notifications">Show before notifications</string>
