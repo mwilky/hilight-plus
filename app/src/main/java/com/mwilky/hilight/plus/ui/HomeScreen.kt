@@ -11,7 +11,6 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -23,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
@@ -572,34 +572,32 @@ private fun HomePageToggle(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         tabs.forEachIndexed { index, (icon, labelRes) ->
             val selected = selectedIndex == index
             val label = stringResource(labelRes)
-            // Springy resize as the selection moves, from the theme's spatial motion spec.
-            val weight by animateFloatAsState(
-                targetValue = if (selected) 2.4f else 0.8f,
-                animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
-                label = "tabWeight"
-            )
             ToggleButton(
                 checked = selected,
                 onCheckedChange = { onSelect(index) },
-                shapes = when (index) {
-                    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                    tabs.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
-                    else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-                },
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
+                // Circular while it's only an icon, rounded rectangle once it carries a label.
+                shapes = ToggleButtonShapes(
+                    shape = CircleShape,
+                    pressedShape = RoundedCornerShape(14.dp),
+                    checkedShape = RoundedCornerShape(18.dp)
+                ),
+                // 24dp icon plus 12dp either side makes an exact circle at this height. No width
+                // is set, so a selected tab is only as wide as its own label needs.
+                contentPadding = PaddingValues(horizontal = 12.dp),
                 modifier = Modifier
-                    .weight(weight)
+                    .height(TabHeight)
                     .semantics { role = Role.RadioButton }
             ) {
                 Icon(
                     icon,
                     contentDescription = label,
-                    modifier = Modifier.size(ToggleButtonDefaults.IconSize)
+                    modifier = Modifier.size(24.dp)
                 )
                 AnimatedVisibility(
                     visible = selected,
@@ -621,6 +619,8 @@ private fun HomePageToggle(
         }
     }
 }
+
+private val TabHeight = 48.dp
 
 data class InstalledAppItem(
     val packageName: String,
