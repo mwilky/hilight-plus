@@ -73,6 +73,12 @@ class LightEngine {
     private var batteryFull = false
     private var batteryFullSinceMs: Long? = null
 
+    // The battery layer is the only thing that renders indefinitely, so it must never be left
+    // holding the LEDs on a reading the app can no longer update - if the app process dies or
+    // the binder drops while charging, nothing would otherwise turn them off. The app heartbeats
+    // the battery state; once that stops arriving, the layer goes dark on its own.
+    private var batteryStateUpdatedAtMs = 0L
+
     private data class IncomingCallAlert(
         val pattern: String,
         val color: Long,
@@ -380,8 +386,11 @@ class LightEngine {
      */
     fun setBatteryState(levelPercent: Int, charging: Boolean, full: Boolean) {
         synchronized(lock) {
-            if (batteryLevel == levelPercent && batteryCharging == charging && batteryFull == full) return
             val now = SystemClock.elapsedRealtime()
+            // Refreshed even when nothing changed: this doubles as the app's heartbeat, and a
+            // heartbeat that reports the same reading still proves the app is still there.
+            batteryStateUpdatedAtMs = now
+            if (batteryLevel == levelPercent && batteryCharging == charging && batteryFull == full) return
             batteryFullSinceMs = if (full && !batteryFull) now else if (!full) null else batteryFullSinceMs
             batteryLevel = levelPercent
             batteryCharging = charging
@@ -440,6 +449,12 @@ class LightEngine {
             activeAlerts.clear()
             currentAlertIndex = 0
             testAlert = null
+            // Also drop the battery reading, so the layer can't simply light back up on the next
+            // tick and undo the blank. It resumes when the app pushes a fresh reading.
+            batteryStateUpdatedAtMs = 0L
+            batteryCharging = false
+            batteryFull = false
+            batteryFullSinceMs = null
             lights.blank()
         }
     }
@@ -727,6 +742,10 @@ class LightEngine {
 
     /** Whether the battery has something worth showing right now (charging, freshly full, or low). */
     private fun batteryLayerWantsToRender(config: BatteryConfig, now: Long): Boolean {
+        // No reading yet, or the app stopped heartbeating: refuse to light rather than hold the
+        // LEDs on a stale state nothing can clear.
+        if (batteryStateUpdatedAtMs == 0L) return false
+        if (now - batteryStateUpdatedAtMs > BATTERY_STATE_STALE_MS) return false
         if (batteryCharging) return true
         if (batteryFull) {
             val since = batteryFullSinceMs ?: return true
@@ -754,5 +773,9 @@ class LightEngine {
     companion object {
         private const val TAG = "LightEngine"
         private const val FRAME_MS = 33L // ~30 FPS
+
+        // Comfortably longer than the app's battery heartbeat, so a missed beat or two doesn't
+        // blink the display, but short enough that a dead app can't strand the LEDs on.
+        private const val BATTERY_STATE_STALE_MS = 3 * 60_000L
     }
 }

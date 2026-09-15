@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
@@ -135,6 +137,17 @@ class LightController private constructor(private val app: Application) {
         scope.launch {
             combine(store.battery, store.isEnabled) { settings, enabled -> settings to enabled }
                 .collect { (settings, enabled) -> pushBatteryConfig(settings, enabled) }
+        }
+        // Heartbeat: the daemon renders the battery layer indefinitely from its own cached
+        // reading, so it treats silence as "the app is gone" and goes dark. Keep telling it we're
+        // here while the layer could be showing something.
+        scope.launch {
+            while (isActive) {
+                delay(BATTERY_HEARTBEAT_MS)
+                if (batteryLayerCouldRender()) {
+                    shizuku.setBatteryState(lastBatteryLevel, lastBatteryCharging, lastBatteryFull)
+                }
+            }
         }
     }
 
@@ -311,6 +324,15 @@ class LightController private constructor(private val app: Application) {
         syncBatteryOrientationMonitor()
     }
 
+    /** Whether the battery layer has anything to show, ignoring where it's allowed to show it. */
+    private fun batteryLayerCouldRender(): Boolean {
+        if (!lastBatteryEnabled || lastBatterySettings.visibility == BatteryVisibility.OFF) return false
+        val lowEligible = lastBatterySettings.lowWarningEnabled &&
+            !lastBatteryCharging && !lastBatteryFull &&
+            lastBatteryLevel <= lastBatterySettings.lowThresholdPercent
+        return lastBatteryCharging || lastBatteryFull || lowEligible
+    }
+
     /**
      * Only runs the orientation sensor for the battery layer while it's set to face-down-only
      * and actually has something to show (charging, freshly full, or low).
@@ -356,6 +378,9 @@ class LightController private constructor(private val app: Application) {
     }
 
     companion object {
+        // Well inside the daemon's staleness window, so ordinary jitter never trips it.
+        private const val BATTERY_HEARTBEAT_MS = 60_000L
+
         @Volatile
         private var instance: LightController? = null
 

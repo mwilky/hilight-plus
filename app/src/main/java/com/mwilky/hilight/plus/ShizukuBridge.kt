@@ -47,6 +47,7 @@ class ShizukuBridge private constructor(private val app: Application) {
     private var manuallyDisconnected = false
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var connectTimeoutJob: Job? = null
+    private var reconnectJob: Job? = null
 
     private val args = Shizuku.UserServiceArgs(
         ComponentName(BuildConfig.APPLICATION_ID, HiLightDaemonService::class.java.name)
@@ -96,6 +97,7 @@ class ShizukuBridge private constructor(private val app: Application) {
             service = null
             _state.value = if (manuallyDisconnected) State.DISCONNECTED else State.NOT_RUNNING
             onAvailabilityChanged?.invoke()
+            scheduleReconnect()
         }
 
         override fun onBindingDied(name: ComponentName?) {
@@ -103,6 +105,7 @@ class ShizukuBridge private constructor(private val app: Application) {
             service = null
             _state.value = if (manuallyDisconnected) State.DISCONNECTED else State.NOT_RUNNING
             onAvailabilityChanged?.invoke()
+            scheduleReconnect()
         }
 
         override fun onNullBinding(name: ComponentName?) {
@@ -254,6 +257,24 @@ class ShizukuBridge private constructor(private val app: Application) {
             _state.value = State.NOT_RUNNING
             lastError = error.message
             onAvailabilityChanged?.invoke()
+            scheduleReconnect()
+        }
+    }
+
+    /**
+     * Rebinds after the daemon goes away. Without this nothing reconnects on its own, and since
+     * the daemon keeps rendering whatever it last knew, a dropped binder could strand the LEDs
+     * lit with every command from the app silently going nowhere.
+     */
+    private fun scheduleReconnect() {
+        if (manuallyDisconnected || reconnectJob?.isActive == true) return
+        reconnectJob = scope.launch {
+            repeat(RECONNECT_ATTEMPTS) {
+                delay(RECONNECT_DELAY_MS)
+                if (manuallyDisconnected || _state.value == State.CONNECTED) return@launch
+                Log.i("HiLightPlus", "Attempting to reconnect to the daemon")
+                refresh()
+            }
         }
     }
 
@@ -490,6 +511,8 @@ class ShizukuBridge private constructor(private val app: Application) {
         private const val SHIZUKU_PKG = "moe.shizuku.privileged.api"
         private const val PERMISSION_REQUEST = 4001
         private const val CONNECT_TIMEOUT_MS = 8_000L
+        private const val RECONNECT_DELAY_MS = 2_000L
+        private const val RECONNECT_ATTEMPTS = 5
 
         @Volatile
         private var instance: ShizukuBridge? = null
