@@ -24,6 +24,7 @@ object DeviceOrientationDetector {
 
     const val TOKEN_NOTIFICATIONS = "notifications"
     const val TOKEN_CALL = "call"
+    const val TOKEN_BATTERY = "battery"
 
     private const val TAG = "DeviceOrientation"
 

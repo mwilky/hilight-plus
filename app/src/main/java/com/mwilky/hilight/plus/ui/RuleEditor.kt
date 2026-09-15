@@ -122,7 +122,7 @@ data class RuleEditorResult(
     val quietHoursEndMinutes: Int
 )
 
-private val PALETTE = listOf(
+internal val PALETTE = listOf(
     0xFF4285F4, // Google Blue
     0xFFEA4335, // Google Red
     0xFFFBBC05, // Google Yellow
@@ -614,7 +614,7 @@ private fun PreviewHeader(
 }
 
 @Composable
-private fun EditorSection(
+internal fun EditorSection(
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -680,7 +680,7 @@ private fun PatternCard(
 }
 
 @Composable
-private fun ColorSwatch(
+internal fun ColorSwatch(
     color: Long,
     selected: Boolean,
     enabled: Boolean,
@@ -717,7 +717,7 @@ private fun ColorSwatch(
 }
 
 @Composable
-private fun <T> ChoiceGroup(
+internal fun <T> ChoiceGroup(
     title: String,
     description: String,
     options: List<Pair<T, String>>,

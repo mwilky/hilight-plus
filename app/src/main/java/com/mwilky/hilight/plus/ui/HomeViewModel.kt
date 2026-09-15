@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.mwilky.hilight.plus.AppNotificationRule
 import com.mwilky.hilight.plus.AppStore
+import com.mwilky.hilight.plus.BatterySettings
 import com.mwilky.hilight.plus.ContactRule
 import com.mwilky.hilight.plus.DEFAULT_SETTINGS_SNAPSHOT
 import com.mwilky.hilight.plus.DndMode
@@ -31,6 +32,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun setNotificationDurationSeconds(seconds: Int) = launch { store.setNotificationDurationSeconds(seconds) }
     fun setCycleNotifications(enabled: Boolean) = launch { store.setCycleNotifications(enabled) }
     fun setDefaultNotifEnabled(enabled: Boolean) = launch { store.setDefaultNotifEnabled(enabled) }
+    fun setBattery(settings: BatterySettings) = launch { store.setBattery(settings) }
 
     fun setOnlyWhenFaceDown(enabled: Boolean) = launch { store.setOnlyWhenFaceDown(enabled) }
     fun setSuppressDuringDnd(enabled: Boolean) = launch { store.setSuppressDuringDnd(enabled) }

@@ -377,6 +377,36 @@ class ShizukuBridge private constructor(private val app: Application) {
         runRemote("cancelTestAlert") { it.cancelTestAlert() }
     }
 
+    fun setBatteryConfig(
+        visibility: BatteryVisibility,
+        chargingPattern: BatteryPattern,
+        autoColor: Boolean,
+        color: Long,
+        lowWarningEnabled: Boolean,
+        lowThresholdPercent: Int,
+        fullTimeoutMinutes: Int?,
+        overridesNotifications: Boolean,
+        quietHoursMode: QuietHoursMode
+    ) {
+        runRemote("setBatteryConfig") {
+            it.setBatteryConfig(
+                visibility.id,
+                chargingPattern.id,
+                autoColor,
+                color,
+                lowWarningEnabled,
+                lowThresholdPercent,
+                fullTimeoutMinutes ?: -1,
+                overridesNotifications,
+                quietHoursMode.name
+            )
+        }
+    }
+
+    fun setBatteryState(levelPercent: Int, charging: Boolean, full: Boolean) {
+        runRemote("setBatteryState") { it.setBatteryState(levelPercent, charging, full) }
+    }
+
     fun removeAlert(key: String) {
         Log.e("HiLightPlus", "removeAlert [key=$key]")
         runRemote("removeAlert") { it.removeAlert(key) }

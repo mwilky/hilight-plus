@@ -202,6 +202,104 @@ data class AppNotificationRule(
 private const val DEFAULT_CONTACT_COLOR = 0xFF4285F4L
 private const val DEFAULT_MESSAGE_COLOR = 0xFF00E5FFL
 private const val DEFAULT_APP_COLOR = 0xFF34A853L
+private const val DEFAULT_BATTERY_COLOR = 0xFF34A853L
+
+/**
+ * Where the battery indicator layer is allowed to show on the LED ring.
+ */
+enum class BatteryVisibility(val id: String) {
+    OFF("off"),
+    FACE_DOWN_ONLY("face_down_only"),
+    ALWAYS("always");
+
+    companion object {
+        fun fromId(id: String?) = entries.find { it.id == id } ?: OFF
+    }
+}
+
+/**
+ * Pattern used for the battery indicator while charging. The full and low-battery
+ * states always override this with their own fixed look.
+ */
+enum class BatteryPattern(val id: String, val titleRes: Int) {
+    GAUGE("gauge", R.string.battery_pattern_gauge),
+    CHARGE_FILL("charge_fill", R.string.battery_pattern_charge_fill),
+    GRADIENT_RING("gradient_ring", R.string.battery_pattern_gradient_ring);
+
+    companion object {
+        fun fromId(id: String?) = entries.find { it.id == id } ?: CHARGE_FILL
+    }
+}
+
+/**
+ * How long the "battery full" display stays on after charging completes.
+ */
+enum class BatteryFullTimeout(val id: String, val minutes: Int?, val titleRes: Int) {
+    STAY_ON("stay_on", null, R.string.battery_full_timeout_stay_on),
+    ONE_MIN("one_min", 1, R.string.battery_full_timeout_1m),
+    FIVE_MIN("five_min", 5, R.string.battery_full_timeout_5m),
+    THIRTY_MIN("thirty_min", 30, R.string.battery_full_timeout_30m);
+
+    companion object {
+        fun fromId(id: String?) = entries.find { it.id == id } ?: FIVE_MIN
+    }
+}
+
+/**
+ * Battery charging / level indicator settings for the LED ring.
+ * A single global config, not a per-target rule, so it lives outside the shared rule fields.
+ */
+data class BatterySettings(
+    val visibility: BatteryVisibility = BatteryVisibility.OFF,
+    val chargingPattern: BatteryPattern = BatteryPattern.CHARGE_FILL,
+    val autoColor: Boolean = true,
+    val color: Long = DEFAULT_BATTERY_COLOR,
+    val lowWarningEnabled: Boolean = true,
+    val lowThresholdPercent: Int = 20,
+    val fullTimeout: BatteryFullTimeout = BatteryFullTimeout.FIVE_MIN,
+    val overridesNotifications: Boolean = false,
+    val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT
+) {
+    fun toJson(): JSONObject = JSONObject().apply {
+        put("visibility", visibility.id)
+        put("chargingPattern", chargingPattern.id)
+        put("autoColor", autoColor)
+        put("color", color)
+        put("lowWarningEnabled", lowWarningEnabled)
+        put("lowThresholdPercent", lowThresholdPercent)
+        put("fullTimeout", fullTimeout.id)
+        put("overridesNotifications", overridesNotifications)
+        put("quietHoursMode", quietHoursMode.name)
+    }
+
+    companion object {
+        private fun fromJson(json: JSONObject): BatterySettings {
+            val d = BatterySettings()
+            return BatterySettings(
+                visibility = BatteryVisibility.fromId(json.optString("visibility", d.visibility.id)),
+                chargingPattern = BatteryPattern.fromId(json.optString("chargingPattern", d.chargingPattern.id)),
+                autoColor = json.optBoolean("autoColor", d.autoColor),
+                color = json.optLong("color", d.color),
+                lowWarningEnabled = json.optBoolean("lowWarningEnabled", d.lowWarningEnabled),
+                lowThresholdPercent = json.optInt("lowThresholdPercent", d.lowThresholdPercent),
+                fullTimeout = BatteryFullTimeout.fromId(json.optString("fullTimeout", d.fullTimeout.id)),
+                overridesNotifications = json.optBoolean("overridesNotifications", d.overridesNotifications),
+                quietHoursMode = runCatching {
+                    QuietHoursMode.valueOf(json.optString("quietHoursMode", QuietHoursMode.INHERIT.name))
+                }.getOrDefault(QuietHoursMode.INHERIT)
+            )
+        }
+
+        fun fromJson(raw: String?): BatterySettings {
+            if (raw.isNullOrBlank()) return BatterySettings()
+            return try {
+                fromJson(JSONObject(raw))
+            } catch (_: Exception) {
+                BatterySettings()
+            }
+        }
+    }
+}
 
 /**
  * The pattern/color/enable/condition fields every rule type shares, read and written

@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.BatteryManager
 import com.mwilky.hilight.plus.core.DeviceOrientationDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +44,34 @@ class LightController private constructor(private val app: Application) {
         }
     }
 
+    // Latest known battery reading and settings, kept so the orientation monitor can be
+    // re-evaluated whenever either changes, without re-reading the DataStore.
+    @Volatile
+    private var lastBatterySettings = BatterySettings()
+    @Volatile
+    private var lastBatteryEnabled = true
+    @Volatile
+    private var lastBatteryLevel = 100
+    @Volatile
+    private var lastBatteryCharging = false
+    @Volatile
+    private var lastBatteryFull = false
+
+    private val batteryReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action != Intent.ACTION_BATTERY_CHANGED) return
+            val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+            val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+            if (level < 0 || scale <= 0) return
+            val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+            onBatteryStateChanged(
+                percent = (level * 100) / scale,
+                charging = status == BatteryManager.BATTERY_STATUS_CHARGING,
+                full = status == BatteryManager.BATTERY_STATUS_FULL
+            )
+        }
+    }
+
     init {
         lastDndActive = isSystemDndActive(
             app.getSystemService(NotificationManager::class.java).currentInterruptionFilter
@@ -52,6 +81,13 @@ class LightController private constructor(private val app: Application) {
             IntentFilter(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED),
             Context.RECEIVER_EXPORTED
         )
+
+        // Sticky broadcast: registering returns the current battery state immediately.
+        app.registerReceiver(
+            batteryReceiver,
+            IntentFilter(Intent.ACTION_BATTERY_CHANGED),
+            Context.RECEIVER_NOT_EXPORTED
+        )?.let { batteryReceiver.onReceive(app, it) }
 
         DeviceOrientationDetector.onOrientationChanged = { faceDown ->
             shizuku.setDeviceFaceDown(faceDown)
@@ -95,6 +131,10 @@ class LightController private constructor(private val app: Application) {
                 .collect { (enabled, start, end) ->
                     shizuku.setQuietHours(enabled, start, end)
                 }
+        }
+        scope.launch {
+            combine(store.battery, store.isEnabled) { settings, enabled -> settings to enabled }
+                .collect { (settings, enabled) -> pushBatteryConfig(settings, enabled) }
         }
     }
 
@@ -241,6 +281,50 @@ class LightController private constructor(private val app: Application) {
             store.quietHoursStartMinutes.first(),
             store.quietHoursEndMinutes.first()
         )
+        pushBatteryConfig(store.battery.first(), store.isEnabled.first())
+        shizuku.setBatteryState(lastBatteryLevel, lastBatteryCharging, lastBatteryFull)
+    }
+
+    private fun pushBatteryConfig(settings: BatterySettings, masterEnabled: Boolean) {
+        lastBatterySettings = settings
+        lastBatteryEnabled = masterEnabled
+        val visibility = if (masterEnabled) settings.visibility else BatteryVisibility.OFF
+        shizuku.setBatteryConfig(
+            visibility,
+            settings.chargingPattern,
+            settings.autoColor,
+            settings.color,
+            settings.lowWarningEnabled,
+            settings.lowThresholdPercent,
+            settings.fullTimeout.minutes,
+            settings.overridesNotifications,
+            settings.quietHoursMode
+        )
+        syncBatteryOrientationMonitor()
+    }
+
+    private fun onBatteryStateChanged(percent: Int, charging: Boolean, full: Boolean) {
+        lastBatteryLevel = percent
+        lastBatteryCharging = charging
+        lastBatteryFull = full
+        shizuku.setBatteryState(percent, charging, full)
+        syncBatteryOrientationMonitor()
+    }
+
+    /**
+     * Only runs the orientation sensor for the battery layer while it's set to face-down-only
+     * and actually has something to show (charging, freshly full, or low).
+     */
+    private fun syncBatteryOrientationMonitor() {
+        val lowEligible = lastBatterySettings.lowWarningEnabled &&
+            !lastBatteryCharging && !lastBatteryFull &&
+            lastBatteryLevel <= lastBatterySettings.lowThresholdPercent
+        val wantsToRender = lastBatteryCharging || lastBatteryFull || lowEligible
+        if (lastBatteryEnabled && lastBatterySettings.visibility == BatteryVisibility.FACE_DOWN_ONLY && wantsToRender) {
+            DeviceOrientationDetector.retainMonitoring(app, DeviceOrientationDetector.TOKEN_BATTERY)
+        } else {
+            DeviceOrientationDetector.releaseMonitoring(DeviceOrientationDetector.TOKEN_BATTERY)
+        }
     }
 
     /**

@@ -71,6 +71,9 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_MESSAGE_CONTACT_RULES_JSON = stringPreferencesKey("message_contact_rules_json")
         private val KEY_APP_RULES_JSON = stringPreferencesKey("app_rules_json")
 
+        // Battery Indicator Settings
+        private val KEY_BATTERY_JSON = stringPreferencesKey("battery_settings_json")
+
         @Volatile
         private var instance: AppStore? = null
 
@@ -111,6 +114,9 @@ class AppStore private constructor(private val appContext: Context) {
 
     val isCycleNotifications: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_CYCLE_NOTIFICATIONS] ?: false }
+
+    val battery: Flow<BatterySettings> = appContext.dataStore.data
+        .map { BatterySettings.fromJson(it[KEY_BATTERY_JSON]) }
 
     /**
      * Every Home-screen-relevant setting in one snapshot, rebuilt whenever any of them
@@ -238,6 +244,10 @@ class AppStore private constructor(private val appContext: Context) {
         }
     }
 
+    suspend fun setBattery(settings: BatterySettings) {
+        appContext.dataStore.edit { it[KEY_BATTERY_JSON] = settings.toJson().toString() }
+    }
+
     suspend fun saveContactRule(rule: ContactRule) {
         appContext.dataStore.edit { prefs ->
             val currentRules = readContactRules(prefs[KEY_CALL_RULES_JSON]).toMutableList()
@@ -340,7 +350,8 @@ class AppStore private constructor(private val appContext: Context) {
             defaultNotifQuietHoursStartMinutes = prefs[KEY_DEFAULT_NOTIF_QUIET_START] ?: d.defaultNotifQuietHoursStartMinutes,
             defaultNotifQuietHoursEndMinutes = prefs[KEY_DEFAULT_NOTIF_QUIET_END] ?: d.defaultNotifQuietHoursEndMinutes,
             messageContactRules = readMessageRules(prefs[KEY_MESSAGE_CONTACT_RULES_JSON]),
-            appRules = readAppRules(prefs[KEY_APP_RULES_JSON])
+            appRules = readAppRules(prefs[KEY_APP_RULES_JSON]),
+            battery = BatterySettings.fromJson(prefs[KEY_BATTERY_JSON])
         )
     }
 
@@ -401,7 +412,8 @@ data class SettingsSnapshot(
     val defaultNotifQuietHoursStartMinutes: Int?,
     val defaultNotifQuietHoursEndMinutes: Int?,
     val messageContactRules: List<MessageContactRule>,
-    val appRules: List<AppNotificationRule>
+    val appRules: List<AppNotificationRule>,
+    val battery: BatterySettings
 ) {
     fun findRuleForContactName(contactName: String): ContactRule? =
         firstEnabledNameMatch(contactName, contactRules, ContactRule::name, ContactRule::isEnabled)
@@ -458,7 +470,8 @@ val DEFAULT_SETTINGS_SNAPSHOT = SettingsSnapshot(
     defaultNotifQuietHoursStartMinutes = null,
     defaultNotifQuietHoursEndMinutes = null,
     messageContactRules = emptyList(),
-    appRules = emptyList()
+    appRules = emptyList(),
+    battery = BatterySettings()
 )
 
 private inline fun <reified T : Enum<T>> enumOr(raw: String?, default: T): T {

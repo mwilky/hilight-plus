@@ -1,8 +1,10 @@
 package com.mwilky.hilight.plus.core
 
+import com.mwilky.hilight.plus.BatteryPattern
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.max
 import kotlin.math.sin
 
 /**
@@ -182,6 +184,141 @@ class PatternRenderer {
         return frame
     }
 
+    /**
+     * Renders the battery indicator layer: a charging pattern, or a fixed "full" / "low battery"
+     * look that always overrides the chosen charging pattern.
+     */
+    fun renderBatteryFrame(
+        pattern: BatteryPattern,
+        levelPercent: Int,
+        charging: Boolean,
+        full: Boolean,
+        low: Boolean,
+        autoColor: Boolean,
+        fixedColor: Long,
+        brightness: Float,
+        elapsedTimeMs: Long,
+        ledCount: Int = 8
+    ): IntArray {
+        val count = maxOf(1, ledCount)
+        val clampedBrightness = brightness.coerceIn(0f, 1f)
+        val level = levelPercent.coerceIn(0, 100)
+        val baseColor = if (autoColor) {
+            batteryLevelColor(level)
+        } else {
+            fixedColor.toInt() or 0xFF000000.toInt()
+        }
+
+        return when {
+            full -> renderBatteryFull(baseColor, clampedBrightness, elapsedTimeMs, count)
+            low && !charging -> renderBatteryLow(baseColor, clampedBrightness, level, elapsedTimeMs, count)
+            pattern == BatteryPattern.GRADIENT_RING -> renderBatteryGradientRing(baseColor, clampedBrightness, elapsedTimeMs, count)
+            pattern == BatteryPattern.CHARGE_FILL -> renderBatteryGauge(baseColor, clampedBrightness, level, count, breathe = true, elapsedTimeMs)
+            else -> renderBatteryGauge(baseColor, clampedBrightness, level, count, breathe = false, elapsedTimeMs)
+        }
+    }
+
+    /** Red (0%) -> amber (50%) -> green (100%), so level reads at a glance without a legend. */
+    private fun batteryLevelColor(level: Int): Int {
+        val hue = if (level <= 50) {
+            40.0 * (level / 50.0)
+        } else {
+            40.0 + 80.0 * ((level - 50) / 50.0)
+        }
+        return hsvToRgb(hue, 1f, 1f)
+    }
+
+    /** Static or breathing fill: whole LEDs for each 12.5% of level, leading LED scaled by the remainder. */
+    private fun renderBatteryGauge(
+        baseColor: Int,
+        brightness: Float,
+        level: Int,
+        count: Int,
+        breathe: Boolean,
+        elapsedTimeMs: Long
+    ): IntArray {
+        val frame = IntArray(count)
+        val exact = (level / 100.0) * count
+        val fullLeds = exact.toInt().coerceIn(0, count)
+        val fraction = (exact - fullLeds).coerceIn(0.0, 1.0)
+
+        val breatheK = if (breathe) {
+            val phase = (elapsedTimeMs % BATTERY_BREATHE_MS) / BATTERY_BREATHE_MS.toDouble()
+            0.55 + 0.45 * (1.0 - cos(phase * 2.0 * PI)) / 2.0
+        } else {
+            1.0
+        }
+
+        for (i in 0 until count) {
+            val ledLevel = when {
+                i < fullLeds -> 1.0
+                i == fullLeds && fraction > 0.0 -> max(fraction, 0.15)
+                else -> 0.0
+            }
+            val k = ledLevel * breatheK
+            frame[i] = if (k > 0.005) scaleColor(baseColor, k * brightness) else 0x00000000
+        }
+        return frame
+    }
+
+    /** All LEDs lit in the level colour, breathing slowly since this is only used while charging. */
+    private fun renderBatteryGradientRing(baseColor: Int, brightness: Float, elapsedTimeMs: Long, count: Int): IntArray {
+        val phase = (elapsedTimeMs % BATTERY_BREATHE_MS) / BATTERY_BREATHE_MS.toDouble()
+        val breatheK = 0.55 + 0.45 * (1.0 - cos(phase * 2.0 * PI)) / 2.0
+        val c = scaleColor(baseColor, breatheK * brightness)
+        return IntArray(count) { c }
+    }
+
+    /** All LEDs solid, with a brief brighter highlight sweeping round every 10s so it still looks alive. */
+    private fun renderBatteryFull(baseColor: Int, brightness: Float, elapsedTimeMs: Long, count: Int): IntArray {
+        val phaseInCycle = elapsedTimeMs % BATTERY_FULL_SWEEP_PERIOD_MS
+        val headPos = if (phaseInCycle < BATTERY_FULL_SWEEP_DURATION_MS) {
+            (phaseInCycle / BATTERY_FULL_SWEEP_DURATION_MS.toDouble()) * count
+        } else {
+            -1.0
+        }
+        val tailLength = 2.0
+
+        val frame = IntArray(count)
+        for (i in 0 until count) {
+            var k = 0.78
+            if (headPos >= 0.0) {
+                var diff = abs(headPos - i)
+                if (diff > count / 2.0) diff = count - diff
+                if (diff <= tailLength) {
+                    k = max(k, 1.0 - (diff / tailLength) * 0.22)
+                }
+            }
+            frame[i] = scaleColor(baseColor, k * brightness)
+        }
+        return frame
+    }
+
+    /** A heartbeat pulse across the remaining LEDs (at least one, so low battery is never invisible). */
+    private fun renderBatteryLow(baseColor: Int, brightness: Float, level: Int, elapsedTimeMs: Long, count: Int): IntArray {
+        val exact = (level / 100.0) * count
+        val litLeds = exact.toInt().coerceIn(0, count).coerceAtLeast(1)
+
+        val phase = (elapsedTimeMs % BATTERY_HEARTBEAT_MS) / BATTERY_HEARTBEAT_MS.toDouble()
+        val k = when {
+            phase < 0.20 -> {
+                val t = phase / 0.20
+                t * t
+            }
+            phase < 0.35 -> 1.0
+            phase < 0.55 -> {
+                val t = (phase - 0.35) / 0.20
+                1.0 - t * t
+            }
+            else -> 0.0
+        }
+        val c = scaleColor(baseColor, (0.15 + 0.85 * k) * brightness)
+
+        val frame = IntArray(count)
+        for (i in 0 until litLeds) frame[i] = c
+        return frame
+    }
+
     private fun scaleColor(color: Int, factor: Double): Int {
         val k = factor.coerceIn(0.0, 1.0)
         val a = 0xFF
@@ -218,5 +355,12 @@ class PatternRenderer {
         val b = ((bPrime + m) * 255f).toInt().coerceIn(0, 255)
 
         return (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+    }
+
+    companion object {
+        private const val BATTERY_BREATHE_MS = 2200L
+        private const val BATTERY_HEARTBEAT_MS = 1800L
+        private const val BATTERY_FULL_SWEEP_PERIOD_MS = 10_000L
+        private const val BATTERY_FULL_SWEEP_DURATION_MS = 900L
     }
 }

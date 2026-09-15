@@ -34,12 +34,14 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mwilky.hilight.plus.AppNotificationRule
+import com.mwilky.hilight.plus.BatterySettings
 import com.mwilky.hilight.plus.ContactRule
 import com.mwilky.hilight.plus.DEFAULT_SETTINGS_SNAPSHOT
 import com.mwilky.hilight.plus.LightController
@@ -179,6 +181,7 @@ fun HomeScreen(
         onEditAppRule = { rule -> appRuleBeingEdited = rule },
         onDeleteAppRule = viewModel::deleteAppRule,
         onAddApp = { isPickingApp = true },
+        onBatteryChange = viewModel::setBattery,
         renderer = renderer
     )
 
@@ -440,10 +443,12 @@ fun HomeContent(
     onEditAppRule: (AppNotificationRule) -> Unit,
     onDeleteAppRule: (String) -> Unit,
     onAddApp: () -> Unit,
+    // Battery
+    onBatteryChange: (BatterySettings) -> Unit,
     renderer: PatternRenderer
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
-    val pagerState = rememberPagerState { 2 }
+    val pagerState = rememberPagerState { 3 }
     val scope = rememberCoroutineScope()
 
     Scaffold(
@@ -470,8 +475,8 @@ fun HomeContent(
                 modifier = Modifier.fillMaxSize(),
                 verticalAlignment = Alignment.Top
             ) { page ->
-                if (page == 0) {
-                    HomeCallsPage(
+                when (page) {
+                    0 -> HomeCallsPage(
                         shizukuState = shizukuState,
                         shizukuError = shizukuError,
                         onDisconnectShizuku = onDisconnectShizuku,
@@ -495,8 +500,7 @@ fun HomeContent(
                         onAddCallContact = onAddCallContact,
                         renderer = renderer
                     )
-                } else {
-                    HomeNotifsPage(
+                    1 -> HomeNotifsPage(
                         shizukuState = shizukuState,
                         shizukuError = shizukuError,
                         onDisconnectShizuku = onDisconnectShizuku,
@@ -521,6 +525,17 @@ fun HomeContent(
                         onToggleCycleNotifications = onToggleCycleNotifications,
                         renderer = renderer
                     )
+                    else -> HomeBatteryPage(
+                        shizukuState = shizukuState,
+                        shizukuError = shizukuError,
+                        onDisconnectShizuku = onDisconnectShizuku,
+                        onConnectShizuku = onConnectShizuku,
+                        onRequestShizukuPermission = onRequestShizukuPermission,
+                        onOpenShizukuApp = onOpenShizukuApp,
+                        battery = state.battery,
+                        onBatteryChange = onBatteryChange,
+                        renderer = renderer
+                    )
                 }
             }
         }
@@ -528,42 +543,46 @@ fun HomeContent(
 }
 
 /**
- * Connected two-button toggle group that mirrors the pager position.
+ * Connected three-button toggle group that mirrors the pager position.
  */
 @Composable
 private fun HomePageToggle(
     selectedIndex: Int,
     onSelect: (Int) -> Unit
 ) {
+    val tabs = listOf(
+        Icons.Rounded.Call to R.string.home_tab_calls,
+        Icons.Rounded.Notifications to R.string.home_tab_notifications,
+        Icons.Rounded.BatteryChargingFull to R.string.home_tab_battery
+    )
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
     ) {
-        ToggleButton(
-            checked = selectedIndex == 0,
-            onCheckedChange = { onSelect(0) },
-            shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
-            modifier = Modifier
-                .weight(1f)
-                .semantics { role = Role.RadioButton }
-        ) {
-            Icon(Icons.Rounded.Call, contentDescription = null, modifier = Modifier.size(ToggleButtonDefaults.IconSize))
-            Spacer(Modifier.width(ToggleButtonDefaults.IconSpacing))
-            Text(stringResource(R.string.home_tab_calls))
-        }
-        ToggleButton(
-            checked = selectedIndex == 1,
-            onCheckedChange = { onSelect(1) },
-            shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
-            modifier = Modifier
-                .weight(1f)
-                .semantics { role = Role.RadioButton }
-        ) {
-            Icon(Icons.Rounded.Notifications, contentDescription = null, modifier = Modifier.size(ToggleButtonDefaults.IconSize))
-            Spacer(Modifier.width(ToggleButtonDefaults.IconSpacing))
-            Text(stringResource(R.string.home_tab_notifications))
+        tabs.forEachIndexed { index, (icon, labelRes) ->
+            ToggleButton(
+                checked = selectedIndex == index,
+                onCheckedChange = { onSelect(index) },
+                shapes = when (index) {
+                    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                    tabs.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                    else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics { role = Role.RadioButton }
+            ) {
+                Icon(icon, contentDescription = null, modifier = Modifier.size(ToggleButtonDefaults.IconSize))
+                Spacer(Modifier.width(ToggleButtonDefaults.IconSpacing))
+                Text(
+                    text = stringResource(labelRes),
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
@@ -811,6 +830,7 @@ fun HomeScreenPreviewContent(
             onEditAppRule = {},
             onDeleteAppRule = {},
             onAddApp = {},
+            onBatteryChange = {},
             renderer = PatternRenderer()
         )
     }

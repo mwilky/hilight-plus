@@ -2,6 +2,8 @@ package com.mwilky.hilight.plus.core
 
 import android.os.SystemClock
 import android.util.Log
+import com.mwilky.hilight.plus.BatteryPattern
+import com.mwilky.hilight.plus.BatteryVisibility
 import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.currentMinutesOfDay
@@ -45,11 +47,31 @@ class LightEngine {
     private var quietHoursStartMinutes = 22 * 60
     private var quietHoursEndMinutes = 7 * 60
 
-    // Ambient state: the idle render when nothing else is active. Always off.
+    // Ambient state: the idle render when nothing else is active and battery isn't showing. Always off.
     private val ambientPattern = "off"
     private val ambientColor = 0xFF000000
     private val ambientBrightness = 1.0f
     private val ambientSpeedMs = 2000L
+
+    private data class BatteryConfig(
+        val visibility: BatteryVisibility,
+        val chargingPattern: BatteryPattern,
+        val autoColor: Boolean,
+        val color: Long,
+        val lowWarningEnabled: Boolean,
+        val lowThresholdPercent: Int,
+        val fullTimeoutMinutes: Int?,
+        val overridesNotifications: Boolean,
+        val quietHoursMode: QuietHoursMode
+    )
+
+    // Battery indicator layer: renders in the idle slot beneath calls and (unless configured to
+    // override them) notifications. Null config means the feature hasn't been set up / is off.
+    private var batteryConfig: BatteryConfig? = null
+    private var batteryLevel = 100
+    private var batteryCharging = false
+    private var batteryFull = false
+    private var batteryFullSinceMs: Long? = null
 
     private data class IncomingCallAlert(
         val pattern: String,
@@ -328,6 +350,47 @@ class LightEngine {
         }
     }
 
+    /**
+     * Replaces the battery indicator configuration. Takes effect on the next tick.
+     */
+    fun setBatteryConfig(
+        visibility: BatteryVisibility,
+        chargingPattern: BatteryPattern,
+        autoColor: Boolean,
+        color: Long,
+        lowWarningEnabled: Boolean,
+        lowThresholdPercent: Int,
+        fullTimeoutMinutes: Int?,
+        overridesNotifications: Boolean,
+        quietHoursMode: QuietHoursMode
+    ) {
+        synchronized(lock) {
+            batteryConfig = BatteryConfig(
+                visibility, chargingPattern, autoColor, color,
+                lowWarningEnabled, lowThresholdPercent, fullTimeoutMinutes,
+                overridesNotifications, quietHoursMode
+            )
+            onLiveConditionChanged()
+            Log.i(TAG, "setBatteryConfig: visibility=$visibility, chargingPattern=$chargingPattern")
+        }
+    }
+
+    /**
+     * Updates the live battery reading. Only triggers a re-render when something changed.
+     */
+    fun setBatteryState(levelPercent: Int, charging: Boolean, full: Boolean) {
+        synchronized(lock) {
+            if (batteryLevel == levelPercent && batteryCharging == charging && batteryFull == full) return
+            val now = SystemClock.elapsedRealtime()
+            batteryFullSinceMs = if (full && !batteryFull) now else if (!full) null else batteryFullSinceMs
+            batteryLevel = levelPercent
+            batteryCharging = charging
+            batteryFull = full
+            onLiveConditionChanged()
+            Log.i(TAG, "setBatteryState: level=$levelPercent, charging=$charging, full=$full")
+        }
+    }
+
     private fun onLiveConditionChanged() {
         val now = SystemClock.elapsedRealtime()
         syncNotificationTimer(now)
@@ -347,7 +410,7 @@ class LightEngine {
                     cycleStartTimeMs = SystemClock.elapsedRealtime()
                 }
                 Log.i(TAG, "removeAlert [key=$key] (remaining queue=${activeAlerts.size})")
-                if (incomingCallAlert == null && activeAlerts.isEmpty() && directAlert == null && ambientPattern.equals("off", ignoreCase = true)) {
+                if (incomingCallAlert == null && activeAlerts.isEmpty() && directAlert == null && !batteryActiveNow()) {
                     lights.blank()
                 }
             }
@@ -363,7 +426,7 @@ class LightEngine {
             directAlertTimer.clear()
             activeAlerts.clear()
             currentAlertIndex = 0
-            if (incomingCallAlert == null && ambientPattern.equals("off", ignoreCase = true)) {
+            if (incomingCallAlert == null && !batteryActiveNow()) {
                 lights.blank()
             }
         }
@@ -444,11 +507,24 @@ class LightEngine {
                 }
             }
 
-            val currentPattern: String
-            val currentColor: Long
-            val currentBrightness: Float
-            val currentSpeed: Long
-            val elapsedMs: Long
+            val battery = batteryConfig
+            val batteryEligible = battery != null &&
+                batteryVisible(battery, nowMinutes) &&
+                batteryLayerWantsToRender(battery, now)
+            // When on, the battery layer takes the whole notification-priority slot rather than
+            // just the gaps between alerts, so it isn't flickered on and off as alerts cycle.
+            val batterySuppressesNotifications = batteryEligible && battery!!.overridesNotifications
+
+            var currentPattern = ambientPattern
+            var currentColor = ambientColor
+            var currentBrightness = ambientBrightness
+            var currentSpeed = ambientSpeedMs
+            var elapsedMs = now
+            var renderBattery = false
+
+            fun useBatteryIfEligible() {
+                if (batteryEligible) renderBattery = true
+            }
 
             if (test != null) {
                 currentPattern = test.pattern
@@ -464,13 +540,9 @@ class LightEngine {
                     currentSpeed = call.speedMs
                     elapsedMs = now - call.startedAtMs
                 } else {
-                    currentPattern = ambientPattern
-                    currentColor = ambientColor
-                    currentBrightness = ambientBrightness
-                    currentSpeed = ambientSpeedMs
-                    elapsedMs = now
+                    useBatteryIfEligible()
                 }
-            } else if (direct != null && notificationVisible(
+            } else if (!batterySuppressesNotifications && direct != null && notificationVisible(
                     direct.requiresFaceDown, direct.dndMode, direct.quietHoursMode,
                     direct.quietStartOverride, direct.quietEndOverride, nowMinutes
                 )
@@ -480,14 +552,10 @@ class LightEngine {
                 currentBrightness = direct.brightness
                 currentSpeed = direct.speedMs
                 elapsedMs = directAlertTimer.elapsedMs(now)
-            } else if (activeAlerts.isNotEmpty()) {
+            } else if (!batterySuppressesNotifications && activeAlerts.isNotEmpty()) {
                 val eligibleStart = firstEligibleAlertIndex(currentAlertIndex)
                 if (eligibleStart == null) {
-                    currentPattern = ambientPattern
-                    currentColor = ambientColor
-                    currentBrightness = ambientBrightness
-                    currentSpeed = ambientSpeedMs
-                    elapsedMs = now
+                    useBatteryIfEligible()
                 } else {
                     if (currentAlertIndex != eligibleStart) {
                         currentAlertIndex = eligibleStart
@@ -515,11 +583,29 @@ class LightEngine {
                     elapsedMs = (now - cycleStartTimeMs).coerceIn(0L, singleCycleDuration)
                 }
             } else {
-                currentPattern = ambientPattern
-                currentColor = ambientColor
-                currentBrightness = ambientBrightness
-                currentSpeed = ambientSpeedMs
-                elapsedMs = now
+                useBatteryIfEligible()
+            }
+
+            if (renderBattery && battery != null) {
+                if (needsSessionReset || !lights.isSessionOpen) {
+                    lights.openSession(sessionPriority)
+                    needsSessionReset = false
+                }
+                val frame = renderer.renderBatteryFrame(
+                    pattern = battery.chargingPattern,
+                    levelPercent = batteryLevel,
+                    charging = batteryCharging,
+                    full = batteryFull,
+                    low = !batteryCharging && !batteryFull && battery.lowWarningEnabled &&
+                        batteryLevel <= battery.lowThresholdPercent,
+                    autoColor = battery.autoColor,
+                    fixedColor = battery.color,
+                    brightness = 1.0f,
+                    elapsedTimeMs = now,
+                    ledCount = lights.ledCount
+                )
+                lights.pushFrame(frame)
+                return
             }
 
             if (currentPattern.equals("off", ignoreCase = true)) {
@@ -625,6 +711,36 @@ class LightEngine {
         quietEndOverride,
         nowMinutes
     )
+
+    private fun batteryVisible(config: BatteryConfig, nowMinutes: Int): Boolean {
+        if (config.visibility == BatteryVisibility.OFF) return false
+        return AlertRenderPolicy.canShowAlert(
+            requiresFaceDown = config.visibility == BatteryVisibility.FACE_DOWN_ONLY,
+            deviceFaceDown = deviceFaceDown,
+            quietHoursMode = config.quietHoursMode,
+            quietHoursEnabled = quietHoursEnabled,
+            quietHoursStartMinutes = quietHoursStartMinutes,
+            quietHoursEndMinutes = quietHoursEndMinutes,
+            nowMinutes = nowMinutes
+        )
+    }
+
+    /** Whether the battery has something worth showing right now (charging, freshly full, or low). */
+    private fun batteryLayerWantsToRender(config: BatteryConfig, now: Long): Boolean {
+        if (batteryCharging) return true
+        if (batteryFull) {
+            val since = batteryFullSinceMs ?: return true
+            val timeoutMinutes = config.fullTimeoutMinutes ?: return true
+            return (now - since) < timeoutMinutes * 60_000L
+        }
+        return config.lowWarningEnabled && batteryLevel <= config.lowThresholdPercent
+    }
+
+    private fun batteryActiveNow(): Boolean {
+        val config = batteryConfig ?: return false
+        return batteryVisible(config, currentMinutesOfDay()) &&
+            batteryLayerWantsToRender(config, SystemClock.elapsedRealtime())
+    }
 
     private fun syncNotificationTimer(now: Long) {
         if (directAlert == null) return

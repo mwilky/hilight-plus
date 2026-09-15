@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.AdminPanelSettings
+import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.NotificationsActive
@@ -548,6 +549,12 @@ private fun FeaturesHighlightCard() {
                 shape = MaterialShapes.Clover4Leaf,
                 title = stringResource(R.string.onboarding_feature_conditions_title),
                 desc = stringResource(R.string.onboarding_feature_conditions_desc)
+            )
+            FeatureRow(
+                icon = Icons.Rounded.BatteryChargingFull,
+                shape = MaterialShapes.Pill,
+                title = stringResource(R.string.onboarding_feature_battery_title),
+                desc = stringResource(R.string.onboarding_feature_battery_desc)
             )
         }
     }

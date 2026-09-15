@@ -10,6 +10,8 @@
     <string name="onboarding_feature_notifs_desc">Light up differently for specific apps and contacts.</string>
     <string name="onboarding_feature_conditions_title">Conditions</string>
     <string name="onboarding_feature_conditions_desc">Choose conditions that stop the lights from showing.</string>
+    <string name="onboarding_feature_battery_title">Battery</string>
+    <string name="onboarding_feature_battery_desc">Show a charging gauge or low-battery warning on the ring.</string>
 
     <!-- Onboarding Step 2: Stock HiLight Conflict -->
     <string name="onboarding_stock_title">Pixel\'s built-in HiLight</string>
@@ -137,8 +139,10 @@
     <string name="rule_editor_test_leds_stop">Stop test</string>
     <string name="home_tab_calls">Calls</string>
     <string name="home_tab_notifications">Notifications</string>
+    <string name="home_tab_battery">Battery</string>
     <string name="hero_calls_title">Call lights</string>
     <string name="hero_notifs_title">Notification lights</string>
+    <string name="hero_battery_title">Battery lights</string>
     <string name="hero_status_on">On · %1$s</string>
     <string name="hero_status_off">Off</string>
     <plurals name="hero_rule_count">
@@ -163,6 +167,13 @@
     <string name="pattern_ripple">Ripple</string>
     <string name="pattern_sparkle">Sparkle</string>
     <string name="pattern_rainbow">Rainbow</string>
+    <string name="battery_pattern_gauge">Gauge</string>
+    <string name="battery_pattern_charge_fill">Charge fill</string>
+    <string name="battery_pattern_gradient_ring">Gradient ring</string>
+    <string name="battery_full_timeout_stay_on">Stay on</string>
+    <string name="battery_full_timeout_1m">1 minute</string>
+    <string name="battery_full_timeout_5m">5 minutes</string>
+    <string name="battery_full_timeout_30m">30 minutes</string>
     <string name="dialog_app_picker_title">Select application</string>
     <string name="dialog_app_picker_search">Search applications…</string>
     <string name="dialog_app_picker_no_apps">No applications found</string>
@@ -186,6 +197,30 @@
     <string name="conditions_quiet_hours_desc">Stay dark between the times below. Overnight windows are fine.</string>
     <string name="conditions_quiet_hours_start">Starts</string>
     <string name="conditions_quiet_hours_end">Ends</string>
+
+    <!-- Battery Screen -->
+    <string name="battery_off_hint">Turned off. Enable it below to show battery status on the LED ring.</string>
+    <string name="battery_visibility_off">Off</string>
+    <string name="battery_visibility_face_down">Face down only</string>
+    <string name="battery_visibility_always">Always</string>
+    <string name="battery_section_show_title">Show</string>
+    <string name="battery_section_show_desc">Choose when the battery display is allowed to appear on the ring.</string>
+    <string name="battery_quiet_desc_default">Follows the quiet hours setting on the Conditions page.</string>
+    <string name="battery_quiet_desc_always">Lights even during quiet hours.</string>
+    <string name="battery_quiet_desc_skip">Stays dark during quiet hours, using the window set on the Conditions page.</string>
+    <string name="battery_preview_level_format">Preview: %1$d%%</string>
+    <string name="battery_preview_charging">Simulate charging</string>
+    <string name="battery_section_pattern_title">Charging pattern</string>
+    <string name="battery_section_color_title">Colour</string>
+    <string name="battery_section_auto_color">Colour by level</string>
+    <string name="battery_section_auto_color_desc">Red to green as the battery charges. Turn off to pick a fixed colour.</string>
+    <string name="battery_section_low_title">Low battery warning</string>
+    <string name="battery_section_low_desc">Pulses red when unplugged and below the threshold below.</string>
+    <string name="battery_low_threshold_format">Warn below %1$d%%</string>
+    <string name="battery_section_full_timeout_title">After fully charged</string>
+    <string name="battery_section_full_timeout_desc">How long the full-battery display stays on once charging finishes.</string>
+    <string name="battery_section_overrides_notifications">Battery display takes priority over notifications</string>
+    <string name="battery_section_overrides_notifications_desc">When on, notification lights won\'t interrupt the battery display. Incoming calls always interrupt it.</string>
 
     <!-- About Screen -->
     <string name="about_title">About &amp; Diagnostics</string>
