@@ -133,6 +133,8 @@
     <string name="dialog_btn_cancel">Cancel</string>
     <string name="dialog_btn_close">Close</string>
     <string name="dialog_configure_title">Configure %1$s</string>
+    <string name="rule_editor_test_leds">Test on LEDs</string>
+    <string name="rule_editor_test_leds_stop">Stop test</string>
     <string name="home_tab_calls">Calls</string>
     <string name="home_tab_notifications">Notifications</string>
     <string name="hero_calls_title">Call lights</string>

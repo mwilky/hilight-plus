@@ -195,6 +195,7 @@ fun HomeScreen(
             initialQuietStart = rule.quietHoursStartMinutes ?: state.quietHoursStartMinutes,
             initialQuietEnd = rule.quietHoursEndMinutes ?: state.quietHoursEndMinutes,
             renderer = renderer,
+            controller = controller,
             onDismiss = { callRuleBeingEdited = null },
             onSave = { result ->
                 viewModel.saveContactRule(
@@ -225,6 +226,7 @@ fun HomeScreen(
             initialQuietStart = state.otherContactsQuietHoursStartMinutes ?: state.quietHoursStartMinutes,
             initialQuietEnd = state.otherContactsQuietHoursEndMinutes ?: state.quietHoursEndMinutes,
             renderer = renderer,
+            controller = controller,
             onDismiss = { isConfiguringOtherContacts = false },
             onSave = { result ->
                 viewModel.setOtherContactsStyle(
@@ -253,6 +255,7 @@ fun HomeScreen(
             initialQuietStart = state.unknownNumbersQuietHoursStartMinutes ?: state.quietHoursStartMinutes,
             initialQuietEnd = state.unknownNumbersQuietHoursEndMinutes ?: state.quietHoursEndMinutes,
             renderer = renderer,
+            controller = controller,
             onDismiss = { isConfiguringUnknownNumbers = false },
             onSave = { result ->
                 viewModel.setUnknownNumbersStyle(
@@ -302,6 +305,7 @@ fun HomeScreen(
             initialQuietStart = rule.quietHoursStartMinutes ?: state.quietHoursStartMinutes,
             initialQuietEnd = rule.quietHoursEndMinutes ?: state.quietHoursEndMinutes,
             renderer = renderer,
+            controller = controller,
             onDismiss = { msgRuleBeingEdited = null },
             onSave = { result ->
                 viewModel.saveMessageContactRule(
@@ -339,6 +343,7 @@ fun HomeScreen(
             initialAutoColor = rule.isAutoColor,
             autoExtractedColor = autoColor,
             renderer = renderer,
+            controller = controller,
             onDismiss = { appRuleBeingEdited = null },
             onSave = { result ->
                 viewModel.saveAppRule(
@@ -373,6 +378,7 @@ fun HomeScreen(
             initialAutoColor = state.isDefaultNotifAutoColor,
             autoExtractedColor = null,
             renderer = renderer,
+            controller = controller,
             onDismiss = { isConfiguringDefaultNotif = false },
             onSave = { result ->
                 viewModel.setDefaultNotifStyle(

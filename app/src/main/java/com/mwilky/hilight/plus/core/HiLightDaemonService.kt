@@ -122,6 +122,14 @@ class HiLightDaemonService : IHiLightService.Stub() {
         engine.setQuietHours(enabled, startMinutes, endMinutes)
     }
 
+    override fun testAlert(pattern: String?, color: Long, brightness: Float, speedMs: Long, durationMs: Long) {
+        engine.testAlert(pattern ?: "solid", color, brightness, speedMs, durationMs)
+    }
+
+    override fun cancelTestAlert() {
+        engine.cancelTestAlert()
+    }
+
     override fun stopIncomingCall() {
         engine.stopIncomingCall()
     }

@@ -83,6 +83,19 @@ class LightEngine {
     private var directAlert: DirectAlert? = null
     private val directAlertTimer = PausableAlertTimer()
 
+    private data class TestAlert(
+        val pattern: String,
+        val color: Long,
+        val brightness: Float,
+        val speedMs: Long,
+        val startedAtMs: Long,
+        val expiresAtMs: Long
+    )
+
+    // In-app "test on LEDs" preview. Takes top render priority and ignores face-down/DND/quiet-hours
+    // gating, but never touches the notification queue or direct alert state, so it can't disturb them.
+    private var testAlert: TestAlert? = null
+
     // Multi-Notification Cyclic Queue
     private val activeAlerts = mutableListOf<QueuedAlert>()
     private var currentAlertIndex = 0
@@ -246,6 +259,29 @@ class LightEngine {
         }
     }
 
+    /**
+     * Renders a transient preview pattern with top priority, ignoring face-down/DND/quiet-hours
+     * gating. Does not touch the notification queue or direct alert, so whatever was playing
+     * resumes automatically once the test expires or is cancelled.
+     */
+    fun testAlert(pattern: String, color: Long, brightness: Float, speedMs: Long, durationMs: Long) {
+        synchronized(lock) {
+            val now = SystemClock.elapsedRealtime()
+            testAlert = TestAlert(pattern, color, brightness, speedMs, now, now + durationMs)
+            needsSessionReset = true
+            Log.i(TAG, "testAlert: pattern=$pattern, color=$color, durationMs=$durationMs")
+        }
+    }
+
+    fun cancelTestAlert() {
+        synchronized(lock) {
+            if (testAlert == null) return
+            testAlert = null
+            needsSessionReset = true
+            Log.i(TAG, "cancelTestAlert")
+        }
+    }
+
     fun setDeviceFaceDown(faceDown: Boolean) {
         synchronized(lock) {
             if (deviceFaceDown == faceDown) return
@@ -340,6 +376,7 @@ class LightEngine {
             directAlertTimer.clear()
             activeAlerts.clear()
             currentAlertIndex = 0
+            testAlert = null
             lights.blank()
         }
     }
@@ -384,6 +421,11 @@ class LightEngine {
                 nowMinutes
             )
 
+            if (testAlert != null && now >= testAlert!!.expiresAtMs) {
+                testAlert = null
+            }
+            val test = testAlert
+
             if (directAlert != null && directAlertTimer.remainingMs(now) == 0L) {
                 directAlert = null
                 directAlertTimer.clear()
@@ -408,7 +450,13 @@ class LightEngine {
             val currentSpeed: Long
             val elapsedMs: Long
 
-            if (call != null) {
+            if (test != null) {
+                currentPattern = test.pattern
+                currentColor = test.color
+                currentBrightness = test.brightness
+                currentSpeed = test.speedMs
+                elapsedMs = now - test.startedAtMs
+            } else if (call != null) {
                 if (callVisible) {
                     currentPattern = call.pattern
                     currentColor = call.color

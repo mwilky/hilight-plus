@@ -44,12 +44,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -64,6 +67,7 @@ import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -93,14 +97,19 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.FaceDownMode
+import com.mwilky.hilight.plus.LightController
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.QuietHoursMode
+import com.mwilky.hilight.plus.ShizukuBridge
 import com.mwilky.hilight.plus.R
 import com.mwilky.hilight.plus.core.PatternRenderer
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+
+private const val TEST_DURATION_MS = 4000L
 
 data class RuleEditorResult(
     val pattern: PatternMode,
@@ -133,6 +142,7 @@ fun CustomRuleDialog(
     initialColor: Long,
     initialPattern: PatternMode,
     renderer: PatternRenderer,
+    controller: LightController,
     onDismiss: () -> Unit,
     onSave: (RuleEditorResult) -> Unit,
     initialFaceDown: FaceDownMode = FaceDownMode.INHERIT,
@@ -162,6 +172,7 @@ fun CustomRuleDialog(
             initialColor = initialColor,
             initialPattern = initialPattern,
             renderer = renderer,
+            controller = controller,
             onDismiss = onDismiss,
             onSave = onSave,
             initialFaceDown = initialFaceDown,
@@ -182,6 +193,7 @@ private fun RuleEditorContent(
     initialColor: Long,
     initialPattern: PatternMode,
     renderer: PatternRenderer,
+    controller: LightController,
     onDismiss: () -> Unit,
     onSave: (RuleEditorResult) -> Unit,
     initialFaceDown: FaceDownMode,
@@ -215,6 +227,28 @@ private fun RuleEditorContent(
         while (isActive) {
             clockMs = System.currentTimeMillis() - start
             delay(33)
+        }
+    }
+
+    // Test-on-LEDs: previews the current pattern/color on the physical lights.
+    val shizukuState by controller.shizuku.state.collectAsStateWithLifecycle()
+    var isTesting by remember { mutableStateOf(false) }
+    LaunchedEffect(isTesting) {
+        if (isTesting) {
+            delay(TEST_DURATION_MS)
+            isTesting = false
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose { controller.cancelTestPattern() }
+    }
+    fun toggleTest() {
+        if (isTesting) {
+            isTesting = false
+            controller.cancelTestPattern()
+        } else {
+            isTesting = true
+            controller.testPattern(selectedPattern, selectedColor, TEST_DURATION_MS)
         }
     }
 
@@ -271,7 +305,10 @@ private fun RuleEditorContent(
                     pattern = selectedPattern,
                     color = selectedColor,
                     elapsedMs = clockMs,
-                    renderer = renderer
+                    renderer = renderer,
+                    isTesting = isTesting,
+                    testEnabled = shizukuState == ShizukuBridge.State.CONNECTED,
+                    onToggleTest = ::toggleTest
                 )
             }
         }
@@ -512,7 +549,10 @@ private fun PreviewHeader(
     pattern: PatternMode,
     color: Long,
     elapsedMs: Long,
-    renderer: PatternRenderer
+    renderer: PatternRenderer,
+    isTesting: Boolean,
+    testEnabled: Boolean,
+    onToggleTest: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -530,6 +570,45 @@ private fun PreviewHeader(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            val testContainerColor by animateColorAsState(
+                targetValue = if (isTesting) {
+                    MaterialTheme.colorScheme.errorContainer
+                } else {
+                    MaterialTheme.colorScheme.secondaryContainer
+                },
+                animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+                label = "testButtonContainer"
+            )
+            val testContentColor by animateColorAsState(
+                targetValue = if (isTesting) {
+                    MaterialTheme.colorScheme.onErrorContainer
+                } else {
+                    MaterialTheme.colorScheme.onSecondaryContainer
+                },
+                animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+                label = "testButtonContent"
+            )
+            FilledTonalButton(
+                onClick = onToggleTest,
+                enabled = testEnabled,
+                shapes = ButtonDefaults.shapes(),
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = testContainerColor,
+                    contentColor = testContentColor
+                )
+            ) {
+                Icon(
+                    if (isTesting) Icons.Rounded.Stop else Icons.Rounded.PlayArrow,
+                    contentDescription = null,
+                    modifier = Modifier.size(ButtonDefaults.IconSize)
+                )
+                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                Text(
+                    stringResource(
+                        if (isTesting) R.string.rule_editor_test_leds_stop else R.string.rule_editor_test_leds
+                    )
+                )
+            }
         }
     }
 }
@@ -700,6 +779,7 @@ private fun RuleEditorPreview() {
             initialColor = 0xFF4285F4,
             initialPattern = PatternMode.PULSE,
             renderer = PatternRenderer(),
+            controller = LightController.get(LocalContext.current),
             onDismiss = {},
             onSave = {},
             initialFaceDown = FaceDownMode.INHERIT,

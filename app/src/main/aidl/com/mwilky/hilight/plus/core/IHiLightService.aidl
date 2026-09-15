@@ -15,4 +15,6 @@ interface IHiLightService {
     void setDndActive(boolean dndActive);
     void setDndSuppressEnabled(boolean enabled);
     void setQuietHours(boolean enabled, int startMinutes, int endMinutes);
+    void testAlert(String pattern, long color, float brightness, long speedMs, long durationMs);
+    void cancelTestAlert();
 }

@@ -176,6 +176,27 @@ class LightController private constructor(private val app: Application) {
     }
 
     /**
+     * Previews a pattern/color on the physical LEDs from the rule editor. Ignores face-down,
+     * DND and quiet-hours gating, and never disturbs whatever notification is actually active.
+     */
+    fun testPattern(pattern: PatternMode, color: Long, durationMs: Long = 3000L) {
+        shizuku.testAlert(
+            pattern = pattern.id,
+            color = color,
+            brightness = 1.0f,
+            speedMs = pattern.speedMs(),
+            durationMs = durationMs
+        )
+    }
+
+    /**
+     * Cancels an in-progress LED test preview, e.g. when the rule editor is closed early.
+     */
+    fun cancelTestPattern() {
+        shizuku.cancelTestAlert()
+    }
+
+    /**
      * Starts an indefinite incoming call ring alert until answered or ended.
      */
     fun startIncomingCallAlert(
