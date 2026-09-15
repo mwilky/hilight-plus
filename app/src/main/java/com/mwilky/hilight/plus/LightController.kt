@@ -51,7 +51,9 @@ class LightController private constructor(private val app: Application) {
     @Volatile
     private var lastBatterySettings = BatterySettings()
     @Volatile
-    private var lastBatteryEnabled = true
+    private var lastMasterEnabled = true
+    @Volatile
+    private var lastBatteryRequiresFaceDown = false
     @Volatile
     private var lastBatteryLevel = 100
     @Volatile
@@ -135,8 +137,12 @@ class LightController private constructor(private val app: Application) {
                 }
         }
         scope.launch {
-            combine(store.battery, store.isEnabled) { settings, enabled -> settings to enabled }
-                .collect { (settings, enabled) -> pushBatteryConfig(settings, enabled) }
+            combine(
+                store.battery,
+                store.isEnabled,
+                store.isOnlyWhenFaceDown
+            ) { settings, enabled, globalFaceDown -> Triple(settings, enabled, globalFaceDown) }
+                .collect { (settings, enabled, globalFaceDown) -> pushBatteryConfig(settings, enabled, globalFaceDown) }
         }
         // Heartbeat: the daemon renders the battery layer indefinitely from its own cached
         // reading, so it treats silence as "the app is gone" and goes dark. Keep telling it we're
@@ -294,24 +300,26 @@ class LightController private constructor(private val app: Application) {
             store.quietHoursStartMinutes.first(),
             store.quietHoursEndMinutes.first()
         )
-        pushBatteryConfig(store.battery.first(), store.isEnabled.first())
+        pushBatteryConfig(store.battery.first(), store.isEnabled.first(), store.isOnlyWhenFaceDown.first())
         shizuku.setBatteryState(lastBatteryLevel, lastBatteryCharging, lastBatteryFull)
     }
 
-    private fun pushBatteryConfig(settings: BatterySettings, masterEnabled: Boolean) {
+    private fun pushBatteryConfig(settings: BatterySettings, masterEnabled: Boolean, globalOnlyWhenFaceDown: Boolean) {
         lastBatterySettings = settings
-        lastBatteryEnabled = masterEnabled
-        val visibility = if (masterEnabled) settings.visibility else BatteryVisibility.OFF
+        lastMasterEnabled = masterEnabled
+        lastBatteryRequiresFaceDown = settings.faceDownMode.requiresFaceDown(globalOnlyWhenFaceDown)
         shizuku.setBatteryConfig(
-            visibility,
-            settings.chargingPattern,
-            settings.autoColor,
-            settings.color,
-            settings.lowWarningEnabled,
-            settings.lowThresholdPercent,
-            settings.fullTimeout.minutes,
-            settings.overridesNotifications,
-            settings.quietHoursMode
+            enabled = masterEnabled && settings.enabled,
+            chargingPattern = settings.chargingPattern,
+            autoColor = settings.autoColor,
+            color = settings.color,
+            lowWarningEnabled = settings.lowWarningEnabled,
+            lowThresholdPercent = settings.lowThresholdPercent,
+            fullTimeoutMinutes = settings.fullTimeout.minutes,
+            overridesNotifications = settings.overridesNotifications,
+            requiresFaceDown = lastBatteryRequiresFaceDown,
+            dndMode = settings.dndMode,
+            quietHoursMode = settings.quietHoursMode
         )
         syncBatteryOrientationMonitor()
     }
@@ -326,7 +334,7 @@ class LightController private constructor(private val app: Application) {
 
     /** Whether the battery layer has anything to show, ignoring where it's allowed to show it. */
     private fun batteryLayerCouldRender(): Boolean {
-        if (!lastBatteryEnabled || lastBatterySettings.visibility == BatteryVisibility.OFF) return false
+        if (!lastMasterEnabled || !lastBatterySettings.enabled) return false
         val lowEligible = lastBatterySettings.lowWarningEnabled &&
             !lastBatteryCharging && !lastBatteryFull &&
             lastBatteryLevel <= lastBatterySettings.lowThresholdPercent
@@ -334,15 +342,15 @@ class LightController private constructor(private val app: Application) {
     }
 
     /**
-     * Only runs the orientation sensor for the battery layer while it's set to face-down-only
-     * and actually has something to show (charging, freshly full, or low).
+     * Only runs the orientation sensor for the battery layer while its face-down mode currently
+     * requires it and it actually has something to show (charging, freshly full, or low).
      */
     private fun syncBatteryOrientationMonitor() {
         val lowEligible = lastBatterySettings.lowWarningEnabled &&
             !lastBatteryCharging && !lastBatteryFull &&
             lastBatteryLevel <= lastBatterySettings.lowThresholdPercent
         val wantsToRender = lastBatteryCharging || lastBatteryFull || lowEligible
-        if (lastBatteryEnabled && lastBatterySettings.visibility == BatteryVisibility.FACE_DOWN_ONLY && wantsToRender) {
+        if (lastMasterEnabled && lastBatterySettings.enabled && lastBatteryRequiresFaceDown && wantsToRender) {
             DeviceOrientationDetector.retainMonitoring(app, DeviceOrientationDetector.TOKEN_BATTERY)
         } else {
             DeviceOrientationDetector.releaseMonitoring(DeviceOrientationDetector.TOKEN_BATTERY)

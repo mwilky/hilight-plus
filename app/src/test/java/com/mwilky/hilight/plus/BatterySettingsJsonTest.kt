@@ -13,7 +13,7 @@ class BatterySettingsJsonTest {
     @Test
     fun roundTripsEveryFieldThroughJsonString() {
         val settings = BatterySettings(
-            visibility = BatteryVisibility.FACE_DOWN_ONLY,
+            enabled = true,
             chargingPattern = BatteryPattern.GRADIENT_RING,
             autoColor = false,
             color = 0xFF8A2BE2,
@@ -21,6 +21,8 @@ class BatterySettingsJsonTest {
             lowThresholdPercent = 35,
             fullTimeout = BatteryFullTimeout.THIRTY_MIN,
             overridesNotifications = true,
+            faceDownMode = FaceDownMode.ONLY_FACE_DOWN,
+            dndMode = DndMode.SKIP,
             quietHoursMode = QuietHoursMode.SKIP
         )
         assertEquals(settings, BatterySettings.fromJson(settings.toJson().toString()))
@@ -46,15 +48,17 @@ class BatterySettingsJsonTest {
     @Test
     fun unrecognisedEnumValuesFallBackInsteadOfThrowing() {
         val json = JSONObject().apply {
-            put("visibility", "NOT_REAL")
-            put("chargingPattern", "ALSO_NOT_REAL")
-            put("fullTimeout", "NOPE")
+            put("chargingPattern", "NOT_REAL")
+            put("fullTimeout", "ALSO_NOT_REAL")
+            put("faceDownMode", "NOPE")
+            put("dndMode", "NOPE")
             put("quietHoursMode", "GARBAGE")
         }
         val parsed = BatterySettings.fromJson(json.toString())
-        assertEquals(BatteryVisibility.OFF, parsed.visibility)
         assertEquals(BatteryPattern.GAUGE, parsed.chargingPattern)
         assertEquals(BatteryFullTimeout.FIVE_MIN, parsed.fullTimeout)
+        assertEquals(FaceDownMode.INHERIT, parsed.faceDownMode)
+        assertEquals(DndMode.INHERIT, parsed.dndMode)
         assertEquals(QuietHoursMode.INHERIT, parsed.quietHoursMode)
     }
 

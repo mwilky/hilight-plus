@@ -205,19 +205,6 @@ private const val DEFAULT_APP_COLOR = 0xFF34A853L
 private const val DEFAULT_BATTERY_COLOR = 0xFF34A853L
 
 /**
- * Where the battery indicator layer is allowed to show on the LED ring.
- */
-enum class BatteryVisibility(val id: String) {
-    OFF("off"),
-    FACE_DOWN_ONLY("face_down_only"),
-    ALWAYS("always");
-
-    companion object {
-        fun fromId(id: String?) = entries.find { it.id == id } ?: OFF
-    }
-}
-
-/**
  * Pattern used for the battery indicator while charging. The full and low-battery
  * states always override this with their own fixed look.
  */
@@ -250,7 +237,7 @@ enum class BatteryFullTimeout(val id: String, val minutes: Int?, val titleRes: I
  * A single global config, not a per-target rule, so it lives outside the shared rule fields.
  */
 data class BatterySettings(
-    val visibility: BatteryVisibility = BatteryVisibility.OFF,
+    val enabled: Boolean = false,
     val chargingPattern: BatteryPattern = BatteryPattern.GAUGE,
     val autoColor: Boolean = true,
     val color: Long = DEFAULT_BATTERY_COLOR,
@@ -258,10 +245,14 @@ data class BatterySettings(
     val lowThresholdPercent: Int = 20,
     val fullTimeout: BatteryFullTimeout = BatteryFullTimeout.FIVE_MIN,
     val overridesNotifications: Boolean = false,
+    // Same tri-state as every rule's own condition fields, for the same reason: face-down and DND
+    // can defer to the Conditions page instead of needing their own copy of that decision.
+    val faceDownMode: FaceDownMode = FaceDownMode.INHERIT,
+    val dndMode: DndMode = DndMode.INHERIT,
     val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
-        put("visibility", visibility.id)
+        put("enabled", enabled)
         put("chargingPattern", chargingPattern.id)
         put("autoColor", autoColor)
         put("color", color)
@@ -269,6 +260,8 @@ data class BatterySettings(
         put("lowThresholdPercent", lowThresholdPercent)
         put("fullTimeout", fullTimeout.id)
         put("overridesNotifications", overridesNotifications)
+        put("faceDownMode", faceDownMode.name)
+        put("dndMode", dndMode.name)
         put("quietHoursMode", quietHoursMode.name)
     }
 
@@ -276,7 +269,7 @@ data class BatterySettings(
         private fun fromJson(json: JSONObject): BatterySettings {
             val d = BatterySettings()
             return BatterySettings(
-                visibility = BatteryVisibility.fromId(json.optString("visibility", d.visibility.id)),
+                enabled = json.optBoolean("enabled", d.enabled),
                 chargingPattern = BatteryPattern.fromId(json.optString("chargingPattern", d.chargingPattern.id)),
                 autoColor = json.optBoolean("autoColor", d.autoColor),
                 color = json.optLong("color", d.color),
@@ -284,6 +277,12 @@ data class BatterySettings(
                 lowThresholdPercent = json.optInt("lowThresholdPercent", d.lowThresholdPercent),
                 fullTimeout = BatteryFullTimeout.fromId(json.optString("fullTimeout", d.fullTimeout.id)),
                 overridesNotifications = json.optBoolean("overridesNotifications", d.overridesNotifications),
+                faceDownMode = runCatching {
+                    FaceDownMode.valueOf(json.optString("faceDownMode", FaceDownMode.INHERIT.name))
+                }.getOrDefault(FaceDownMode.INHERIT),
+                dndMode = runCatching {
+                    DndMode.valueOf(json.optString("dndMode", DndMode.INHERIT.name))
+                }.getOrDefault(DndMode.INHERIT),
                 quietHoursMode = runCatching {
                     QuietHoursMode.valueOf(json.optString("quietHoursMode", QuietHoursMode.INHERIT.name))
                 }.getOrDefault(QuietHoursMode.INHERIT)

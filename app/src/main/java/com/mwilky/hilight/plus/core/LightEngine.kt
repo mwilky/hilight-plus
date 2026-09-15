@@ -3,7 +3,6 @@ package com.mwilky.hilight.plus.core
 import android.os.SystemClock
 import android.util.Log
 import com.mwilky.hilight.plus.BatteryPattern
-import com.mwilky.hilight.plus.BatteryVisibility
 import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.currentMinutesOfDay
@@ -54,7 +53,7 @@ class LightEngine {
     private val ambientSpeedMs = 2000L
 
     private data class BatteryConfig(
-        val visibility: BatteryVisibility,
+        val enabled: Boolean,
         val chargingPattern: BatteryPattern,
         val autoColor: Boolean,
         val color: Long,
@@ -62,6 +61,8 @@ class LightEngine {
         val lowThresholdPercent: Int,
         val fullTimeoutMinutes: Int?,
         val overridesNotifications: Boolean,
+        val requiresFaceDown: Boolean,
+        val dndMode: DndMode,
         val quietHoursMode: QuietHoursMode
     )
 
@@ -360,7 +361,7 @@ class LightEngine {
      * Replaces the battery indicator configuration. Takes effect on the next tick.
      */
     fun setBatteryConfig(
-        visibility: BatteryVisibility,
+        enabled: Boolean,
         chargingPattern: BatteryPattern,
         autoColor: Boolean,
         color: Long,
@@ -368,16 +369,18 @@ class LightEngine {
         lowThresholdPercent: Int,
         fullTimeoutMinutes: Int?,
         overridesNotifications: Boolean,
+        requiresFaceDown: Boolean,
+        dndMode: DndMode,
         quietHoursMode: QuietHoursMode
     ) {
         synchronized(lock) {
             batteryConfig = BatteryConfig(
-                visibility, chargingPattern, autoColor, color,
+                enabled, chargingPattern, autoColor, color,
                 lowWarningEnabled, lowThresholdPercent, fullTimeoutMinutes,
-                overridesNotifications, quietHoursMode
+                overridesNotifications, requiresFaceDown, dndMode, quietHoursMode
             )
             onLiveConditionChanged()
-            Log.i(TAG, "setBatteryConfig: visibility=$visibility, chargingPattern=$chargingPattern")
+            Log.i(TAG, "setBatteryConfig: enabled=$enabled, chargingPattern=$chargingPattern, requiresFaceDown=$requiresFaceDown, dndMode=$dndMode")
         }
     }
 
@@ -728,10 +731,13 @@ class LightEngine {
     )
 
     private fun batteryVisible(config: BatteryConfig, nowMinutes: Int): Boolean {
-        if (config.visibility == BatteryVisibility.OFF) return false
+        if (!config.enabled) return false
         return AlertRenderPolicy.canShowAlert(
-            requiresFaceDown = config.visibility == BatteryVisibility.FACE_DOWN_ONLY,
+            requiresFaceDown = config.requiresFaceDown,
             deviceFaceDown = deviceFaceDown,
+            dndMode = config.dndMode,
+            dndSuppressEnabled = dndSuppressEnabled,
+            dndActive = dndActive,
             quietHoursMode = config.quietHoursMode,
             quietHoursEnabled = quietHoursEnabled,
             quietHoursStartMinutes = quietHoursStartMinutes,

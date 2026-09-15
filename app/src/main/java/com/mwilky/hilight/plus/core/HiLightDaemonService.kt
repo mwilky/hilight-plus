@@ -3,7 +3,6 @@ package com.mwilky.hilight.plus.core
 import android.os.Process
 import android.util.Log
 import com.mwilky.hilight.plus.BatteryPattern
-import com.mwilky.hilight.plus.BatteryVisibility
 import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.QuietHoursMode
 import java.io.BufferedReader
@@ -133,7 +132,7 @@ class HiLightDaemonService : IHiLightService.Stub() {
     }
 
     override fun setBatteryConfig(
-        visibility: String?,
+        enabled: Boolean,
         chargingPattern: String?,
         autoColor: Boolean,
         color: Long,
@@ -141,10 +140,12 @@ class HiLightDaemonService : IHiLightService.Stub() {
         lowThresholdPercent: Int,
         fullTimeoutMinutes: Int,
         overridesNotifications: Boolean,
+        requiresFaceDown: Boolean,
+        dndMode: String?,
         quietHoursMode: String?
     ) {
         engine.setBatteryConfig(
-            BatteryVisibility.fromId(visibility),
+            enabled,
             BatteryPattern.fromId(chargingPattern),
             autoColor,
             color,
@@ -152,6 +153,8 @@ class HiLightDaemonService : IHiLightService.Stub() {
             lowThresholdPercent,
             fullTimeoutMinutes.takeIf { it >= 0 },
             overridesNotifications,
+            requiresFaceDown,
+            DndMode.fromId(dndMode),
             QuietHoursMode.fromId(quietHoursMode)
         )
     }

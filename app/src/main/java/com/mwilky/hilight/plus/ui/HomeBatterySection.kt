@@ -60,7 +60,8 @@ import androidx.compose.ui.unit.dp
 import com.mwilky.hilight.plus.BatteryFullTimeout
 import com.mwilky.hilight.plus.BatteryPattern
 import com.mwilky.hilight.plus.BatterySettings
-import com.mwilky.hilight.plus.BatteryVisibility
+import com.mwilky.hilight.plus.DndMode
+import com.mwilky.hilight.plus.FaceDownMode
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.R
 import com.mwilky.hilight.plus.ShizukuBridge
@@ -87,8 +88,6 @@ fun HomeBatteryPage(
     onBatteryChange: (BatterySettings) -> Unit,
     renderer: PatternRenderer
 ) {
-    val isEnabled = battery.visibility != BatteryVisibility.OFF
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -110,31 +109,16 @@ fun HomeBatteryPage(
 
         SectionHero(
             title = stringResource(R.string.hero_battery_title),
-            statusText = if (isEnabled) {
-                stringResource(
-                    R.string.hero_status_on,
-                    stringResource(
-                        if (battery.visibility == BatteryVisibility.FACE_DOWN_ONLY) {
-                            R.string.battery_visibility_face_down
-                        } else {
-                            R.string.battery_visibility_always
-                        }
-                    )
-                )
+            statusText = if (battery.enabled) {
+                stringResource(R.string.hero_status_battery_on)
             } else {
                 stringResource(R.string.hero_status_off)
             },
-            checked = isEnabled,
-            onCheckedChange = { on ->
-                onBatteryChange(
-                    battery.copy(
-                        visibility = if (on) BatteryVisibility.ALWAYS else BatteryVisibility.OFF
-                    )
-                )
-            }
+            checked = battery.enabled,
+            onCheckedChange = { onBatteryChange(battery.copy(enabled = it)) }
         )
 
-        SectionBody(enabled = isEnabled) {
+        SectionBody(enabled = battery.enabled) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 BatteryPreviewCard(battery = battery, renderer = renderer)
 
@@ -177,7 +161,7 @@ private fun BatterySettingsGroup(
     battery: BatterySettings,
     onBatteryChange: (BatterySettings) -> Unit
 ) {
-    val rowCount = 6
+    val rowCount = 8
     var index = 0
 
     Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
@@ -242,19 +226,52 @@ private fun BatterySettingsGroup(
             )
         }
 
-        SwitchRow(
+        OptionsRow(
             index = index++,
             count = rowCount,
-            title = stringResource(R.string.conditions_face_down_title),
-            description = stringResource(R.string.battery_face_down_desc),
-            checked = battery.visibility == BatteryVisibility.FACE_DOWN_ONLY,
-            onCheckedChange = { faceDownOnly ->
-                onBatteryChange(
-                    battery.copy(
-                        visibility = if (faceDownOnly) BatteryVisibility.FACE_DOWN_ONLY else BatteryVisibility.ALWAYS
-                    )
+            title = stringResource(R.string.dialog_orientation_title),
+            description = stringResource(
+                when (battery.faceDownMode) {
+                    FaceDownMode.INHERIT -> R.string.dialog_orientation_desc_default
+                    FaceDownMode.ALWAYS -> R.string.dialog_orientation_desc_always
+                    FaceDownMode.ONLY_FACE_DOWN -> R.string.dialog_orientation_desc_face_down
+                }
+            ),
+            options = FaceDownMode.entries.map { mode ->
+                mode to stringResource(
+                    when (mode) {
+                        FaceDownMode.INHERIT -> R.string.dialog_orientation_default
+                        FaceDownMode.ALWAYS -> R.string.dialog_orientation_always
+                        FaceDownMode.ONLY_FACE_DOWN -> R.string.dialog_orientation_face_down
+                    }
                 )
-            }
+            },
+            selected = battery.faceDownMode,
+            onSelect = { onBatteryChange(battery.copy(faceDownMode = it)) }
+        )
+
+        OptionsRow(
+            index = index++,
+            count = rowCount,
+            title = stringResource(R.string.dialog_dnd_title),
+            description = stringResource(
+                when (battery.dndMode) {
+                    DndMode.INHERIT -> R.string.dialog_dnd_desc_default
+                    DndMode.ALWAYS -> R.string.dialog_dnd_desc_always
+                    DndMode.SKIP -> R.string.dialog_dnd_desc_skip
+                }
+            ),
+            options = DndMode.entries.map { mode ->
+                mode to stringResource(
+                    when (mode) {
+                        DndMode.INHERIT -> R.string.dialog_mode_default
+                        DndMode.ALWAYS -> R.string.dialog_mode_always
+                        DndMode.SKIP -> R.string.dialog_mode_skip
+                    }
+                )
+            },
+            selected = battery.dndMode,
+            onSelect = { onBatteryChange(battery.copy(dndMode = it)) }
         )
 
         SwitchRow(

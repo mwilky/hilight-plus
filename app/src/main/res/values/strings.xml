@@ -144,6 +144,7 @@
     <string name="hero_notifs_title">Notification lights</string>
     <string name="hero_battery_title">Battery lights</string>
     <string name="hero_status_on">On · %1$s</string>
+    <string name="hero_status_battery_on">On</string>
     <string name="hero_status_off">Off</string>
     <plurals name="hero_rule_count">
         <item quantity="one">%d rule</item>
@@ -199,18 +200,15 @@
     <string name="conditions_quiet_hours_end">Ends</string>
 
     <!-- Battery Screen -->
-    <string name="battery_visibility_face_down">Face down only</string>
-    <string name="battery_visibility_always">Always</string>
     <string name="battery_quiet_desc_default">Follows the quiet hours setting on the Conditions page.</string>
     <string name="battery_quiet_desc_always">Lights even during quiet hours.</string>
     <string name="battery_quiet_desc_skip">Stays dark during quiet hours, using the window set on the Conditions page.</string>
     <string name="battery_preview_level_format">Preview: %1$d%%</string>
     <string name="battery_preview_charging">Simulate charging</string>
     <string name="battery_section_pattern_title">Charging pattern</string>
-    <string name="battery_section_auto_color">Colour by level</string>
+    <string name="battery_section_auto_color">Auto colour</string>
     <string name="battery_section_auto_color_desc">Red to green as the battery charges. Turn off to pick a fixed colour.</string>
     <string name="battery_fixed_color_title">Fixed colour</string>
-    <string name="battery_face_down_desc">Only show battery lights while the phone is lying face down.</string>
     <string name="battery_threshold_title">Warn below</string>
     <string name="battery_threshold_value">%1$d%%</string>
     <string name="battery_section_low_title">Low battery warning</string>
