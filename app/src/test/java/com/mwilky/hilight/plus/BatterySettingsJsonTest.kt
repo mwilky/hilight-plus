@@ -53,7 +53,7 @@ class BatterySettingsJsonTest {
         }
         val parsed = BatterySettings.fromJson(json.toString())
         assertEquals(BatteryVisibility.OFF, parsed.visibility)
-        assertEquals(BatteryPattern.CHARGE_FILL, parsed.chargingPattern)
+        assertEquals(BatteryPattern.GAUGE, parsed.chargingPattern)
         assertEquals(BatteryFullTimeout.FIVE_MIN, parsed.fullTimeout)
         assertEquals(QuietHoursMode.INHERIT, parsed.quietHoursMode)
     }
