@@ -226,6 +226,27 @@ private fun BatterySettingsGroup(
             )
         }
 
+        SwitchRow(
+            index = index++,
+            count = rowCount,
+            title = stringResource(R.string.battery_section_overrides_notifications),
+            description = stringResource(R.string.battery_section_overrides_notifications_desc),
+            checked = battery.overridesNotifications,
+            onCheckedChange = { onBatteryChange(battery.copy(overridesNotifications = it)) }
+        )
+
+        OptionsRow(
+            index = index++,
+            count = rowCount,
+            title = stringResource(R.string.battery_section_full_timeout_title),
+            description = stringResource(R.string.battery_section_full_timeout_desc),
+            options = BatteryFullTimeout.entries.map { it to stringResource(it.titleRes) },
+            selected = battery.fullTimeout,
+            onSelect = { onBatteryChange(battery.copy(fullTimeout = it)) }
+        )
+
+        // Phone position, Do Not Disturb, then Quiet hours — the same three rows in the same
+        // order the rule editor's "When" section uses.
         OptionsRow(
             index = index++,
             count = rowCount,
@@ -272,25 +293,6 @@ private fun BatterySettingsGroup(
             },
             selected = battery.dndMode,
             onSelect = { onBatteryChange(battery.copy(dndMode = it)) }
-        )
-
-        SwitchRow(
-            index = index++,
-            count = rowCount,
-            title = stringResource(R.string.battery_section_overrides_notifications),
-            description = stringResource(R.string.battery_section_overrides_notifications_desc),
-            checked = battery.overridesNotifications,
-            onCheckedChange = { onBatteryChange(battery.copy(overridesNotifications = it)) }
-        )
-
-        OptionsRow(
-            index = index++,
-            count = rowCount,
-            title = stringResource(R.string.battery_section_full_timeout_title),
-            description = stringResource(R.string.battery_section_full_timeout_desc),
-            options = BatteryFullTimeout.entries.map { it to stringResource(it.titleRes) },
-            selected = battery.fullTimeout,
-            onSelect = { onBatteryChange(battery.copy(fullTimeout = it)) }
         )
 
         OptionsRow(
