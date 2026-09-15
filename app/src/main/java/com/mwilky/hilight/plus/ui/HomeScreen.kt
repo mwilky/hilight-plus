@@ -10,6 +10,12 @@ import android.provider.ContactsContract
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -36,6 +42,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -550,22 +557,34 @@ private fun HomePageToggle(
     selectedIndex: Int,
     onSelect: (Int) -> Unit
 ) {
-    // Labels only: at a third of the screen each, an icon plus "Notifications" doesn't fit
-    // without truncating, and the words carry the meaning better than the icons did.
+    // Only the selected tab carries its label; the others shrink to their icon. That leaves the
+    // selected tab room for a word as long as "Notifications", which never fitted when all three
+    // showed icon and label at a third of the screen each.
     val tabs = listOf(
-        R.string.home_tab_calls,
-        R.string.home_tab_notifications,
-        R.string.home_tab_battery
+        Icons.Rounded.Call to R.string.home_tab_calls,
+        Icons.Rounded.Notifications to R.string.home_tab_notifications,
+        Icons.Rounded.BatteryChargingFull to R.string.home_tab_battery
     )
+    val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+    val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
     ) {
-        tabs.forEachIndexed { index, labelRes ->
+        tabs.forEachIndexed { index, (icon, labelRes) ->
+            val selected = selectedIndex == index
+            val label = stringResource(labelRes)
+            // Springy resize as the selection moves, from the theme's spatial motion spec.
+            val weight by animateFloatAsState(
+                targetValue = if (selected) 2.4f else 0.8f,
+                animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                label = "tabWeight"
+            )
             ToggleButton(
-                checked = selectedIndex == index,
+                checked = selected,
                 onCheckedChange = { onSelect(index) },
                 shapes = when (index) {
                     0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
@@ -574,15 +593,30 @@ private fun HomePageToggle(
                 },
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
                 modifier = Modifier
-                    .weight(1f)
+                    .weight(weight)
                     .semantics { role = Role.RadioButton }
             ) {
-                Text(
-                    text = stringResource(labelRes),
-                    style = MaterialTheme.typography.labelMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                Icon(
+                    icon,
+                    contentDescription = label,
+                    modifier = Modifier.size(ToggleButtonDefaults.IconSize)
                 )
+                AnimatedVisibility(
+                    visible = selected,
+                    enter = fadeIn(effects) + expandHorizontally(spatial),
+                    exit = fadeOut(effects) + shrinkHorizontally(spatial)
+                ) {
+                    Row {
+                        Spacer(Modifier.width(ToggleButtonDefaults.IconSpacing))
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
         }
     }
