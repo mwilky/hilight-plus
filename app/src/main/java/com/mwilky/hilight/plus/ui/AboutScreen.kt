@@ -143,6 +143,7 @@ fun AboutContent(
                         )
                     }
                 },
+                verticalAlignment = Alignment.CenterVertically,
                 colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                 shapes = ListItemDefaults.shapes(shape = MaterialTheme.shapes.extraLarge)
             ) {

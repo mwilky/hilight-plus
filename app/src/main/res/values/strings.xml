@@ -3,47 +3,47 @@
 
     <!-- Onboarding Step 1: Welcome & Features -->
     <string name="onboarding_title">Welcome to HiLight Plus</string>
-    <string name="onboarding_subtitle">HiLight Plus gives you full control over the rear LED lights on your pixel device. It allows you to set up custom rules for incoming calls and notifications.</string>
+    <string name="onboarding_subtitle">Take control of the rear lights on your Pixel with your own rules for calls and notifications.</string>
     <string name="onboarding_feature_calls_title">Incoming calls</string>
-    <string name="onboarding_feature_calls_desc">Assign unique animated LED patterns and vibrant colors to specific contacts or unknown callers.</string>
+    <string name="onboarding_feature_calls_desc">Give each contact, or unknown callers, their own colour and light pattern.</string>
     <string name="onboarding_feature_notifs_title">Notifications</string>
-    <string name="onboarding_feature_notifs_desc">Custom rules for notifications from specific apps or contacts.</string>
+    <string name="onboarding_feature_notifs_desc">Light up differently for specific apps and contacts.</string>
     <string name="onboarding_feature_conditions_title">Conditions</string>
-    <string name="onboarding_feature_conditions_desc">Customisable conditions to determine whether the lights should display or not.</string>
+    <string name="onboarding_feature_conditions_desc">Choose conditions that stop the lights from showing.</string>
 
     <!-- Onboarding Step 2: Stock HiLight Conflict -->
-    <string name="onboarding_stock_title">Native HiLight</string>
-    <string name="onboarding_stock_desc1">Pixel\'s built-in HiLight feature has a basic \'Calls from favourites\' mode. If left enabled in system settings, both the native system and HiLight Plus will try to control the rear light array simultaneously.</string>
-    <string name="onboarding_stock_desc2">Turn off native \'Calls from favourites\' so it does not fight HiLight Plus for the rear lights. Gemini and other system features may still use them.</string>
-    <string name="onboarding_stock_card_title">Native HiLight settings</string>
-    <string name="onboarding_stock_conflict_active_desc">Calls from favourites is currently active in system settings and will conflict with HiLight Plus. Please tap below to disable it.</string>
-    <string name="onboarding_stock_unknown_desc">Could not read the native favourite-caller setting. Connect Shizuku to check it.</string>
-    <string name="onboarding_stock_status_conflict">Conflict Active</string>
-    <string name="onboarding_stock_status_ready">Ready</string>
+    <string name="onboarding_stock_title">Pixel\'s built-in HiLight</string>
+    <string name="onboarding_stock_desc1">Your Pixel already has a simple HiLight option called \'Calls from favourites\'. If it stays on, it and HiLight Plus will both try to drive the rear lights at the same time.</string>
+    <string name="onboarding_stock_desc2">Turn it off in system settings so HiLight Plus has the lights to itself. Gemini and other system features can still use them.</string>
+    <string name="onboarding_stock_card_title">Calls from favourites</string>
+    <string name="onboarding_stock_conflict_active_desc">This is still on in system settings and will clash with HiLight Plus. Tap below to turn it off.</string>
+    <string name="onboarding_stock_unknown_desc">Couldn\'t read this setting yet. Connect Shizuku to check it.</string>
+    <string name="onboarding_stock_status_conflict">Still on</string>
+    <string name="onboarding_stock_status_ready">Off</string>
     <string name="onboarding_stock_status_unknown">Unknown</string>
-    <string name="onboarding_stock_btn_open">Open settings to disable</string>
+    <string name="onboarding_stock_btn_open">Open system settings</string>
 
     <!-- Onboarding Step 3: Shizuku Hardware Access -->
-    <string name="onboarding_shizuku_title">Shizuku</string>
-    <string name="onboarding_shizuku_desc">Pixel devices do not expose public APIs to directly control rear hardware LEDs. HiLight Plus uses Shizuku to communicate with hardware drivers, without requiring root access.</string>
+    <string name="onboarding_shizuku_title">Connect Shizuku</string>
+    <string name="onboarding_shizuku_desc">Android doesn\'t let apps control the rear lights directly. HiLight Plus uses Shizuku to reach them without root. Connect it below to continue.</string>
 
     <!-- Onboarding Step 4: Permissions -->
-    <string name="onboarding_perms_title">Required permissions</string>
-    <string name="onboarding_perms_subtitle">Grant permissions so HiLight Plus can detect incoming calls, contacts, and app notifications in real-time.</string>
-    <string name="onboarding_perms_calls_title">1. Calls &amp; contacts access</string>
-    <string name="onboarding_perms_calls_granted_desc">Phone state, call log, and contacts permissions are active. Incoming caller identification is ready.</string>
-    <string name="onboarding_perms_calls_needed_desc">Required to detect incoming phone calls and match caller numbers against your saved contact rules.</string>
+    <string name="onboarding_perms_title">Permissions</string>
+    <string name="onboarding_perms_subtitle">HiLight Plus needs to see incoming calls, your contacts and your notifications so it knows when to light up.</string>
+    <string name="onboarding_perms_calls_title">Calls and contacts</string>
+    <string name="onboarding_perms_calls_granted_desc">Phone, call log and contacts access is granted. Callers can be matched to your rules.</string>
+    <string name="onboarding_perms_calls_needed_desc">Needed to notice incoming calls and match the caller to your contact rules.</string>
     <string name="onboarding_perms_calls_status_granted">Granted</string>
-    <string name="onboarding_perms_calls_status_needed">Permissions required</string>
+    <string name="onboarding_perms_calls_status_needed">Needed</string>
     <string name="onboarding_perms_calls_btn_grant">Grant access</string>
     <string name="onboarding_perms_calls_btn_app_info">App info</string>
-    <string name="onboarding_perms_notif_title">2. Notification listener access</string>
-    <string name="onboarding_perms_notif_granted_desc">Notification access is granted and the listener is running.</string>
-    <string name="onboarding_perms_notif_not_running_desc">Notification access is granted, but the listener is not running. Toggle it off and on in settings if alerts stop.</string>
+    <string name="onboarding_perms_notif_title">Notification access</string>
+    <string name="onboarding_perms_notif_granted_desc">Notification access is granted and listening.</string>
+    <string name="onboarding_perms_notif_not_running_desc">Access is granted but the listener has stopped. Turn it off and on again in settings if alerts stop lighting.</string>
     <string name="onboarding_perms_notif_status_not_running">Not running</string>
-    <string name="onboarding_perms_notif_needed_desc">Notification listener access is required to detect incoming notifications.</string>
-    <string name="onboarding_perms_notif_status_needed">Access required</string>
-    <string name="onboarding_perms_notif_btn_enable">Enable notification access</string>
+    <string name="onboarding_perms_notif_needed_desc">Needed to notice new notifications from your apps and contacts.</string>
+    <string name="onboarding_perms_notif_status_needed">Needed</string>
+    <string name="onboarding_perms_notif_btn_enable">Allow notification access</string>
 
     <!-- Navigation Buttons -->
     <string name="btn_back">Back</string>
@@ -61,24 +61,24 @@
     <string name="shizuku_card_title">Shizuku</string>
     <string name="shizuku_status_connected">Connected</string>
     <string name="shizuku_status_connecting">Connecting</string>
-    <string name="shizuku_status_disconnected_paused">Disconnected (Paused)</string>
-    <string name="shizuku_status_needs_permission">Needs Permission</string>
-    <string name="shizuku_status_not_running">Not Running</string>
-    <string name="shizuku_status_not_installed">Not Installed</string>
+    <string name="shizuku_status_disconnected_paused">Paused</string>
+    <string name="shizuku_status_needs_permission">Needs permission</string>
+    <string name="shizuku_status_not_running">Not running</string>
+    <string name="shizuku_status_not_installed">Not installed</string>
     <string name="shizuku_status_disconnected">Disconnected</string>
-    <string name="shizuku_desc_connected">Connected and providing control over your Pixel\'s rear lights.</string>
-    <string name="shizuku_desc_disconnected">Session is paused/disconnected. Tap \'Connect\' to re-engage hardware lights.</string>
-    <string name="shizuku_desc_needs_permission">Shizuku is running. Tap \'Authorize\' below to grant access.</string>
-    <string name="shizuku_desc_not_running">Shizuku daemon is stopped. Start via Wireless Debugging or ADB.</string>
-    <string name="shizuku_desc_not_installed">Shizuku Manager is not installed on this device.</string>
-    <string name="shizuku_desc_connecting">Connecting to local Shizuku binder daemon&#8230;</string>
-    <string name="shizuku_btn_disconnect">Disconnect shizuku</string>
-    <string name="shizuku_btn_connect">Connect shizuku</string>
-    <string name="shizuku_btn_authorize">Authorize shizuku access</string>
-    <string name="shizuku_btn_install">Install Shizuku Manager</string>
+    <string name="shizuku_desc_connected">Connected. HiLight Plus can control the rear lights.</string>
+    <string name="shizuku_desc_disconnected">Paused, so the lights won\'t respond. Tap Connect to resume.</string>
+    <string name="shizuku_desc_needs_permission">Shizuku is running but hasn\'t allowed HiLight Plus yet. Tap Allow to grant access.</string>
+    <string name="shizuku_desc_not_running">Shizuku isn\'t running. Start it from the Shizuku app using Wireless debugging, then check again.</string>
+    <string name="shizuku_desc_not_installed">Shizuku isn\'t installed. Tap Install to get it, then come back here.</string>
+    <string name="shizuku_desc_connecting">Connecting to Shizuku&#8230;</string>
+    <string name="shizuku_btn_disconnect">Disconnect</string>
+    <string name="shizuku_btn_connect">Connect</string>
+    <string name="shizuku_btn_authorize">Allow in Shizuku</string>
+    <string name="shizuku_btn_install">Install Shizuku</string>
     <string name="shizuku_btn_open">Open Shizuku</string>
-    <string name="shizuku_btn_check_again">Check Again</string>
-    <string name="shizuku_btn_retry">Retry Connection</string>
+    <string name="shizuku_btn_check_again">Check again</string>
+    <string name="shizuku_btn_retry">Try again</string>
 
     <!-- Incoming Calls Section -->
     <string name="calls_other_contacts_title">All other contacts</string>
@@ -190,5 +190,5 @@
     <string name="about_app_desc">Custom rear LED lighting for Google Pixel.</string>
     <string name="about_version_label">Version</string>
     <string name="about_status_section_header">System Health &amp; Permissions</string>
-    <string name="about_stock_ok_desc">Native favourite-caller lighting is off. Gemini and other system lights may still use the LEDs.</string>
+    <string name="about_stock_ok_desc">Pixel\'s own \'Calls from favourites\' lighting is off. Gemini and other system features may still use the lights.</string>
 </resources>
