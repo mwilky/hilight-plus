@@ -5,6 +5,7 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /**
@@ -228,7 +229,13 @@ class PatternRenderer {
         return hsvToRgb(hue, 1f, 1f)
     }
 
-    /** Static or breathing fill: whole LEDs for each 12.5% of level, leading LED scaled by the remainder. */
+    /**
+     * Whole LEDs snapped to the nearest 12.5% of level — no partial-brightness boundary LED.
+     * The diffused ring bleeds so heavily that a dim leading LED next to a full-brightness one
+     * just reads as glow spilling from its neighbour, not as a boundary; a hard on/off edge is
+     * the only thing that survives the diffusion. Breathing (for CHARGE_FILL) stays shallow for
+     * the same reason: dipping too low makes "on" indistinguishable from bleed.
+     */
     private fun renderBatteryGauge(
         baseColor: Int,
         brightness: Float,
@@ -237,27 +244,18 @@ class PatternRenderer {
         breathe: Boolean,
         elapsedTimeMs: Long
     ): IntArray {
-        val frame = IntArray(count)
-        val exact = (level / 100.0) * count
-        val fullLeds = exact.toInt().coerceIn(0, count)
-        val fraction = (exact - fullLeds).coerceIn(0.0, 1.0)
+        val litCount = ((level / 100.0) * count).roundToInt().coerceIn(0, count)
 
         val breatheK = if (breathe) {
             val phase = (elapsedTimeMs % BATTERY_BREATHE_MS) / BATTERY_BREATHE_MS.toDouble()
-            0.55 + 0.45 * (1.0 - cos(phase * 2.0 * PI)) / 2.0
+            0.8 + 0.2 * (1.0 - cos(phase * 2.0 * PI)) / 2.0
         } else {
             1.0
         }
+        val c = scaleColor(baseColor, breatheK * brightness)
 
-        for (i in 0 until count) {
-            val ledLevel = when {
-                i < fullLeds -> 1.0
-                i == fullLeds && fraction > 0.0 -> max(fraction, 0.15)
-                else -> 0.0
-            }
-            val k = ledLevel * breatheK
-            frame[i] = if (k > 0.005) scaleColor(baseColor, k * brightness) else 0x00000000
-        }
+        val frame = IntArray(count)
+        for (i in 0 until litCount) frame[i] = c
         return frame
     }
 

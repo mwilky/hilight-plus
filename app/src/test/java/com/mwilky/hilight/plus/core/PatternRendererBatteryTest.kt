@@ -48,8 +48,9 @@ class PatternRendererBatteryTest {
     }
 
     @Test
-    fun sixtyTwoPercentLightsFourFullLedsPlusAPartialFifth() {
-        // 62% of 8 LEDs = 4.96 -> 4 full LEDs, the 5th at ~96% brightness.
+    fun sixtyTwoPercentSnapsToTheNearestWholeLedWithNoPartialBrightness() {
+        // 62% of 8 LEDs = 4.96 -> rounds to 5 whole LEDs, none of them partial: a dim boundary
+        // LED next to a full-brightness one just reads as bleed on the diffused ring, not a edge.
         val frame = renderer.renderBatteryFrame(
             pattern = BatteryPattern.GAUGE,
             levelPercent = 62,
@@ -62,8 +63,9 @@ class PatternRendererBatteryTest {
             elapsedTimeMs = 0L
         )
         assertEquals(5, litCount(frame))
-        // The first four LEDs are at full brightness (auto colour at s=1,v=1 always peaks one channel at 255).
-        for (i in 0 until 4) {
+        // Every lit LED is at full brightness (auto colour at s=1,v=1 always peaks one channel at 255) -
+        // no dim partial LED at the boundary.
+        for (i in 0 until 5) {
             val c = frame[i]
             val maxChannel = maxOf((c ushr 16) and 0xFF, (c ushr 8) and 0xFF, c and 0xFF)
             assertEquals(255, maxChannel)
@@ -73,7 +75,7 @@ class PatternRendererBatteryTest {
     @Test
     fun fullOverridesTheChosenChargingPatternWithAllLedsLit() {
         val frame = renderer.renderBatteryFrame(
-            pattern = BatteryPattern.GAUGE, // would normally only light a partial fraction
+            pattern = BatteryPattern.GAUGE, // would normally only light 1-2 whole LEDs at 20%
             levelPercent = 20,
             charging = true,
             full = true,
@@ -116,8 +118,7 @@ class PatternRendererBatteryTest {
             brightness = 1f,
             elapsedTimeMs = 0L
         )
-        // At 10% with GAUGE, only the leading fractional LED should be lit (0.8 LEDs -> 1 partial LED),
-        // not the full-ring heartbeat treatment.
+        // At 10% with GAUGE, 0.8 LEDs rounds to 1 whole LED lit, not the full-ring heartbeat treatment.
         assertEquals(1, litCount(chargingFrame))
     }
 
