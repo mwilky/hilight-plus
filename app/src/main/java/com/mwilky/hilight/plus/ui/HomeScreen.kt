@@ -550,10 +550,12 @@ private fun HomePageToggle(
     selectedIndex: Int,
     onSelect: (Int) -> Unit
 ) {
+    // Labels only: at a third of the screen each, an icon plus "Notifications" doesn't fit
+    // without truncating, and the words carry the meaning better than the icons did.
     val tabs = listOf(
-        Icons.Rounded.Call to R.string.home_tab_calls,
-        Icons.Rounded.Notifications to R.string.home_tab_notifications,
-        Icons.Rounded.BatteryChargingFull to R.string.home_tab_battery
+        R.string.home_tab_calls,
+        R.string.home_tab_notifications,
+        R.string.home_tab_battery
     )
     Row(
         modifier = Modifier
@@ -561,7 +563,7 @@ private fun HomePageToggle(
             .padding(horizontal = 20.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
     ) {
-        tabs.forEachIndexed { index, (icon, labelRes) ->
+        tabs.forEachIndexed { index, labelRes ->
             ToggleButton(
                 checked = selectedIndex == index,
                 onCheckedChange = { onSelect(index) },
@@ -570,16 +572,15 @@ private fun HomePageToggle(
                     tabs.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
                     else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
                 },
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
                 modifier = Modifier
                     .weight(1f)
                     .semantics { role = Role.RadioButton }
             ) {
-                Icon(icon, contentDescription = null, modifier = Modifier.size(ToggleButtonDefaults.IconSize))
-                Spacer(Modifier.width(ToggleButtonDefaults.IconSpacing))
                 Text(
                     text = stringResource(labelRes),
+                    style = MaterialTheme.typography.labelMedium,
                     maxLines = 1,
-                    softWrap = false,
                     overflow = TextOverflow.Ellipsis
                 )
             }

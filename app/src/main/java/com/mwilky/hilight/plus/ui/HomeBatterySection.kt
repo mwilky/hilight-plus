@@ -2,14 +2,14 @@
 
 package com.mwilky.hilight.plus.ui
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,18 +18,21 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.ToggleButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,6 +44,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -58,8 +64,9 @@ import kotlinx.coroutines.isActive
 import kotlin.math.roundToInt
 
 /**
- * Battery indicator page: a single global config (not a per-target rule), so it's edited
- * directly rather than through the rule editor dialog used by calls and notifications.
+ * Battery indicator page. A single global config rather than a list of per-target rules, so its
+ * settings sit in segmented list groups (like the Notifications page's additional settings)
+ * instead of rule rows opening the rule editor dialog.
  */
 @Composable
 fun HomeBatteryPage(
@@ -121,144 +128,35 @@ fun HomeBatteryPage(
 
         SectionBody(enabled = isEnabled) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                BatteryPreviewHeader(battery = battery, renderer = renderer)
+                BatteryPreviewCard(battery = battery, renderer = renderer)
 
-                SettingCard {
-                    ChoiceGroup(
-                        title = stringResource(R.string.battery_section_show_title),
-                        description = stringResource(R.string.battery_section_show_desc),
-                        options = listOf(
-                            BatteryVisibility.FACE_DOWN_ONLY to stringResource(R.string.battery_visibility_face_down),
-                            BatteryVisibility.ALWAYS to stringResource(R.string.battery_visibility_always)
-                        ),
-                        selected = battery.visibility,
-                        onSelect = { onBatteryChange(battery.copy(visibility = it)) }
-                    )
-                }
-
-                EditorSection(title = stringResource(R.string.battery_section_pattern_title)) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                            .padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        BatteryPattern.entries.forEach { pattern ->
-                            BatteryPatternCard(
-                                pattern = pattern,
-                                autoColor = battery.autoColor,
-                                color = battery.color,
-                                selected = battery.chargingPattern == pattern,
-                                renderer = renderer,
-                                onClick = { onBatteryChange(battery.copy(chargingPattern = pattern)) }
-                            )
-                        }
+                RuleGroupHeader(stringResource(R.string.battery_section_pattern_title))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
+                ) {
+                    BatteryPattern.entries.forEach { pattern ->
+                        BatteryPatternCard(
+                            pattern = pattern,
+                            autoColor = battery.autoColor,
+                            color = battery.color,
+                            selected = battery.chargingPattern == pattern,
+                            renderer = renderer,
+                            onClick = { onBatteryChange(battery.copy(chargingPattern = pattern)) }
+                        )
                     }
                 }
+                Text(
+                    text = stringResource(R.string.battery_pattern_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
 
-                EditorSection(title = stringResource(R.string.battery_section_color_title)) {
-                    ToggleRow(
-                        title = stringResource(R.string.battery_section_auto_color),
-                        description = stringResource(R.string.battery_section_auto_color_desc),
-                        checked = battery.autoColor,
-                        onCheckedChange = { onBatteryChange(battery.copy(autoColor = it)) }
-                    )
-                    AnimatedVisibility(visible = !battery.autoColor) {
-                        FlowRow(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
-                            maxItemsInEachRow = 4,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            PALETTE.forEach { c ->
-                                ColorSwatch(
-                                    color = c,
-                                    selected = battery.color == c,
-                                    enabled = true,
-                                    onClick = { onBatteryChange(battery.copy(color = c)) }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                SettingCard {
-                    ToggleRow(
-                        title = stringResource(R.string.battery_section_low_title),
-                        description = stringResource(R.string.battery_section_low_desc),
-                        checked = battery.lowWarningEnabled,
-                        onCheckedChange = { onBatteryChange(battery.copy(lowWarningEnabled = it)) }
-                    )
-                    AnimatedVisibility(visible = battery.lowWarningEnabled) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.battery_low_threshold_format, battery.lowThresholdPercent),
-                                style = MaterialTheme.typography.labelLarge
-                            )
-                            Slider(
-                                value = battery.lowThresholdPercent.toFloat(),
-                                onValueChange = { value ->
-                                    val rounded = (value / 5f).roundToInt() * 5
-                                    onBatteryChange(battery.copy(lowThresholdPercent = rounded.coerceIn(5, 50)))
-                                },
-                                valueRange = 5f..50f,
-                                steps = 8,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-                }
-
-                SettingCard {
-                    ChoiceGroup(
-                        title = stringResource(R.string.battery_section_full_timeout_title),
-                        description = stringResource(R.string.battery_section_full_timeout_desc),
-                        options = BatteryFullTimeout.entries.map { it to stringResource(it.titleRes) },
-                        selected = battery.fullTimeout,
-                        onSelect = { onBatteryChange(battery.copy(fullTimeout = it)) }
-                    )
-                }
-
-                SettingCard {
-                    ChoiceGroup(
-                        title = stringResource(R.string.dialog_quiet_hours_title),
-                        description = stringResource(
-                            when (battery.quietHoursMode) {
-                                QuietHoursMode.INHERIT -> R.string.battery_quiet_desc_default
-                                QuietHoursMode.ALWAYS -> R.string.battery_quiet_desc_always
-                                QuietHoursMode.SKIP -> R.string.battery_quiet_desc_skip
-                            }
-                        ),
-                        options = QuietHoursMode.entries.map { mode ->
-                            mode to stringResource(
-                                when (mode) {
-                                    QuietHoursMode.INHERIT -> R.string.dialog_mode_default
-                                    QuietHoursMode.ALWAYS -> R.string.dialog_mode_always
-                                    QuietHoursMode.SKIP -> R.string.dialog_mode_skip
-                                }
-                            )
-                        },
-                        selected = battery.quietHoursMode,
-                        onSelect = { onBatteryChange(battery.copy(quietHoursMode = it)) }
-                    )
-                }
-
-                SettingCard {
-                    ToggleRow(
-                        title = stringResource(R.string.battery_section_overrides_notifications),
-                        description = stringResource(R.string.battery_section_overrides_notifications_desc),
-                        checked = battery.overridesNotifications,
-                        onCheckedChange = { onBatteryChange(battery.copy(overridesNotifications = it)) }
-                    )
-                }
+                RuleGroupHeader(stringResource(R.string.settings_additional_header))
+                BatterySettingsGroup(battery = battery, onBatteryChange = onBatteryChange)
             }
         }
 
@@ -267,51 +165,232 @@ fun HomeBatteryPage(
 }
 
 /**
- * Same card look as [EditorSection] but without its own title, for a section whose single
- * [ChoiceGroup] or [ToggleRow] child already carries the only label it needs.
+ * Every battery setting as one segmented list group, matching how the Notifications page
+ * presents its additional settings. Rows that only apply to another setting's "on" state
+ * (the fixed colour swatches, the low-battery threshold) join and leave the group, so the
+ * segmented corner shapes are derived from the rows actually shown.
  */
 @Composable
-private fun SettingCard(content: @Composable ColumnScope.() -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.surfaceContainerLow
-    ) {
-        Column(
-            modifier = Modifier.padding(vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            content = content
+private fun BatterySettingsGroup(
+    battery: BatterySettings,
+    onBatteryChange: (BatterySettings) -> Unit
+) {
+    val rowCount = 6 +
+        (if (battery.autoColor) 0 else 1) +
+        (if (battery.lowWarningEnabled) 1 else 0)
+    var index = 0
+
+    Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+        SwitchRow(
+            index = index++,
+            count = rowCount,
+            title = stringResource(R.string.battery_section_auto_color),
+            description = stringResource(R.string.battery_section_auto_color_desc),
+            checked = battery.autoColor,
+            onCheckedChange = { onBatteryChange(battery.copy(autoColor = it)) }
+        )
+
+        if (!battery.autoColor) {
+            SegmentedListItem(
+                shapes = ListItemDefaults.segmentedShapes(index = index++, count = rowCount),
+                colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                supportingContent = {
+                    FlowRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp),
+                        maxItemsInEachRow = 4,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        PALETTE.forEach { swatch ->
+                            ColorSwatch(
+                                color = swatch,
+                                selected = battery.color == swatch,
+                                enabled = true,
+                                onClick = { onBatteryChange(battery.copy(color = swatch)) }
+                            )
+                        }
+                    }
+                }
+            ) {
+                Text(stringResource(R.string.battery_fixed_color_title))
+            }
+        }
+
+        SwitchRow(
+            index = index++,
+            count = rowCount,
+            title = stringResource(R.string.battery_section_low_title),
+            description = stringResource(R.string.battery_section_low_desc),
+            checked = battery.lowWarningEnabled,
+            onCheckedChange = { onBatteryChange(battery.copy(lowWarningEnabled = it)) }
+        )
+
+        if (battery.lowWarningEnabled) {
+            SegmentedListItem(
+                shapes = ListItemDefaults.segmentedShapes(index = index++, count = rowCount),
+                colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                trailingContent = {
+                    Text(
+                        text = stringResource(R.string.battery_threshold_value, battery.lowThresholdPercent),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                },
+                supportingContent = {
+                    Slider(
+                        value = battery.lowThresholdPercent.toFloat(),
+                        onValueChange = { value ->
+                            val rounded = (value / 5f).roundToInt() * 5
+                            onBatteryChange(battery.copy(lowThresholdPercent = rounded.coerceIn(5, 50)))
+                        },
+                        valueRange = 5f..50f,
+                        steps = 8,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            ) {
+                Text(stringResource(R.string.battery_threshold_title))
+            }
+        }
+
+        SwitchRow(
+            index = index++,
+            count = rowCount,
+            title = stringResource(R.string.conditions_face_down_title),
+            description = stringResource(R.string.battery_face_down_desc),
+            checked = battery.visibility == BatteryVisibility.FACE_DOWN_ONLY,
+            onCheckedChange = { faceDownOnly ->
+                onBatteryChange(
+                    battery.copy(
+                        visibility = if (faceDownOnly) BatteryVisibility.FACE_DOWN_ONLY else BatteryVisibility.ALWAYS
+                    )
+                )
+            }
+        )
+
+        SwitchRow(
+            index = index++,
+            count = rowCount,
+            title = stringResource(R.string.battery_section_overrides_notifications),
+            description = stringResource(R.string.battery_section_overrides_notifications_desc),
+            checked = battery.overridesNotifications,
+            onCheckedChange = { onBatteryChange(battery.copy(overridesNotifications = it)) }
+        )
+
+        OptionsRow(
+            index = index++,
+            count = rowCount,
+            title = stringResource(R.string.battery_section_full_timeout_title),
+            description = stringResource(R.string.battery_section_full_timeout_desc),
+            options = BatteryFullTimeout.entries.map { it to stringResource(it.titleRes) },
+            selected = battery.fullTimeout,
+            onSelect = { onBatteryChange(battery.copy(fullTimeout = it)) }
+        )
+
+        OptionsRow(
+            index = index++,
+            count = rowCount,
+            title = stringResource(R.string.dialog_quiet_hours_title),
+            description = stringResource(
+                when (battery.quietHoursMode) {
+                    QuietHoursMode.INHERIT -> R.string.battery_quiet_desc_default
+                    QuietHoursMode.ALWAYS -> R.string.battery_quiet_desc_always
+                    QuietHoursMode.SKIP -> R.string.battery_quiet_desc_skip
+                }
+            ),
+            options = QuietHoursMode.entries.map { mode ->
+                mode to stringResource(
+                    when (mode) {
+                        QuietHoursMode.INHERIT -> R.string.dialog_mode_default
+                        QuietHoursMode.ALWAYS -> R.string.dialog_mode_always
+                        QuietHoursMode.SKIP -> R.string.dialog_mode_skip
+                    }
+                )
+            },
+            selected = battery.quietHoursMode,
+            onSelect = { onBatteryChange(battery.copy(quietHoursMode = it)) }
         )
     }
 }
 
-/**
- * A titled row with a trailing switch, matching the spacing/typography [ChoiceGroup] uses
- * so toggle rows and choice rows sit consistently inside the same [EditorSection] or [SettingCard].
- */
+/** A segmented row whose trailing control is a switch, as used on the Notifications page. */
 @Composable
-private fun ToggleRow(
+private fun SwitchRow(
+    index: Int,
+    count: Int,
     title: String,
     description: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+    SegmentedListItem(
+        onClick = { onCheckedChange(!checked) },
+        shapes = ListItemDefaults.segmentedShapes(index = index, count = count),
+        colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        supportingContent = { Text(description) },
+        trailingContent = { Switch(checked = checked, onCheckedChange = onCheckedChange) }
     ) {
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(text = title, style = MaterialTheme.typography.labelLarge)
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        Text(title)
+    }
+}
+
+/** A segmented row whose choice is a connected button group, for settings with more than two states. */
+@Composable
+private fun <T> OptionsRow(
+    index: Int,
+    count: Int,
+    title: String,
+    description: String,
+    options: List<Pair<T, String>>,
+    selected: T,
+    onSelect: (T) -> Unit
+) {
+    SegmentedListItem(
+        shapes = ListItemDefaults.segmentedShapes(index = index, count = count),
+        colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        supportingContent = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                AnimatedText(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
+                ) {
+                    options.forEachIndexed { optionIndex, (option, label) ->
+                        ToggleButton(
+                            checked = selected == option,
+                            onCheckedChange = { onSelect(option) },
+                            modifier = Modifier
+                                .weight(1f)
+                                .semantics { role = Role.RadioButton },
+                            shapes = when (optionIndex) {
+                                0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                            },
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelMedium,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    ) {
+        Text(title)
     }
 }
 
@@ -320,7 +399,7 @@ private fun ToggleRow(
  * battery level without waiting for the real battery to get there.
  */
 @Composable
-private fun BatteryPreviewHeader(battery: BatterySettings, renderer: PatternRenderer) {
+private fun BatteryPreviewCard(battery: BatterySettings, renderer: PatternRenderer) {
     var previewLevel by remember { mutableFloatStateOf(65f) }
     var previewCharging by remember { mutableStateOf(true) }
     var frames by remember { mutableStateOf(IntArray(8)) }
@@ -348,16 +427,18 @@ private fun BatteryPreviewHeader(battery: BatterySettings, renderer: PatternRend
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surfaceContainer,
-        shape = RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp)
+        shape = HiLightTheme.CardShape
     ) {
         Column(
-            modifier = Modifier.padding(top = 8.dp, bottom = 16.dp, start = 24.dp, end = 24.dp),
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             DiffusedRingPreview(
                 frames = frames,
-                modifier = Modifier.size(96.dp).clip(CircleShape),
+                modifier = Modifier
+                    .size(96.dp)
+                    .clip(CircleShape),
                 size = 96.dp
             )
             Slider(
@@ -376,7 +457,10 @@ private fun BatteryPreviewHeader(battery: BatterySettings, renderer: PatternRend
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Text(
                         text = stringResource(R.string.battery_preview_charging),
                         style = MaterialTheme.typography.labelLarge,
@@ -425,7 +509,7 @@ private fun BatteryPatternCard(
         label = "batteryPatternCorner"
     )
     val container by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+        targetValue = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
         animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
         label = "batteryPatternContainer"
     )
@@ -444,7 +528,9 @@ private fun BatteryPatternCard(
         ) {
             DiffusedRingPreview(
                 frames = frames,
-                modifier = Modifier.size(48.dp).clip(CircleShape),
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape),
                 size = 48.dp
             )
             Text(

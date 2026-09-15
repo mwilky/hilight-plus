@@ -614,7 +614,7 @@ private fun PreviewHeader(
 }
 
 @Composable
-internal fun EditorSection(
+private fun EditorSection(
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -717,7 +717,7 @@ internal fun ColorSwatch(
 }
 
 @Composable
-internal fun <T> ChoiceGroup(
+private fun <T> ChoiceGroup(
     title: String,
     description: String,
     options: List<Pair<T, String>>,

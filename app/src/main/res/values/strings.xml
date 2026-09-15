@@ -174,9 +174,9 @@
     <string name="battery_pattern_gradient_ring">Gradient ring</string>
     <string name="battery_pattern_gradient_ring_desc">Full ring, breathing</string>
     <string name="battery_full_timeout_stay_on">Stay on</string>
-    <string name="battery_full_timeout_1m">1 minute</string>
-    <string name="battery_full_timeout_5m">5 minutes</string>
-    <string name="battery_full_timeout_30m">30 minutes</string>
+    <string name="battery_full_timeout_1m">1 min</string>
+    <string name="battery_full_timeout_5m">5 min</string>
+    <string name="battery_full_timeout_30m">30 min</string>
     <string name="dialog_app_picker_title">Select application</string>
     <string name="dialog_app_picker_search">Search applications…</string>
     <string name="dialog_app_picker_no_apps">No applications found</string>
@@ -202,27 +202,26 @@
     <string name="conditions_quiet_hours_end">Ends</string>
 
     <!-- Battery Screen -->
-    <string name="battery_off_hint">Turned off. Enable it below to show battery status on the LED ring.</string>
-    <string name="battery_visibility_off">Off</string>
     <string name="battery_visibility_face_down">Face down only</string>
     <string name="battery_visibility_always">Always</string>
-    <string name="battery_section_show_title">Show</string>
-    <string name="battery_section_show_desc">Choose when the battery display is allowed to appear on the ring.</string>
     <string name="battery_quiet_desc_default">Follows the quiet hours setting on the Conditions page.</string>
     <string name="battery_quiet_desc_always">Lights even during quiet hours.</string>
     <string name="battery_quiet_desc_skip">Stays dark during quiet hours, using the window set on the Conditions page.</string>
     <string name="battery_preview_level_format">Preview: %1$d%%</string>
     <string name="battery_preview_charging">Simulate charging</string>
     <string name="battery_section_pattern_title">Charging pattern</string>
-    <string name="battery_section_color_title">Colour</string>
     <string name="battery_section_auto_color">Colour by level</string>
     <string name="battery_section_auto_color_desc">Red to green as the battery charges. Turn off to pick a fixed colour.</string>
+    <string name="battery_pattern_hint">Used while charging. Full and low battery always use their own look.</string>
+    <string name="battery_fixed_color_title">Fixed colour</string>
+    <string name="battery_face_down_desc">Only show battery lights while the phone is lying face down.</string>
+    <string name="battery_threshold_title">Warn below</string>
+    <string name="battery_threshold_value">%1$d%%</string>
     <string name="battery_section_low_title">Low battery warning</string>
     <string name="battery_section_low_desc">Pulses red when unplugged and below the threshold below.</string>
-    <string name="battery_low_threshold_format">Warn below %1$d%%</string>
     <string name="battery_section_full_timeout_title">After fully charged</string>
     <string name="battery_section_full_timeout_desc">How long the full-battery display stays on once charging finishes.</string>
-    <string name="battery_section_overrides_notifications">Battery display takes priority over notifications</string>
+    <string name="battery_section_overrides_notifications">Show before notifications</string>
     <string name="battery_section_overrides_notifications_desc">When on, notification lights won\'t interrupt the battery display. Incoming calls always interrupt it.</string>
 
     <!-- About Screen -->
