@@ -540,6 +540,8 @@ fun HomeContent(
                         onRequestShizukuPermission = onRequestShizukuPermission,
                         onOpenShizukuApp = onOpenShizukuApp,
                         battery = state.battery,
+                        globalQuietStartMinutes = state.quietHoursStartMinutes,
+                        globalQuietEndMinutes = state.quietHoursEndMinutes,
                         onBatteryChange = onBatteryChange,
                         renderer = renderer
                     )

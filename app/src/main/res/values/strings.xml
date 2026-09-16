@@ -200,12 +200,12 @@
     <string name="conditions_quiet_hours_end">Ends</string>
 
     <!-- Battery Screen -->
-    <string name="battery_quiet_desc_default">Follows the quiet hours setting on the Conditions page.</string>
-    <string name="battery_quiet_desc_always">Lights even during quiet hours.</string>
-    <string name="battery_quiet_desc_skip">Stays dark during quiet hours, using the window set on the Conditions page.</string>
     <string name="battery_preview_level_format">Preview: %1$d%%</string>
     <string name="battery_preview_charging">Simulate charging</string>
-    <string name="battery_section_pattern_title">Charging pattern</string>
+    <string name="battery_group_charging">Charging</string>
+    <string name="battery_group_low">Low battery</string>
+    <string name="battery_show_charging_title">Show while charging</string>
+    <string name="battery_show_charging_desc">Light the ring while plugged in, using the pattern below. Turn off to keep only the low battery warning.</string>
     <string name="battery_section_auto_color">Auto colour</string>
     <string name="battery_section_auto_color_desc">Red to green as the battery charges. Turn off to pick a fixed colour.</string>
     <string name="battery_fixed_color_title">Fixed colour</string>

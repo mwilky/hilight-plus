@@ -313,13 +313,16 @@ class LightController private constructor(private val app: Application) {
             chargingPattern = settings.chargingPattern,
             autoColor = settings.autoColor,
             color = settings.color,
+            showCharging = settings.showCharging,
             lowWarningEnabled = settings.lowWarningEnabled,
             lowThresholdPercent = settings.lowThresholdPercent,
             fullTimeoutMinutes = settings.fullTimeout.minutes,
             overridesNotifications = settings.overridesNotifications,
             requiresFaceDown = lastBatteryRequiresFaceDown,
             dndMode = settings.dndMode,
-            quietHoursMode = settings.quietHoursMode
+            quietHoursMode = settings.quietHoursMode,
+            quietStartMinutes = settings.quietHoursStartMinutes,
+            quietEndMinutes = settings.quietHoursEndMinutes
         )
         syncBatteryOrientationMonitor()
     }
@@ -338,7 +341,8 @@ class LightController private constructor(private val app: Application) {
         val lowEligible = lastBatterySettings.lowWarningEnabled &&
             !lastBatteryCharging && !lastBatteryFull &&
             lastBatteryLevel <= lastBatterySettings.lowThresholdPercent
-        return lastBatteryCharging || lastBatteryFull || lowEligible
+        val chargingEligible = lastBatterySettings.showCharging && (lastBatteryCharging || lastBatteryFull)
+        return chargingEligible || lowEligible
     }
 
     /**
@@ -349,7 +353,8 @@ class LightController private constructor(private val app: Application) {
         val lowEligible = lastBatterySettings.lowWarningEnabled &&
             !lastBatteryCharging && !lastBatteryFull &&
             lastBatteryLevel <= lastBatterySettings.lowThresholdPercent
-        val wantsToRender = lastBatteryCharging || lastBatteryFull || lowEligible
+        val chargingEligible = lastBatterySettings.showCharging && (lastBatteryCharging || lastBatteryFull)
+        val wantsToRender = chargingEligible || lowEligible
         if (lastMasterEnabled && lastBatterySettings.enabled && lastBatteryRequiresFaceDown && wantsToRender) {
             DeviceOrientationDetector.retainMonitoring(app, DeviceOrientationDetector.TOKEN_BATTERY)
         } else {

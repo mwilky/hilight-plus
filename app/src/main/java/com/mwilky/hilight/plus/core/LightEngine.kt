@@ -57,13 +57,16 @@ class LightEngine {
         val chargingPattern: BatteryPattern,
         val autoColor: Boolean,
         val color: Long,
+        val showCharging: Boolean,
         val lowWarningEnabled: Boolean,
         val lowThresholdPercent: Int,
         val fullTimeoutMinutes: Int?,
         val overridesNotifications: Boolean,
         val requiresFaceDown: Boolean,
         val dndMode: DndMode,
-        val quietHoursMode: QuietHoursMode
+        val quietHoursMode: QuietHoursMode,
+        val quietStartOverride: Int?,
+        val quietEndOverride: Int?
     )
 
     // Battery indicator layer: renders in the idle slot beneath calls and (unless configured to
@@ -365,19 +368,23 @@ class LightEngine {
         chargingPattern: BatteryPattern,
         autoColor: Boolean,
         color: Long,
+        showCharging: Boolean,
         lowWarningEnabled: Boolean,
         lowThresholdPercent: Int,
         fullTimeoutMinutes: Int?,
         overridesNotifications: Boolean,
         requiresFaceDown: Boolean,
         dndMode: DndMode,
-        quietHoursMode: QuietHoursMode
+        quietHoursMode: QuietHoursMode,
+        quietStartOverride: Int?,
+        quietEndOverride: Int?
     ) {
         synchronized(lock) {
             batteryConfig = BatteryConfig(
-                enabled, chargingPattern, autoColor, color,
+                enabled, chargingPattern, autoColor, color, showCharging,
                 lowWarningEnabled, lowThresholdPercent, fullTimeoutMinutes,
-                overridesNotifications, requiresFaceDown, dndMode, quietHoursMode
+                overridesNotifications, requiresFaceDown, dndMode, quietHoursMode,
+                quietStartOverride, quietEndOverride
             )
             onLiveConditionChanged()
             Log.i(TAG, "setBatteryConfig: enabled=$enabled, chargingPattern=$chargingPattern, requiresFaceDown=$requiresFaceDown, dndMode=$dndMode")
@@ -742,6 +749,8 @@ class LightEngine {
             quietHoursEnabled = quietHoursEnabled,
             quietHoursStartMinutes = quietHoursStartMinutes,
             quietHoursEndMinutes = quietHoursEndMinutes,
+            quietStartOverride = config.quietStartOverride,
+            quietEndOverride = config.quietEndOverride,
             nowMinutes = nowMinutes
         )
     }
@@ -752,8 +761,10 @@ class LightEngine {
         // LEDs on a stale state nothing can clear.
         if (batteryStateUpdatedAtMs == 0L) return false
         if (now - batteryStateUpdatedAtMs > BATTERY_STATE_STALE_MS) return false
-        if (batteryCharging) return true
+        // Charging and its "full" tail are one switch; the low-battery warning is independent.
+        if (batteryCharging) return config.showCharging
         if (batteryFull) {
+            if (!config.showCharging) return false
             val since = batteryFullSinceMs ?: return true
             val timeoutMinutes = config.fullTimeoutMinutes ?: return true
             return (now - since) < timeoutMinutes * 60_000L

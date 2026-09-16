@@ -55,7 +55,7 @@ class ShizukuBridge private constructor(private val app: Application) {
         .daemon(false)
         .processNameSuffix("hilight_daemon")
         .debuggable(BuildConfig.DEBUG)
-        .version(9)
+        .version(10)
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -416,13 +416,16 @@ class ShizukuBridge private constructor(private val app: Application) {
         val chargingPattern: BatteryPattern,
         val autoColor: Boolean,
         val color: Long,
+        val showCharging: Boolean,
         val lowWarningEnabled: Boolean,
         val lowThresholdPercent: Int,
         val fullTimeoutMinutes: Int?,
         val overridesNotifications: Boolean,
         val requiresFaceDown: Boolean,
         val dndMode: DndMode,
-        val quietHoursMode: QuietHoursMode
+        val quietHoursMode: QuietHoursMode,
+        val quietStartMinutes: Int?,
+        val quietEndMinutes: Int?
     )
 
     private data class CachedBatteryState(val levelPercent: Int, val charging: Boolean, val full: Boolean)
@@ -432,18 +435,22 @@ class ShizukuBridge private constructor(private val app: Application) {
         chargingPattern: BatteryPattern,
         autoColor: Boolean,
         color: Long,
+        showCharging: Boolean,
         lowWarningEnabled: Boolean,
         lowThresholdPercent: Int,
         fullTimeoutMinutes: Int?,
         overridesNotifications: Boolean,
         requiresFaceDown: Boolean,
         dndMode: DndMode,
-        quietHoursMode: QuietHoursMode
+        quietHoursMode: QuietHoursMode,
+        quietStartMinutes: Int?,
+        quietEndMinutes: Int?
     ) {
         val config = CachedBatteryConfig(
-            enabled, chargingPattern, autoColor, color,
+            enabled, chargingPattern, autoColor, color, showCharging,
             lowWarningEnabled, lowThresholdPercent, fullTimeoutMinutes,
-            overridesNotifications, requiresFaceDown, dndMode, quietHoursMode
+            overridesNotifications, requiresFaceDown, dndMode, quietHoursMode,
+            quietStartMinutes, quietEndMinutes
         )
         lastBatteryConfig = config
         sendBatteryConfig(config)
@@ -456,6 +463,7 @@ class ShizukuBridge private constructor(private val app: Application) {
                 config.chargingPattern.id,
                 config.autoColor,
                 config.color,
+                config.showCharging,
                 config.lowWarningEnabled,
                 config.lowThresholdPercent,
                 config.fullTimeoutMinutes ?: -1,
@@ -464,7 +472,9 @@ class ShizukuBridge private constructor(private val app: Application) {
                 config.dndMode.id,
                 // .id (not .name): QuietHoursMode.fromId on the daemon side matches against the
                 // lowercase wire id, same as every other mode sent over this AIDL surface.
-                config.quietHoursMode.id
+                config.quietHoursMode.id,
+                config.quietStartMinutes ?: -1,
+                config.quietEndMinutes ?: -1
             )
         }
     }

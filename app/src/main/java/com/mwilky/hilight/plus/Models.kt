@@ -241,6 +241,9 @@ data class BatterySettings(
     val chargingPattern: BatteryPattern = BatteryPattern.GAUGE,
     val autoColor: Boolean = true,
     val color: Long = DEFAULT_BATTERY_COLOR,
+    // Charging and low battery are separately switchable, so the ring can warn about a low
+    // battery without also lighting for the whole of every charge.
+    val showCharging: Boolean = true,
     val lowWarningEnabled: Boolean = true,
     val lowThresholdPercent: Int = 20,
     val fullTimeout: BatteryFullTimeout = BatteryFullTimeout.FIVE_MIN,
@@ -249,13 +252,18 @@ data class BatterySettings(
     // can defer to the Conditions page instead of needing their own copy of that decision.
     val faceDownMode: FaceDownMode = FaceDownMode.INHERIT,
     val dndMode: DndMode = DndMode.INHERIT,
-    val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT
+    val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT,
+    // Own quiet window when quietHoursMode is SKIP, exactly as a rule can have; null follows the
+    // Conditions page window.
+    val quietHoursStartMinutes: Int? = null,
+    val quietHoursEndMinutes: Int? = null
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("enabled", enabled)
         put("chargingPattern", chargingPattern.id)
         put("autoColor", autoColor)
         put("color", color)
+        put("showCharging", showCharging)
         put("lowWarningEnabled", lowWarningEnabled)
         put("lowThresholdPercent", lowThresholdPercent)
         put("fullTimeout", fullTimeout.id)
@@ -263,6 +271,8 @@ data class BatterySettings(
         put("faceDownMode", faceDownMode.name)
         put("dndMode", dndMode.name)
         put("quietHoursMode", quietHoursMode.name)
+        putOptionalMinutes("quietHoursStartMinutes", quietHoursStartMinutes)
+        putOptionalMinutes("quietHoursEndMinutes", quietHoursEndMinutes)
     }
 
     companion object {
@@ -273,6 +283,7 @@ data class BatterySettings(
                 chargingPattern = BatteryPattern.fromId(json.optString("chargingPattern", d.chargingPattern.id)),
                 autoColor = json.optBoolean("autoColor", d.autoColor),
                 color = json.optLong("color", d.color),
+                showCharging = json.optBoolean("showCharging", d.showCharging),
                 lowWarningEnabled = json.optBoolean("lowWarningEnabled", d.lowWarningEnabled),
                 lowThresholdPercent = json.optInt("lowThresholdPercent", d.lowThresholdPercent),
                 fullTimeout = BatteryFullTimeout.fromId(json.optString("fullTimeout", d.fullTimeout.id)),
@@ -285,7 +296,9 @@ data class BatterySettings(
                 }.getOrDefault(DndMode.INHERIT),
                 quietHoursMode = runCatching {
                     QuietHoursMode.valueOf(json.optString("quietHoursMode", QuietHoursMode.INHERIT.name))
-                }.getOrDefault(QuietHoursMode.INHERIT)
+                }.getOrDefault(QuietHoursMode.INHERIT),
+                quietHoursStartMinutes = json.optionalMinutes("quietHoursStartMinutes"),
+                quietHoursEndMinutes = json.optionalMinutes("quietHoursEndMinutes")
             )
         }
 

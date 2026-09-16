@@ -17,13 +17,16 @@ class BatterySettingsJsonTest {
             chargingPattern = BatteryPattern.GRADIENT_RING,
             autoColor = false,
             color = 0xFF8A2BE2,
+            showCharging = false,
             lowWarningEnabled = false,
             lowThresholdPercent = 35,
             fullTimeout = BatteryFullTimeout.THIRTY_MIN,
             overridesNotifications = true,
             faceDownMode = FaceDownMode.ONLY_FACE_DOWN,
             dndMode = DndMode.SKIP,
-            quietHoursMode = QuietHoursMode.SKIP
+            quietHoursMode = QuietHoursMode.SKIP,
+            quietHoursStartMinutes = 23 * 60,
+            quietHoursEndMinutes = 6 * 60 + 30
         )
         assertEquals(settings, BatterySettings.fromJson(settings.toJson().toString()))
     }

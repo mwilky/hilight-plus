@@ -136,26 +136,32 @@ class HiLightDaemonService : IHiLightService.Stub() {
         chargingPattern: String?,
         autoColor: Boolean,
         color: Long,
+        showCharging: Boolean,
         lowWarningEnabled: Boolean,
         lowThresholdPercent: Int,
         fullTimeoutMinutes: Int,
         overridesNotifications: Boolean,
         requiresFaceDown: Boolean,
         dndMode: String?,
-        quietHoursMode: String?
+        quietHoursMode: String?,
+        quietStartMinutes: Int,
+        quietEndMinutes: Int
     ) {
         engine.setBatteryConfig(
             enabled,
             BatteryPattern.fromId(chargingPattern),
             autoColor,
             color,
+            showCharging,
             lowWarningEnabled,
             lowThresholdPercent,
             fullTimeoutMinutes.takeIf { it >= 0 },
             overridesNotifications,
             requiresFaceDown,
             DndMode.fromId(dndMode),
-            QuietHoursMode.fromId(quietHoursMode)
+            QuietHoursMode.fromId(quietHoursMode),
+            quietStartMinutes.takeIf { it >= 0 },
+            quietEndMinutes.takeIf { it >= 0 }
         )
     }
 
