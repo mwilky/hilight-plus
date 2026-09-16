@@ -4,6 +4,7 @@ import android.os.Process
 import android.util.Log
 import com.mwilky.hilight.plus.BatteryPattern
 import com.mwilky.hilight.plus.DndMode
+import com.mwilky.hilight.plus.LowBatteryPattern
 import com.mwilky.hilight.plus.QuietHoursMode
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -134,6 +135,7 @@ class HiLightDaemonService : IHiLightService.Stub() {
     override fun setBatteryConfig(
         enabled: Boolean,
         chargingPattern: String?,
+        lowPattern: String?,
         autoColor: Boolean,
         color: Long,
         showCharging: Boolean,
@@ -150,6 +152,7 @@ class HiLightDaemonService : IHiLightService.Stub() {
         engine.setBatteryConfig(
             enabled,
             BatteryPattern.fromId(chargingPattern),
+            LowBatteryPattern.fromId(lowPattern),
             autoColor,
             color,
             showCharging,

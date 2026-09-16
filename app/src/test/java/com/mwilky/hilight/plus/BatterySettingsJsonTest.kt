@@ -15,6 +15,7 @@ class BatterySettingsJsonTest {
         val settings = BatterySettings(
             enabled = true,
             chargingPattern = BatteryPattern.GRADIENT_RING,
+            lowPattern = LowBatteryPattern.SOLID,
             autoColor = false,
             color = 0xFF8A2BE2,
             showCharging = false,
@@ -52,6 +53,7 @@ class BatterySettingsJsonTest {
     fun unrecognisedEnumValuesFallBackInsteadOfThrowing() {
         val json = JSONObject().apply {
             put("chargingPattern", "NOT_REAL")
+            put("lowPattern", "NOT_REAL_EITHER")
             put("fullTimeout", "ALSO_NOT_REAL")
             put("faceDownMode", "NOPE")
             put("dndMode", "NOPE")
@@ -59,6 +61,7 @@ class BatterySettingsJsonTest {
         }
         val parsed = BatterySettings.fromJson(json.toString())
         assertEquals(BatteryPattern.GAUGE, parsed.chargingPattern)
+        assertEquals(LowBatteryPattern.HEARTBEAT, parsed.lowPattern)
         assertEquals(BatteryFullTimeout.FIVE_MIN, parsed.fullTimeout)
         assertEquals(FaceDownMode.INHERIT, parsed.faceDownMode)
         assertEquals(DndMode.INHERIT, parsed.dndMode)

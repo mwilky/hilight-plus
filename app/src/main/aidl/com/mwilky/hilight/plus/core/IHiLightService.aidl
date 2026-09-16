@@ -17,6 +17,6 @@ interface IHiLightService {
     void setQuietHours(boolean enabled, int startMinutes, int endMinutes);
     void testAlert(String pattern, long color, float brightness, long speedMs, long durationMs);
     void cancelTestAlert();
-    void setBatteryConfig(boolean enabled, String chargingPattern, boolean autoColor, long color, boolean showCharging, boolean lowWarningEnabled, int lowThresholdPercent, int fullTimeoutMinutes, boolean overridesNotifications, boolean requiresFaceDown, String dndMode, String quietHoursMode, int quietStartMinutes, int quietEndMinutes);
+    void setBatteryConfig(boolean enabled, String chargingPattern, String lowPattern, boolean autoColor, long color, boolean showCharging, boolean lowWarningEnabled, int lowThresholdPercent, int fullTimeoutMinutes, boolean overridesNotifications, boolean requiresFaceDown, String dndMode, String quietHoursMode, int quietStartMinutes, int quietEndMinutes);
     void setBatteryState(int levelPercent, boolean charging, boolean full);
 }

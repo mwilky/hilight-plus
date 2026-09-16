@@ -1,6 +1,7 @@
 package com.mwilky.hilight.plus.core
 
 import com.mwilky.hilight.plus.BatteryPattern
+import com.mwilky.hilight.plus.LowBatteryPattern
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -102,6 +103,30 @@ class PatternRendererBatteryTest {
             elapsedTimeMs = 0L
         )
         assertTrue(litCount(frame) > 0)
+    }
+
+    @Test
+    fun solidLowPatternIsStaticAndLightsTheRemainingLeds() {
+        fun frameAt(elapsed: Long) = renderer.renderBatteryFrame(
+            pattern = BatteryPattern.GAUGE, levelPercent = 25, charging = false, full = false, low = true,
+            autoColor = true, fixedColor = 0, brightness = 1f, elapsedTimeMs = elapsed,
+            lowPattern = LowBatteryPattern.SOLID
+        )
+        // 25% of 8 LEDs = 2, lit identically whenever it's sampled.
+        assertEquals(2, litCount(frameAt(0L)))
+        assertTrue(frameAt(0L).contentEquals(frameAt(777L)))
+    }
+
+    @Test
+    fun breatheLowPatternIsNeverFullyDark() {
+        for (elapsed in 0L..2200L step 100L) {
+            val frame = renderer.renderBatteryFrame(
+                pattern = BatteryPattern.GAUGE, levelPercent = 12, charging = false, full = false, low = true,
+                autoColor = true, fixedColor = 0, brightness = 1f, elapsedTimeMs = elapsed,
+                lowPattern = LowBatteryPattern.BREATHE
+            )
+            assertTrue("dark at $elapsed", litCount(frame) >= 1)
+        }
     }
 
     @Test

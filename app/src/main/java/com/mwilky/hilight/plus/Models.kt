@@ -219,6 +219,20 @@ enum class BatteryPattern(val id: String, val titleRes: Int) {
 }
 
 /**
+ * Pattern for the low-battery warning: the remaining LEDs lit in this style while unplugged
+ * and below the threshold.
+ */
+enum class LowBatteryPattern(val id: String, val titleRes: Int) {
+    HEARTBEAT("heartbeat", R.string.battery_low_pattern_heartbeat),
+    BREATHE("breathe", R.string.battery_low_pattern_breathe),
+    SOLID("solid", R.string.battery_low_pattern_solid);
+
+    companion object {
+        fun fromId(id: String?) = entries.find { it.id == id } ?: HEARTBEAT
+    }
+}
+
+/**
  * How long the "battery full" display stays on after charging completes.
  */
 enum class BatteryFullTimeout(val id: String, val minutes: Int?, val titleRes: Int) {
@@ -239,6 +253,7 @@ enum class BatteryFullTimeout(val id: String, val minutes: Int?, val titleRes: I
 data class BatterySettings(
     val enabled: Boolean = false,
     val chargingPattern: BatteryPattern = BatteryPattern.GAUGE,
+    val lowPattern: LowBatteryPattern = LowBatteryPattern.HEARTBEAT,
     val autoColor: Boolean = true,
     val color: Long = DEFAULT_BATTERY_COLOR,
     // Charging and low battery are separately switchable, so the ring can warn about a low
@@ -261,6 +276,7 @@ data class BatterySettings(
     fun toJson(): JSONObject = JSONObject().apply {
         put("enabled", enabled)
         put("chargingPattern", chargingPattern.id)
+        put("lowPattern", lowPattern.id)
         put("autoColor", autoColor)
         put("color", color)
         put("showCharging", showCharging)
@@ -281,6 +297,7 @@ data class BatterySettings(
             return BatterySettings(
                 enabled = json.optBoolean("enabled", d.enabled),
                 chargingPattern = BatteryPattern.fromId(json.optString("chargingPattern", d.chargingPattern.id)),
+                lowPattern = LowBatteryPattern.fromId(json.optString("lowPattern", d.lowPattern.id)),
                 autoColor = json.optBoolean("autoColor", d.autoColor),
                 color = json.optLong("color", d.color),
                 showCharging = json.optBoolean("showCharging", d.showCharging),

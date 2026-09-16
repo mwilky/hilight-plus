@@ -1,6 +1,7 @@
 package com.mwilky.hilight.plus.core
 
 import com.mwilky.hilight.plus.BatteryPattern
+import com.mwilky.hilight.plus.LowBatteryPattern
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -199,6 +200,7 @@ class PatternRenderer {
         fixedColor: Long,
         brightness: Float,
         elapsedTimeMs: Long,
+        lowPattern: LowBatteryPattern = LowBatteryPattern.HEARTBEAT,
         ledCount: Int = 8
     ): IntArray {
         val count = maxOf(1, ledCount)
@@ -212,7 +214,7 @@ class PatternRenderer {
 
         return when {
             full -> renderBatteryFull(baseColor, clampedBrightness, elapsedTimeMs, count)
-            low && !charging -> renderBatteryLow(baseColor, clampedBrightness, level, elapsedTimeMs, count)
+            low && !charging -> renderBatteryLow(baseColor, clampedBrightness, level, lowPattern, elapsedTimeMs, count)
             pattern == BatteryPattern.GRADIENT_RING -> renderBatteryGradientRing(baseColor, clampedBrightness, elapsedTimeMs, count)
             pattern == BatteryPattern.CHARGE_FILL -> renderBatteryGauge(baseColor, clampedBrightness, level, count, breathe = true, elapsedTimeMs)
             else -> renderBatteryGauge(baseColor, clampedBrightness, level, count, breathe = false, elapsedTimeMs)
@@ -292,25 +294,44 @@ class PatternRenderer {
         return frame
     }
 
-    /** A heartbeat pulse across the remaining LEDs (at least one, so low battery is never invisible). */
-    private fun renderBatteryLow(baseColor: Int, brightness: Float, level: Int, elapsedTimeMs: Long, count: Int): IntArray {
-        val exact = (level / 100.0) * count
-        val litLeds = exact.toInt().coerceIn(0, count).coerceAtLeast(1)
+    /**
+     * Low battery: the remaining LEDs (at least one, so it's never invisible) in the chosen
+     * pattern. Heartbeat is a sharp pulse, breathe a slow swell, solid is simply lit.
+     */
+    private fun renderBatteryLow(
+        baseColor: Int,
+        brightness: Float,
+        level: Int,
+        pattern: LowBatteryPattern,
+        elapsedTimeMs: Long,
+        count: Int
+    ): IntArray {
+        val litLeds = ((level / 100.0) * count).roundToInt().coerceIn(1, count)
 
-        val phase = (elapsedTimeMs % BATTERY_HEARTBEAT_MS) / BATTERY_HEARTBEAT_MS.toDouble()
-        val k = when {
-            phase < 0.20 -> {
-                val t = phase / 0.20
-                t * t
+        val k = when (pattern) {
+            LowBatteryPattern.SOLID -> 1.0
+            LowBatteryPattern.BREATHE -> {
+                val phase = (elapsedTimeMs % BATTERY_BREATHE_MS) / BATTERY_BREATHE_MS.toDouble()
+                0.35 + 0.65 * (1.0 - cos(phase * 2.0 * PI)) / 2.0
             }
-            phase < 0.35 -> 1.0
-            phase < 0.55 -> {
-                val t = (phase - 0.35) / 0.20
-                1.0 - t * t
+            LowBatteryPattern.HEARTBEAT -> {
+                val phase = (elapsedTimeMs % BATTERY_HEARTBEAT_MS) / BATTERY_HEARTBEAT_MS.toDouble()
+                val beat = when {
+                    phase < 0.20 -> {
+                        val t = phase / 0.20
+                        t * t
+                    }
+                    phase < 0.35 -> 1.0
+                    phase < 0.55 -> {
+                        val t = (phase - 0.35) / 0.20
+                        1.0 - t * t
+                    }
+                    else -> 0.0
+                }
+                0.15 + 0.85 * beat
             }
-            else -> 0.0
         }
-        val c = scaleColor(baseColor, (0.15 + 0.85 * k) * brightness)
+        val c = scaleColor(baseColor, k * brightness)
 
         val frame = IntArray(count)
         for (i in 0 until litLeds) frame[i] = c

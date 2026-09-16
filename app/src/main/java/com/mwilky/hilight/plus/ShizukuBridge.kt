@@ -55,7 +55,7 @@ class ShizukuBridge private constructor(private val app: Application) {
         .daemon(false)
         .processNameSuffix("hilight_daemon")
         .debuggable(BuildConfig.DEBUG)
-        .version(10)
+        .version(11)
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -414,6 +414,7 @@ class ShizukuBridge private constructor(private val app: Application) {
     private data class CachedBatteryConfig(
         val enabled: Boolean,
         val chargingPattern: BatteryPattern,
+        val lowPattern: LowBatteryPattern,
         val autoColor: Boolean,
         val color: Long,
         val showCharging: Boolean,
@@ -433,6 +434,7 @@ class ShizukuBridge private constructor(private val app: Application) {
     fun setBatteryConfig(
         enabled: Boolean,
         chargingPattern: BatteryPattern,
+        lowPattern: LowBatteryPattern,
         autoColor: Boolean,
         color: Long,
         showCharging: Boolean,
@@ -447,7 +449,7 @@ class ShizukuBridge private constructor(private val app: Application) {
         quietEndMinutes: Int?
     ) {
         val config = CachedBatteryConfig(
-            enabled, chargingPattern, autoColor, color, showCharging,
+            enabled, chargingPattern, lowPattern, autoColor, color, showCharging,
             lowWarningEnabled, lowThresholdPercent, fullTimeoutMinutes,
             overridesNotifications, requiresFaceDown, dndMode, quietHoursMode,
             quietStartMinutes, quietEndMinutes
@@ -461,6 +463,7 @@ class ShizukuBridge private constructor(private val app: Application) {
             it.setBatteryConfig(
                 config.enabled,
                 config.chargingPattern.id,
+                config.lowPattern.id,
                 config.autoColor,
                 config.color,
                 config.showCharging,

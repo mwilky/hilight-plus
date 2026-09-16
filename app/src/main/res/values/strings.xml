@@ -202,8 +202,7 @@
     <!-- Battery Screen -->
     <string name="battery_preview_level_format">Preview: %1$d%%</string>
     <string name="battery_preview_state_charging">Charging</string>
-    <string name="battery_preview_state_full">Full</string>
-    <string name="battery_preview_state_low">Low</string>
+    <string name="battery_preview_state_low">Low battery</string>
     <string name="battery_group_charging">Charging</string>
     <string name="battery_group_low">Low battery</string>
     <string name="battery_show_charging_title">Show while charging</string>
@@ -214,7 +213,10 @@
     <string name="battery_threshold_title">Warn below</string>
     <string name="battery_threshold_value">%1$d%%</string>
     <string name="battery_section_low_title">Low battery warning</string>
-    <string name="battery_section_low_desc">Pulses when unplugged and below the threshold.</string>
+    <string name="battery_section_low_desc">Lights when unplugged and below the threshold, in the pattern below.</string>
+    <string name="battery_low_pattern_heartbeat">Heartbeat</string>
+    <string name="battery_low_pattern_breathe">Breathe</string>
+    <string name="battery_low_pattern_solid">Solid</string>
     <string name="battery_section_full_timeout_title">Full charge timeout</string>
     <string name="battery_section_full_timeout_desc">How long the full-battery display stays on once charging finishes.</string>
     <string name="battery_section_overrides_notifications">Prioritise over notifications</string>

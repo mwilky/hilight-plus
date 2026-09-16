@@ -4,6 +4,7 @@ import android.os.SystemClock
 import android.util.Log
 import com.mwilky.hilight.plus.BatteryPattern
 import com.mwilky.hilight.plus.DndMode
+import com.mwilky.hilight.plus.LowBatteryPattern
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.currentMinutesOfDay
 
@@ -55,6 +56,7 @@ class LightEngine {
     private data class BatteryConfig(
         val enabled: Boolean,
         val chargingPattern: BatteryPattern,
+        val lowPattern: LowBatteryPattern,
         val autoColor: Boolean,
         val color: Long,
         val showCharging: Boolean,
@@ -366,6 +368,7 @@ class LightEngine {
     fun setBatteryConfig(
         enabled: Boolean,
         chargingPattern: BatteryPattern,
+        lowPattern: LowBatteryPattern,
         autoColor: Boolean,
         color: Long,
         showCharging: Boolean,
@@ -381,7 +384,7 @@ class LightEngine {
     ) {
         synchronized(lock) {
             batteryConfig = BatteryConfig(
-                enabled, chargingPattern, autoColor, color, showCharging,
+                enabled, chargingPattern, lowPattern, autoColor, color, showCharging,
                 lowWarningEnabled, lowThresholdPercent, fullTimeoutMinutes,
                 overridesNotifications, requiresFaceDown, dndMode, quietHoursMode,
                 quietStartOverride, quietEndOverride
@@ -618,6 +621,7 @@ class LightEngine {
                 }
                 val frame = renderer.renderBatteryFrame(
                     pattern = battery.chargingPattern,
+                    lowPattern = battery.lowPattern,
                     levelPercent = batteryLevel,
                     charging = batteryCharging,
                     full = batteryFull,

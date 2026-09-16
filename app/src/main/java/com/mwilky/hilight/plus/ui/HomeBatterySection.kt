@@ -69,6 +69,7 @@ import com.mwilky.hilight.plus.BatteryPattern
 import com.mwilky.hilight.plus.BatterySettings
 import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.FaceDownMode
+import com.mwilky.hilight.plus.LowBatteryPattern
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.R
 import com.mwilky.hilight.plus.ShizukuBridge
@@ -144,7 +145,7 @@ fun HomeBatteryPage(
                 ChargingGroup(battery = battery, onBatteryChange = onBatteryChange, renderer = renderer)
 
                 RuleGroupHeader(stringResource(R.string.battery_group_low))
-                LowBatteryGroup(battery = battery, onBatteryChange = onBatteryChange)
+                LowBatteryGroup(battery = battery, onBatteryChange = onBatteryChange, renderer = renderer)
 
                 RuleGroupHeader(stringResource(R.string.dialog_section_look))
                 LookGroup(battery = battery, onBatteryChange = onBatteryChange)
@@ -241,7 +242,8 @@ private fun ChargingGroup(
 @Composable
 private fun LowBatteryGroup(
     battery: BatterySettings,
-    onBatteryChange: (BatterySettings) -> Unit
+    onBatteryChange: (BatterySettings) -> Unit,
+    renderer: PatternRenderer
 ) {
     SwitchRow(
         index = 0,
@@ -276,6 +278,24 @@ private fun LowBatteryGroup(
             steps = 8,
             modifier = Modifier.fillMaxWidth()
         )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
+        ) {
+            LowBatteryPattern.entries.forEach { pattern ->
+                LowPatternCard(
+                    pattern = pattern,
+                    autoColor = battery.autoColor,
+                    color = battery.color,
+                    threshold = battery.lowThresholdPercent,
+                    selected = battery.lowPattern == pattern,
+                    renderer = renderer,
+                    onClick = { onBatteryChange(battery.copy(lowPattern = pattern)) }
+                )
+            }
+        }
     }
 }
 
@@ -596,8 +616,8 @@ private fun ExpandingContent(
     }
 }
 
-/** The three states the battery layer can be showing, so each is one tap away in the preview. */
-private enum class PreviewState { CHARGING, FULL, LOW }
+/** The two things the battery layer shows; "full" is just what charging looks like at 100%. */
+private enum class PreviewState { CHARGING, LOW }
 
 /**
  * Live ring preview: pick which state to preview, then fine-tune the level. Mirrors the
@@ -614,16 +634,18 @@ private fun BatteryPreviewCard(battery: BatterySettings, renderer: PatternRender
         val level = previewLevel.roundToInt()
         val startMs = System.currentTimeMillis()
         while (isActive) {
-            val pluggedIn = previewState != PreviewState.LOW
+            val pluggedIn = previewState == PreviewState.CHARGING
             frames = if (pluggedIn && !battery.showCharging) {
                 IntArray(8)
             } else {
                 renderer.renderBatteryFrame(
                     pattern = battery.chargingPattern,
+                    lowPattern = battery.lowPattern,
                     levelPercent = level,
-                    charging = previewState == PreviewState.CHARGING,
-                    full = previewState == PreviewState.FULL,
-                    low = previewState == PreviewState.LOW &&
+                    // Slide to 100% while charging and the full look shows, as on the ring.
+                    charging = pluggedIn && level < 100,
+                    full = pluggedIn && level >= 100,
+                    low = !pluggedIn &&
                         battery.lowWarningEnabled && level <= battery.lowThresholdPercent,
                     autoColor = battery.autoColor,
                     fixedColor = battery.color,
@@ -656,7 +678,6 @@ private fun BatteryPreviewCard(battery: BatterySettings, renderer: PatternRender
             ConnectedChoice(
                 options = listOf(
                     PreviewState.CHARGING to stringResource(R.string.battery_preview_state_charging),
-                    PreviewState.FULL to stringResource(R.string.battery_preview_state_full),
                     PreviewState.LOW to stringResource(R.string.battery_preview_state_low)
                 ),
                 selected = previewState,
@@ -664,8 +685,7 @@ private fun BatteryPreviewCard(battery: BatterySettings, renderer: PatternRender
                     previewState = state
                     // Snap the level somewhere the chosen state actually shows.
                     previewLevel = when (state) {
-                        PreviewState.CHARGING -> if (previewLevel >= 100f) 65f else previewLevel
-                        PreviewState.FULL -> 100f
+                        PreviewState.CHARGING -> previewLevel
                         PreviewState.LOW -> minOf(previewLevel, battery.lowThresholdPercent.toFloat())
                     }
                 }
@@ -674,8 +694,6 @@ private fun BatteryPreviewCard(battery: BatterySettings, renderer: PatternRender
                 value = previewLevel,
                 onValueChange = { previewLevel = it },
                 valueRange = 0f..100f,
-                // "Full" is always 100%, so there's nothing to fine-tune.
-                enabled = previewState != PreviewState.FULL,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
@@ -696,23 +714,75 @@ private fun BatteryPatternCard(
     renderer: PatternRenderer,
     onClick: () -> Unit
 ) {
+    PatternPreviewCard(
+        title = stringResource(pattern.titleRes),
+        selected = selected,
+        onClick = onClick,
+        renderKey = Triple(pattern, autoColor, color)
+    ) { elapsedMs ->
+        renderer.renderBatteryFrame(
+            pattern = pattern,
+            levelPercent = 65,
+            charging = true,
+            full = false,
+            low = false,
+            autoColor = autoColor,
+            fixedColor = color,
+            brightness = 1.0f,
+            elapsedTimeMs = elapsedMs,
+            ledCount = 8
+        )
+    }
+}
+
+@Composable
+private fun LowPatternCard(
+    pattern: LowBatteryPattern,
+    autoColor: Boolean,
+    color: Long,
+    threshold: Int,
+    selected: Boolean,
+    renderer: PatternRenderer,
+    onClick: () -> Unit
+) {
+    PatternPreviewCard(
+        title = stringResource(pattern.titleRes),
+        selected = selected,
+        onClick = onClick,
+        renderKey = listOf(pattern, autoColor, color, threshold)
+    ) { elapsedMs ->
+        // Previewed at the threshold itself, so the card shows what the warning first looks like.
+        renderer.renderBatteryFrame(
+            pattern = BatteryPattern.GAUGE,
+            lowPattern = pattern,
+            levelPercent = threshold,
+            charging = false,
+            full = false,
+            low = true,
+            autoColor = autoColor,
+            fixedColor = color,
+            brightness = 1.0f,
+            elapsedTimeMs = elapsedMs,
+            ledCount = 8
+        )
+    }
+}
+
+/** A selectable card with a live mini ring, shared by the charging and low-battery pattern pickers. */
+@Composable
+private fun PatternPreviewCard(
+    title: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    renderKey: Any,
+    render: (elapsedMs: Long) -> IntArray
+) {
     var frames by remember { mutableStateOf(IntArray(8)) }
 
-    LaunchedEffect(pattern, autoColor, color) {
+    LaunchedEffect(renderKey) {
         val startMs = System.currentTimeMillis()
         while (isActive) {
-            frames = renderer.renderBatteryFrame(
-                pattern = pattern,
-                levelPercent = 65,
-                charging = true,
-                full = false,
-                low = false,
-                autoColor = autoColor,
-                fixedColor = color,
-                brightness = 1.0f,
-                elapsedTimeMs = System.currentTimeMillis() - startMs,
-                ledCount = 8
-            )
+            frames = render(System.currentTimeMillis() - startMs)
             delay(33)
         }
     }
@@ -720,12 +790,12 @@ private fun BatteryPatternCard(
     val corner by animateDpAsState(
         targetValue = if (selected) 28.dp else 16.dp,
         animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
-        label = "batteryPatternCorner"
+        label = "patternCardCorner"
     )
     val container by animateColorAsState(
         targetValue = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
         animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-        label = "batteryPatternContainer"
+        label = "patternCardContainer"
     )
 
     Surface(
@@ -748,7 +818,7 @@ private fun BatteryPatternCard(
                 size = 48.dp
             )
             Text(
-                text = stringResource(pattern.titleRes),
+                text = title,
                 style = MaterialTheme.typography.labelMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

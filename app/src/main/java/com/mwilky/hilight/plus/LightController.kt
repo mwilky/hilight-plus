@@ -311,6 +311,7 @@ class LightController private constructor(private val app: Application) {
         shizuku.setBatteryConfig(
             enabled = masterEnabled && settings.enabled,
             chargingPattern = settings.chargingPattern,
+            lowPattern = settings.lowPattern,
             autoColor = settings.autoColor,
             color = settings.color,
             showCharging = settings.showCharging,
