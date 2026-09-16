@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed (Material You) icon layer: single colour, tinted by the launcher. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M77,54A23,23 0 1 1 31,54A23,23 0 1 1 77,54Z"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="7.5" />
+    <path
+        android:pathData="M46.5,54H61.5M54,46.5V61.5"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round" />
+</vector>

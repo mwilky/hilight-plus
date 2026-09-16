@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Diffused multi-colour LED ring (the Pixel HiLight) with the "Plus" in the centre.
+     Geometry stays inside the 66dp adaptive-icon safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Soft glow, faked with three widening translucent strokes -->
+    <path
+        android:pathData="M77,54A23,23 0 1 1 31,54A23,23 0 1 1 77,54Z"
+        android:strokeWidth="22">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="sweep"
+                android:centerX="54"
+                android:centerY="54">
+                <item android:offset="0.0000" android:color="#1A4C8DFF" />
+                <item android:offset="0.1429" android:color="#1A2AC3E8" />
+                <item android:offset="0.2857" android:color="#1A3DD68C" />
+                <item android:offset="0.4286" android:color="#1AFFC838" />
+                <item android:offset="0.5714" android:color="#1AFF7A3D" />
+                <item android:offset="0.7143" android:color="#1AFF3D71" />
+                <item android:offset="0.8571" android:color="#1AC86BFF" />
+                <item android:offset="1.0000" android:color="#1A4C8DFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:pathData="M77,54A23,23 0 1 1 31,54A23,23 0 1 1 77,54Z"
+        android:strokeWidth="16">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="sweep"
+                android:centerX="54"
+                android:centerY="54">
+                <item android:offset="0.0000" android:color="#2E4C8DFF" />
+                <item android:offset="0.1429" android:color="#2E2AC3E8" />
+                <item android:offset="0.2857" android:color="#2E3DD68C" />
+                <item android:offset="0.4286" android:color="#2EFFC838" />
+                <item android:offset="0.5714" android:color="#2EFF7A3D" />
+                <item android:offset="0.7143" android:color="#2EFF3D71" />
+                <item android:offset="0.8571" android:color="#2EC86BFF" />
+                <item android:offset="1.0000" android:color="#2E4C8DFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:pathData="M77,54A23,23 0 1 1 31,54A23,23 0 1 1 77,54Z"
+        android:strokeWidth="11">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="sweep"
+                android:centerX="54"
+                android:centerY="54">
+                <item android:offset="0.0000" android:color="#4C4C8DFF" />
+                <item android:offset="0.1429" android:color="#4C2AC3E8" />
+                <item android:offset="0.2857" android:color="#4C3DD68C" />
+                <item android:offset="0.4286" android:color="#4CFFC838" />
+                <item android:offset="0.5714" android:color="#4CFF7A3D" />
+                <item android:offset="0.7143" android:color="#4CFF3D71" />
+                <item android:offset="0.8571" android:color="#4CC86BFF" />
+                <item android:offset="1.0000" android:color="#4C4C8DFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Lit LED ring -->
+    <path
+        android:pathData="M77,54A23,23 0 1 1 31,54A23,23 0 1 1 77,54Z"
+        android:strokeWidth="7.5">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="sweep"
+                android:centerX="54"
+                android:centerY="54">
+                <item android:offset="0.0000" android:color="#FF4C8DFF" />
+                <item android:offset="0.1429" android:color="#FF2AC3E8" />
+                <item android:offset="0.2857" android:color="#FF3DD68C" />
+                <item android:offset="0.4286" android:color="#FFFFC838" />
+                <item android:offset="0.5714" android:color="#FFFF7A3D" />
+                <item android:offset="0.7143" android:color="#FFFF3D71" />
+                <item android:offset="0.8571" android:color="#FFC86BFF" />
+                <item android:offset="1.0000" android:color="#FF4C8DFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Frosted lens edge highlight -->
+    <path
+        android:pathData="M75.2,54A21.2,21.2 0 1 1 32.8,54A21.2,21.2 0 1 1 75.2,54Z"
+        android:strokeColor="#47FFFFFF"
+        android:strokeWidth="1.2" />
+    <!-- Plus -->
+    <path
+        android:pathData="M46.5,54H61.5M54,46.5V61.5"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round" />
+</vector>
