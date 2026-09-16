@@ -201,7 +201,9 @@
 
     <!-- Battery Screen -->
     <string name="battery_preview_level_format">Preview: %1$d%%</string>
-    <string name="battery_preview_charging">Simulate charging</string>
+    <string name="battery_preview_state_charging">Charging</string>
+    <string name="battery_preview_state_full">Full</string>
+    <string name="battery_preview_state_low">Low</string>
     <string name="battery_group_charging">Charging</string>
     <string name="battery_group_low">Low battery</string>
     <string name="battery_show_charging_title">Show while charging</string>
