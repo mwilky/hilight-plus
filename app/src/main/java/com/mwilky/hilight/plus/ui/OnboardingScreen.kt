@@ -24,6 +24,7 @@ import androidx.compose.material.icons.rounded.PhoneInTalk
 import androidx.compose.material.icons.rounded.ScreenRotation
 import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -47,8 +48,10 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.RoundedPolygon
+import androidx.activity.compose.LocalActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mwilky.hilight.plus.LightController
+import com.mwilky.hilight.plus.Licensing
 import com.mwilky.hilight.plus.NativeHiLightDetector
 import com.mwilky.hilight.plus.R
 import com.mwilky.hilight.plus.ShizukuBridge
@@ -66,7 +69,8 @@ enum class OnboardingStep {
     WELCOME,
     SHIZUKU,
     STOCK_CONFLICT,
-    PERMISSIONS
+    PERMISSIONS,
+    TRIAL
 }
 
 /**
@@ -101,6 +105,10 @@ private fun stepStyle(step: OnboardingStep): StepStyle {
             MaterialShapes.Clover8Leaf, Icons.Rounded.VerifiedUser,
             c.primaryContainer, c.onPrimaryContainer, c.primary, c.onPrimary
         )
+        OnboardingStep.TRIAL -> StepStyle(
+            MaterialShapes.Gem, Icons.Rounded.WorkspacePremium,
+            c.tertiaryContainer, c.onTertiaryContainer, c.tertiary, c.onTertiary
+        )
     }
 }
 
@@ -114,6 +122,8 @@ fun OnboardingScreen(
 
     val stockState by NativeHiLightDetector.state.collectAsStateWithLifecycle()
     val shizukuState by controller.shizuku.state.collectAsStateWithLifecycle()
+    val licenseStatus by controller.licensing.status.collectAsStateWithLifecycle()
+    val activity = LocalActivity.current
 
     val permissionState = rememberPermissionState()
     val requestCallPermissions = rememberCallPermissionLauncher(permissionState)
@@ -139,6 +149,7 @@ fun OnboardingScreen(
         OnboardingStep.SHIZUKU -> shizukuState == ShizukuBridge.State.CONNECTED
         OnboardingStep.STOCK_CONFLICT -> !stockState.favoriteCallsActive
         OnboardingStep.PERMISSIONS -> permissionState.hasAllCallPermissions && permissionState.isNotifAccessGranted
+        OnboardingStep.TRIAL -> true
     }
 
     OnboardingScaffold(
@@ -149,7 +160,7 @@ fun OnboardingScreen(
             if (prevIndex >= 0) currentStep = OnboardingStep.entries[prevIndex]
         },
         onNext = {
-            if (currentStep == OnboardingStep.PERMISSIONS) {
+            if (currentStep == OnboardingStep.TRIAL) {
                 onComplete()
             } else {
                 val nextIndex = currentStep.ordinal + 1
@@ -176,6 +187,10 @@ fun OnboardingScreen(
                 onRequestCallPerms = requestCallPermissions,
                 onOpenAppSettings = { openAppSettings() },
                 onOpenNotifListenerSettings = { openNotificationListenerSettings() }
+            )
+            OnboardingStep.TRIAL -> TrialStepContent(
+                status = licenseStatus,
+                onBuy = { activity?.let { controller.licensing.purchase(it) } }
             )
         }
     }
@@ -315,7 +330,7 @@ private fun OnboardingBottomBar(
     onBack: () -> Unit,
     onNext: () -> Unit
 ) {
-    val isLast = currentStep == OnboardingStep.PERMISSIONS
+    val isLast = currentStep == OnboardingStep.TRIAL
     val progress by animateFloatAsState(
         targetValue = (currentStep.ordinal + 1f) / OnboardingStep.entries.size,
         animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
@@ -525,6 +540,18 @@ private fun PermissionsStepContent(
 }
 
 @Composable
+private fun TrialStepContent(
+    status: Licensing.Status,
+    onBuy: () -> Unit
+) {
+    StepColumn(
+        stringResource(R.string.onboarding_trial_title),
+        { StepBody(stringResource(R.string.onboarding_trial_desc, Licensing.TRIAL_DAYS)) },
+        { LicenseCard(status = status, onBuy = onBuy) }
+    )
+}
+
+@Composable
 private fun FeaturesHighlightCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -640,6 +667,18 @@ fun OnboardingStep4Preview() {
             onRequestCallPerms = {},
             onOpenAppSettings = {},
             onOpenNotifListenerSettings = {}
+        )
+    }
+}
+
+@Preview(name = "Step 5 - Trial", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+fun OnboardingStep5Preview() {
+    OnboardingStepPreview(OnboardingStep.TRIAL) {
+        val now = System.currentTimeMillis()
+        TrialStepContent(
+            status = Licensing.Status(purchased = false, trialStartMillis = now, now = now, priceText = "\u00a32.99"),
+            onBuy = {}
         )
     }
 }

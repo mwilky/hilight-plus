@@ -11,8 +11,8 @@ android {
         applicationId = "com.mwilky.hilight.plus"
         minSdk = 37
         targetSdk = 37
-        versionCode = 7
-        versionName = "1.1.3"
+        versionCode = 8
+        versionName = "1.1.4"
     }
 
     buildTypes {
@@ -66,6 +66,7 @@ dependencies {
     implementation(libs.androidx.palette)
     implementation(libs.api)
     implementation(libs.provider)
+    implementation(libs.billing.ktx)
     testImplementation(libs.junit)
     testImplementation(libs.json)
 }

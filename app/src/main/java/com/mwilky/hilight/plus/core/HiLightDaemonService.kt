@@ -19,6 +19,9 @@ class HiLightDaemonService : IHiLightService.Stub() {
 
     private val engine = LightEngine()
 
+    @Volatile
+    private var entitled = true
+
     init {
         try {
             engine.start()
@@ -40,6 +43,7 @@ class HiLightDaemonService : IHiLightService.Stub() {
         quietStartMinutes: Int,
         quietEndMinutes: Int
     ) {
+        if (!entitled) return
         engine.triggerAlert(
             pattern ?: "solid",
             color,
@@ -67,7 +71,7 @@ class HiLightDaemonService : IHiLightService.Stub() {
         quietStartMinutes: Int,
         quietEndMinutes: Int
     ) {
-        if (key != null) {
+        if (key != null && entitled) {
             engine.postAlert(
                 key,
                 pattern ?: "solid",
@@ -95,6 +99,7 @@ class HiLightDaemonService : IHiLightService.Stub() {
         quietStartMinutes: Int,
         quietEndMinutes: Int
     ) {
+        if (!entitled) return
         engine.startIncomingCall(
             pattern ?: "solid",
             color,
@@ -154,7 +159,7 @@ class HiLightDaemonService : IHiLightService.Stub() {
         quietEndMinutes: Int
     ) {
         engine.setBatteryConfig(
-            enabled,
+            enabled && entitled,
             BatteryPattern.fromId(chargingPattern),
             LowBatteryPattern.fromId(lowPattern),
             autoColor,
@@ -200,9 +205,32 @@ class HiLightDaemonService : IHiLightService.Stub() {
 
     override fun getSecureString(key: String?): String? {
         if (key.isNullOrBlank()) return null
+        return runSettings("get", "secure", key)?.takeIf { it.isNotBlank() }
+    }
+
+    override fun getGlobalString(key: String?): String? {
+        if (key.isNullOrBlank()) return null
+        return runSettings("get", "global", key)?.takeIf { it.isNotBlank() }
+    }
+
+    /**
+     * Writes to Settings.Global, which the shell UID may do and which survives the app's data
+     * being cleared. Used for the trial start so a data clear doesn't restart the clock.
+     */
+    override fun putGlobalString(key: String?, value: String?): Boolean {
+        if (key.isNullOrBlank() || value.isNullOrBlank()) return false
+        runSettings("put", "global", key, value) ?: return false
+        return true
+    }
+
+    /**
+     * Runs the `settings` shell command. Returns the first line of stdout, an empty string when
+     * the command succeeded silently (e.g. `put`), or null on failure / timeout / "null".
+     */
+    private fun runSettings(vararg args: String): String? {
         var process: java.lang.Process? = null
         return try {
-            process = Runtime.getRuntime().exec(arrayOf("settings", "get", "secure", key))
+            process = Runtime.getRuntime().exec(arrayOf("settings", *args))
             val output = BufferedReader(InputStreamReader(process.inputStream)).use { it.readLine()?.trim() }
             runCatching { process.errorStream.close() }
             val finished = process.waitFor(2, TimeUnit.SECONDS)
@@ -210,12 +238,25 @@ class HiLightDaemonService : IHiLightService.Stub() {
                 process.destroyForcibly()
                 return null
             }
-            if (output == "null" || output.isNullOrBlank()) null else output
+            if (process.exitValue() != 0 || output == "null") null else output.orEmpty()
         } catch (t: Throwable) {
-            Log.e(TAG, "getSecureString failed: ${t.message}", t)
+            Log.e(TAG, "settings ${args.joinToString(" ")} failed: ${t.message}", t)
             null
         } finally {
             process?.destroy()
+        }
+    }
+
+    /**
+     * Trial expired and not purchased: stop showing alerts and refuse new ones. The test
+     * channel stays open so the paywall can still demo the lights.
+     */
+    override fun setEntitled(entitled: Boolean) {
+        if (this.entitled == entitled) return
+        this.entitled = entitled
+        if (!entitled) {
+            engine.stopIncomingCall()
+            engine.clearAlert()
         }
     }
 

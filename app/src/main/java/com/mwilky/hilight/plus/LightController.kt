@@ -28,6 +28,7 @@ class LightController private constructor(private val app: Application) {
 
     val store = AppStore.get(app)
     val shizuku = ShizukuBridge.get(app)
+    val licensing = Licensing(app, store, shizuku)
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     @Volatile
@@ -113,6 +114,9 @@ class LightController private constructor(private val app: Application) {
             store.isEnabled.collect { syncState() }
         }
         scope.launch {
+            licensing.isEntitled.collect { shizuku.setEntitled(it) }
+        }
+        scope.launch {
             store.isNotificationsEnabled.collect { enabled ->
                 if (!enabled) shizuku.clearAlert()
             }
@@ -146,8 +150,9 @@ class LightController private constructor(private val app: Application) {
             combine(
                 store.battery,
                 store.isEnabled,
-                store.isOnlyWhenFaceDown
-            ) { settings, enabled, globalFaceDown -> Triple(settings, enabled, globalFaceDown) }
+                store.isOnlyWhenFaceDown,
+                licensing.isEntitled
+            ) { settings, enabled, globalFaceDown, entitled -> Triple(settings, enabled && entitled, globalFaceDown) }
                 .collect { (settings, enabled, globalFaceDown) -> pushBatteryConfig(settings, enabled, globalFaceDown) }
         }
         // Heartbeat: the daemon renders the battery layer indefinitely from its own cached
@@ -318,7 +323,11 @@ class LightController private constructor(private val app: Application) {
             store.quietHoursStartMinutes.first(),
             store.quietHoursEndMinutes.first()
         )
-        pushBatteryConfig(store.battery.first(), store.isEnabled.first(), store.isOnlyWhenFaceDown.first())
+        pushBatteryConfig(
+            store.battery.first(),
+            store.isEnabled.first() && licensing.isEntitled.value,
+            store.isOnlyWhenFaceDown.first()
+        )
         shizuku.setBatteryState(lastBatteryLevel, lastBatteryCharging, lastBatteryFull)
     }
 
@@ -407,6 +416,7 @@ class LightController private constructor(private val app: Application) {
 
     fun refreshStatus() {
         shizuku.refresh()
+        licensing.refreshPurchases()
     }
 
     companion object {

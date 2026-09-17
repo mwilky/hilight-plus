@@ -20,4 +20,7 @@ interface IHiLightService {
     void cancelTestAlert();
     void setBatteryConfig(boolean enabled, String chargingPattern, String lowPattern, boolean autoColor, long color, boolean showCharging, boolean lowWarningEnabled, int lowThresholdPercent, int fullTimeoutMinutes, boolean overridesNotifications, boolean requiresFaceDown, String dndMode, String quietHoursMode, int quietStartMinutes, int quietEndMinutes);
     void setBatteryState(int levelPercent, boolean charging, boolean full);
+    String getGlobalString(String key);
+    boolean putGlobalString(String key, String value);
+    void setEntitled(boolean entitled);
 }

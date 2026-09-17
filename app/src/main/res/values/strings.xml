@@ -48,6 +48,29 @@
     <string name="onboarding_perms_notif_btn_enable">Allow notification access</string>
 
     <!-- Navigation Buttons -->
+    <!-- Onboarding Step 5: Trial -->
+    <string name="onboarding_trial_title">Try it free</string>
+    <string name="onboarding_trial_desc">Everything in HiLight Plus is free for %1$d days. After that, a one-off purchase keeps it working for good. No subscription, no ads.</string>
+
+    <!-- Licensing card -->
+    <string name="license_title_trial">Free trial</string>
+    <string name="license_title_expired">Trial ended</string>
+    <string name="license_title_unlocked">Unlocked</string>
+    <string name="license_status_pending">Not started</string>
+    <string name="license_status_expired">Expired</string>
+    <string name="license_status_unlocked">Purchased</string>
+    <plurals name="license_days_left">
+        <item quantity="one">%1$d day left</item>
+        <item quantity="other">%1$d days left</item>
+    </plurals>
+    <string name="license_desc_pending">Your %1$d-day trial starts the first time Shizuku connects.</string>
+    <string name="license_desc_trial">Everything is unlocked during the trial. Keep it forever with a one-off purchase. No subscription.</string>
+    <string name="license_desc_trial_price">Everything is unlocked during the trial. Keep it forever for %1$s, one-off. No subscription.</string>
+    <string name="license_desc_expired">Your trial is over, so the lights are paused. Your rules are saved and pick up again the moment you unlock.</string>
+    <string name="license_desc_unlocked">Thanks for supporting HiLight Plus. Everything stays unlocked for good.</string>
+    <string name="license_btn_buy">Unlock</string>
+    <string name="license_btn_buy_price">Unlock for %1$s</string>
+
     <string name="btn_back">Back</string>
     <string name="btn_next">Next</string>
     <string name="onboarding_complete_btn">Get started</string>
@@ -235,5 +258,5 @@
     <string name="about_led_walk_desc">Lighting each LED in turn, 0 to 7. The ring above shows where the app thinks this LED is; compare it with the phone.</string>
     <string name="about_version_label">Version</string>
     <string name="about_status_section_header">System Health &amp; Permissions</string>
-    <string name="about_stock_ok_desc">Pixel\'s own \'Calls from favourites\' lighting is off. Gemini and other system features may still use the lights.</string>
+    <string name="about_stock_ok_desc">Pixel\'s own \'Calls from favourites\' lighting is off. Gemini may still use the lights if this option is enabled.</string>
 </resources>

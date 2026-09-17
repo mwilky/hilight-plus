@@ -23,6 +23,9 @@ class AppStore private constructor(private val appContext: Context) {
 
     companion object {
         private val KEY_ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
+        // Licensing. Trial start is a local copy of the Settings.Global value the daemon owns.
+        private val KEY_TRIAL_START_MS = longPreferencesKey("trial_start_ms")
+        private val KEY_PURCHASED = booleanPreferencesKey("purchased")
         private val KEY_ENABLED = booleanPreferencesKey("enabled")
 
         // Smart Condition Settings
@@ -92,6 +95,12 @@ class AppStore private constructor(private val appContext: Context) {
     val isEnabled: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_ENABLED] ?: true }
 
+    val trialStartMillis: Flow<Long?> = appContext.dataStore.data
+        .map { it[KEY_TRIAL_START_MS] }
+
+    val isPurchased: Flow<Boolean> = appContext.dataStore.data
+        .map { it[KEY_PURCHASED] ?: false }
+
     val isOnlyWhenFaceDown: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_ONLY_WHEN_FACE_DOWN] ?: false }
 
@@ -136,6 +145,14 @@ class AppStore private constructor(private val appContext: Context) {
 
     suspend fun setEnabled(enabled: Boolean) {
         appContext.dataStore.edit { it[KEY_ENABLED] = enabled }
+    }
+
+    suspend fun setTrialStartMillis(millis: Long) {
+        appContext.dataStore.edit { it[KEY_TRIAL_START_MS] = millis }
+    }
+
+    suspend fun setPurchased(purchased: Boolean) {
+        appContext.dataStore.edit { it[KEY_PURCHASED] = purchased }
     }
 
     suspend fun setOnlyWhenFaceDown(enabled: Boolean) {

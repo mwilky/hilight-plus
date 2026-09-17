@@ -89,6 +89,7 @@ class ShizukuBridge private constructor(private val app: Application) {
             // config/state was last set so it can't be lost to a connection that wasn't ready yet.
             lastBatteryConfig?.let { sendBatteryConfig(it) }
             lastBatteryState?.let { sendBatteryState(it) }
+            lastEntitled?.let { sendEntitled(it) }
             onAvailabilityChanged?.invoke()
         }
 
@@ -511,6 +512,32 @@ class ShizukuBridge private constructor(private val app: Application) {
         return runCatching { s.getSecureString(key) }
             .onFailure { markDead("getSecureString", it) }
             .getOrNull()
+    }
+
+    fun getGlobalString(key: String): String? {
+        val s = service ?: return null
+        return runCatching { s.getGlobalString(key) }
+            .onFailure { markDead("getGlobalString", it) }
+            .getOrNull()
+    }
+
+    fun putGlobalString(key: String, value: String): Boolean {
+        val s = service ?: return false
+        return runCatching { s.putGlobalString(key, value) }
+            .onFailure { markDead("putGlobalString", it) }
+            .getOrDefault(false)
+    }
+
+    /** Cached and replayed on (re)connect, like the battery config: the daemon boots entitled. */
+    private var lastEntitled: Boolean? = null
+
+    fun setEntitled(entitled: Boolean) {
+        lastEntitled = entitled
+        sendEntitled(entitled)
+    }
+
+    private fun sendEntitled(entitled: Boolean) {
+        runRemote("setEntitled") { it.setEntitled(entitled) }
     }
 
     fun turnOff() {

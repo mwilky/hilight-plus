@@ -45,6 +45,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
+import androidx.activity.compose.LocalActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mwilky.hilight.plus.AppNotificationRule
@@ -52,6 +53,7 @@ import com.mwilky.hilight.plus.BatterySettings
 import com.mwilky.hilight.plus.ContactRule
 import com.mwilky.hilight.plus.DEFAULT_SETTINGS_SNAPSHOT
 import com.mwilky.hilight.plus.LightController
+import com.mwilky.hilight.plus.Licensing
 import com.mwilky.hilight.plus.MessageContactRule
 import com.mwilky.hilight.plus.MultiAlertMode
 import com.mwilky.hilight.plus.NativeHiLightDetector
@@ -85,6 +87,8 @@ fun HomeScreen(
     val stockState by NativeHiLightDetector.state.collectAsStateWithLifecycle()
     val shizukuState by controller.shizuku.state.collectAsStateWithLifecycle()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val licenseStatus by controller.licensing.status.collectAsStateWithLifecycle()
+    val activity = LocalActivity.current
 
     val permissionState = rememberPermissionState()
     val requestCallPermissions = rememberCallPermissionLauncher(permissionState)
@@ -150,6 +154,8 @@ fun HomeScreen(
     HomeContent(
         shizukuState = shizukuState,
         shizukuError = controller.shizuku.errorText(),
+        licenseStatus = licenseStatus,
+        onBuy = { activity?.let { controller.licensing.purchase(it) } },
         onDisconnectShizuku = { controller.shizuku.unbind() },
         onConnectShizuku = { controller.shizuku.connectManually() },
         onRequestShizukuPermission = { controller.shizuku.requestPermission() },
@@ -453,7 +459,9 @@ fun HomeContent(
     onAddApp: () -> Unit,
     // Battery
     onBatteryChange: (BatterySettings) -> Unit,
-    renderer: PatternRenderer
+    renderer: PatternRenderer,
+    licenseStatus: Licensing.Status? = null,
+    onBuy: () -> Unit = {}
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val pagerState = rememberPagerState { 3 }
@@ -478,6 +486,13 @@ fun HomeContent(
                 selectedIndex = pagerState.currentPage,
                 onSelect = { page -> scope.launch { pagerState.animateScrollToPage(page) } }
             )
+            if (licenseStatus != null && !licenseStatus.purchased) {
+                LicenseCard(
+                    status = licenseStatus,
+                    onBuy = onBuy,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize(),
