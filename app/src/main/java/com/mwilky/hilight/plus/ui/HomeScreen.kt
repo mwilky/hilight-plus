@@ -573,8 +573,8 @@ private fun HomePageToggle(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 8.dp)
-            .padding(top = 8.dp),
+            // The gap below the strip lives here, not on the pages, so it stays put while they scroll.
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

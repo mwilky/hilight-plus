@@ -111,8 +111,7 @@ fun HomeBatteryPage(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp)
-            .padding(top = 8.dp),
+            .padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         if (shizukuState != ShizukuBridge.State.CONNECTED) {
