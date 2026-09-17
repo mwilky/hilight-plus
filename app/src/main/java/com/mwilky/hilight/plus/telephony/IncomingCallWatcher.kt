@@ -33,6 +33,9 @@ import kotlinx.coroutines.sync.withLock
  *
  * Events are serialized and the receiver is kept alive with [goAsync] so a
  * hangup cannot lose the stop, and a late RINGING cannot restart lights.
+ *
+ * App calls (WhatsApp, Teams, ...) arrive through [IncomingCallProcessor.submitVoipRinging]
+ * from the notification listener and resolve through the same three tiers by caller name.
  */
 class IncomingCallWatcher : BroadcastReceiver() {
 
@@ -52,20 +55,25 @@ class IncomingCallWatcher : BroadcastReceiver() {
 
 internal object IncomingCallProcessor {
     private val session = IncomingCallSession()
-    private val events = Channel<Queued>(Channel.UNLIMITED)
+    private val events = Channel<CallEvent>(Channel.UNLIMITED)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val lock = Mutex()
     @Volatile private var settingsWatchStarted = false
 
+    // The one app call currently ringing, by notification key. A cellular ring always wins
+    // over it while both are live; when the cellular call ends the app call's lights resume.
+    private var voipKey: String? = null
+    private var voipCallerName: String = ""
+
     init {
         scope.launch {
-            for (queued in events) {
+            for (event in events) {
                 try {
-                    lock.withLock { handle(queued) }
+                    lock.withLock { handle(event) }
                 } catch (t: Throwable) {
                     Log.e(TAG, "Call event failed", t)
                 } finally {
-                    queued.pending.finish()
+                    (event as? CallEvent.Telephony)?.pending?.finish()
                 }
             }
         }
@@ -78,10 +86,26 @@ internal object IncomingCallProcessor {
         pending: BroadcastReceiver.PendingResult
     ) {
         ensureSettingsWatch(appContext)
-        val queued = Queued(appContext, state, number, pending)
+        val queued = CallEvent.Telephony(appContext, state, number, pending)
         if (!events.trySend(queued).isSuccess) {
             pending.finish()
         }
+    }
+
+    /** A ringing app-call notification was posted (or re-posted) under [key]. */
+    fun submitVoipRinging(appContext: Context, key: String, callerName: String) {
+        ensureSettingsWatch(appContext)
+        events.trySend(CallEvent.VoipRinging(appContext, key, callerName))
+    }
+
+    /** The notification under [key] was removed or is no longer a ringing call. */
+    fun submitVoipEnded(appContext: Context, key: String) {
+        events.trySend(CallEvent.VoipEnded(appContext, key))
+    }
+
+    /** Listener reconnected: any tracked app call whose notification is gone has ended. */
+    fun submitVoipShadeSync(appContext: Context, shadeKeys: Set<String>) {
+        events.trySend(CallEvent.VoipShadeSync(appContext, shadeKeys))
     }
 
     private fun ensureSettingsWatch(appContext: Context) {
@@ -90,22 +114,48 @@ internal object IncomingCallProcessor {
         scope.launch {
             appContext.dataStore.data.collect {
                 lock.withLock {
-                    if (!session.isRinging) return@withLock
-                    startResolvedCall(
-                        appContext,
-                        AppStore.get(appContext),
-                        LightController.get(appContext),
-                        session.number
-                    )
+                    val store = AppStore.get(appContext)
+                    val controller = LightController.get(appContext)
+                    when {
+                        session.isRinging -> startResolvedCall(appContext, store, controller, session.number)
+                        voipKey != null -> startResolvedVoipCall(appContext, store, controller, voipCallerName)
+                    }
                 }
             }
         }
     }
 
-    private suspend fun handle(queued: Queued) {
+    private suspend fun handle(event: CallEvent) {
+        val controller = LightController.get(event.appContext)
+        val store = AppStore.get(event.appContext)
+        when (event) {
+            is CallEvent.Telephony -> handleTelephony(event, store, controller)
+            is CallEvent.VoipRinging -> {
+                voipKey = event.key
+                voipCallerName = event.callerName
+                if (session.isRinging) {
+                    Log.d(TAG, "App call ringing while a phone call rings; phone call keeps the lights")
+                } else {
+                    startResolvedVoipCall(event.appContext, store, controller, event.callerName)
+                }
+            }
+            is CallEvent.VoipEnded -> if (event.key == voipKey) endVoipCall(controller)
+            is CallEvent.VoipShadeSync -> {
+                val key = voipKey
+                if (key != null && key !in event.shadeKeys) endVoipCall(controller)
+            }
+        }
+    }
+
+    private fun endVoipCall(controller: LightController) {
+        Log.i(TAG, "App call ended or answered, stopping call lights")
+        voipKey = null
+        voipCallerName = ""
+        if (!session.isRinging) stopCallLights(controller)
+    }
+
+    private suspend fun handleTelephony(queued: CallEvent.Telephony, store: AppStore, controller: LightController) {
         val now = SystemClock.elapsedRealtime()
-        val controller = LightController.get(queued.appContext)
-        val store = AppStore.get(queued.appContext)
 
         when (queued.state) {
             TelephonyManager.EXTRA_STATE_RINGING -> {
@@ -124,7 +174,11 @@ internal object IncomingCallProcessor {
             TelephonyManager.EXTRA_STATE_IDLE -> {
                 if (session.onEnded(now) == IncomingCallSession.Effect.Stop) {
                     Log.i(TAG, "Call ended or answered (${queued.state}), stopping call lights")
-                    stopCallLights(controller)
+                    if (voipKey != null) {
+                        startResolvedVoipCall(queued.appContext, store, controller, voipCallerName)
+                    } else {
+                        stopCallLights(controller)
+                    }
                 }
             }
         }
@@ -144,6 +198,38 @@ internal object IncomingCallProcessor {
         }
 
         val contactName = if (number.isNotBlank()) lookupContactName(context, number) else null
+        startForCaller(context, snapshot, controller, contactName, isSavedContact = contactName != null)
+    }
+
+    /**
+     * App calls carry a display name rather than a number. A custom rule matches on that name;
+     * otherwise the address book decides between All Other Contacts and Unknown.
+     */
+    private suspend fun startResolvedVoipCall(
+        context: Context,
+        store: AppStore,
+        controller: LightController,
+        callerName: String
+    ) {
+        val snapshot = store.snapshot()
+        if (!snapshot.isEnabled || !snapshot.isCallLightsEnabled) {
+            Log.d(TAG, "Call lights are disabled; keeping session but stopping lights")
+            stopCallLights(controller)
+            return
+        }
+
+        val name = callerName.takeIf { it.isNotBlank() }
+        val isSaved = name != null && isSavedContactName(context, name)
+        startForCaller(context, snapshot, controller, name, isSavedContact = isSaved)
+    }
+
+    private suspend fun startForCaller(
+        context: Context,
+        snapshot: SettingsSnapshot,
+        controller: LightController,
+        contactName: String?,
+        isSavedContact: Boolean
+    ) {
         val matchedRule = if (contactName != null) snapshot.findRuleForContactName(contactName) else null
 
         if (matchedRule != null && matchedRule.isEnabled) {
@@ -163,7 +249,7 @@ internal object IncomingCallProcessor {
             return
         }
 
-        if (contactName != null) {
+        if (isSavedContact) {
             if (matchedRule != null) {
                 Log.i(TAG, "Custom rule for '${matchedRule.name}' is disabled -> All Other Contacts")
             } else {
@@ -283,12 +369,32 @@ internal object IncomingCallProcessor {
         }.getOrNull()
     }
 
-    private data class Queued(
-        val appContext: Context,
-        val state: String,
-        val number: String,
-        val pending: BroadcastReceiver.PendingResult
-    )
+    private fun isSavedContactName(context: Context, displayName: String): Boolean {
+        return runCatching {
+            context.contentResolver.query(
+                ContactsContract.Contacts.CONTENT_URI,
+                arrayOf(ContactsContract.Contacts._ID),
+                "${ContactsContract.Contacts.DISPLAY_NAME_PRIMARY} = ? COLLATE NOCASE",
+                arrayOf(displayName.trim()),
+                null
+            )?.use { it.moveToFirst() }
+        }.getOrNull() == true
+    }
+
+    private sealed interface CallEvent {
+        val appContext: Context
+
+        data class Telephony(
+            override val appContext: Context,
+            val state: String,
+            val number: String,
+            val pending: BroadcastReceiver.PendingResult
+        ) : CallEvent
+
+        data class VoipRinging(override val appContext: Context, val key: String, val callerName: String) : CallEvent
+        data class VoipEnded(override val appContext: Context, val key: String) : CallEvent
+        data class VoipShadeSync(override val appContext: Context, val shadeKeys: Set<String>) : CallEvent
+    }
 
     private const val TAG = "IncomingCallWatcher"
 }

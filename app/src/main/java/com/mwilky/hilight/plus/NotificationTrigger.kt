@@ -5,10 +5,13 @@ import android.app.NotificationManager
 import android.app.Person
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import android.telecom.TelecomManager
 import android.util.Log
 import com.mwilky.hilight.plus.core.AppIconColorExtractor
 import com.mwilky.hilight.plus.core.DeviceOrientationDetector
 import com.mwilky.hilight.plus.core.NotificationSlotTracker
+import com.mwilky.hilight.plus.telephony.IncomingCallProcessor
+import com.mwilky.hilight.plus.telephony.VoipCallDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -71,6 +74,7 @@ class NotificationTrigger : NotificationListenerService() {
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         if (sbn == null) return
+        IncomingCallProcessor.submitVoipEnded(applicationContext, sbn.key)
         enqueue(ListenerEvent.Removed(sbn.key))
     }
 
@@ -78,6 +82,19 @@ class NotificationTrigger : NotificationListenerService() {
         if (sbn == null) return
         val pkg = sbn.packageName ?: return
         if (pkg == packageName) return
+
+        // A ringing app call is a call, not a message: it lights until answered or ended.
+        // The same key re-posted as an in-progress call is how most apps signal "answered".
+        val posted = sbn.notification
+        if (posted?.category == Notification.CATEGORY_CALL && !isCellularCallSource(pkg)) {
+            if (VoipCallDetector.isIncomingCall(posted)) {
+                IncomingCallProcessor.submitVoipRinging(applicationContext, sbn.key, extractSenderName(posted))
+            } else {
+                IncomingCallProcessor.submitVoipEnded(applicationContext, sbn.key)
+            }
+            return
+        }
+
         if (!isEligiblePostedNotification(sbn)) return
 
         val notification = sbn.notification ?: return
@@ -101,6 +118,7 @@ class NotificationTrigger : NotificationListenerService() {
             }
             is ListenerEvent.Reconnect -> {
                 val shadeKeys = event.shadeKeys ?: return
+                IncomingCallProcessor.submitVoipShadeSync(applicationContext, shadeKeys)
                 applyRemovals(
                     tracker.pruneMissing(shadeKeys),
                     AppStore.get(applicationContext).snapshot().isCycleNotifications
@@ -179,6 +197,13 @@ class NotificationTrigger : NotificationListenerService() {
             )
         }
         syncNotificationMonitor()
+    }
+
+    /** Cellular calls are already handled by the phone-state receiver; their dialer notification must not double up. */
+    private fun isCellularCallSource(pkg: String): Boolean {
+        if (pkg == "com.android.server.telecom" || pkg == "com.android.phone") return true
+        val dialer = runCatching { getSystemService(TelecomManager::class.java)?.defaultDialerPackage }.getOrNull()
+        return dialer != null && pkg == dialer
     }
 
     private fun isEligiblePostedNotification(sbn: StatusBarNotification): Boolean {

@@ -5,7 +5,7 @@
     <string name="onboarding_title">Welcome to HiLight Plus</string>
     <string name="onboarding_subtitle">Take control of the rear lights on your Pixel with your own rules for calls and notifications.</string>
     <string name="onboarding_feature_calls_title">Incoming calls</string>
-    <string name="onboarding_feature_calls_desc">Give each contact, or unknown callers, their own colour and light pattern.</string>
+    <string name="onboarding_feature_calls_desc">Give each contact, or unknown callers, their own colour and light pattern. Works for phone calls and app calls like WhatsApp.</string>
     <string name="onboarding_feature_notifs_title">Notifications</string>
     <string name="onboarding_feature_notifs_desc">Light up differently for specific apps and contacts.</string>
     <string name="onboarding_feature_conditions_title">Conditions</string>
