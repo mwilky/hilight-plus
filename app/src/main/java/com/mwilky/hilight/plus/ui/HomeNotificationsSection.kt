@@ -2,14 +2,23 @@
 
 package com.mwilky.hilight.plus.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -22,14 +31,19 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mwilky.hilight.plus.AppNotificationRule
 import com.mwilky.hilight.plus.MessageContactRule
+import com.mwilky.hilight.plus.MultiAlertMode
 import com.mwilky.hilight.plus.R
 import com.mwilky.hilight.plus.SettingsSnapshot
 import com.mwilky.hilight.plus.ShizukuBridge
@@ -62,7 +76,7 @@ fun HomeNotifsPage(
     onDeleteAppRule: (String) -> Unit,
     onAddApp: () -> Unit,
     onChangeDuration: (Int) -> Unit,
-    onToggleCycleNotifications: (Boolean) -> Unit,
+    onChangeMultiAlertMode: (MultiAlertMode) -> Unit,
     renderer: PatternRenderer
 ) {
     val messageRules = state.messageContactRules
@@ -169,7 +183,15 @@ fun HomeNotifsPage(
 
                 RuleGroupHeader(stringResource(R.string.settings_additional_header))
                 Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
-                    val isCycle = state.isCycleNotifications
+                    val mode = state.multiAlertMode
+                    val isCycle = mode.keepsQueue
+                    // Duration only applies to Newest only; in the queue modes lights last until dismissal,
+                    // so the whole row fades rather than just the slider's thumb.
+                    val durationAlpha by animateFloatAsState(
+                        targetValue = if (isCycle) DISABLED_ALPHA else 1f,
+                        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+                        label = "durationAlpha"
+                    )
                     SegmentedListItem(
                         shapes = ListItemDefaults.segmentedShapes(index = 0, count = 2),
                         colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -177,12 +199,13 @@ fun HomeNotifsPage(
                             Text(
                                 text = formatDurationLabel(state.notificationDurationSeconds),
                                 style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.alpha(durationAlpha)
                             )
                         },
                         supportingContent = {
-                            Column {
-                                Text(
+                            Column(modifier = Modifier.alpha(durationAlpha)) {
+                                AnimatedText(
                                     if (isCycle) stringResource(R.string.settings_duration_cycling_desc)
                                     else stringResource(R.string.settings_duration_desc)
                                 )
@@ -200,16 +223,42 @@ fun HomeNotifsPage(
                             }
                         }
                     ) {
-                        Text(stringResource(R.string.settings_duration_title))
+                        Text(stringResource(R.string.settings_duration_title), modifier = Modifier.alpha(durationAlpha))
                     }
                     SegmentedListItem(
-                        onClick = { onToggleCycleNotifications(!isCycle) },
                         shapes = ListItemDefaults.segmentedShapes(index = 1, count = 2),
                         colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                        supportingContent = { Text(stringResource(R.string.settings_cycle_desc)) },
-                        trailingContent = { Switch(checked = isCycle, onCheckedChange = onToggleCycleNotifications) }
+                        supportingContent = {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                ConnectedChoice(
+                                    options = listOf(
+                                        MultiAlertMode.LATEST to stringResource(R.string.settings_multi_latest),
+                                        MultiAlertMode.CYCLE to stringResource(R.string.settings_multi_cycle),
+                                        MultiAlertMode.SPLIT to stringResource(R.string.settings_multi_split)
+                                    ),
+                                    selected = mode,
+                                    onSelect = onChangeMultiAlertMode
+                                )
+                                AnimatedText(
+                                    when (mode) {
+                                        MultiAlertMode.LATEST -> stringResource(R.string.settings_multi_latest_desc)
+                                        MultiAlertMode.CYCLE -> stringResource(R.string.settings_multi_cycle_desc)
+                                        MultiAlertMode.SPLIT -> stringResource(R.string.settings_multi_split_desc)
+                                    }
+                                )
+                                AnimatedVisibility(
+                                    visible = mode == MultiAlertMode.SPLIT,
+                                    enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
+                                        fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+                                    exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
+                                        fadeOut(MaterialTheme.motionScheme.defaultEffectsSpec())
+                                ) {
+                                    SplitRingExample(renderer)
+                                }
+                            }
+                        }
                     ) {
-                        Text(stringResource(R.string.settings_cycle_title))
+                        Text(stringResource(R.string.settings_multi_title))
                     }
                 }
             }
@@ -218,6 +267,35 @@ fun HomeNotifsPage(
         Spacer(Modifier.height(24.dp))
     }
 }
+
+/** A still of three waiting notifications, so the split layout is visible before any arrive. */
+@Composable
+private fun SplitRingExample(renderer: PatternRenderer) {
+    val frame = remember(renderer) {
+        renderer.renderSplitFrame(
+            colors = longArrayOf(0xFF00E5FF, 0xFF34A853, 0xFFFF6D00),
+            brightness = 1f,
+            elapsedTimeMs = 1200L
+        )
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        DiffusedRingPreview(
+            frames = frame,
+            modifier = Modifier.size(56.dp).clip(CircleShape),
+            size = 56.dp
+        )
+        Text(
+            text = stringResource(R.string.settings_multi_split_example),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+private const val DISABLED_ALPHA = 0.38f
 
 @Composable
 private fun formatDurationLabel(seconds: Int): String {

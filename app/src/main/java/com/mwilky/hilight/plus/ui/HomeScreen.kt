@@ -53,6 +53,7 @@ import com.mwilky.hilight.plus.ContactRule
 import com.mwilky.hilight.plus.DEFAULT_SETTINGS_SNAPSHOT
 import com.mwilky.hilight.plus.LightController
 import com.mwilky.hilight.plus.MessageContactRule
+import com.mwilky.hilight.plus.MultiAlertMode
 import com.mwilky.hilight.plus.NativeHiLightDetector
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.R
@@ -173,7 +174,7 @@ fun HomeScreen(
         onAddCallContact = { callContactPickerLauncher.launch(null) },
         onToggleNotifs = viewModel::setNotificationsEnabled,
         onChangeDuration = viewModel::setNotificationDurationSeconds,
-        onToggleCycleNotifications = viewModel::setCycleNotifications,
+        onChangeMultiAlertMode = viewModel::setMultiAlertMode,
         onToggleDefaultNotif = viewModel::setDefaultNotifEnabled,
         onEditDefaultNotif = { isConfiguringDefaultNotif = true },
         onToggleMessageRule = { rule, isEnabled ->
@@ -439,7 +440,7 @@ fun HomeContent(
     // Notifications
     onToggleNotifs: (Boolean) -> Unit,
     onChangeDuration: (Int) -> Unit,
-    onToggleCycleNotifications: (Boolean) -> Unit = {},
+    onChangeMultiAlertMode: (MultiAlertMode) -> Unit = {},
     onToggleDefaultNotif: (Boolean) -> Unit,
     onEditDefaultNotif: () -> Unit,
     onToggleMessageRule: (MessageContactRule, Boolean) -> Unit,
@@ -529,7 +530,7 @@ fun HomeContent(
                         onDeleteAppRule = onDeleteAppRule,
                         onAddApp = onAddApp,
                         onChangeDuration = onChangeDuration,
-                        onToggleCycleNotifications = onToggleCycleNotifications,
+                        onChangeMultiAlertMode = onChangeMultiAlertMode,
                         renderer = renderer
                     )
                     else -> HomeBatteryPage(

@@ -44,6 +44,25 @@ enum class FaceDownMode(val id: String) {
     }
 }
 
+/**
+ * What the ring does when more than one notification is waiting.
+ */
+enum class MultiAlertMode(val id: String) {
+    /** Only the newest notification lights, for the configured duration. */
+    LATEST("latest"),
+    /** Every waiting notification plays its own pattern in turn until dismissed. */
+    CYCLE("cycle"),
+    /** Every waiting notification owns an arc of the ring in its colour until dismissed. */
+    SPLIT("split");
+
+    /** CYCLE and SPLIT both keep every waiting alert queued in the daemon. */
+    val keepsQueue: Boolean get() = this != LATEST
+
+    companion object {
+        fun fromId(id: String?) = entries.find { it.id == id }
+    }
+}
+
 enum class DndMode(val id: String) {
     INHERIT("inherit"),
     ALWAYS("always"),

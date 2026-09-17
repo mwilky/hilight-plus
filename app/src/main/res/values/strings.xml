@@ -101,9 +101,15 @@
     <string name="settings_additional_header">Additional settings</string>
     <string name="settings_duration_title">Light duration</string>
     <string name="settings_duration_desc">How long to display the lights after receiving a notification</string>
-    <string name="settings_duration_cycling_desc">Duration does not apply while cycle multiple alerts is enabled. Lights continue until each notification is dismissed.</string>
-    <string name="settings_cycle_title">Cycle multiple alerts</string>
-    <string name="settings_cycle_desc">Rotate lighting patterns through each active unread notification</string>
+    <string name="settings_duration_cycling_desc">Duration does not apply in this mode. Lights continue until each notification is dismissed.</string>
+    <string name="settings_multi_title">Multiple alerts</string>
+    <string name="settings_multi_latest">Newest only</string>
+    <string name="settings_multi_cycle">Take turns</string>
+    <string name="settings_multi_split">Split the ring</string>
+    <string name="settings_multi_latest_desc">Only the newest notification lights, for the duration above.</string>
+    <string name="settings_multi_cycle_desc">Each waiting notification plays its own pattern in turn, until it is dismissed.</string>
+    <string name="settings_multi_split_desc">Each waiting notification gets its own arc of the ring in its colour, with a dark gap between arcs, until it is dismissed. Up to four are shown in fixed slots around the ring, newest at the top. Arcs breathe slowly together instead of using each rule\'s pattern. A single notification still plays its own pattern.</string>
+    <string name="settings_multi_split_example">Three waiting: newest at the top, then clockwise</string>
 
     <!-- Dialogs & Customization -->
     <string name="dialog_section_look">Look</string>

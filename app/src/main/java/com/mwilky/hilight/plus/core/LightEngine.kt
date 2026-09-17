@@ -136,6 +136,10 @@ class LightEngine {
     private var cycleStartTimeMs = 0L
     private var needsSessionReset = false
 
+    // Split-ring display of the queue: with two or more visible alerts each gets its own arc
+    // instead of taking turns. A single visible alert still plays its own pattern.
+    private var splitRing = false
+
     fun start(): Boolean {
         synchronized(lock) {
             if (running) return true
@@ -346,6 +350,14 @@ class LightEngine {
         }
     }
 
+    fun setSplitRing(enabled: Boolean) {
+        synchronized(lock) {
+            if (splitRing == enabled) return
+            splitRing = enabled
+            Log.i(TAG, "setSplitRing: $enabled")
+        }
+    }
+
     fun setQuietHours(enabled: Boolean, startMinutes: Int, endMinutes: Int) {
         synchronized(lock) {
             if (quietHoursEnabled == enabled &&
@@ -549,6 +561,7 @@ class LightEngine {
             var currentSpeed = ambientSpeedMs
             var elapsedMs = now
             var renderBattery = false
+            var splitColors: LongArray? = null
 
             fun useBatteryIfEligible() {
                 if (batteryEligible) renderBattery = true
@@ -582,8 +595,12 @@ class LightEngine {
                 elapsedMs = directAlertTimer.elapsedMs(now)
             } else if (!batterySuppressesNotifications && activeAlerts.isNotEmpty()) {
                 val eligibleStart = firstEligibleAlertIndex(currentAlertIndex)
+                val splitAlerts = if (splitRing && eligibleStart != null) visibleAlertsNewestFirst(nowMinutes) else emptyList()
                 if (eligibleStart == null) {
                     useBatteryIfEligible()
+                } else if (splitAlerts.size >= 2) {
+                    splitColors = LongArray(minOf(splitAlerts.size, PatternRenderer.MAX_SPLIT_SEGMENTS)) { splitAlerts[it].color }
+                    currentBrightness = splitAlerts[0].brightness
                 } else {
                     if (currentAlertIndex != eligibleStart) {
                         currentAlertIndex = eligibleStart
@@ -637,6 +654,22 @@ class LightEngine {
                 return
             }
 
+            if (splitColors != null) {
+                if (needsSessionReset || !lights.isSessionOpen) {
+                    lights.openSession(sessionPriority)
+                    needsSessionReset = false
+                }
+                lights.pushFrame(
+                    renderer.renderSplitFrame(
+                        colors = splitColors,
+                        brightness = currentBrightness,
+                        elapsedTimeMs = now,
+                        ledCount = lights.ledCount
+                    )
+                )
+                return
+            }
+
             if (currentPattern.equals("off", ignoreCase = true)) {
                 if (lights.isSessionOpen) {
                     lights.blank()
@@ -662,6 +695,19 @@ class LightEngine {
             lights.pushFrame(frame)
         }
     }
+
+    /** Queue order is post order, so the newest alert is last; the split ring shows newest at the top. */
+    private fun visibleAlertsNewestFirst(nowMinutes: Int): List<QueuedAlert> =
+        activeAlerts.asReversed().filter { alert ->
+            alertVisible(
+                alert.requiresFaceDown,
+                alert.dndMode,
+                alert.quietHoursMode,
+                alert.quietStartOverride,
+                alert.quietEndOverride,
+                nowMinutes
+            )
+        }
 
     private fun firstEligibleAlertIndex(startIndex: Int): Int? {
         if (activeAlerts.isEmpty()) return null

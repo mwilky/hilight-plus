@@ -127,6 +127,11 @@ class LightController private constructor(private val app: Application) {
             }
         }
         scope.launch {
+            store.multiAlertMode.collect { mode ->
+                shizuku.setSplitRing(mode == MultiAlertMode.SPLIT)
+            }
+        }
+        scope.launch {
             combine(
                 store.quietHoursEnabled,
                 store.quietHoursStartMinutes,
@@ -295,6 +300,7 @@ class LightController private constructor(private val app: Application) {
     private suspend fun pushLiveConditions() {
         shizuku.setDndActive(lastDndActive)
         shizuku.setDndSuppressEnabled(store.suppressDuringDnd.first())
+        shizuku.setSplitRing(store.multiAlertMode.first() == MultiAlertMode.SPLIT)
         shizuku.setQuietHours(
             store.quietHoursEnabled.first(),
             store.quietHoursStartMinutes.first(),

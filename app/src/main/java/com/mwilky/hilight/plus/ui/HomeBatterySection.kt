@@ -547,7 +547,7 @@ private fun <T> OptionsRow(
 
 /** The connected toggle-button strip shared by the choice rows and the preview card. */
 @Composable
-private fun <T> ConnectedChoice(
+internal fun <T> ConnectedChoice(
     options: List<Pair<T, String>>,
     selected: T,
     onSelect: (T) -> Unit,

@@ -221,6 +221,35 @@ class PatternRenderer {
         }
     }
 
+    /**
+     * Split-ring layer for several waiting notifications: each gets its own arc in its colour,
+     * with one dark LED between arcs. On the diffused ring two colours placed side by side just
+     * blend into a third, so the gap is what makes "two things" readable rather than "one odd
+     * colour". All arcs breathe together, shallowly, so the count stays readable through the
+     * whole cycle and there is no per-arc motion to mistake for extra alerts.
+     *
+     * [colors] is newest first; the newest arc starts at LED 0 (the top) and arcs run clockwise.
+     */
+    fun renderSplitFrame(
+        colors: LongArray,
+        brightness: Float,
+        elapsedTimeMs: Long,
+        ledCount: Int = 8
+    ): IntArray {
+        val count = maxOf(1, ledCount)
+        val layout = splitLayout(colors.size, count)
+        val phase = (elapsedTimeMs % SPLIT_BREATHE_MS) / SPLIT_BREATHE_MS.toDouble()
+        val k = (SPLIT_BREATHE_FLOOR + (1.0 - SPLIT_BREATHE_FLOOR) * (1.0 - cos(phase * 2.0 * PI)) / 2.0) *
+            brightness.coerceIn(0f, 1f)
+
+        val frame = IntArray(count)
+        for (i in 0 until count) {
+            val segment = layout[i]
+            frame[i] = if (segment < 0) 0x00000000 else scaleColor(colors[segment].toInt() or 0xFF000000.toInt(), k)
+        }
+        return frame
+    }
+
     /** Red (0%) -> amber (50%) -> green (100%), so level reads at a glance without a legend. */
     private fun batteryLevelColor(level: Int): Int {
         val hue = if (level <= 50) {
@@ -377,6 +406,46 @@ class PatternRenderer {
     }
 
     companion object {
+        private const val SPLIT_BREATHE_MS = 2400L
+        // Never dip low enough that "on" reads as bleed from a neighbour.
+        private const val SPLIT_BREATHE_FLOOR = 0.45
+
+        /** Each arc needs at least one lit LED plus its gap, and more than four arcs stop being countable. */
+        const val MAX_SPLIT_SEGMENTS = 4
+
+        /**
+         * Maps each LED to the arc index it belongs to, or -1 for a gap. Arcs are always the same
+         * size as each other. Two arcs split the ring in half, 2 lit + 2 dark each on 8 LEDs: a
+         * single dark LED is not enough of a gap on the diffused ring and the two halves merge into
+         * one blended circle. Three or more use four fixed single-LED slots at the quarter points,
+         * so three alerts read as "three of four slots" with one dark slot, rather than as an
+         * uneven 2+2+1: eight LEDs cannot be split three ways evenly, and equal arcs with a
+         * consistent grid beat equal gaps.
+         */
+        fun splitLayout(segments: Int, ledCount: Int): IntArray {
+            val count = maxOf(1, ledCount)
+            val n = segments.coerceIn(1, minOf(MAX_SPLIT_SEGMENTS, maxOf(1, count / 2)))
+            val layout = IntArray(count) { -1 }
+
+            if (n >= 3) {
+                val stride = maxOf(2, count / MAX_SPLIT_SEGMENTS)
+                for (segment in 0 until n) {
+                    val at = segment * stride
+                    if (at < count) layout[at] = segment
+                }
+                return layout
+            }
+
+            // Each arc takes half of its share of the ring; the other half is its gap.
+            val share = count / n
+            val size = maxOf(1, share / 2)
+            for (segment in 0 until n) {
+                val start = segment * share
+                for (offset in 0 until size) layout[start + offset] = segment
+            }
+            return layout
+        }
+
         private const val BATTERY_BREATHE_MS = 2200L
         private const val BATTERY_HEARTBEAT_MS = 1800L
         private const val BATTERY_FULL_SWEEP_PERIOD_MS = 10_000L

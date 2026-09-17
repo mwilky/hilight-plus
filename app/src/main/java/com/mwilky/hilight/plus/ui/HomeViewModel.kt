@@ -11,6 +11,7 @@ import com.mwilky.hilight.plus.DEFAULT_SETTINGS_SNAPSHOT
 import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.FaceDownMode
 import com.mwilky.hilight.plus.MessageContactRule
+import com.mwilky.hilight.plus.MultiAlertMode
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.SettingsSnapshot
@@ -30,7 +31,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun setUnknownNumbersEnabled(enabled: Boolean) = launch { store.setUnknownNumbersEnabled(enabled) }
     fun setNotificationsEnabled(enabled: Boolean) = launch { store.setNotificationsEnabled(enabled) }
     fun setNotificationDurationSeconds(seconds: Int) = launch { store.setNotificationDurationSeconds(seconds) }
-    fun setCycleNotifications(enabled: Boolean) = launch { store.setCycleNotifications(enabled) }
+    fun setMultiAlertMode(mode: MultiAlertMode) = launch { store.setMultiAlertMode(mode) }
     fun setDefaultNotifEnabled(enabled: Boolean) = launch { store.setDefaultNotifEnabled(enabled) }
     fun setBattery(settings: BatterySettings) = launch { store.setBattery(settings) }
 

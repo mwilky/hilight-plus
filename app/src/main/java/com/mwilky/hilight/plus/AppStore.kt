@@ -59,6 +59,7 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
         private val KEY_NOTIFICATION_DURATION_SEC = intPreferencesKey("notification_duration_sec")
         private val KEY_CYCLE_NOTIFICATIONS = booleanPreferencesKey("cycle_notifications")
+        private val KEY_MULTI_ALERT_MODE = stringPreferencesKey("multi_alert_mode")
         private val KEY_DEFAULT_NOTIF_ENABLED = booleanPreferencesKey("default_notif_enabled")
         private val KEY_DEFAULT_NOTIF_COLOR = longPreferencesKey("default_notif_color")
         private val KEY_DEFAULT_NOTIF_PATTERN = stringPreferencesKey("default_notif_pattern")
@@ -112,8 +113,10 @@ class AppStore private constructor(private val appContext: Context) {
     val isNotificationsEnabled: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_NOTIFICATIONS_ENABLED] ?: true }
 
-    val isCycleNotifications: Flow<Boolean> = appContext.dataStore.data
-        .map { it[KEY_CYCLE_NOTIFICATIONS] ?: false }
+    val multiAlertMode: Flow<MultiAlertMode> = appContext.dataStore.data
+        .map { readMultiAlertMode(it) }
+
+    val isCycleNotifications: Flow<Boolean> = multiAlertMode.map { it.keepsQueue }
 
     val battery: Flow<BatterySettings> = appContext.dataStore.data
         .map { BatterySettings.fromJson(it[KEY_BATTERY_JSON]) }
@@ -174,9 +177,14 @@ class AppStore private constructor(private val appContext: Context) {
         appContext.dataStore.edit { it[KEY_NOTIFICATION_DURATION_SEC] = seconds }
     }
 
-    suspend fun setCycleNotifications(enabled: Boolean) {
-        appContext.dataStore.edit { it[KEY_CYCLE_NOTIFICATIONS] = enabled }
+    suspend fun setMultiAlertMode(mode: MultiAlertMode) {
+        appContext.dataStore.edit { it[KEY_MULTI_ALERT_MODE] = mode.id }
     }
+
+    /** Falls back to the pre-1.1.3 on/off cycle switch for installs that never picked a mode. */
+    private fun readMultiAlertMode(prefs: Preferences): MultiAlertMode =
+        MultiAlertMode.fromId(prefs[KEY_MULTI_ALERT_MODE])
+            ?: if (prefs[KEY_CYCLE_NOTIFICATIONS] == true) MultiAlertMode.CYCLE else MultiAlertMode.LATEST
 
     suspend fun setDefaultNotifEnabled(enabled: Boolean) {
         appContext.dataStore.edit { it[KEY_DEFAULT_NOTIF_ENABLED] = enabled }
@@ -339,7 +347,7 @@ class AppStore private constructor(private val appContext: Context) {
             unknownNumbersQuietHoursEndMinutes = prefs[KEY_UNKNOWN_NUMBERS_QUIET_END] ?: d.unknownNumbersQuietHoursEndMinutes,
             isNotificationsEnabled = prefs[KEY_NOTIFICATIONS_ENABLED] ?: d.isNotificationsEnabled,
             notificationDurationSeconds = prefs[KEY_NOTIFICATION_DURATION_SEC] ?: d.notificationDurationSeconds,
-            isCycleNotifications = prefs[KEY_CYCLE_NOTIFICATIONS] ?: d.isCycleNotifications,
+            multiAlertMode = readMultiAlertMode(prefs),
             isDefaultNotifEnabled = prefs[KEY_DEFAULT_NOTIF_ENABLED] ?: d.isDefaultNotifEnabled,
             defaultNotifColor = prefs[KEY_DEFAULT_NOTIF_COLOR] ?: d.defaultNotifColor,
             defaultNotifPattern = enumOr(prefs[KEY_DEFAULT_NOTIF_PATTERN], d.defaultNotifPattern),
@@ -401,7 +409,7 @@ data class SettingsSnapshot(
     val unknownNumbersQuietHoursEndMinutes: Int?,
     val isNotificationsEnabled: Boolean,
     val notificationDurationSeconds: Int,
-    val isCycleNotifications: Boolean,
+    val multiAlertMode: MultiAlertMode,
     val isDefaultNotifEnabled: Boolean,
     val defaultNotifColor: Long,
     val defaultNotifPattern: PatternMode,
@@ -415,6 +423,9 @@ data class SettingsSnapshot(
     val appRules: List<AppNotificationRule>,
     val battery: BatterySettings
 ) {
+    /** CYCLE and SPLIT both keep every waiting alert queued; only LATEST uses the timed single alert. */
+    val isCycleNotifications: Boolean get() = multiAlertMode.keepsQueue
+
     fun findRuleForContactName(contactName: String): ContactRule? =
         firstEnabledNameMatch(contactName, contactRules, ContactRule::name, ContactRule::isEnabled)
 
@@ -459,7 +470,7 @@ val DEFAULT_SETTINGS_SNAPSHOT = SettingsSnapshot(
     unknownNumbersQuietHoursEndMinutes = null,
     isNotificationsEnabled = true,
     notificationDurationSeconds = 30,
-    isCycleNotifications = false,
+    multiAlertMode = MultiAlertMode.LATEST,
     isDefaultNotifEnabled = true,
     defaultNotifColor = 0xFFFFFFFF,
     defaultNotifPattern = PatternMode.PULSE,
