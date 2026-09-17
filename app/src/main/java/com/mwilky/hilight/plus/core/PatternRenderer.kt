@@ -178,8 +178,16 @@ class PatternRenderer {
             }
 
             else -> {
-                val c = scaleColor(baseColor, clampedBrightness.toDouble())
-                frame.fill(c)
+                // Diagnostic: "led:N" lights only LED N, so the index order the lights service
+                // reports can be checked against where each LED physically sits on the ring.
+                val single = pattern.removePrefix(SINGLE_LED_PREFIX).toIntOrNull()
+                    ?.takeIf { pattern.startsWith(SINGLE_LED_PREFIX) }
+                if (single != null) {
+                    if (single in 0 until count) frame[single] = scaleColor(baseColor, clampedBrightness.toDouble())
+                } else {
+                    val c = scaleColor(baseColor, clampedBrightness.toDouble())
+                    frame.fill(c)
+                }
             }
         }
 
@@ -406,6 +414,8 @@ class PatternRenderer {
     }
 
     companion object {
+        const val SINGLE_LED_PREFIX = "led:"
+
         private const val SPLIT_BREATHE_MS = 2400L
         // Never dip low enough that "on" reads as bleed from a neighbour.
         private const val SPLIT_BREATHE_FLOOR = 0.45

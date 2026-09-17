@@ -231,6 +231,8 @@
     <!-- About Screen -->
     <string name="about_title">About &amp; Diagnostics</string>
     <string name="about_app_desc">Custom rear LED lighting for Google Pixel.</string>
+    <string name="about_led_walk_title">LED %1$d</string>
+    <string name="about_led_walk_desc">Lighting each LED in turn, 0 to 7. The ring above shows where the app thinks this LED is; compare it with the phone.</string>
     <string name="about_version_label">Version</string>
     <string name="about_status_section_header">System Health &amp; Permissions</string>
     <string name="about_stock_ok_desc">Pixel\'s own \'Calls from favourites\' lighting is off. Gemini and other system features may still use the lights.</string>

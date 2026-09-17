@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import com.mwilky.hilight.plus.core.DeviceOrientationDetector
+import com.mwilky.hilight.plus.core.PatternRenderer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -249,6 +250,17 @@ class LightController private constructor(private val app: Application) {
             color = color,
             brightness = 1.0f,
             speedMs = pattern.speedMs(),
+            durationMs = durationMs
+        )
+    }
+
+    /** Diagnostic: lights only LED [index] for [durationMs], via the same test channel as [testPattern]. */
+    fun testSingleLed(index: Int, durationMs: Long) {
+        shizuku.testAlert(
+            pattern = PatternRenderer.SINGLE_LED_PREFIX + index,
+            color = 0xFFFF0000,
+            brightness = 1.0f,
+            speedMs = 1000L,
             durationMs = durationMs
         )
     }

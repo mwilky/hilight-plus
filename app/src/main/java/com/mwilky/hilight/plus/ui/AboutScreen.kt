@@ -6,6 +6,8 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -35,6 +37,7 @@ import com.mwilky.hilight.plus.ui.diagnostics.ShizukuStatusCard
 import com.mwilky.hilight.plus.ui.diagnostics.StockConflictCard
 import com.mwilky.hilight.plus.ui.diagnostics.rememberCallPermissionLauncher
 import com.mwilky.hilight.plus.ui.diagnostics.rememberPermissionState
+import kotlinx.coroutines.delay
 
 /**
  * About & Diagnostics Screen:
@@ -64,7 +67,36 @@ fun AboutScreen(controller: LightController) {
         context.startActivity(intent)
     }
 
+    // Hidden LED index walk: ten quick taps on the title card light LEDs 0..7 in turn.
+    var titleTaps by remember { mutableStateOf(0) }
+    var lastTapMs by remember { mutableStateOf(0L) }
+    var walkingLed by remember { mutableStateOf<Int?>(null) }
+
+    LaunchedEffect(walkingLed == null) {
+        if (walkingLed == null) return@LaunchedEffect
+        repeat(LED_WALK_ROUNDS) {
+            for (i in 0 until 8) {
+                walkingLed = i
+                controller.testSingleLed(i, LED_WALK_STEP_MS + 200L)
+                delay(LED_WALK_STEP_MS)
+            }
+        }
+        controller.cancelTestPattern()
+        walkingLed = null
+    }
+
+    walkingLed?.let { index -> LedWalkDialog(index) }
+
     AboutContent(
+        onTitleCardTap = {
+            val now = System.currentTimeMillis()
+            titleTaps = if (now - lastTapMs < LED_WALK_TAP_WINDOW_MS) titleTaps + 1 else 1
+            lastTapMs = now
+            if (titleTaps >= LED_WALK_TAP_COUNT && walkingLed == null) {
+                titleTaps = 0
+                walkingLed = 0
+            }
+        },
         shizukuState = shizukuState,
         shizukuError = controller.shizuku.errorText(),
         onDisconnectShizuku = { controller.shizuku.unbind() },
@@ -81,8 +113,34 @@ fun AboutScreen(controller: LightController) {
 }
 
 @Composable
+private fun LedWalkDialog(index: Int) {
+    val frame = remember(index) { IntArray(8) { if (it == index) 0xFFFF0000.toInt() else 0 } }
+    AlertDialog(
+        onDismissRequest = {},
+        confirmButton = {},
+        title = { Text(stringResource(R.string.about_led_walk_title, index)) },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                DiffusedRingPreview(frames = frame, size = 120.dp)
+                Text(stringResource(R.string.about_led_walk_desc))
+            }
+        }
+    )
+}
+
+private const val LED_WALK_TAP_COUNT = 10
+private const val LED_WALK_TAP_WINDOW_MS = 600L
+private const val LED_WALK_STEP_MS = 2000L
+private const val LED_WALK_ROUNDS = 2
+
+@Composable
 fun AboutContent(
     shizukuState: ShizukuBridge.State,
+    onTitleCardTap: () -> Unit = {},
     shizukuError: String?,
     onDisconnectShizuku: () -> Unit,
     onConnectShizuku: () -> Unit,
@@ -116,6 +174,12 @@ fun AboutContent(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             ListItem(
+                // No ripple: the tap target is a hidden diagnostic and should not look tappable.
+                modifier = Modifier.clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onTitleCardTap
+                ),
                 leadingContent = {
                     Box(
                         modifier = Modifier
