@@ -634,7 +634,10 @@ private fun BatteryPreviewCard(battery: BatterySettings, renderer: PatternRender
         val startMs = System.currentTimeMillis()
         while (isActive) {
             val pluggedIn = previewState == PreviewState.CHARGING
-            frames = if (pluggedIn && !battery.showCharging) {
+            val low = !pluggedIn && battery.lowWarningEnabled && level <= battery.lowThresholdPercent
+            // Unplugged, the ring only lights for an active low warning; without one the renderer
+            // would fall through to the charging gauge, which the ring never shows in that state.
+            frames = if ((pluggedIn && !battery.showCharging) || (!pluggedIn && !low)) {
                 IntArray(8)
             } else {
                 renderer.renderBatteryFrame(
@@ -644,8 +647,7 @@ private fun BatteryPreviewCard(battery: BatterySettings, renderer: PatternRender
                     // Slide to 100% while charging and the full look shows, as on the ring.
                     charging = pluggedIn && level < 100,
                     full = pluggedIn && level >= 100,
-                    low = !pluggedIn &&
-                        battery.lowWarningEnabled && level <= battery.lowThresholdPercent,
+                    low = low,
                     autoColor = battery.autoColor,
                     fixedColor = battery.color,
                     brightness = 1.0f,
