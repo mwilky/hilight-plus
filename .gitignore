@@ -18,3 +18,8 @@ local.properties
 app/build/
 app/release/
 .aider*
+
+# Local AI-assistant and IDE files
+CLAUDE.md
+.claudeignore
+/.idea/markdown.xml
