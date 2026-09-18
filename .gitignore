@@ -23,3 +23,6 @@ app/release/
 CLAUDE.md
 .claudeignore
 /.idea/markdown.xml
+
+# Play Store listing graphics, kept locally only
+/play_store_assets/
