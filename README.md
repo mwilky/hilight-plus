@@ -2,7 +2,7 @@
 
 Custom rear LED lighting for the Google Pixel 11 Pro.
 
-Pixel's built-in HiLight only lights the rear ring for calls from favourites. HiLight Plus takes over the eight-LED ring behind the camera bar and lets you decide what it shows: a colour and pattern per contact or app, a charging gauge, a low-battery warning, and rules for when it should stay dark. Everything runs on-device with no accounts and no analytics; the only network use is the Google Play purchase.
+Pixel's built-in HiLight lights the rear ring for two things: calls from favourites, and Gemini's listening, thinking and replying states. HiLight Plus replaces the first and leaves the second alone. It takes over the eight-LED ring behind the camera bar and lets you decide what it shows: a colour and pattern per contact or app, a charging gauge, a low-battery warning, and rules for when it should stay dark. Everything runs on-device with no accounts and no analytics; the only network use is the Google Play purchase.
 
 <p align="center">
   <img src="docs/screenshots/calls.png" width="24%" alt="Calls page with per-contact rules" />
@@ -46,7 +46,7 @@ Pixel's built-in HiLight only lights the rear ring for calls from favourites. Hi
 
 - Google Pixel 11 Pro series running Android 17 (API 37). The app targets the rear `LIGHT_TYPE_APPLICATION` LEDs and will find none on other devices.
 - [Shizuku](https://shizuku.rikka.app/) running, either over wireless debugging or root. Android does not let apps drive the rear lights directly, so HiLight Plus runs a small daemon under Shizuku's shell permission to reach the lights service.
-- The stock "Calls from favourites" HiLight option turned off, otherwise both will try to drive the ring at once. Onboarding checks this for you.
+- The stock "Calls from favourites" HiLight option turned off, otherwise both will try to drive the ring at once. Onboarding checks this for you. Gemini's own use of the ring is untouched: its state changes are not broadcast in a way an app can intercept in real time, so that stays stock behaviour.
 
 ## Permissions
 
