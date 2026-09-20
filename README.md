@@ -2,7 +2,14 @@
 
 Custom rear LED lighting for the Google Pixel 11 Pro.
 
-Pixel's built-in HiLight only lights the rear ring for calls from favourites. HiLight Plus takes over the eight-LED ring behind the camera bar and lets you decide what it shows: a colour and pattern per contact or app, a charging gauge, a low-battery warning, and rules for when it should stay dark. Everything runs on-device with no accounts, no network and no analytics.
+Pixel's built-in HiLight only lights the rear ring for calls from favourites. HiLight Plus takes over the eight-LED ring behind the camera bar and lets you decide what it shows: a colour and pattern per contact or app, a charging gauge, a low-battery warning, and rules for when it should stay dark. Everything runs on-device with no accounts and no analytics; the only network use is the Google Play purchase.
+
+<p align="center">
+  <img src="docs/screenshots/calls.png" width="24%" alt="Calls page with per-contact rules" />
+  <img src="docs/screenshots/rule-editor.png" width="24%" alt="Rule editor with pattern and colour pickers" />
+  <img src="docs/screenshots/split-ring.png" width="24%" alt="Multiple alerts set to split the ring" />
+  <img src="docs/screenshots/battery.png" width="24%" alt="Battery page with charging gauge preview" />
+</p>
 
 ## Features
 
@@ -33,7 +40,7 @@ Pixel's built-in HiLight only lights the rear ring for calls from favourites. Hi
 
 **Extras**
 - Live preview of every pattern on a diffused ring mock-up, and a Test on LEDs button in each rule editor.
-- Onboarding that checks Shizuku, permissions and the stock HiLight setting that would otherwise fight for the ring.
+- Onboarding that checks Shizuku, permissions and the stock HiLight setting that would otherwise fight for the ring, and explains the trial.
 
 ## Requirements
 
@@ -50,7 +57,7 @@ Pixel's built-in HiLight only lights the rear ring for calls from favourites. Hi
 | Notification access | Notice new notifications and app calls, and know when they are dismissed |
 | Shizuku | Talk to the lights daemon over local Binder IPC |
 
-Nothing leaves the device. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for the full policy.
+Contacts and notification content never leave the device. The only network activity is Google Play Billing for the purchase. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for the full policy.
 
 ## How it works
 
@@ -76,6 +83,12 @@ Standard Android Gradle project. Open in Android Studio or run:
 Release builds are minified with R8. There is also a `debugMinified` variant, signed with the debug key, for checking the shrunk app on a device. Keep the `mapping.txt` from each release build for readable crash reports.
 
 Unit tests cover the rule model, JSON round-tripping, contact matching, quiet hours, the pattern renderer, the battery and split-ring layouts, the call-state machine and the notification slot tracker. Anything that touches the LEDs needs a physical Pixel.
+
+## Pricing
+
+The [Google Play](https://play.google.com/store/apps/details?id=com.mwilky.hilight.plus) build is free for 7 days, then a single one-off purchase unlocks it for good. No subscription. The trial starts the first time Shizuku connects and is recorded in a system setting, so it survives clearing app data.
+
+The source is GPL-3.0 and you are welcome to build and install it yourself. A self-built APK is signed with your own key, so it cannot be updated from Play and does not include the purchase. Buying the Play version is the way to support development.
 
 ## Licence
 
