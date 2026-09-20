@@ -568,7 +568,7 @@ internal fun <T> ConnectedChoice(
                     .semantics { role = Role.RadioButton },
                 // The surrounding container is surfaceContainer, which the default unchecked
                 // button colour matches, leaving unselected options invisible.
-                colors = ToggleButtonDefaults.toggleButtonColors(
+                colors = ToggleButtonDefaults.colors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 ),
