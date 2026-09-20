@@ -75,7 +75,8 @@ fun ShizukuStatusCard(
     onDisconnect: () -> Unit,
     onConnect: () -> Unit,
     onRequestPermission: () -> Unit,
-    onOpenShizukuApp: () -> Unit
+    onOpenShizukuApp: () -> Unit,
+    onRestartApp: () -> Unit
 ) {
     val isConnected = shizukuState == ShizukuBridge.State.CONNECTED
     val isExplicitlyDisconnected = shizukuState == ShizukuBridge.State.DISCONNECTED
@@ -155,8 +156,8 @@ fun ShizukuStatusCard(
                         Button(onClick = onOpenShizukuApp, modifier = Modifier.weight(1f), shapes = ButtonDefaults.shapes()) {
                             ButtonLabel(Icons.AutoMirrored.Rounded.Launch, stringResource(R.string.shizuku_btn_open))
                         }
-                        OutlinedButton(onClick = onConnect, modifier = Modifier.weight(1f), shapes = ButtonDefaults.shapes()) {
-                            ButtonLabel(Icons.Rounded.Refresh, stringResource(R.string.shizuku_btn_check_again))
+                        OutlinedButton(onClick = onRestartApp, modifier = Modifier.weight(1f), shapes = ButtonDefaults.shapes()) {
+                            ButtonLabel(Icons.Rounded.Refresh, stringResource(R.string.shizuku_btn_restart_app))
                         }
                     }
                 }

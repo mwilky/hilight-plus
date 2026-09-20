@@ -545,6 +545,19 @@ class ShizukuBridge private constructor(private val app: Application) {
         runRemote("turnOff") { it.turnOff() }
     }
 
+    /**
+     * Shizuku only pushes its binder into app processes it sees start or come to the foreground,
+     * so a process that was already running when Shizuku was started never receives one and
+     * [refresh] can't help. The only reliable way to get a binder is a fresh process.
+     */
+    fun restartApp(context: Context) {
+        refresh()
+        if (_state.value != State.NOT_RUNNING) return
+        val launch = context.packageManager.getLaunchIntentForPackage(context.packageName) ?: return
+        context.startActivity(Intent.makeRestartActivityTask(launch.component))
+        Runtime.getRuntime().exit(0)
+    }
+
     fun openShizukuApp(context: Context) {
         val launch = context.packageManager.getLaunchIntentForPackage(SHIZUKU_PKG)
         if (launch != null) {

@@ -95,6 +95,7 @@ fun HomeBatteryPage(
     onConnectShizuku: () -> Unit,
     onRequestShizukuPermission: () -> Unit,
     onOpenShizukuApp: () -> Unit,
+    onRestartApp: () -> Unit,
     battery: BatterySettings,
     globalQuietStartMinutes: Int,
     globalQuietEndMinutes: Int,
@@ -121,7 +122,8 @@ fun HomeBatteryPage(
                 onDisconnect = onDisconnectShizuku,
                 onConnect = onConnectShizuku,
                 onRequestPermission = onRequestShizukuPermission,
-                onOpenShizukuApp = onOpenShizukuApp
+                onOpenShizukuApp = onOpenShizukuApp,
+                onRestartApp = onRestartApp
             )
         }
 

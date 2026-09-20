@@ -61,6 +61,7 @@ fun HomeNotifsPage(
     onConnectShizuku: () -> Unit,
     onRequestShizukuPermission: () -> Unit,
     onOpenShizukuApp: () -> Unit,
+    onRestartApp: () -> Unit,
     permissionState: PermissionState,
     onOpenNotifSettings: () -> Unit,
     state: SettingsSnapshot,
@@ -95,7 +96,8 @@ fun HomeNotifsPage(
                 onDisconnect = onDisconnectShizuku,
                 onConnect = onConnectShizuku,
                 onRequestPermission = onRequestShizukuPermission,
-                onOpenShizukuApp = onOpenShizukuApp
+                onOpenShizukuApp = onOpenShizukuApp,
+                onRestartApp = onRestartApp
             )
         }
         if (!permissionState.hasNotifAccess) {

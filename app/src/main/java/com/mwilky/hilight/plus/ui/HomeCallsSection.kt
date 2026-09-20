@@ -49,6 +49,7 @@ fun HomeCallsPage(
     onConnectShizuku: () -> Unit,
     onRequestShizukuPermission: () -> Unit,
     onOpenShizukuApp: () -> Unit,
+    onRestartApp: () -> Unit,
     stockState: StockHiLightState,
     onOpenStockSettings: () -> Unit,
     permissionState: PermissionState,
@@ -81,7 +82,8 @@ fun HomeCallsPage(
                 onDisconnect = onDisconnectShizuku,
                 onConnect = onConnectShizuku,
                 onRequestPermission = onRequestShizukuPermission,
-                onOpenShizukuApp = onOpenShizukuApp
+                onOpenShizukuApp = onOpenShizukuApp,
+                onRestartApp = onRestartApp
             )
         }
         if (stockState.known && stockState.favoriteCallsActive) {

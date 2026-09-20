@@ -180,7 +180,8 @@ fun OnboardingScreen(
                 onRequestPermission = { controller.shizuku.requestPermission() },
                 onConnect = { controller.shizuku.connectManually() },
                 onDisconnect = { controller.shizuku.unbind() },
-                onOpenShizuku = { controller.shizuku.openShizukuApp(context) }
+                onOpenShizuku = { controller.shizuku.openShizukuApp(context) },
+                onRestartApp = { controller.shizuku.restartApp(context) }
             )
             OnboardingStep.PERMISSIONS -> PermissionsStepContent(
                 permissionState = permissionState,
@@ -495,7 +496,8 @@ private fun ShizukuStepContent(
     onRequestPermission: () -> Unit,
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
-    onOpenShizuku: () -> Unit
+    onOpenShizuku: () -> Unit,
+    onRestartApp: () -> Unit
 ) {
     StepColumn(
         stringResource(R.string.onboarding_shizuku_title),
@@ -507,7 +509,8 @@ private fun ShizukuStepContent(
                 onDisconnect = onDisconnect,
                 onConnect = onConnect,
                 onRequestPermission = onRequestPermission,
-                onOpenShizukuApp = onOpenShizuku
+                onOpenShizukuApp = onOpenShizuku,
+                onRestartApp = onRestartApp
             )
         }
     )
@@ -635,7 +638,8 @@ fun OnboardingStep2Preview() {
             onRequestPermission = {},
             onConnect = {},
             onDisconnect = {},
-            onOpenShizuku = {}
+            onOpenShizuku = {},
+            onRestartApp = {}
         )
     }
 }

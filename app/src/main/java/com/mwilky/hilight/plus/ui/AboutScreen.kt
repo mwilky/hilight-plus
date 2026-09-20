@@ -103,6 +103,7 @@ fun AboutScreen(controller: LightController) {
         onConnectShizuku = { controller.shizuku.connectManually() },
         onRequestShizukuPermission = { controller.shizuku.requestPermission() },
         onOpenShizukuApp = { controller.shizuku.openShizukuApp(context) },
+        onRestartApp = { controller.shizuku.restartApp(context) },
         stockState = stockState,
         permissionState = permissionState,
         onOpenSettings = { NativeHiLightDetector.openHiLightSettings(context) },
@@ -146,6 +147,7 @@ fun AboutContent(
     onConnectShizuku: () -> Unit,
     onRequestShizukuPermission: () -> Unit,
     onOpenShizukuApp: () -> Unit,
+    onRestartApp: () -> Unit,
     stockState: StockHiLightState,
     permissionState: PermissionState,
     onOpenSettings: () -> Unit,
@@ -222,7 +224,8 @@ fun AboutContent(
                 onDisconnect = onDisconnectShizuku,
                 onConnect = onConnectShizuku,
                 onRequestPermission = onRequestShizukuPermission,
-                onOpenShizukuApp = onOpenShizukuApp
+                onOpenShizukuApp = onOpenShizukuApp,
+                onRestartApp = onRestartApp
             )
 
             StockConflictCard(
@@ -255,6 +258,7 @@ fun AboutScreenPreview() {
             onConnectShizuku = {},
             onRequestShizukuPermission = {},
             onOpenShizukuApp = {},
+            onRestartApp = {},
             stockState = StockHiLightState(favoriteCallsActive = false, known = true),
             permissionState = PermissionState(
                 context = LocalContext.current,

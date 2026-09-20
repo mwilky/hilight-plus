@@ -94,7 +94,7 @@
     <string name="shizuku_desc_connected">Connected. HiLight Plus can control the rear lights.</string>
     <string name="shizuku_desc_disconnected">Paused, so the lights won\'t respond. Tap Connect to resume.</string>
     <string name="shizuku_desc_needs_permission">Shizuku is running but hasn\'t allowed HiLight Plus yet. Tap Allow to grant access.</string>
-    <string name="shizuku_desc_not_running">Shizuku isn\'t running. Start it from the Shizuku app using Wireless debugging, then check again.</string>
+    <string name="shizuku_desc_not_running">Shizuku isn\'t running. Start it from the Shizuku app (Wireless debugging or ADB), then come back here and it will connect. If you started it while HiLight Plus was still open, tap Restart app instead.</string>
     <string name="shizuku_desc_not_installed">Shizuku isn\'t installed. Tap Install to get it, then come back here.</string>
     <string name="shizuku_desc_connecting">Connecting to Shizuku&#8230;</string>
     <string name="shizuku_btn_disconnect">Disconnect</string>
@@ -102,7 +102,7 @@
     <string name="shizuku_btn_authorize">Allow in Shizuku</string>
     <string name="shizuku_btn_install">Install Shizuku</string>
     <string name="shizuku_btn_open">Open Shizuku</string>
-    <string name="shizuku_btn_check_again">Check again</string>
+    <string name="shizuku_btn_restart_app">Restart app</string>
     <string name="shizuku_btn_retry">Try again</string>
 
     <!-- Incoming Calls Section -->
