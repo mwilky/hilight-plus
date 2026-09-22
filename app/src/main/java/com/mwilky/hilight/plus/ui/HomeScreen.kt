@@ -862,8 +862,6 @@ fun HomeScreenPreviewContent(
             onOpenStockSettings = {},
             permissionState = PermissionState(
                 context = LocalContext.current,
-                isPhoneGranted = true,
-                isCallLogGranted = true,
                 isContactsGranted = true,
                 isNotifAccessGranted = true,
                 isNotifListenerRunning = true

@@ -16,7 +16,7 @@ import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.NotificationAdd
 import androidx.compose.material.icons.rounded.NotificationsActive
-import androidx.compose.material.icons.rounded.PermPhoneMsg
+import androidx.compose.material.icons.rounded.Contacts
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
@@ -212,8 +212,8 @@ fun StockConflictCard(
 }
 
 /**
- * Phone/call-log/contacts permission status, needed to identify incoming callers and
- * match them against custom rules.
+ * Contacts permission status, needed to tell saved callers and senders from unknown ones and
+ * to pick contacts for rules.
  */
 @Composable
 fun CallPermissionsCard(
@@ -221,7 +221,7 @@ fun CallPermissionsCard(
     onRequestPermissions: () -> Unit,
     onOpenAppSettings: () -> Unit
 ) {
-    val hasAll = state.hasAllCallPermissions
+    val hasAll = state.hasContactsPermission
 
     StandardDiagnosticCard(
         title = stringResource(R.string.onboarding_perms_calls_title),
@@ -230,7 +230,7 @@ fun CallPermissionsCard(
         } else {
             stringResource(R.string.onboarding_perms_calls_needed_desc)
         },
-        icon = if (hasAll) Icons.Rounded.CheckCircle else Icons.Rounded.PermPhoneMsg,
+        icon = if (hasAll) Icons.Rounded.CheckCircle else Icons.Rounded.Contacts,
         statusText = if (hasAll) {
             stringResource(R.string.onboarding_perms_calls_status_granted)
         } else {

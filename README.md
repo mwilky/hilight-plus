@@ -52,18 +52,17 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 
 | Permission | Why |
 |---|---|
-| Phone state and call log | Notice incoming calls and read the caller's number |
-| Contacts | Match callers and senders to your rules, and pick contacts when creating a rule |
-| Notification access | Notice new notifications and app calls, and know when they are dismissed |
+| Contacts | Tell saved callers and senders from unknown ones, match them to your rules, and pick contacts when creating a rule |
+| Notification access | Notice incoming calls, new notifications and app calls, and know when they are dismissed |
 | Shizuku | Talk to the lights daemon over local Binder IPC |
 
-Contacts and notification content never leave the device. The only network activity is Google Play Billing for the purchase. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for the full policy.
+No phone-state or call-log permission is used: incoming calls, cellular or app, are recognised from the dialer's own call notification. Contacts and notification content never leave the device. The only network activity is Google Play Billing for the purchase. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for the full policy.
 
 ## How it works
 
 The app has two halves:
 
-- **The app process** hosts the UI, the notification listener, the phone-state receiver and the battery receiver. It resolves each event against your rules and decides colour, pattern and conditions.
+- **The app process** hosts the UI, the notification listener and the battery receiver. It resolves each event against your rules and decides colour, pattern and conditions.
 - **The daemon** (`HiLightDaemonService`) runs under Shizuku with shell UID. It owns the render loop at roughly 30 frames per second, talks to `ILightsManager` through reflection, and applies live gating for face-down, Do Not Disturb and quiet hours so lights already playing react to changes. The app and daemon talk over an AIDL interface.
 
 Face-down detection samples the accelerometer only while something is waiting to light, so there is no idle sensor cost.

@@ -148,7 +148,7 @@ fun OnboardingScreen(
         OnboardingStep.WELCOME -> true
         OnboardingStep.SHIZUKU -> shizukuState == ShizukuBridge.State.CONNECTED
         OnboardingStep.STOCK_CONFLICT -> !stockState.favoriteCallsActive
-        OnboardingStep.PERMISSIONS -> permissionState.hasAllCallPermissions && permissionState.isNotifAccessGranted
+        OnboardingStep.PERMISSIONS -> permissionState.hasContactsPermission && permissionState.isNotifAccessGranted
         OnboardingStep.TRIAL -> true
     }
 
@@ -662,8 +662,6 @@ fun OnboardingStep4Preview() {
         PermissionsStepContent(
             permissionState = PermissionState(
                 context = LocalContext.current,
-                isPhoneGranted = true,
-                isCallLogGranted = false,
                 isContactsGranted = false,
                 isNotifAccessGranted = false,
                 isNotifListenerRunning = false

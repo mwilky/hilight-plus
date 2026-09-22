@@ -9,7 +9,7 @@
 ## 1. Summary: 100% On-Device Processing
 HiLight Plus operates **entirely on your device**. 
 - We do **not** collect, store, transmit, sell, or share any personal information.
-- The app does **not** connect to external servers or cloud services.
+- The app does **not** connect to external servers or cloud services. The only network activity is Google Play Billing, used to process the one-off purchase; Google's handling of that transaction is covered by Google's own privacy policy.
 - The app does **not** include third-party tracking, analytics, or advertising SDKs.
 
 ---
@@ -18,19 +18,15 @@ HiLight Plus operates **entirely on your device**.
 
 HiLight Plus requests sensitive Android permissions solely to deliver real-time rear hardware LED lighting alerts. All processing occurs strictly in local memory on your device:
 
-### A. Phone State (`READ_PHONE_STATE`) & Call Logs (`READ_CALL_LOG`)
-- **Purpose:** Used to detect incoming phone calls in real time and match the incoming phone number against your saved contacts.
-- **Data Handling:** Phone numbers and call states are processed transiently in memory to trigger your configured LED lighting animations and are never logged, stored externally, or transmitted off your device.
+### A. Contacts (`READ_CONTACTS`)
+- **Purpose:** Allows you to pick contacts and assign custom LED ring lighting colors and patterns (e.g., custom animations for family or VIP contacts), and to tell saved contacts from unknown callers and senders when a call or message arrives.
+- **Data Handling:** Contact data remains solely within Android's local contacts database on your device and is only accessed when matching an incoming caller or sender name or opening the contact picker.
 
-### B. Contacts (`READ_CONTACTS`)
-- **Purpose:** Allows you to pick contacts and assign custom LED ring lighting colors and patterns (e.g., custom animations for family or VIP contacts), and look up contact names for incoming calls/messages.
-- **Data Handling:** Contact data remains solely within Android's local contacts database on your device and is only accessed when matching incoming caller IDs or opening the contact picker.
+### B. Notification Listener Access (`BIND_NOTIFICATION_LISTENER_SERVICE`)
+- **Purpose:** Used to detect incoming calls (from the phone dialer and from apps such as WhatsApp, Teams and Meet) and incoming notifications and chats from user-selected applications, to trigger corresponding LED light alerts. HiLight Plus does **not** request phone-state or call-log permissions; calls are recognised from the dialer's own call notification.
+- **Data Handling:** Notification metadata (app package name, sender or caller title) is processed in real time to match your custom lighting rules. We do **not** read or store notification contents, chat bodies, or attachments.
 
-### C. Notification Listener Access (`BIND_NOTIFICATION_LISTENER_SERVICE`)
-- **Purpose:** Used to detect incoming notifications and chats from user-selected applications (e.g., WhatsApp, Messages, Slack) to trigger corresponding LED light alerts.
-- **Data Handling:** Notification metadata (app package name, sender title) is processed in real time to match your custom lighting rules. We do **not** read or store notification contents, chat bodies, or attachments.
-
-### D. Shizuku Privileged Access (`moe.shizuku.manager.permission.API_V23`)
+### C. Shizuku Privileged Access (`moe.shizuku.manager.permission.API_V23`)
 - **Purpose:** Used to securely communicate with the local Shizuku service via local Android Binder IPC to control the Pixel device's rear hardware LED array.
 - **Data Handling:** Binder IPC communication remains entirely local to your device.
 

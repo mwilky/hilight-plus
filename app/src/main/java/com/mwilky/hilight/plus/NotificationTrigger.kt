@@ -5,7 +5,6 @@ import android.app.NotificationManager
 import android.app.Person
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
-import android.telecom.TelecomManager
 import android.util.Log
 import com.mwilky.hilight.plus.core.AppIconColorExtractor
 import com.mwilky.hilight.plus.core.DeviceOrientationDetector
@@ -83,10 +82,10 @@ class NotificationTrigger : NotificationListenerService() {
         val pkg = sbn.packageName ?: return
         if (pkg == packageName) return
 
-        // A ringing app call is a call, not a message: it lights until answered or ended.
-        // The same key re-posted as an in-progress call is how most apps signal "answered".
+        // A ringing call (dialer or app call) is a call, not a message: it lights until answered
+        // or ended. The same key re-posted as an in-progress call is how "answered" is signalled.
         val posted = sbn.notification
-        if (posted?.category == Notification.CATEGORY_CALL && !isCellularCallSource(pkg)) {
+        if (posted?.category == Notification.CATEGORY_CALL) {
             if (VoipCallDetector.isIncomingCall(posted)) {
                 IncomingCallProcessor.submitVoipRinging(applicationContext, sbn.key, extractSenderName(posted))
             } else {
@@ -197,13 +196,6 @@ class NotificationTrigger : NotificationListenerService() {
             )
         }
         syncNotificationMonitor()
-    }
-
-    /** Cellular calls are already handled by the phone-state receiver; their dialer notification must not double up. */
-    private fun isCellularCallSource(pkg: String): Boolean {
-        if (pkg == "com.android.server.telecom" || pkg == "com.android.phone") return true
-        val dialer = runCatching { getSystemService(TelecomManager::class.java)?.defaultDialerPackage }.getOrNull()
-        return dialer != null && pkg == dialer
     }
 
     private fun isEligiblePostedNotification(sbn: StatusBarNotification): Boolean {

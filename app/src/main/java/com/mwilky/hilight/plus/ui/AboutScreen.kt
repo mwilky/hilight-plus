@@ -262,8 +262,6 @@ fun AboutScreenPreview() {
             stockState = StockHiLightState(favoriteCallsActive = false, known = true),
             permissionState = PermissionState(
                 context = LocalContext.current,
-                isPhoneGranted = true,
-                isCallLogGranted = true,
                 isContactsGranted = true,
                 isNotifAccessGranted = true,
                 isNotifListenerRunning = true

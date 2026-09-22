@@ -89,7 +89,7 @@ fun HomeCallsPage(
         if (stockState.known && stockState.favoriteCallsActive) {
             StockConflictCard(stockState = stockState, onOpenSettings = onOpenStockSettings)
         }
-        if (!permissionState.hasAllCallPermissions) {
+        if (!permissionState.hasContactsPermission) {
             CallPermissionsCard(
                 state = permissionState,
                 onRequestPermissions = onRequestPhonePerms,

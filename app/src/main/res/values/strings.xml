@@ -31,10 +31,10 @@
 
     <!-- Onboarding Step 4: Permissions -->
     <string name="onboarding_perms_title">Permissions</string>
-    <string name="onboarding_perms_subtitle">HiLight Plus needs to see incoming calls, your contacts and your notifications so it knows when to light up.</string>
-    <string name="onboarding_perms_calls_title">Calls and contacts</string>
-    <string name="onboarding_perms_calls_granted_desc">Phone, call log and contacts access is granted. Callers can be matched to your rules.</string>
-    <string name="onboarding_perms_calls_needed_desc">Needed to notice incoming calls and match the caller to your contact rules.</string>
+    <string name="onboarding_perms_subtitle">HiLight Plus needs your contacts and your notifications so it knows who is calling or messaging and when to light up.</string>
+    <string name="onboarding_perms_calls_title">Contacts</string>
+    <string name="onboarding_perms_calls_granted_desc">Contacts access is granted. Callers and senders can be matched to your rules.</string>
+    <string name="onboarding_perms_calls_needed_desc">Needed to tell saved contacts from unknown callers and to pick contacts for rules. Calls themselves are noticed through notification access.</string>
     <string name="onboarding_perms_calls_status_granted">Granted</string>
     <string name="onboarding_perms_calls_status_needed">Needed</string>
     <string name="onboarding_perms_calls_btn_grant">Grant access</string>
@@ -43,7 +43,7 @@
     <string name="onboarding_perms_notif_granted_desc">Notification access is granted and listening.</string>
     <string name="onboarding_perms_notif_not_running_desc">Access is granted but the listener has stopped. Turn it off and on again in settings if alerts stop lighting.</string>
     <string name="onboarding_perms_notif_status_not_running">Not running</string>
-    <string name="onboarding_perms_notif_needed_desc">Needed to notice new notifications from your apps and contacts.</string>
+    <string name="onboarding_perms_notif_needed_desc">Needed to notice incoming calls and new notifications from your apps and contacts.</string>
     <string name="onboarding_perms_notif_status_needed">Needed</string>
     <string name="onboarding_perms_notif_btn_enable">Allow notification access</string>
 

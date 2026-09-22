@@ -21,22 +21,16 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.mwilky.hilight.plus.NotificationTrigger
 
 /**
- * Snapshot of the runtime permissions HiLight Plus needs: phone/call-log/contacts
- * for caller identification, and notification listener access for notifications & chats.
+ * Snapshot of the runtime permissions HiLight Plus needs: contacts for caller and sender
+ * identification, and notification listener access for calls, notifications and chats.
  */
 @Stable
 class PermissionState internal constructor(
     private val context: Context,
-    isPhoneGranted: Boolean = false,
-    isCallLogGranted: Boolean = false,
     isContactsGranted: Boolean = false,
     isNotifAccessGranted: Boolean = false,
     isNotifListenerRunning: Boolean = false
 ) {
-    var isPhoneGranted by mutableStateOf(isPhoneGranted)
-        private set
-    var isCallLogGranted by mutableStateOf(isCallLogGranted)
-        private set
     var isContactsGranted by mutableStateOf(isContactsGranted)
         private set
     var isNotifAccessGranted by mutableStateOf(isNotifAccessGranted)
@@ -44,15 +38,13 @@ class PermissionState internal constructor(
     var isNotifListenerRunning by mutableStateOf(isNotifListenerRunning)
         private set
 
-    val hasAllCallPermissions: Boolean
-        get() = isPhoneGranted && isCallLogGranted && isContactsGranted
+    val hasContactsPermission: Boolean
+        get() = isContactsGranted
 
     val hasNotifAccess: Boolean
         get() = isNotifAccessGranted && isNotifListenerRunning
 
     fun refresh() {
-        isPhoneGranted = context.hasPermission(Manifest.permission.READ_PHONE_STATE)
-        isCallLogGranted = context.hasPermission(Manifest.permission.READ_CALL_LOG)
         isContactsGranted = context.hasPermission(Manifest.permission.READ_CONTACTS)
         isNotifAccessGranted = isNotificationListenerEnabled(context)
         isNotifListenerRunning = isNotificationListenerRunning()
@@ -86,7 +78,7 @@ fun rememberPermissionState(): PermissionState {
     return state
 }
 
-/** Launches the system permission dialog for whichever call/contacts permissions are still missing. */
+/** Launches the system permission dialog for the contacts permission if it is still missing. */
 @Composable
 fun rememberCallPermissionLauncher(state: PermissionState): () -> Unit {
     val launcher = rememberLauncherForActivityResult(
@@ -96,8 +88,6 @@ fun rememberCallPermissionLauncher(state: PermissionState): () -> Unit {
     }
     return {
         val missing = buildList {
-            if (!state.isPhoneGranted) add(Manifest.permission.READ_PHONE_STATE)
-            if (!state.isCallLogGranted) add(Manifest.permission.READ_CALL_LOG)
             if (!state.isContactsGranted) add(Manifest.permission.READ_CONTACTS)
         }.toTypedArray()
         launcher.launch(missing)
