@@ -119,6 +119,7 @@ fun OnboardingScreen(
 ) {
     val context = LocalContext.current
     var currentStep by remember { mutableStateOf(OnboardingStep.WELCOME) }
+    var showShizukuSkipDialog by remember { mutableStateOf(false) }
 
     val stockState by NativeHiLightDetector.state.collectAsStateWithLifecycle()
     val shizukuState by controller.shizuku.state.collectAsStateWithLifecycle()
@@ -144,9 +145,14 @@ fun OnboardingScreen(
     }
 
     val totalSteps = OnboardingStep.entries.size
+    fun advance() {
+        val nextIndex = currentStep.ordinal + 1
+        if (nextIndex < totalSteps) currentStep = OnboardingStep.entries[nextIndex]
+    }
     val isNextEnabled = when (currentStep) {
         OnboardingStep.WELCOME -> true
-        OnboardingStep.SHIZUKU -> shizukuState == ShizukuBridge.State.CONNECTED
+        // Reviewers and first-time users can go on without Shizuku; onNext confirms first.
+        OnboardingStep.SHIZUKU -> true
         OnboardingStep.STOCK_CONFLICT -> !stockState.favoriteCallsActive
         OnboardingStep.PERMISSIONS -> permissionState.hasContactsPermission && permissionState.isNotifAccessGranted
         OnboardingStep.TRIAL -> true
@@ -160,11 +166,11 @@ fun OnboardingScreen(
             if (prevIndex >= 0) currentStep = OnboardingStep.entries[prevIndex]
         },
         onNext = {
-            if (currentStep == OnboardingStep.TRIAL) {
-                onComplete()
-            } else {
-                val nextIndex = currentStep.ordinal + 1
-                if (nextIndex < totalSteps) currentStep = OnboardingStep.entries[nextIndex]
+            when {
+                currentStep == OnboardingStep.TRIAL -> onComplete()
+                currentStep == OnboardingStep.SHIZUKU && shizukuState != ShizukuBridge.State.CONNECTED ->
+                    showShizukuSkipDialog = true
+                else -> advance()
             }
         }
     ) { step ->
@@ -194,6 +200,28 @@ fun OnboardingScreen(
                 onBuy = { activity?.let { controller.licensing.purchase(it) } }
             )
         }
+    }
+
+    if (showShizukuSkipDialog) {
+        AlertDialog(
+            onDismissRequest = { showShizukuSkipDialog = false },
+            icon = { Icon(Icons.Rounded.Warning, contentDescription = null) },
+            title = { Text(stringResource(R.string.onboarding_shizuku_skip_title)) },
+            text = { Text(stringResource(R.string.onboarding_shizuku_skip_desc)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showShizukuSkipDialog = false
+                    advance()
+                }) {
+                    Text(stringResource(R.string.onboarding_shizuku_skip_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showShizukuSkipDialog = false }) {
+                    Text(stringResource(R.string.onboarding_shizuku_skip_cancel))
+                }
+            }
+        )
     }
 }
 

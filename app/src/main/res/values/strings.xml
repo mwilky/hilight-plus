@@ -27,7 +27,11 @@
 
     <!-- Onboarding Step 3: Shizuku Hardware Access -->
     <string name="onboarding_shizuku_title">Connect Shizuku</string>
-    <string name="onboarding_shizuku_desc">Android doesn\'t let apps control the rear lights directly. HiLight Plus uses Shizuku to reach them without root. Connect it below to continue.</string>
+    <string name="onboarding_shizuku_desc">Android doesn\'t let apps control the rear lights directly. HiLight Plus uses Shizuku to reach them without root. Connect it below, or continue and connect later from the Home screen.</string>
+    <string name="onboarding_shizuku_skip_title">Continue without Shizuku?</string>
+    <string name="onboarding_shizuku_skip_desc">You can set up rules, but the rear lights won\'t do anything until Shizuku is connected. The Shizuku card on the Home screen will walk you through it whenever you\'re ready.</string>
+    <string name="onboarding_shizuku_skip_confirm">Continue anyway</string>
+    <string name="onboarding_shizuku_skip_cancel">Go back</string>
 
     <!-- Onboarding Step 4: Permissions -->
     <string name="onboarding_perms_title">Permissions</string>
