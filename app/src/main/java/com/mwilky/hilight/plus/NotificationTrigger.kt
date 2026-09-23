@@ -85,11 +85,21 @@ class NotificationTrigger : NotificationListenerService() {
         // A ringing call (dialer or app call) is a call, not a message: it lights until answered
         // or ended. The same key re-posted as an in-progress call is how "answered" is signalled.
         val posted = sbn.notification
+        Log.d(
+            TAG,
+            "Posted pkg=$pkg category=${posted?.category} channel=${posted?.channelId} key=${sbn.key} " +
+                "callType=${posted?.extras?.takeIf { it.containsKey(Notification.EXTRA_CALL_TYPE) }?.getInt(Notification.EXTRA_CALL_TYPE)} " +
+                "fullScreen=${posted?.fullScreenIntent != null} ongoing=${sbn.isOngoing} " +
+                "chrono=${posted?.extras?.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER)} silent=${isSilent(sbn.key)}"
+        )
         if (posted?.category == Notification.CATEGORY_CALL) {
-            if (VoipCallDetector.isIncomingCall(posted)) {
-                IncomingCallProcessor.submitVoipRinging(applicationContext, sbn.key, extractSenderName(posted))
-            } else {
-                IncomingCallProcessor.submitVoipEnded(applicationContext, sbn.key)
+            when (VoipCallDetector.callState(posted)) {
+                VoipCallDetector.CallState.RINGING ->
+                    IncomingCallProcessor.submitVoipRinging(applicationContext, sbn.key, extractSenderName(posted))
+                VoipCallDetector.CallState.IN_PROGRESS ->
+                    IncomingCallProcessor.submitVoipEnded(applicationContext, sbn.key)
+                // Keep whatever state the key is in; removal still ends a ringing call.
+                else -> Unit
             }
             return
         }
@@ -136,7 +146,7 @@ class NotificationTrigger : NotificationListenerService() {
         val snapshot = store.snapshot()
         if (!snapshot.isEnabled || !snapshot.isNotificationsEnabled) return
 
-        val resolved = resolveAlert(snapshot, pkg, notification) ?: return
+        val resolved = resolveAlert(snapshot, event.key, pkg, notification) ?: return
         val isCycle = snapshot.isCycleNotifications
         val requiresFaceDown = resolved.faceDownMode.requiresFaceDown(snapshot.isOnlyWhenFaceDown)
         if (requiresFaceDown) {
@@ -183,7 +193,7 @@ class NotificationTrigger : NotificationListenerService() {
                 applyRemovals(listOf(tracker.remove(key)), isCycle)
                 continue
             }
-            val resolved = resolveAlert(snapshot, sbn.packageName, sbn.notification)
+            val resolved = resolveAlert(snapshot, key, sbn.packageName, sbn.notification)
             if (resolved == null) {
                 applyRemovals(listOf(tracker.remove(key)), isCycle)
                 continue
@@ -208,14 +218,19 @@ class NotificationTrigger : NotificationListenerService() {
             return false
         }
 
-        val ranking = Ranking()
-        if (currentRanking?.getRanking(sbn.key, ranking) == true) {
-            if (ranking.isAmbient || ranking.importance < NotificationManager.IMPORTANCE_DEFAULT) {
-                Log.d(TAG, "Ignoring silent/ambient notification from ${sbn.packageName} (importance=${ranking.importance})")
-                return false
-            }
+        // Missed calls pass even when silent (WhatsApp posts them on a low-importance channel);
+        // resolveAlert only lets a silent one light through the Missed Calls rule.
+        if (sbn.notification.category != Notification.CATEGORY_MISSED_CALL && isSilent(sbn.key)) {
+            Log.d(TAG, "Ignoring silent/ambient notification from ${sbn.packageName}")
+            return false
         }
         return true
+    }
+
+    private fun isSilent(key: String): Boolean {
+        val ranking = Ranking()
+        if (currentRanking?.getRanking(key, ranking) != true) return false
+        return ranking.isAmbient || ranking.importance < NotificationManager.IMPORTANCE_DEFAULT
     }
 
     private data class ResolvedAlert(
@@ -229,7 +244,33 @@ class NotificationTrigger : NotificationListenerService() {
         val quietEndMinutes: Int? = null
     )
 
-    private fun resolveAlert(snapshot: SettingsSnapshot, pkg: String, notification: Notification): ResolvedAlert? {
+    private fun resolveAlert(snapshot: SettingsSnapshot, key: String, pkg: String, notification: Notification): ResolvedAlert? {
+        // A missed call has one style whoever called, so it is resolved before any contact or app rule.
+        // When the rule is off, missed-call notifications fall through to the rules below as before.
+        if (notification.category == Notification.CATEGORY_MISSED_CALL &&
+            snapshot.isCallLightsEnabled && snapshot.isMissedCallsEnabled
+        ) {
+            if (snapshot.missedCallsPattern == PatternMode.OFF) {
+                Log.i(TAG, "Missed Call Match ($pkg) but Missed Calls is OFF -> NO LIGHT")
+                return null
+            }
+            Log.i(TAG, "Missed Call Match ($pkg)")
+            return ResolvedAlert(
+                "missed_call",
+                snapshot.missedCallsPattern,
+                snapshot.missedCallsColor,
+                snapshot.missedCallsFaceDownMode,
+                snapshot.missedCallsDndMode,
+                snapshot.missedCallsQuietHoursMode,
+                snapshot.missedCallsQuietHoursStartMinutes,
+                snapshot.missedCallsQuietHoursEndMinutes
+            )
+        }
+        if (notification.category == Notification.CATEGORY_MISSED_CALL && isSilent(key)) {
+            Log.i(TAG, "Silent missed call ($pkg) with Missed Calls off -> NO LIGHT")
+            return null
+        }
+
         val senderName = extractSenderName(notification)
         val contactRule = if (senderName.isNotBlank()) snapshot.findMessageRuleForSender(senderName) else null
         if (contactRule != null) {

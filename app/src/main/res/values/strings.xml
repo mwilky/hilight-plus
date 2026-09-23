@@ -113,6 +113,7 @@
     <string name="favourite_contacts_title">Favourite contacts</string>
     <string name="calls_other_contacts_title">All other contacts</string>
     <string name="calls_unknown_numbers_title">Unknown numbers</string>
+    <string name="calls_missed_calls_title">Missed calls</string>
     <string name="calls_custom_rules_header">Custom caller rules (%1$d)</string>
     <string name="calls_no_rules">No custom caller rules.</string>
     <string name="calls_add_contact_btn">Add contact</string>

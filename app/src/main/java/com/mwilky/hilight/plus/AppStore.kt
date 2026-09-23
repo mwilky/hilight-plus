@@ -66,6 +66,16 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_UNKNOWN_NUMBERS_QUIET_START = intPreferencesKey("unknown_numbers_quiet_start")
         private val KEY_UNKNOWN_NUMBERS_QUIET_END = intPreferencesKey("unknown_numbers_quiet_end")
 
+        // Call Settings: Missed Calls
+        private val KEY_MISSED_CALLS_ENABLED = booleanPreferencesKey("missed_calls_enabled")
+        private val KEY_MISSED_CALLS_COLOR = longPreferencesKey("missed_calls_color")
+        private val KEY_MISSED_CALLS_PATTERN = stringPreferencesKey("missed_calls_pattern")
+        private val KEY_MISSED_CALLS_FACE_DOWN = stringPreferencesKey("missed_calls_face_down")
+        private val KEY_MISSED_CALLS_DND = stringPreferencesKey("missed_calls_dnd")
+        private val KEY_MISSED_CALLS_QUIET = stringPreferencesKey("missed_calls_quiet")
+        private val KEY_MISSED_CALLS_QUIET_START = intPreferencesKey("missed_calls_quiet_start")
+        private val KEY_MISSED_CALLS_QUIET_END = intPreferencesKey("missed_calls_quiet_end")
+
         private val KEY_CALL_RULES_JSON = stringPreferencesKey("contact_rules_json")
 
         // Notification & Messaging Settings
@@ -208,6 +218,10 @@ class AppStore private constructor(private val appContext: Context) {
         appContext.dataStore.edit { it[KEY_UNKNOWN_NUMBERS_ENABLED] = enabled }
     }
 
+    suspend fun setMissedCallsEnabled(enabled: Boolean) {
+        appContext.dataStore.edit { it[KEY_MISSED_CALLS_ENABLED] = enabled }
+    }
+
     suspend fun setNotificationsEnabled(enabled: Boolean) {
         appContext.dataStore.edit { it[KEY_NOTIFICATIONS_ENABLED] = enabled }
     }
@@ -290,6 +304,26 @@ class AppStore private constructor(private val appContext: Context) {
             prefs[KEY_UNKNOWN_NUMBERS_QUIET] = quietHoursMode.name
             prefs[KEY_UNKNOWN_NUMBERS_QUIET_START] = quietHoursStartMinutes
             prefs[KEY_UNKNOWN_NUMBERS_QUIET_END] = quietHoursEndMinutes
+        }
+    }
+
+    suspend fun setMissedCallsStyle(
+        pattern: PatternMode,
+        color: Long,
+        faceDown: FaceDownMode,
+        dndMode: DndMode,
+        quietHoursMode: QuietHoursMode,
+        quietHoursStartMinutes: Int,
+        quietHoursEndMinutes: Int
+    ) {
+        appContext.dataStore.edit { prefs ->
+            prefs[KEY_MISSED_CALLS_PATTERN] = pattern.name
+            prefs[KEY_MISSED_CALLS_COLOR] = color
+            prefs[KEY_MISSED_CALLS_FACE_DOWN] = faceDown.name
+            prefs[KEY_MISSED_CALLS_DND] = dndMode.name
+            prefs[KEY_MISSED_CALLS_QUIET] = quietHoursMode.name
+            prefs[KEY_MISSED_CALLS_QUIET_START] = quietHoursStartMinutes
+            prefs[KEY_MISSED_CALLS_QUIET_END] = quietHoursEndMinutes
         }
     }
 
@@ -436,6 +470,14 @@ class AppStore private constructor(private val appContext: Context) {
             unknownNumbersQuietHoursMode = enumOr(prefs[KEY_UNKNOWN_NUMBERS_QUIET], d.unknownNumbersQuietHoursMode),
             unknownNumbersQuietHoursStartMinutes = prefs[KEY_UNKNOWN_NUMBERS_QUIET_START] ?: d.unknownNumbersQuietHoursStartMinutes,
             unknownNumbersQuietHoursEndMinutes = prefs[KEY_UNKNOWN_NUMBERS_QUIET_END] ?: d.unknownNumbersQuietHoursEndMinutes,
+            isMissedCallsEnabled = prefs[KEY_MISSED_CALLS_ENABLED] ?: d.isMissedCallsEnabled,
+            missedCallsColor = prefs[KEY_MISSED_CALLS_COLOR] ?: d.missedCallsColor,
+            missedCallsPattern = enumOr(prefs[KEY_MISSED_CALLS_PATTERN], d.missedCallsPattern),
+            missedCallsFaceDownMode = enumOr(prefs[KEY_MISSED_CALLS_FACE_DOWN], d.missedCallsFaceDownMode),
+            missedCallsDndMode = enumOr(prefs[KEY_MISSED_CALLS_DND], d.missedCallsDndMode),
+            missedCallsQuietHoursMode = enumOr(prefs[KEY_MISSED_CALLS_QUIET], d.missedCallsQuietHoursMode),
+            missedCallsQuietHoursStartMinutes = prefs[KEY_MISSED_CALLS_QUIET_START] ?: d.missedCallsQuietHoursStartMinutes,
+            missedCallsQuietHoursEndMinutes = prefs[KEY_MISSED_CALLS_QUIET_END] ?: d.missedCallsQuietHoursEndMinutes,
             isNotificationsEnabled = prefs[KEY_NOTIFICATIONS_ENABLED] ?: d.isNotificationsEnabled,
             notificationDurationSeconds = prefs[KEY_NOTIFICATION_DURATION_SEC] ?: d.notificationDurationSeconds,
             multiAlertMode = readMultiAlertMode(prefs),
@@ -514,6 +556,14 @@ data class SettingsSnapshot(
     val unknownNumbersQuietHoursMode: QuietHoursMode,
     val unknownNumbersQuietHoursStartMinutes: Int?,
     val unknownNumbersQuietHoursEndMinutes: Int?,
+    val isMissedCallsEnabled: Boolean,
+    val missedCallsColor: Long,
+    val missedCallsPattern: PatternMode,
+    val missedCallsFaceDownMode: FaceDownMode,
+    val missedCallsDndMode: DndMode,
+    val missedCallsQuietHoursMode: QuietHoursMode,
+    val missedCallsQuietHoursStartMinutes: Int?,
+    val missedCallsQuietHoursEndMinutes: Int?,
     val isNotificationsEnabled: Boolean,
     val notificationDurationSeconds: Int,
     val multiAlertMode: MultiAlertMode,
@@ -592,6 +642,15 @@ val DEFAULT_SETTINGS_SNAPSHOT = SettingsSnapshot(
     unknownNumbersQuietHoursMode = QuietHoursMode.INHERIT,
     unknownNumbersQuietHoursStartMinutes = null,
     unknownNumbersQuietHoursEndMinutes = null,
+    // Off by default so missed-call notifications keep following notification rules until opted in.
+    isMissedCallsEnabled = false,
+    missedCallsColor = 0xFFFF6D00,
+    missedCallsPattern = PatternMode.PULSE,
+    missedCallsFaceDownMode = FaceDownMode.INHERIT,
+    missedCallsDndMode = DndMode.INHERIT,
+    missedCallsQuietHoursMode = QuietHoursMode.INHERIT,
+    missedCallsQuietHoursStartMinutes = null,
+    missedCallsQuietHoursEndMinutes = null,
     isNotificationsEnabled = true,
     notificationDurationSeconds = 30,
     multiAlertMode = MultiAlertMode.LATEST,

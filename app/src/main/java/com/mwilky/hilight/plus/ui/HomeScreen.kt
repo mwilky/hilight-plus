@@ -97,6 +97,7 @@ fun HomeScreen(
     var isConfiguringFavouriteCalls by remember { mutableStateOf(false) }
     var isConfiguringOtherContacts by remember { mutableStateOf(false) }
     var isConfiguringUnknownNumbers by remember { mutableStateOf(false) }
+    var isConfiguringMissedCalls by remember { mutableStateOf(false) }
 
     var msgRuleBeingEdited by remember { mutableStateOf<MessageContactRule?>(null) }
     var appRuleBeingEdited by remember { mutableStateOf<AppNotificationRule?>(null) }
@@ -177,6 +178,8 @@ fun HomeScreen(
         onEditOtherContacts = { isConfiguringOtherContacts = true },
         onToggleUnknownNumbers = viewModel::setUnknownNumbersEnabled,
         onEditUnknownNumbers = { isConfiguringUnknownNumbers = true },
+        onToggleMissedCalls = viewModel::setMissedCallsEnabled,
+        onEditMissedCalls = { isConfiguringMissedCalls = true },
         onToggleCallContactRule = { rule, isEnabled ->
             viewModel.saveContactRule(rule.copy(isEnabled = isEnabled))
         },
@@ -321,6 +324,35 @@ fun HomeScreen(
                     result.quietHoursEndMinutes
                 )
                 isConfiguringUnknownNumbers = false
+            }
+        )
+    }
+
+    // Missed Calls Dialog
+    if (isConfiguringMissedCalls) {
+        CustomRuleDialog(
+            title = stringResource(R.string.calls_missed_calls_title),
+            initialColor = state.missedCallsColor,
+            initialPattern = state.missedCallsPattern,
+            initialFaceDown = state.missedCallsFaceDownMode,
+            initialDnd = state.missedCallsDndMode,
+            initialQuietHours = state.missedCallsQuietHoursMode,
+            initialQuietStart = state.missedCallsQuietHoursStartMinutes ?: state.quietHoursStartMinutes,
+            initialQuietEnd = state.missedCallsQuietHoursEndMinutes ?: state.quietHoursEndMinutes,
+            renderer = renderer,
+            controller = controller,
+            onDismiss = { isConfiguringMissedCalls = false },
+            onSave = { result ->
+                viewModel.setMissedCallsStyle(
+                    result.pattern,
+                    result.color,
+                    result.faceDown,
+                    result.dndMode,
+                    result.quietHoursMode,
+                    result.quietHoursStartMinutes,
+                    result.quietHoursEndMinutes
+                )
+                isConfiguringMissedCalls = false
             }
         )
     }
@@ -507,6 +539,8 @@ fun HomeContent(
     onEditOtherContacts: () -> Unit,
     onToggleUnknownNumbers: (Boolean) -> Unit,
     onEditUnknownNumbers: () -> Unit,
+    onToggleMissedCalls: (Boolean) -> Unit,
+    onEditMissedCalls: () -> Unit,
     onToggleCallContactRule: (ContactRule, Boolean) -> Unit,
     onEditCallContactRule: (ContactRule) -> Unit,
     onDeleteCallContactRule: (String) -> Unit,
@@ -590,6 +624,8 @@ fun HomeContent(
                         onEditOtherContacts = onEditOtherContacts,
                         onToggleUnknownNumbers = onToggleUnknownNumbers,
                         onEditUnknownNumbers = onEditUnknownNumbers,
+                        onToggleMissedCalls = onToggleMissedCalls,
+                        onEditMissedCalls = onEditMissedCalls,
                         onToggleCallContactRule = onToggleCallContactRule,
                         onEditCallContactRule = onEditCallContactRule,
                         onDeleteCallContactRule = onDeleteCallContactRule,
@@ -954,6 +990,8 @@ fun HomeScreenPreviewContent(
             onEditOtherContacts = {},
             onToggleUnknownNumbers = {},
             onEditUnknownNumbers = {},
+            onToggleMissedCalls = {},
+            onEditMissedCalls = {},
             onToggleCallContactRule = { _, _ -> },
             onEditCallContactRule = {},
             onDeleteCallContactRule = {},

@@ -63,6 +63,8 @@ fun HomeCallsPage(
     onEditOtherContacts: () -> Unit,
     onToggleUnknownNumbers: (Boolean) -> Unit,
     onEditUnknownNumbers: () -> Unit,
+    onToggleMissedCalls: (Boolean) -> Unit,
+    onEditMissedCalls: () -> Unit,
     onToggleCallContactRule: (ContactRule, Boolean) -> Unit,
     onEditCallContactRule: (ContactRule) -> Unit,
     onDeleteCallContactRule: (String) -> Unit,
@@ -111,7 +113,7 @@ fun HomeCallsPage(
                 Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
                     RuleListItem(
                         index = 0,
-                        count = 3,
+                        count = 4,
                         title = stringResource(R.string.favourite_contacts_title),
                         pattern = state.favouriteCallsPattern,
                         color = state.favouriteCallsColor,
@@ -125,7 +127,7 @@ fun HomeCallsPage(
                     )
                     RuleListItem(
                         index = 1,
-                        count = 3,
+                        count = 4,
                         title = stringResource(R.string.calls_other_contacts_title),
                         pattern = state.otherContactsPattern,
                         color = state.otherContactsColor,
@@ -139,7 +141,7 @@ fun HomeCallsPage(
                     )
                     RuleListItem(
                         index = 2,
-                        count = 3,
+                        count = 4,
                         title = stringResource(R.string.calls_unknown_numbers_title),
                         pattern = state.unknownNumbersPattern,
                         color = state.unknownNumbersColor,
@@ -150,6 +152,20 @@ fun HomeCallsPage(
                         isEnabled = state.isUnknownNumbersEnabled,
                         onToggle = onToggleUnknownNumbers,
                         onEdit = onEditUnknownNumbers
+                    )
+                    RuleListItem(
+                        index = 3,
+                        count = 4,
+                        title = stringResource(R.string.calls_missed_calls_title),
+                        pattern = state.missedCallsPattern,
+                        color = state.missedCallsColor,
+                        faceDownMode = state.missedCallsFaceDownMode,
+                        dndMode = state.missedCallsDndMode,
+                        quietHoursMode = state.missedCallsQuietHoursMode,
+                        renderer = renderer,
+                        isEnabled = state.isMissedCallsEnabled,
+                        onToggle = onToggleMissedCalls,
+                        onEdit = onEditMissedCalls
                     )
                 }
 
