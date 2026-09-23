@@ -15,10 +15,13 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 
 **Calls**
 - A colour and pattern per contact, with separate defaults for all other saved contacts and for unknown numbers.
+- A favourites style for your starred contacts, used when a caller has no rule of their own.
 - Works for phone calls and for app calls such as WhatsApp, Teams and Meet. The ring lights until the call is answered or ended.
+- An optional missed-call style, whoever called, that stays lit until the missed-call notification is dismissed.
 
 **Notifications**
 - Rules per message sender and per app, plus a general default with automatic colour taken from the app icon.
+- Starred contacts can share a favourites style, which sits between a sender's own rule and the app rule.
 - Ten patterns: solid, breathe, pulse, wave, comet, orbit, beacon, ripple, sparkle and rainbow.
 - Three ways to handle several notifications at once:
   - *Newest only* lights the latest for a chosen duration.
@@ -52,7 +55,7 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 
 | Permission | Why |
 |---|---|
-| Contacts | Tell saved callers and senders from unknown ones, match them to your rules, and pick contacts when creating a rule |
+| Contacts | Tell saved callers and senders from unknown ones, spot starred favourites, match them to your rules, and pick contacts when creating a rule |
 | Notification access | Notice incoming calls, new notifications and app calls, and know when they are dismissed |
 | Shizuku | Talk to the lights daemon over local Binder IPC |
 

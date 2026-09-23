@@ -1,6 +1,6 @@
 # Privacy Policy for HiLight Plus
 
-**Last updated:** August 26, 2026
+**Last updated:** September 23, 2026
 
 **HiLight Plus** ("we", "our", or "the app") is developed by **mwilky**. We are committed to protecting your privacy. This Privacy Policy outlines how your information is handled when you use HiLight Plus.
 
@@ -19,7 +19,7 @@ HiLight Plus operates **entirely on your device**.
 HiLight Plus requests sensitive Android permissions solely to deliver real-time rear hardware LED lighting alerts. All processing occurs strictly in local memory on your device:
 
 ### A. Contacts (`READ_CONTACTS`)
-- **Purpose:** Allows you to pick contacts and assign custom LED ring lighting colors and patterns (e.g., custom animations for family or VIP contacts), and to tell saved contacts from unknown callers and senders when a call or message arrives.
+- **Purpose:** Allows you to pick contacts and assign custom LED ring lighting colors and patterns (e.g., custom animations for family or VIP contacts), to tell saved contacts from unknown callers and senders when a call or message arrives, and to check whether a caller or sender is starred as a favourite.
 - **Data Handling:** Contact data remains solely within Android's local contacts database on your device and is only accessed when matching an incoming caller or sender name or opening the contact picker.
 
 ### B. Notification Listener Access (`BIND_NOTIFICATION_LISTENER_SERVICE`)

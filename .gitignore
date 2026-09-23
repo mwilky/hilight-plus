@@ -26,3 +26,6 @@ CLAUDE.md
 
 # Play Store listing graphics, kept locally only
 /play_store_assets/
+
+# Claude-generated implementation plans, kept locally only
+docs/*-plan.md
