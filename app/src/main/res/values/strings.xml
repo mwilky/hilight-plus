@@ -215,12 +215,12 @@
     <string name="dialog_app_picker_no_apps">No applications found</string>
 
     <!-- Rule Item Labels -->
-    <string name="rule_trigger_always">Lights in any position</string>
+    <string name="rule_trigger_always">Any position</string>
     <string name="rule_trigger_face_down">Face down only</string>
-    <string name="rule_dnd_always">Lights during Do Not Disturb</string>
-    <string name="rule_dnd_skip">Dark during Do Not Disturb</string>
-    <string name="rule_quiet_hours_always">Lights during quiet hours</string>
-    <string name="rule_quiet_hours_skip">Dark during quiet hours</string>
+    <string name="rule_dnd_always">Lights in DND</string>
+    <string name="rule_dnd_skip">Dark in DND</string>
+    <string name="rule_quiet_hours_always">Lights in quiet hours</string>
+    <string name="rule_quiet_hours_skip">Dark in quiet hours</string>
 
     <!-- Conditions Screen -->
     <string name="conditions_title">Conditions</string>

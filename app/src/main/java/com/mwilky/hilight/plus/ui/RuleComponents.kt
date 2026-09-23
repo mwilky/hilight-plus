@@ -2,9 +2,11 @@
 
 package com.mwilky.hilight.plus.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -12,6 +14,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,10 +23,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.DoNotDisturbOn
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.PowerSettingsNew
+import androidx.compose.material.icons.rounded.ScreenRotation
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -167,25 +173,38 @@ fun RuleListItem(
                 AnimatedRingBadge(pattern = pattern, color = color, renderer = renderer, size = 36.dp)
             },
             supportingContent = {
-                val parts = buildList {
-                    add(stringResource(pattern.titleRes))
+                // Pattern on its own line; only conditions overridden from the Conditions page get a chip.
+                val chips = buildList {
                     when (faceDownMode) {
                         FaceDownMode.INHERIT -> Unit
-                        FaceDownMode.ALWAYS -> add(stringResource(R.string.rule_trigger_always))
-                        FaceDownMode.ONLY_FACE_DOWN -> add(stringResource(R.string.rule_trigger_face_down))
+                        FaceDownMode.ALWAYS -> add(ConditionChip(Icons.Rounded.ScreenRotation, R.string.rule_trigger_always, lights = true))
+                        FaceDownMode.ONLY_FACE_DOWN -> add(ConditionChip(Icons.Rounded.ScreenRotation, R.string.rule_trigger_face_down, lights = false))
                     }
                     when (dndMode) {
                         DndMode.INHERIT -> Unit
-                        DndMode.ALWAYS -> add(stringResource(R.string.rule_dnd_always))
-                        DndMode.SKIP -> add(stringResource(R.string.rule_dnd_skip))
+                        DndMode.ALWAYS -> add(ConditionChip(Icons.Rounded.DoNotDisturbOn, R.string.rule_dnd_always, lights = true))
+                        DndMode.SKIP -> add(ConditionChip(Icons.Rounded.DoNotDisturbOn, R.string.rule_dnd_skip, lights = false))
                     }
                     when (quietHoursMode) {
                         QuietHoursMode.INHERIT -> Unit
-                        QuietHoursMode.ALWAYS -> add(stringResource(R.string.rule_quiet_hours_always))
-                        QuietHoursMode.SKIP -> add(stringResource(R.string.rule_quiet_hours_skip))
+                        QuietHoursMode.ALWAYS -> add(ConditionChip(Icons.Rounded.Bedtime, R.string.rule_quiet_hours_always, lights = true))
+                        QuietHoursMode.SKIP -> add(ConditionChip(Icons.Rounded.Bedtime, R.string.rule_quiet_hours_skip, lights = false))
                     }
                 }
-                AnimatedText(text = parts.joinToString(" · "))
+                Column(
+                    modifier = Modifier.animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec()),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    AnimatedText(text = stringResource(pattern.titleRes))
+                    if (chips.isNotEmpty()) {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            chips.forEach { ConditionChipView(it) }
+                        }
+                    }
+                }
             },
             trailingContent = {
                 Switch(checked = isEnabled, onCheckedChange = onToggle)
@@ -204,6 +223,30 @@ fun RuleListItem(
                     }
                 )
             }
+        }
+    }
+}
+
+private data class ConditionChip(val icon: ImageVector, @StringRes val labelRes: Int, val lights: Boolean)
+
+/**
+ * Small read-only badge for one overridden condition. Tertiary when the rule lights anyway,
+ * muted when it stays dark; the label spells the direction out too so colour isn't the only cue.
+ */
+@Composable
+private fun ConditionChipView(chip: ConditionChip) {
+    Surface(
+        shape = CircleShape,
+        color = if (chip.lights) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
+        contentColor = if (chip.lights) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 8.dp, end = 10.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(chip.icon, contentDescription = null, modifier = Modifier.size(14.dp))
+            Text(text = stringResource(chip.labelRes), style = MaterialTheme.typography.labelMedium)
         }
     }
 }
@@ -325,7 +368,11 @@ private fun RuleComponentsPreview() {
             Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
                 RuleListItem(0, 3, "Sarah Connor", PatternMode.PULSE, 0xFFEA4335, FaceDownMode.INHERIT, renderer, true, {}, {}, {})
                 RuleListItem(1, 3, "Mom", PatternMode.BREATHE, 0xFFFF007F, FaceDownMode.ONLY_FACE_DOWN, renderer, false, {}, {}, {})
-                RuleListItem(2, 3, "Unknown numbers", PatternMode.WAVE, 0xFFFBBC05, FaceDownMode.INHERIT, renderer, true, {}, {})
+                RuleListItem(
+                    2, 3, "Unknown numbers", PatternMode.WAVE, 0xFFFBBC05, FaceDownMode.ALWAYS, renderer, true, {}, {},
+                    dndMode = DndMode.SKIP,
+                    quietHoursMode = QuietHoursMode.ALWAYS
+                )
             }
             EmptyRuleHint("No custom caller rules.", Icons.Rounded.Lightbulb)
             AddRuleButton("Add contact", Icons.Rounded.Lightbulb, onClick = {})
