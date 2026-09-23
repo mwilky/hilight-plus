@@ -57,6 +57,8 @@ fun HomeCallsPage(
     onOpenAppSettings: () -> Unit,
     state: SettingsSnapshot,
     onToggleCallLights: (Boolean) -> Unit,
+    onToggleFavouriteCalls: (Boolean) -> Unit,
+    onEditFavouriteCalls: () -> Unit,
     onToggleOtherContacts: (Boolean) -> Unit,
     onEditOtherContacts: () -> Unit,
     onToggleUnknownNumbers: (Boolean) -> Unit,
@@ -109,7 +111,21 @@ fun HomeCallsPage(
                 Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
                     RuleListItem(
                         index = 0,
-                        count = 2,
+                        count = 3,
+                        title = stringResource(R.string.favourite_contacts_title),
+                        pattern = state.favouriteCallsPattern,
+                        color = state.favouriteCallsColor,
+                        faceDownMode = state.favouriteCallsFaceDownMode,
+                        dndMode = state.favouriteCallsDndMode,
+                        quietHoursMode = state.favouriteCallsQuietHoursMode,
+                        renderer = renderer,
+                        isEnabled = state.isFavouriteCallsEnabled,
+                        onToggle = onToggleFavouriteCalls,
+                        onEdit = onEditFavouriteCalls
+                    )
+                    RuleListItem(
+                        index = 1,
+                        count = 3,
                         title = stringResource(R.string.calls_other_contacts_title),
                         pattern = state.otherContactsPattern,
                         color = state.otherContactsColor,
@@ -122,8 +138,8 @@ fun HomeCallsPage(
                         onEdit = onEditOtherContacts
                     )
                     RuleListItem(
-                        index = 1,
-                        count = 2,
+                        index = 2,
+                        count = 3,
                         title = stringResource(R.string.calls_unknown_numbers_title),
                         pattern = state.unknownNumbersPattern,
                         color = state.unknownNumbersColor,

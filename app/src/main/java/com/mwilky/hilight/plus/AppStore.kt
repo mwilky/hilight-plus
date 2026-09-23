@@ -46,6 +46,16 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_OTHER_CONTACTS_QUIET_START = intPreferencesKey("other_contacts_quiet_start")
         private val KEY_OTHER_CONTACTS_QUIET_END = intPreferencesKey("other_contacts_quiet_end")
 
+        // Call Settings: Favourite (starred) Contacts
+        private val KEY_FAV_CALLS_ENABLED = booleanPreferencesKey("fav_calls_enabled")
+        private val KEY_FAV_CALLS_COLOR = longPreferencesKey("fav_calls_color")
+        private val KEY_FAV_CALLS_PATTERN = stringPreferencesKey("fav_calls_pattern")
+        private val KEY_FAV_CALLS_FACE_DOWN = stringPreferencesKey("fav_calls_face_down")
+        private val KEY_FAV_CALLS_DND = stringPreferencesKey("fav_calls_dnd")
+        private val KEY_FAV_CALLS_QUIET = stringPreferencesKey("fav_calls_quiet")
+        private val KEY_FAV_CALLS_QUIET_START = intPreferencesKey("fav_calls_quiet_start")
+        private val KEY_FAV_CALLS_QUIET_END = intPreferencesKey("fav_calls_quiet_end")
+
         // Call Settings: Unknown / Private Numbers
         private val KEY_UNKNOWN_NUMBERS_ENABLED = booleanPreferencesKey("unknown_numbers_enabled")
         private val KEY_UNKNOWN_NUMBERS_COLOR = longPreferencesKey("unknown_numbers_color")
@@ -72,6 +82,14 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_DEFAULT_NOTIF_QUIET = stringPreferencesKey("default_notif_quiet")
         private val KEY_DEFAULT_NOTIF_QUIET_START = intPreferencesKey("default_notif_quiet_start")
         private val KEY_DEFAULT_NOTIF_QUIET_END = intPreferencesKey("default_notif_quiet_end")
+        private val KEY_FAV_NOTIF_ENABLED = booleanPreferencesKey("fav_notif_enabled")
+        private val KEY_FAV_NOTIF_COLOR = longPreferencesKey("fav_notif_color")
+        private val KEY_FAV_NOTIF_PATTERN = stringPreferencesKey("fav_notif_pattern")
+        private val KEY_FAV_NOTIF_FACE_DOWN = stringPreferencesKey("fav_notif_face_down")
+        private val KEY_FAV_NOTIF_DND = stringPreferencesKey("fav_notif_dnd")
+        private val KEY_FAV_NOTIF_QUIET = stringPreferencesKey("fav_notif_quiet")
+        private val KEY_FAV_NOTIF_QUIET_START = intPreferencesKey("fav_notif_quiet_start")
+        private val KEY_FAV_NOTIF_QUIET_END = intPreferencesKey("fav_notif_quiet_end")
         private val KEY_MESSAGE_CONTACT_RULES_JSON = stringPreferencesKey("message_contact_rules_json")
         private val KEY_APP_RULES_JSON = stringPreferencesKey("app_rules_json")
 
@@ -182,6 +200,10 @@ class AppStore private constructor(private val appContext: Context) {
         appContext.dataStore.edit { it[KEY_OTHER_CONTACTS_ENABLED] = enabled }
     }
 
+    suspend fun setFavouriteCallsEnabled(enabled: Boolean) {
+        appContext.dataStore.edit { it[KEY_FAV_CALLS_ENABLED] = enabled }
+    }
+
     suspend fun setUnknownNumbersEnabled(enabled: Boolean) {
         appContext.dataStore.edit { it[KEY_UNKNOWN_NUMBERS_ENABLED] = enabled }
     }
@@ -207,6 +229,10 @@ class AppStore private constructor(private val appContext: Context) {
         appContext.dataStore.edit { it[KEY_DEFAULT_NOTIF_ENABLED] = enabled }
     }
 
+    suspend fun setFavouriteNotifEnabled(enabled: Boolean) {
+        appContext.dataStore.edit { it[KEY_FAV_NOTIF_ENABLED] = enabled }
+    }
+
     suspend fun setOtherContactsStyle(
         pattern: PatternMode,
         color: Long,
@@ -224,6 +250,26 @@ class AppStore private constructor(private val appContext: Context) {
             prefs[KEY_OTHER_CONTACTS_QUIET] = quietHoursMode.name
             prefs[KEY_OTHER_CONTACTS_QUIET_START] = quietHoursStartMinutes
             prefs[KEY_OTHER_CONTACTS_QUIET_END] = quietHoursEndMinutes
+        }
+    }
+
+    suspend fun setFavouriteCallsStyle(
+        pattern: PatternMode,
+        color: Long,
+        faceDown: FaceDownMode,
+        dndMode: DndMode,
+        quietHoursMode: QuietHoursMode,
+        quietHoursStartMinutes: Int,
+        quietHoursEndMinutes: Int
+    ) {
+        appContext.dataStore.edit { prefs ->
+            prefs[KEY_FAV_CALLS_PATTERN] = pattern.name
+            prefs[KEY_FAV_CALLS_COLOR] = color
+            prefs[KEY_FAV_CALLS_FACE_DOWN] = faceDown.name
+            prefs[KEY_FAV_CALLS_DND] = dndMode.name
+            prefs[KEY_FAV_CALLS_QUIET] = quietHoursMode.name
+            prefs[KEY_FAV_CALLS_QUIET_START] = quietHoursStartMinutes
+            prefs[KEY_FAV_CALLS_QUIET_END] = quietHoursEndMinutes
         }
     }
 
@@ -266,6 +312,26 @@ class AppStore private constructor(private val appContext: Context) {
             prefs[KEY_DEFAULT_NOTIF_QUIET] = quietHoursMode.name
             prefs[KEY_DEFAULT_NOTIF_QUIET_START] = quietHoursStartMinutes
             prefs[KEY_DEFAULT_NOTIF_QUIET_END] = quietHoursEndMinutes
+        }
+    }
+
+    suspend fun setFavouriteNotifStyle(
+        pattern: PatternMode,
+        color: Long,
+        faceDown: FaceDownMode,
+        dndMode: DndMode,
+        quietHoursMode: QuietHoursMode,
+        quietHoursStartMinutes: Int,
+        quietHoursEndMinutes: Int
+    ) {
+        appContext.dataStore.edit { prefs ->
+            prefs[KEY_FAV_NOTIF_PATTERN] = pattern.name
+            prefs[KEY_FAV_NOTIF_COLOR] = color
+            prefs[KEY_FAV_NOTIF_FACE_DOWN] = faceDown.name
+            prefs[KEY_FAV_NOTIF_DND] = dndMode.name
+            prefs[KEY_FAV_NOTIF_QUIET] = quietHoursMode.name
+            prefs[KEY_FAV_NOTIF_QUIET_START] = quietHoursStartMinutes
+            prefs[KEY_FAV_NOTIF_QUIET_END] = quietHoursEndMinutes
         }
     }
 
@@ -354,6 +420,14 @@ class AppStore private constructor(private val appContext: Context) {
             otherContactsQuietHoursMode = enumOr(prefs[KEY_OTHER_CONTACTS_QUIET], d.otherContactsQuietHoursMode),
             otherContactsQuietHoursStartMinutes = prefs[KEY_OTHER_CONTACTS_QUIET_START] ?: d.otherContactsQuietHoursStartMinutes,
             otherContactsQuietHoursEndMinutes = prefs[KEY_OTHER_CONTACTS_QUIET_END] ?: d.otherContactsQuietHoursEndMinutes,
+            isFavouriteCallsEnabled = prefs[KEY_FAV_CALLS_ENABLED] ?: d.isFavouriteCallsEnabled,
+            favouriteCallsColor = prefs[KEY_FAV_CALLS_COLOR] ?: d.favouriteCallsColor,
+            favouriteCallsPattern = enumOr(prefs[KEY_FAV_CALLS_PATTERN], d.favouriteCallsPattern),
+            favouriteCallsFaceDownMode = enumOr(prefs[KEY_FAV_CALLS_FACE_DOWN], d.favouriteCallsFaceDownMode),
+            favouriteCallsDndMode = enumOr(prefs[KEY_FAV_CALLS_DND], d.favouriteCallsDndMode),
+            favouriteCallsQuietHoursMode = enumOr(prefs[KEY_FAV_CALLS_QUIET], d.favouriteCallsQuietHoursMode),
+            favouriteCallsQuietHoursStartMinutes = prefs[KEY_FAV_CALLS_QUIET_START] ?: d.favouriteCallsQuietHoursStartMinutes,
+            favouriteCallsQuietHoursEndMinutes = prefs[KEY_FAV_CALLS_QUIET_END] ?: d.favouriteCallsQuietHoursEndMinutes,
             isUnknownNumbersEnabled = prefs[KEY_UNKNOWN_NUMBERS_ENABLED] ?: d.isUnknownNumbersEnabled,
             unknownNumbersColor = prefs[KEY_UNKNOWN_NUMBERS_COLOR] ?: d.unknownNumbersColor,
             unknownNumbersPattern = enumOr(prefs[KEY_UNKNOWN_NUMBERS_PATTERN], d.unknownNumbersPattern),
@@ -374,6 +448,14 @@ class AppStore private constructor(private val appContext: Context) {
             defaultNotifQuietHoursMode = enumOr(prefs[KEY_DEFAULT_NOTIF_QUIET], d.defaultNotifQuietHoursMode),
             defaultNotifQuietHoursStartMinutes = prefs[KEY_DEFAULT_NOTIF_QUIET_START] ?: d.defaultNotifQuietHoursStartMinutes,
             defaultNotifQuietHoursEndMinutes = prefs[KEY_DEFAULT_NOTIF_QUIET_END] ?: d.defaultNotifQuietHoursEndMinutes,
+            isFavouriteNotifEnabled = prefs[KEY_FAV_NOTIF_ENABLED] ?: d.isFavouriteNotifEnabled,
+            favouriteNotifColor = prefs[KEY_FAV_NOTIF_COLOR] ?: d.favouriteNotifColor,
+            favouriteNotifPattern = enumOr(prefs[KEY_FAV_NOTIF_PATTERN], d.favouriteNotifPattern),
+            favouriteNotifFaceDownMode = enumOr(prefs[KEY_FAV_NOTIF_FACE_DOWN], d.favouriteNotifFaceDownMode),
+            favouriteNotifDndMode = enumOr(prefs[KEY_FAV_NOTIF_DND], d.favouriteNotifDndMode),
+            favouriteNotifQuietHoursMode = enumOr(prefs[KEY_FAV_NOTIF_QUIET], d.favouriteNotifQuietHoursMode),
+            favouriteNotifQuietHoursStartMinutes = prefs[KEY_FAV_NOTIF_QUIET_START] ?: d.favouriteNotifQuietHoursStartMinutes,
+            favouriteNotifQuietHoursEndMinutes = prefs[KEY_FAV_NOTIF_QUIET_END] ?: d.favouriteNotifQuietHoursEndMinutes,
             messageContactRules = readMessageRules(prefs[KEY_MESSAGE_CONTACT_RULES_JSON]),
             appRules = readAppRules(prefs[KEY_APP_RULES_JSON]),
             battery = BatterySettings.fromJson(prefs[KEY_BATTERY_JSON])
@@ -416,6 +498,14 @@ data class SettingsSnapshot(
     val otherContactsQuietHoursMode: QuietHoursMode,
     val otherContactsQuietHoursStartMinutes: Int?,
     val otherContactsQuietHoursEndMinutes: Int?,
+    val isFavouriteCallsEnabled: Boolean,
+    val favouriteCallsColor: Long,
+    val favouriteCallsPattern: PatternMode,
+    val favouriteCallsFaceDownMode: FaceDownMode,
+    val favouriteCallsDndMode: DndMode,
+    val favouriteCallsQuietHoursMode: QuietHoursMode,
+    val favouriteCallsQuietHoursStartMinutes: Int?,
+    val favouriteCallsQuietHoursEndMinutes: Int?,
     val isUnknownNumbersEnabled: Boolean,
     val unknownNumbersColor: Long,
     val unknownNumbersPattern: PatternMode,
@@ -436,6 +526,14 @@ data class SettingsSnapshot(
     val defaultNotifQuietHoursMode: QuietHoursMode,
     val defaultNotifQuietHoursStartMinutes: Int?,
     val defaultNotifQuietHoursEndMinutes: Int?,
+    val isFavouriteNotifEnabled: Boolean,
+    val favouriteNotifColor: Long,
+    val favouriteNotifPattern: PatternMode,
+    val favouriteNotifFaceDownMode: FaceDownMode,
+    val favouriteNotifDndMode: DndMode,
+    val favouriteNotifQuietHoursMode: QuietHoursMode,
+    val favouriteNotifQuietHoursStartMinutes: Int?,
+    val favouriteNotifQuietHoursEndMinutes: Int?,
     val messageContactRules: List<MessageContactRule>,
     val appRules: List<AppNotificationRule>,
     val battery: BatterySettings
@@ -477,6 +575,15 @@ val DEFAULT_SETTINGS_SNAPSHOT = SettingsSnapshot(
     otherContactsQuietHoursMode = QuietHoursMode.INHERIT,
     otherContactsQuietHoursStartMinutes = null,
     otherContactsQuietHoursEndMinutes = null,
+    // Favourites are off by default so existing installs keep their current lighting until opted in.
+    isFavouriteCallsEnabled = false,
+    favouriteCallsColor = 0xFFFFD600,
+    favouriteCallsPattern = PatternMode.PULSE,
+    favouriteCallsFaceDownMode = FaceDownMode.INHERIT,
+    favouriteCallsDndMode = DndMode.INHERIT,
+    favouriteCallsQuietHoursMode = QuietHoursMode.INHERIT,
+    favouriteCallsQuietHoursStartMinutes = null,
+    favouriteCallsQuietHoursEndMinutes = null,
     isUnknownNumbersEnabled = true,
     unknownNumbersColor = 0xFFFBBC05,
     unknownNumbersPattern = PatternMode.PULSE,
@@ -497,6 +604,14 @@ val DEFAULT_SETTINGS_SNAPSHOT = SettingsSnapshot(
     defaultNotifQuietHoursMode = QuietHoursMode.INHERIT,
     defaultNotifQuietHoursStartMinutes = null,
     defaultNotifQuietHoursEndMinutes = null,
+    isFavouriteNotifEnabled = false,
+    favouriteNotifColor = 0xFFFFD600,
+    favouriteNotifPattern = PatternMode.PULSE,
+    favouriteNotifFaceDownMode = FaceDownMode.INHERIT,
+    favouriteNotifDndMode = DndMode.INHERIT,
+    favouriteNotifQuietHoursMode = QuietHoursMode.INHERIT,
+    favouriteNotifQuietHoursStartMinutes = null,
+    favouriteNotifQuietHoursEndMinutes = null,
     messageContactRules = emptyList(),
     appRules = emptyList(),
     battery = BatterySettings()

@@ -66,6 +66,8 @@ fun HomeNotifsPage(
     onOpenNotifSettings: () -> Unit,
     state: SettingsSnapshot,
     onToggleNotifs: (Boolean) -> Unit,
+    onToggleFavouriteNotif: (Boolean) -> Unit,
+    onEditFavouriteNotif: () -> Unit,
     onToggleDefaultNotif: (Boolean) -> Unit,
     onEditDefaultNotif: () -> Unit,
     onToggleMessageRule: (MessageContactRule, Boolean) -> Unit,
@@ -116,20 +118,36 @@ fun HomeNotifsPage(
 
         SectionBody(enabled = state.isNotificationsEnabled) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                RuleListItem(
-                    index = 0,
-                    count = 1,
-                    title = stringResource(R.string.notifs_default_title),
-                    pattern = state.defaultNotifPattern,
-                    color = state.defaultNotifColor,
-                    faceDownMode = state.defaultNotifFaceDownMode,
-                    dndMode = state.defaultNotifDndMode,
-                    quietHoursMode = state.defaultNotifQuietHoursMode,
-                    renderer = renderer,
-                    isEnabled = state.isDefaultNotifEnabled,
-                    onToggle = onToggleDefaultNotif,
-                    onEdit = onEditDefaultNotif
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+                    RuleListItem(
+                        index = 0,
+                        count = 2,
+                        title = stringResource(R.string.favourite_contacts_title),
+                        pattern = state.favouriteNotifPattern,
+                        color = state.favouriteNotifColor,
+                        faceDownMode = state.favouriteNotifFaceDownMode,
+                        dndMode = state.favouriteNotifDndMode,
+                        quietHoursMode = state.favouriteNotifQuietHoursMode,
+                        renderer = renderer,
+                        isEnabled = state.isFavouriteNotifEnabled,
+                        onToggle = onToggleFavouriteNotif,
+                        onEdit = onEditFavouriteNotif
+                    )
+                    RuleListItem(
+                        index = 1,
+                        count = 2,
+                        title = stringResource(R.string.notifs_default_title),
+                        pattern = state.defaultNotifPattern,
+                        color = state.defaultNotifColor,
+                        faceDownMode = state.defaultNotifFaceDownMode,
+                        dndMode = state.defaultNotifDndMode,
+                        quietHoursMode = state.defaultNotifQuietHoursMode,
+                        renderer = renderer,
+                        isEnabled = state.isDefaultNotifEnabled,
+                        onToggle = onToggleDefaultNotif,
+                        onEdit = onEditDefaultNotif
+                    )
+                }
 
                 RuleGroupHeader(stringResource(R.string.notifs_contact_rules_header, messageRules.size))
                 if (messageRules.isEmpty()) {

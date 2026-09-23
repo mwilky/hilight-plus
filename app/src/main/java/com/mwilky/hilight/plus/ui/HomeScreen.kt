@@ -94,6 +94,7 @@ fun HomeScreen(
     val requestCallPermissions = rememberCallPermissionLauncher(permissionState)
 
     var callRuleBeingEdited by remember { mutableStateOf<ContactRule?>(null) }
+    var isConfiguringFavouriteCalls by remember { mutableStateOf(false) }
     var isConfiguringOtherContacts by remember { mutableStateOf(false) }
     var isConfiguringUnknownNumbers by remember { mutableStateOf(false) }
 
@@ -101,6 +102,7 @@ fun HomeScreen(
     var appRuleBeingEdited by remember { mutableStateOf<AppNotificationRule?>(null) }
     var isPickingApp by remember { mutableStateOf(false) }
     var isConfiguringDefaultNotif by remember { mutableStateOf(false) }
+    var isConfiguringFavouriteNotif by remember { mutableStateOf(false) }
 
     // Pick Contact for Call
     val callContactPickerLauncher = rememberLauncherForActivityResult(
@@ -169,6 +171,8 @@ fun HomeScreen(
         onOpenNotifSettings = { openNotifSettings() },
         state = state,
         onToggleCallLights = viewModel::setCallLightsEnabled,
+        onToggleFavouriteCalls = viewModel::setFavouriteCallsEnabled,
+        onEditFavouriteCalls = { isConfiguringFavouriteCalls = true },
         onToggleOtherContacts = viewModel::setOtherContactsEnabled,
         onEditOtherContacts = { isConfiguringOtherContacts = true },
         onToggleUnknownNumbers = viewModel::setUnknownNumbersEnabled,
@@ -182,6 +186,8 @@ fun HomeScreen(
         onToggleNotifs = viewModel::setNotificationsEnabled,
         onChangeDuration = viewModel::setNotificationDurationSeconds,
         onChangeMultiAlertMode = viewModel::setMultiAlertMode,
+        onToggleFavouriteNotif = viewModel::setFavouriteNotifEnabled,
+        onEditFavouriteNotif = { isConfiguringFavouriteNotif = true },
         onToggleDefaultNotif = viewModel::setDefaultNotifEnabled,
         onEditDefaultNotif = { isConfiguringDefaultNotif = true },
         onToggleMessageRule = { rule, isEnabled ->
@@ -228,6 +234,35 @@ fun HomeScreen(
                     )
                 )
                 callRuleBeingEdited = null
+            }
+        )
+    }
+
+    // Favourite Contacts (Calls) Dialog
+    if (isConfiguringFavouriteCalls) {
+        CustomRuleDialog(
+            title = stringResource(R.string.favourite_contacts_title),
+            initialColor = state.favouriteCallsColor,
+            initialPattern = state.favouriteCallsPattern,
+            initialFaceDown = state.favouriteCallsFaceDownMode,
+            initialDnd = state.favouriteCallsDndMode,
+            initialQuietHours = state.favouriteCallsQuietHoursMode,
+            initialQuietStart = state.favouriteCallsQuietHoursStartMinutes ?: state.quietHoursStartMinutes,
+            initialQuietEnd = state.favouriteCallsQuietHoursEndMinutes ?: state.quietHoursEndMinutes,
+            renderer = renderer,
+            controller = controller,
+            onDismiss = { isConfiguringFavouriteCalls = false },
+            onSave = { result ->
+                viewModel.setFavouriteCallsStyle(
+                    result.pattern,
+                    result.color,
+                    result.faceDown,
+                    result.dndMode,
+                    result.quietHoursMode,
+                    result.quietHoursStartMinutes,
+                    result.quietHoursEndMinutes
+                )
+                isConfiguringFavouriteCalls = false
             }
         )
     }
@@ -381,6 +416,35 @@ fun HomeScreen(
         )
     }
 
+    // Favourite Contacts (Notifications) Dialog
+    if (isConfiguringFavouriteNotif) {
+        CustomRuleDialog(
+            title = stringResource(R.string.favourite_contacts_title),
+            initialColor = state.favouriteNotifColor,
+            initialPattern = state.favouriteNotifPattern,
+            initialFaceDown = state.favouriteNotifFaceDownMode,
+            initialDnd = state.favouriteNotifDndMode,
+            initialQuietHours = state.favouriteNotifQuietHoursMode,
+            initialQuietStart = state.favouriteNotifQuietHoursStartMinutes ?: state.quietHoursStartMinutes,
+            initialQuietEnd = state.favouriteNotifQuietHoursEndMinutes ?: state.quietHoursEndMinutes,
+            renderer = renderer,
+            controller = controller,
+            onDismiss = { isConfiguringFavouriteNotif = false },
+            onSave = { result ->
+                viewModel.setFavouriteNotifStyle(
+                    result.pattern,
+                    result.color,
+                    result.faceDown,
+                    result.dndMode,
+                    result.quietHoursMode,
+                    result.quietHoursStartMinutes,
+                    result.quietHoursEndMinutes
+                )
+                isConfiguringFavouriteNotif = false
+            }
+        )
+    }
+
     // Default Fallback Notif Dialog
     if (isConfiguringDefaultNotif) {
         CustomRuleDialog(
@@ -437,6 +501,8 @@ fun HomeContent(
     state: SettingsSnapshot,
     // Calls
     onToggleCallLights: (Boolean) -> Unit,
+    onToggleFavouriteCalls: (Boolean) -> Unit,
+    onEditFavouriteCalls: () -> Unit,
     onToggleOtherContacts: (Boolean) -> Unit,
     onEditOtherContacts: () -> Unit,
     onToggleUnknownNumbers: (Boolean) -> Unit,
@@ -449,6 +515,8 @@ fun HomeContent(
     onToggleNotifs: (Boolean) -> Unit,
     onChangeDuration: (Int) -> Unit,
     onChangeMultiAlertMode: (MultiAlertMode) -> Unit = {},
+    onToggleFavouriteNotif: (Boolean) -> Unit,
+    onEditFavouriteNotif: () -> Unit,
     onToggleDefaultNotif: (Boolean) -> Unit,
     onEditDefaultNotif: () -> Unit,
     onToggleMessageRule: (MessageContactRule, Boolean) -> Unit,
@@ -516,6 +584,8 @@ fun HomeContent(
                         onOpenAppSettings = onOpenAppSettings,
                         state = state,
                         onToggleCallLights = onToggleCallLights,
+                        onToggleFavouriteCalls = onToggleFavouriteCalls,
+                        onEditFavouriteCalls = onEditFavouriteCalls,
                         onToggleOtherContacts = onToggleOtherContacts,
                         onEditOtherContacts = onEditOtherContacts,
                         onToggleUnknownNumbers = onToggleUnknownNumbers,
@@ -538,6 +608,8 @@ fun HomeContent(
                         onOpenNotifSettings = onOpenNotifSettings,
                         state = state,
                         onToggleNotifs = onToggleNotifs,
+                        onToggleFavouriteNotif = onToggleFavouriteNotif,
+                        onEditFavouriteNotif = onEditFavouriteNotif,
                         onToggleDefaultNotif = onToggleDefaultNotif,
                         onEditDefaultNotif = onEditDefaultNotif,
                         onToggleMessageRule = onToggleMessageRule,
@@ -876,6 +948,8 @@ fun HomeScreenPreviewContent(
                 appRules = mockApps
             ),
             onToggleCallLights = {},
+            onToggleFavouriteCalls = {},
+            onEditFavouriteCalls = {},
             onToggleOtherContacts = {},
             onEditOtherContacts = {},
             onToggleUnknownNumbers = {},
@@ -886,6 +960,8 @@ fun HomeScreenPreviewContent(
             onAddCallContact = {},
             onToggleNotifs = {},
             onChangeDuration = {},
+            onToggleFavouriteNotif = {},
+            onEditFavouriteNotif = {},
             onToggleDefaultNotif = {},
             onEditDefaultNotif = {},
             onToggleMessageRule = { _, _ -> },

@@ -28,11 +28,13 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setCallLightsEnabled(enabled: Boolean) = launch { store.setCallLightsEnabled(enabled) }
     fun setOtherContactsEnabled(enabled: Boolean) = launch { store.setOtherContactsEnabled(enabled) }
+    fun setFavouriteCallsEnabled(enabled: Boolean) = launch { store.setFavouriteCallsEnabled(enabled) }
     fun setUnknownNumbersEnabled(enabled: Boolean) = launch { store.setUnknownNumbersEnabled(enabled) }
     fun setNotificationsEnabled(enabled: Boolean) = launch { store.setNotificationsEnabled(enabled) }
     fun setNotificationDurationSeconds(seconds: Int) = launch { store.setNotificationDurationSeconds(seconds) }
     fun setMultiAlertMode(mode: MultiAlertMode) = launch { store.setMultiAlertMode(mode) }
     fun setDefaultNotifEnabled(enabled: Boolean) = launch { store.setDefaultNotifEnabled(enabled) }
+    fun setFavouriteNotifEnabled(enabled: Boolean) = launch { store.setFavouriteNotifEnabled(enabled) }
     fun setBattery(settings: BatterySettings) = launch { store.setBattery(settings) }
 
     fun setOnlyWhenFaceDown(enabled: Boolean) = launch { store.setOnlyWhenFaceDown(enabled) }
@@ -57,6 +59,46 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         quietHoursEndMinutes: Int
     ) = launch {
         store.setOtherContactsStyle(
+            pattern,
+            color,
+            faceDown,
+            dndMode,
+            quietHoursMode,
+            quietHoursStartMinutes,
+            quietHoursEndMinutes
+        )
+    }
+
+    fun setFavouriteCallsStyle(
+        pattern: PatternMode,
+        color: Long,
+        faceDown: FaceDownMode,
+        dndMode: DndMode,
+        quietHoursMode: QuietHoursMode,
+        quietHoursStartMinutes: Int,
+        quietHoursEndMinutes: Int
+    ) = launch {
+        store.setFavouriteCallsStyle(
+            pattern,
+            color,
+            faceDown,
+            dndMode,
+            quietHoursMode,
+            quietHoursStartMinutes,
+            quietHoursEndMinutes
+        )
+    }
+
+    fun setFavouriteNotifStyle(
+        pattern: PatternMode,
+        color: Long,
+        faceDown: FaceDownMode,
+        dndMode: DndMode,
+        quietHoursMode: QuietHoursMode,
+        quietHoursStartMinutes: Int,
+        quietHoursEndMinutes: Int
+    ) = launch {
+        store.setFavouriteNotifStyle(
             pattern,
             color,
             faceDown,

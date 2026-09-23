@@ -12,6 +12,7 @@ import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.SettingsSnapshot
 import com.mwilky.hilight.plus.core.DeviceOrientationDetector
 import com.mwilky.hilight.plus.dataStore
+import com.mwilky.hilight.plus.isFavouriteContactName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -21,8 +22,9 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * Lights the ring for a ringing call and resolves the caller through three tiers:
+ * Lights the ring for a ringing call and resolves the caller through four tiers:
  * - Specific enabled Contact Rule (highest priority)
+ * - Favourite Contacts (starred in the address book), when enabled
  * - All Other Contacts (saved in address book, including a disabled custom rule)
  * - Unknown & Private Numbers (unsaved callers)
  *
@@ -152,6 +154,25 @@ internal object IncomingCallProcessor {
                 matchedRule.quietHoursEndMinutes,
                 matchedRule.pattern,
                 matchedRule.color
+            )
+            return
+        }
+
+        if (isSavedContact && contactName != null && snapshot.isFavouriteCallsEnabled &&
+            isFavouriteContactName(context, contactName)
+        ) {
+            Log.i(TAG, "Caller '$contactName' is a favourite contact -> Favourite Contacts")
+            startCallAlert(
+                context,
+                snapshot,
+                controller,
+                snapshot.favouriteCallsFaceDownMode,
+                snapshot.favouriteCallsDndMode,
+                snapshot.favouriteCallsQuietHoursMode,
+                snapshot.favouriteCallsQuietHoursStartMinutes,
+                snapshot.favouriteCallsQuietHoursEndMinutes,
+                snapshot.favouriteCallsPattern,
+                snapshot.favouriteCallsColor
             )
             return
         }

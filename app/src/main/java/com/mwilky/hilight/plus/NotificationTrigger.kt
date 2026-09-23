@@ -250,6 +250,25 @@ class NotificationTrigger : NotificationListenerService() {
             )
         }
 
+        // Favourites sit above app rules: a starred contact is more specific than the app they message from.
+        if (snapshot.isFavouriteNotifEnabled && isFavouriteContactName(applicationContext, senderName)) {
+            if (snapshot.favouriteNotifPattern == PatternMode.OFF) {
+                Log.i(TAG, "Favourite Match: '$senderName' but Favourite Contacts is OFF -> NO LIGHT")
+                return null
+            }
+            Log.i(TAG, "Favourite Match: '$senderName'")
+            return ResolvedAlert(
+                "favourite_${senderName.trim().lowercase()}",
+                snapshot.favouriteNotifPattern,
+                snapshot.favouriteNotifColor,
+                snapshot.favouriteNotifFaceDownMode,
+                snapshot.favouriteNotifDndMode,
+                snapshot.favouriteNotifQuietHoursMode,
+                snapshot.favouriteNotifQuietHoursStartMinutes,
+                snapshot.favouriteNotifQuietHoursEndMinutes
+            )
+        }
+
         val appRule = snapshot.findRuleForPackage(pkg)
         if (appRule != null) {
             if (appRule.pattern == PatternMode.OFF) {
