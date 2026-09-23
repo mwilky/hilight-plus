@@ -11,8 +11,8 @@ android {
         applicationId = "com.mwilky.hilight.plus"
         minSdk = 37
         targetSdk = 37
-        versionCode = 11
-        versionName = "1.1.7"
+        versionCode = 12
+        versionName = "1.1.8"
     }
 
     buildTypes {
