@@ -27,4 +27,5 @@ interface IHiLightService {
     void setEntitled(boolean entitled);
     void setLogSink(ILogSink sink);
     String dumpState();
+    void setSplitAnimation(String animation);
 }

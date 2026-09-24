@@ -6,6 +6,7 @@ import com.mwilky.hilight.plus.DebugLog
 import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.LowBatteryPattern
 import com.mwilky.hilight.plus.QuietHoursMode
+import com.mwilky.hilight.plus.SplitAnimation
 import com.mwilky.hilight.plus.currentMinutesOfDay
 
 /**
@@ -139,6 +140,11 @@ class LightEngine {
     // Split-ring display of the queue: with two or more visible alerts each gets its own arc
     // instead of taking turns. A single visible alert still plays its own pattern.
     private var splitRing = false
+    private var splitAnimation = SplitAnimation.BREATHE
+    // The arcs on show and when that set appeared, so a changed set restarts the animation
+    // (Spotlight on the newest arc, Rotate with the newest at the top).
+    private var splitKeys: List<String>? = null
+    private var splitStartedAtMs = 0L
 
     // What the ring was last showing, so each change is logged once rather than every frame.
     private var lastRenderReason: String? = null
@@ -362,6 +368,15 @@ class LightEngine {
             if (splitRing == enabled) return
             splitRing = enabled
             DebugLog.i(TAG, "setSplitRing: $enabled")
+        }
+    }
+
+    fun setSplitAnimation(animation: SplitAnimation) {
+        synchronized(lock) {
+            if (splitAnimation == animation) return
+            splitAnimation = animation
+            splitKeys = null
+            DebugLog.i(TAG, "setSplitAnimation: ${animation.id}")
         }
     }
 
@@ -617,7 +632,12 @@ class LightEngine {
                     reason = "off (${activeAlerts.size} queued, hidden by conditions)"
                     useBatteryIfEligible()
                 } else if (splitAlerts.size >= 2) {
-                    reason = "split ${splitAlerts.take(PatternRenderer.MAX_SPLIT_SEGMENTS).map { it.key }}"
+                    val keys = splitAlerts.take(PatternRenderer.MAX_SPLIT_SEGMENTS).map { it.key }
+                    if (keys != splitKeys) {
+                        splitKeys = keys
+                        splitStartedAtMs = now
+                    }
+                    reason = "split ${splitAnimation.id} $keys"
                     splitColors = LongArray(minOf(splitAlerts.size, PatternRenderer.MAX_SPLIT_SEGMENTS)) { splitAlerts[it].color }
                     currentBrightness = splitAlerts[0].brightness
                 } else {
@@ -655,6 +675,7 @@ class LightEngine {
                 }
                 useBatteryIfEligible()
             }
+            if (splitColors == null) splitKeys = null
 
             if (renderBattery) {
                 reason = when {
@@ -697,8 +718,9 @@ class LightEngine {
                     renderer.renderSplitFrame(
                         colors = splitColors,
                         brightness = currentBrightness,
-                        elapsedTimeMs = now,
-                        ledCount = lights.ledCount
+                        elapsedTimeMs = now - splitStartedAtMs,
+                        ledCount = lights.ledCount,
+                        animation = splitAnimation
                     )
                 )
                 return
@@ -762,7 +784,7 @@ class LightEngine {
         val now = SystemClock.elapsedRealtime()
         buildString {
             appendLine("ring=$lastRenderReason, sessionOpen=${lights.isSessionOpen}, leds=${lights.ledCount}, running=$running, renderThreadAlive=${renderThread?.isAlive}, lastFrame=${now - lastTickElapsedMs}ms ago")
-            appendLine("faceDown=$deviceFaceDown, dndActive=$dndActive, dndSuppress=$dndSuppressEnabled, quietHours=$quietHoursEnabled $quietHoursStartMinutes-$quietHoursEndMinutes, splitRing=$splitRing")
+            appendLine("faceDown=$deviceFaceDown, dndActive=$dndActive, dndSuppress=$dndSuppressEnabled, quietHours=$quietHoursEnabled $quietHoursStartMinutes-$quietHoursEndMinutes, splitRing=$splitRing (${splitAnimation.id})")
             appendLine("test=${testAlert?.let { "${it.pattern} ${hex(it.color)}, ${it.expiresAtMs - now}ms left" }}")
             appendLine("call=${incomingCallAlert?.let { "${it.pattern} ${hex(it.color)}, ringing ${(now - it.startedAtMs) / 1000}s, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}" }}")
             appendLine("latestOnly=${directAlert?.let { "${it.pattern} ${hex(it.color)}, ${directAlertTimer.remainingMs(now)}ms left, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}" }}")

@@ -33,8 +33,11 @@ import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -47,10 +50,13 @@ import com.mwilky.hilight.plus.MultiAlertMode
 import com.mwilky.hilight.plus.R
 import com.mwilky.hilight.plus.SettingsSnapshot
 import com.mwilky.hilight.plus.ShizukuBridge
+import com.mwilky.hilight.plus.SplitAnimation
 import com.mwilky.hilight.plus.core.PatternRenderer
 import com.mwilky.hilight.plus.ui.diagnostics.NotificationAccessCard
 import com.mwilky.hilight.plus.ui.diagnostics.PermissionState
 import com.mwilky.hilight.plus.ui.diagnostics.ShizukuStatusCard
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlin.math.roundToInt
 
 @Composable
@@ -80,6 +86,7 @@ fun HomeNotifsPage(
     onAddApp: () -> Unit,
     onChangeDuration: (Int) -> Unit,
     onChangeMultiAlertMode: (MultiAlertMode) -> Unit,
+    onChangeSplitAnimation: (SplitAnimation) -> Unit,
     renderer: PatternRenderer
 ) {
     val messageRules = state.messageContactRules
@@ -273,7 +280,20 @@ fun HomeNotifsPage(
                                     exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
                                         fadeOut(MaterialTheme.motionScheme.defaultEffectsSpec())
                                 ) {
-                                    SplitRingExample(renderer)
+                                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        Text(stringResource(R.string.settings_split_animation_title))
+                                        ConnectedChoice(
+                                            options = listOf(
+                                                SplitAnimation.BREATHE to stringResource(R.string.settings_split_animation_breathe),
+                                                SplitAnimation.SOLID to stringResource(R.string.settings_split_animation_solid),
+                                                SplitAnimation.SPOTLIGHT to stringResource(R.string.settings_split_animation_spotlight),
+                                                SplitAnimation.ROTATE to stringResource(R.string.settings_split_animation_rotate)
+                                            ),
+                                            selected = state.splitAnimation,
+                                            onSelect = onChangeSplitAnimation
+                                        )
+                                        SplitRingExample(renderer, state.splitAnimation)
+                                    }
                                 }
                             }
                         }
@@ -288,15 +308,23 @@ fun HomeNotifsPage(
     }
 }
 
-/** A still of three waiting notifications, so the split layout is visible before any arrive. */
+/** Three waiting notifications in the chosen animation, so it's visible before any arrive. */
 @Composable
-private fun SplitRingExample(renderer: PatternRenderer) {
-    val frame = remember(renderer) {
-        renderer.renderSplitFrame(
-            colors = longArrayOf(0xFF00E5FF, 0xFF34A853, 0xFFFF6D00),
-            brightness = 1f,
-            elapsedTimeMs = 1200L
-        )
+private fun SplitRingExample(renderer: PatternRenderer, animation: SplitAnimation) {
+    var frame by remember { mutableStateOf(IntArray(8)) }
+    // Restarts with each choice, as the ring does when its arcs change, so Spotlight starts on
+    // the newest arc and Rotate with the newest at the top.
+    LaunchedEffect(renderer, animation) {
+        val startMs = System.currentTimeMillis()
+        while (isActive) {
+            frame = renderer.renderSplitFrame(
+                colors = longArrayOf(0xFF00E5FF, 0xFF34A853, 0xFFFF6D00),
+                brightness = 1f,
+                elapsedTimeMs = System.currentTimeMillis() - startMs,
+                animation = animation
+            )
+            delay(33)
+        }
     }
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -307,8 +335,13 @@ private fun SplitRingExample(renderer: PatternRenderer) {
             modifier = Modifier.size(56.dp).clip(CircleShape),
             size = 56.dp
         )
-        Text(
-            text = stringResource(R.string.settings_multi_split_example),
+        AnimatedText(
+            text = when (animation) {
+                SplitAnimation.BREATHE -> stringResource(R.string.settings_split_example_breathe)
+                SplitAnimation.SOLID -> stringResource(R.string.settings_split_example_solid)
+                SplitAnimation.SPOTLIGHT -> stringResource(R.string.settings_split_example_spotlight)
+                SplitAnimation.ROTATE -> stringResource(R.string.settings_split_example_rotate)
+            },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

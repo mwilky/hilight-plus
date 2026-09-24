@@ -63,6 +63,25 @@ enum class MultiAlertMode(val id: String) {
     }
 }
 
+/**
+ * How the split ring animates its arcs. Every option keeps each arc whole and every gap dark,
+ * so the number of waiting alerts stays readable at any moment.
+ */
+enum class SplitAnimation(val id: String) {
+    /** All arcs swell together; newest at the top. */
+    BREATHE("breathe"),
+    /** Arcs held steady at a level low enough that each LED keeps its own colour. */
+    SOLID("solid"),
+    /** Each arc brightens in turn, newest first. */
+    SPOTLIGHT("spotlight"),
+    /** The whole layout steps round the ring one LED at a time. */
+    ROTATE("rotate");
+
+    companion object {
+        fun fromId(id: String?) = entries.find { it.id == id } ?: BREATHE
+    }
+}
+
 enum class DndMode(val id: String) {
     INHERIT("inherit"),
     ALWAYS("always"),

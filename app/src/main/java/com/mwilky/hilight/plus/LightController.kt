@@ -142,6 +142,11 @@ class LightController private constructor(private val app: Application) {
             }
         }
         scope.launch {
+            store.splitAnimation.collect { animation ->
+                shizuku.setSplitAnimation(animation)
+            }
+        }
+        scope.launch {
             combine(
                 store.quietHoursEnabled,
                 store.quietHoursStartMinutes,
@@ -323,6 +328,7 @@ class LightController private constructor(private val app: Application) {
         shizuku.setDndActive(lastDndActive)
         shizuku.setDndSuppressEnabled(store.suppressDuringDnd.first())
         shizuku.setSplitRing(store.multiAlertMode.first() == MultiAlertMode.SPLIT)
+        shizuku.setSplitAnimation(store.splitAnimation.first())
         shizuku.setQuietHours(
             store.quietHoursEnabled.first(),
             store.quietHoursStartMinutes.first(),

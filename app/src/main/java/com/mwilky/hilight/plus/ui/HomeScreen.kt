@@ -61,6 +61,7 @@ import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.R
 import com.mwilky.hilight.plus.SettingsSnapshot
 import com.mwilky.hilight.plus.ShizukuBridge
+import com.mwilky.hilight.plus.SplitAnimation
 import com.mwilky.hilight.plus.StockHiLightState
 import com.mwilky.hilight.plus.core.PatternRenderer
 import com.mwilky.hilight.plus.ui.diagnostics.PermissionState
@@ -189,6 +190,7 @@ fun HomeScreen(
         onToggleNotifs = viewModel::setNotificationsEnabled,
         onChangeDuration = viewModel::setNotificationDurationSeconds,
         onChangeMultiAlertMode = viewModel::setMultiAlertMode,
+        onChangeSplitAnimation = viewModel::setSplitAnimation,
         onToggleFavouriteNotif = viewModel::setFavouriteNotifEnabled,
         onEditFavouriteNotif = { isConfiguringFavouriteNotif = true },
         onToggleDefaultNotif = viewModel::setDefaultNotifEnabled,
@@ -549,6 +551,7 @@ fun HomeContent(
     onToggleNotifs: (Boolean) -> Unit,
     onChangeDuration: (Int) -> Unit,
     onChangeMultiAlertMode: (MultiAlertMode) -> Unit = {},
+    onChangeSplitAnimation: (SplitAnimation) -> Unit = {},
     onToggleFavouriteNotif: (Boolean) -> Unit,
     onEditFavouriteNotif: () -> Unit,
     onToggleDefaultNotif: (Boolean) -> Unit,
@@ -565,10 +568,11 @@ fun HomeContent(
     onBatteryChange: (BatterySettings) -> Unit,
     renderer: PatternRenderer,
     licenseStatus: Licensing.Status? = null,
-    onBuy: () -> Unit = {}
+    onBuy: () -> Unit = {},
+    initialPage: Int = 0
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
-    val pagerState = rememberPagerState { 3 }
+    val pagerState = rememberPagerState(initialPage) { 3 }
     val scope = rememberCoroutineScope()
 
     Scaffold(
@@ -658,6 +662,7 @@ fun HomeContent(
                         onAddApp = onAddApp,
                         onChangeDuration = onChangeDuration,
                         onChangeMultiAlertMode = onChangeMultiAlertMode,
+                        onChangeSplitAnimation = onChangeSplitAnimation,
                         renderer = renderer
                     )
                     else -> HomeBatteryPage(
@@ -931,12 +936,25 @@ fun HomeScreenPreviewOff() {
     HomeScreenPreviewContent(hasCallRules = true, callLightsEnabled = false)
 }
 
+@Preview(name = "Home Screen - Split Ring", showBackground = true, widthDp = 390, heightDp = 1400)
+@Composable
+fun HomeScreenPreviewSplitRing() {
+    HomeScreenPreviewContent(
+        initialPage = 1,
+        multiAlertMode = MultiAlertMode.SPLIT,
+        splitAnimation = SplitAnimation.SOLID
+    )
+}
+
 @Composable
 fun HomeScreenPreviewContent(
     hasCallRules: Boolean = false,
     hasMsgRules: Boolean = true,
     hasAppRules: Boolean = true,
-    callLightsEnabled: Boolean = true
+    callLightsEnabled: Boolean = true,
+    initialPage: Int = 0,
+    multiAlertMode: MultiAlertMode = DEFAULT_SETTINGS_SNAPSHOT.multiAlertMode,
+    splitAnimation: SplitAnimation = DEFAULT_SETTINGS_SNAPSHOT.splitAnimation
 ) {
     val mockCallContacts = if (hasCallRules) {
         listOf(
@@ -981,7 +999,9 @@ fun HomeScreenPreviewContent(
                 isCallLightsEnabled = callLightsEnabled,
                 contactRules = mockCallContacts,
                 messageContactRules = mockMsgContacts,
-                appRules = mockApps
+                appRules = mockApps,
+                multiAlertMode = multiAlertMode,
+                splitAnimation = splitAnimation
             ),
             onToggleCallLights = {},
             onToggleFavouriteCalls = {},
@@ -1011,7 +1031,8 @@ fun HomeScreenPreviewContent(
             onDeleteAppRule = {},
             onAddApp = {},
             onBatteryChange = {},
-            renderer = PatternRenderer()
+            renderer = PatternRenderer(),
+            initialPage = initialPage
         )
     }
 }

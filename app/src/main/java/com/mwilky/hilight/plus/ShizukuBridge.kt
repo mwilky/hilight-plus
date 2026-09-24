@@ -55,7 +55,7 @@ class ShizukuBridge private constructor(private val app: Application) {
         .daemon(false)
         .processNameSuffix("hilight_daemon")
         .debuggable(BuildConfig.DEBUG)
-        .version(13)
+        .version(14)
 
     // Receives the daemon's log lines so they land in the same shareable log as the app's.
     private val logSink = object : ILogSink.Stub() {
@@ -415,6 +415,10 @@ class ShizukuBridge private constructor(private val app: Application) {
 
     fun setSplitRing(enabled: Boolean) {
         runRemote("setSplitRing") { it.setSplitRing(enabled) }
+    }
+
+    fun setSplitAnimation(animation: SplitAnimation) {
+        runRemote("setSplitAnimation") { it.setSplitAnimation(animation.id) }
     }
 
     fun stopIncomingCall() {

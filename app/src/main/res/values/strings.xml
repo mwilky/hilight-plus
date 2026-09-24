@@ -137,8 +137,16 @@
     <string name="settings_multi_split">Split the ring</string>
     <string name="settings_multi_latest_desc">Only the newest notification lights, for the duration above.</string>
     <string name="settings_multi_cycle_desc">Each waiting notification plays its own pattern in turn, until it is dismissed.</string>
-    <string name="settings_multi_split_desc">Each waiting notification gets its own arc of the ring in its colour, with a dark gap between arcs, until it is dismissed. Up to four are shown in fixed slots around the ring, newest at the top. Arcs breathe slowly together instead of using each rule\'s pattern. A single notification still plays its own pattern.</string>
-    <string name="settings_multi_split_example">Three waiting: newest at the top, then clockwise</string>
+    <string name="settings_multi_split_desc">Each waiting notification gets its own arc of the ring in its colour, with a dark gap between arcs, until it is dismissed. Up to four are shown around the ring, using the animation below instead of each rule\'s pattern. A single notification still plays its own pattern.</string>
+    <string name="settings_split_animation_title">Animation</string>
+    <string name="settings_split_animation_breathe">Breathe</string>
+    <string name="settings_split_animation_solid">Solid</string>
+    <string name="settings_split_animation_spotlight">Spotlight</string>
+    <string name="settings_split_animation_rotate">Rotate</string>
+    <string name="settings_split_example_breathe">Three waiting, breathing together: newest at the top, then clockwise</string>
+    <string name="settings_split_example_solid">Three waiting, held dim so each keeps its own colour: newest at the top, then clockwise</string>
+    <string name="settings_split_example_spotlight">Three waiting, each brightening in turn: newest at the top first, then clockwise</string>
+    <string name="settings_split_example_rotate">Three waiting, circling the ring: they start with the newest at the top, then keep moving</string>
 
     <!-- Dialogs & Customization -->
     <string name="dialog_section_look">Look</string>

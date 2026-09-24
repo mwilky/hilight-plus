@@ -83,6 +83,7 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_NOTIFICATION_DURATION_SEC = intPreferencesKey("notification_duration_sec")
         private val KEY_CYCLE_NOTIFICATIONS = booleanPreferencesKey("cycle_notifications")
         private val KEY_MULTI_ALERT_MODE = stringPreferencesKey("multi_alert_mode")
+        private val KEY_SPLIT_ANIMATION = stringPreferencesKey("split_animation")
         private val KEY_DEFAULT_NOTIF_ENABLED = booleanPreferencesKey("default_notif_enabled")
         private val KEY_DEFAULT_NOTIF_COLOR = longPreferencesKey("default_notif_color")
         private val KEY_DEFAULT_NOTIF_PATTERN = stringPreferencesKey("default_notif_pattern")
@@ -154,6 +155,9 @@ class AppStore private constructor(private val appContext: Context) {
         .map { readMultiAlertMode(it) }
 
     val isCycleNotifications: Flow<Boolean> = multiAlertMode.map { it.keepsQueue }
+
+    val splitAnimation: Flow<SplitAnimation> = appContext.dataStore.data
+        .map { SplitAnimation.fromId(it[KEY_SPLIT_ANIMATION]) }
 
     val battery: Flow<BatterySettings> = appContext.dataStore.data
         .map { BatterySettings.fromJson(it[KEY_BATTERY_JSON]) }
@@ -232,6 +236,10 @@ class AppStore private constructor(private val appContext: Context) {
 
     suspend fun setMultiAlertMode(mode: MultiAlertMode) {
         appContext.dataStore.edit { it[KEY_MULTI_ALERT_MODE] = mode.id }
+    }
+
+    suspend fun setSplitAnimation(animation: SplitAnimation) {
+        appContext.dataStore.edit { it[KEY_SPLIT_ANIMATION] = animation.id }
     }
 
     /** Falls back to the pre-1.1.3 on/off cycle switch for installs that never picked a mode. */
@@ -481,6 +489,7 @@ class AppStore private constructor(private val appContext: Context) {
             isNotificationsEnabled = prefs[KEY_NOTIFICATIONS_ENABLED] ?: d.isNotificationsEnabled,
             notificationDurationSeconds = prefs[KEY_NOTIFICATION_DURATION_SEC] ?: d.notificationDurationSeconds,
             multiAlertMode = readMultiAlertMode(prefs),
+            splitAnimation = SplitAnimation.fromId(prefs[KEY_SPLIT_ANIMATION]),
             isDefaultNotifEnabled = prefs[KEY_DEFAULT_NOTIF_ENABLED] ?: d.isDefaultNotifEnabled,
             defaultNotifColor = prefs[KEY_DEFAULT_NOTIF_COLOR] ?: d.defaultNotifColor,
             defaultNotifPattern = enumOr(prefs[KEY_DEFAULT_NOTIF_PATTERN], d.defaultNotifPattern),
@@ -567,6 +576,7 @@ data class SettingsSnapshot(
     val isNotificationsEnabled: Boolean,
     val notificationDurationSeconds: Int,
     val multiAlertMode: MultiAlertMode,
+    val splitAnimation: SplitAnimation,
     val isDefaultNotifEnabled: Boolean,
     val defaultNotifColor: Long,
     val defaultNotifPattern: PatternMode,
@@ -654,6 +664,7 @@ val DEFAULT_SETTINGS_SNAPSHOT = SettingsSnapshot(
     isNotificationsEnabled = true,
     notificationDurationSeconds = 30,
     multiAlertMode = MultiAlertMode.LATEST,
+    splitAnimation = SplitAnimation.BREATHE,
     isDefaultNotifEnabled = true,
     defaultNotifColor = 0xFFFFFFFF,
     defaultNotifPattern = PatternMode.PULSE,

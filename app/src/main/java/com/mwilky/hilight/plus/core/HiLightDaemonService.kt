@@ -7,6 +7,7 @@ import com.mwilky.hilight.plus.DebugLog
 import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.LowBatteryPattern
 import com.mwilky.hilight.plus.QuietHoursMode
+import com.mwilky.hilight.plus.SplitAnimation
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.concurrent.TimeUnit
@@ -135,6 +136,10 @@ class HiLightDaemonService : IHiLightService.Stub() {
 
     override fun setSplitRing(enabled: Boolean) {
         engine.setSplitRing(enabled)
+    }
+
+    override fun setSplitAnimation(animation: String?) {
+        engine.setSplitAnimation(SplitAnimation.fromId(animation))
     }
 
     override fun testAlert(pattern: String?, color: Long, brightness: Float, speedMs: Long, durationMs: Long) {

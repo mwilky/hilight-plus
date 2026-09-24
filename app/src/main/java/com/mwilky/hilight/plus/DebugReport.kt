@@ -73,7 +73,7 @@ internal object DebugReport {
             snapshot.contactRules.forEach {
                 rule("Call contact ${it.id}", it.isEnabled, it.pattern, it.color, it.faceDownMode, it.dndMode, it.quietHoursMode, it.quietHoursStartMinutes, it.quietHoursEndMinutes)
             }
-            appendLine("Notifications enabled=${snapshot.isNotificationsEnabled}, mode=${snapshot.multiAlertMode}, duration=${snapshot.notificationDurationSeconds}s")
+            appendLine("Notifications enabled=${snapshot.isNotificationsEnabled}, mode=${snapshot.multiAlertMode}, split=${snapshot.splitAnimation}, duration=${snapshot.notificationDurationSeconds}s")
             rule("Default", snapshot.isDefaultNotifEnabled, snapshot.defaultNotifPattern, snapshot.defaultNotifColor, snapshot.defaultNotifFaceDownMode, snapshot.defaultNotifDndMode, snapshot.defaultNotifQuietHoursMode, snapshot.defaultNotifQuietHoursStartMinutes, snapshot.defaultNotifQuietHoursEndMinutes, "autoColor=${snapshot.isDefaultNotifAutoColor}")
             rule("Favourite senders", snapshot.isFavouriteNotifEnabled, snapshot.favouriteNotifPattern, snapshot.favouriteNotifColor, snapshot.favouriteNotifFaceDownMode, snapshot.favouriteNotifDndMode, snapshot.favouriteNotifQuietHoursMode, snapshot.favouriteNotifQuietHoursStartMinutes, snapshot.favouriteNotifQuietHoursEndMinutes)
             snapshot.messageContactRules.forEach {
