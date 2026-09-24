@@ -287,7 +287,7 @@
     <string name="about_debug_log_share_subject">HiLight Plus debug log (%1$s)</string>
     <string name="about_debug_log_share_body">What happened, and roughly when:\n\n</string>
     <string name="about_debug_log_reset">Reset lights</string>
-    <string name="about_debug_log_reset_desc">Ring stuck on and not responding? Reset restarts the lights service, which releases the ring without restarting your phone. Once it\'s back, notifications that were already lit should start playing again. If any don\'t, new notifications will still light as normal.</string>
+    <string name="about_debug_log_reset_desc">Ring stuck on and not responding? Reset restarts the lights service, which releases the ring without restarting your phone. Once it reconnects, alerts that stay lit until dismissed are sent to it again. Timed alerts aren\'t, but new notifications light as normal.</string>
     <string name="about_debug_log_reset_started">Restarting the lights service</string>
     <string name="about_debug_log_share_failed">Couldn\'t prepare the log</string>
 </resources>
