@@ -44,6 +44,7 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 **Extras**
 - Live preview of every pattern on a diffused ring mock-up, and a Test on LEDs button in each rule editor.
 - Onboarding that checks Shizuku, permissions and the stock HiLight setting that would otherwise fight for the ring, and explains the trial.
+- A live debug log on the About page, covering the app and the daemon, with one-tap clear and share. A shared report adds device and permission status, what the daemon is holding and every setting and rule, with contact names left out.
 
 ## Requirements
 

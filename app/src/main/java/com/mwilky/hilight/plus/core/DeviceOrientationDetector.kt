@@ -6,7 +6,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.PowerManager
-import android.util.Log
+import com.mwilky.hilight.plus.DebugLog
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
@@ -160,7 +160,7 @@ object DeviceOrientationDetector {
                 rememberFaceDown(faceDown)
                 if (faceDown != lastReportedFaceDown) {
                     lastReportedFaceDown = faceDown
-                    Log.i(TAG, "Device orientation flipped -> isFaceDown=$faceDown")
+                    DebugLog.i(TAG, "Device orientation flipped -> isFaceDown=$faceDown")
                     onOrientationChanged?.invoke(faceDown)
                 }
             }
@@ -169,7 +169,7 @@ object DeviceOrientationDetector {
         }
 
         sensorManager.registerListener(activeListener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
-        Log.i(TAG, "Started orientation monitoring for pending alerts")
+        DebugLog.i(TAG, "Started orientation monitoring for pending alerts")
     }
 
     private fun stopMonitoringLocked() {
@@ -178,7 +178,7 @@ object DeviceOrientationDetector {
             activeListener = null
             activeSensorManager = null
             lastReportedFaceDown = null
-            Log.i(TAG, "Stopped orientation monitoring")
+            DebugLog.i(TAG, "Stopped orientation monitoring")
         }
     }
 }

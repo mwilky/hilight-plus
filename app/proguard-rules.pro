@@ -6,6 +6,8 @@
 # so both sides agree on method ordering and the interface descriptor.
 -keep class com.mwilky.hilight.plus.core.IHiLightService { *; }
 -keep class com.mwilky.hilight.plus.core.IHiLightService$* { *; }
+-keep class com.mwilky.hilight.plus.core.ILogSink { *; }
+-keep class com.mwilky.hilight.plus.core.ILogSink$* { *; }
 
 # Rule JSON stores enum names (PatternMode.valueOf etc.); keep enum names readable so saved
 # settings survive across releases with different obfuscation maps.

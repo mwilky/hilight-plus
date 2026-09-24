@@ -1,5 +1,7 @@
 package com.mwilky.hilight.plus.core;
 
+import com.mwilky.hilight.plus.core.ILogSink;
+
 interface IHiLightService {
     void triggerAlert(String pattern, long color, float brightness, long speedMs, long durationMs, boolean requiresFaceDown, String dndMode, String quietHoursMode, int quietStartMinutes, int quietEndMinutes);
     void postAlert(String key, String pattern, long color, float brightness, long speedMs, long durationMs, boolean requiresFaceDown, String dndMode, String quietHoursMode, int quietStartMinutes, int quietEndMinutes);
@@ -23,4 +25,6 @@ interface IHiLightService {
     String getGlobalString(String key);
     boolean putGlobalString(String key, String value);
     void setEntitled(boolean entitled);
+    void setLogSink(ILogSink sink);
+    String dumpState();
 }

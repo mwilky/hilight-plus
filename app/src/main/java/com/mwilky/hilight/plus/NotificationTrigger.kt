@@ -5,7 +5,6 @@ import android.app.NotificationManager
 import android.app.Person
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
-import android.util.Log
 import com.mwilky.hilight.plus.core.AppIconColorExtractor
 import com.mwilky.hilight.plus.core.DeviceOrientationDetector
 import com.mwilky.hilight.plus.core.NotificationSlotTracker
@@ -42,7 +41,7 @@ class NotificationTrigger : NotificationListenerService() {
                 try {
                     handle(event)
                 } catch (t: Throwable) {
-                    Log.e(TAG, "Listener event failed", t)
+                    DebugLog.e(TAG, "Listener event failed", t)
                 }
             }
         }
@@ -55,11 +54,13 @@ class NotificationTrigger : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
+        DebugLog.i(TAG, "Notification listener connected")
         isListenerConnected = true
         enqueue(ListenerEvent.Reconnect(currentShadeKeys()))
     }
 
     override fun onListenerDisconnected() {
+        DebugLog.w(TAG, "Notification listener disconnected")
         isListenerConnected = false
         super.onListenerDisconnected()
     }
@@ -69,10 +70,17 @@ class NotificationTrigger : NotificationListenerService() {
         isListenerConnected = false
         job.cancel()
         DeviceOrientationDetector.stopMonitoring()
+        // The tracker dies with this instance, so nothing could ever remove the alerts it posted,
+        // and no removal will arrive to end a ringing call: e.g. notification access was revoked
+        // mid-alert. Clear both rather than leave the ring lit.
+        DebugLog.w(TAG, "Notification listener destroyed -> clearing notification and call lights")
+        LightController.get(applicationContext).clearAlert()
+        IncomingCallProcessor.submitListenerGone(applicationContext)
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         if (sbn == null) return
+        DebugLog.d(TAG, "Removed pkg=${sbn.packageName} key=${DebugLog.redactKey(sbn.key)}")
         IncomingCallProcessor.submitVoipEnded(applicationContext, sbn.key)
         enqueue(ListenerEvent.Removed(sbn.key))
     }
@@ -85,9 +93,9 @@ class NotificationTrigger : NotificationListenerService() {
         // A ringing call (dialer or app call) is a call, not a message: it lights until answered
         // or ended. The same key re-posted as an in-progress call is how "answered" is signalled.
         val posted = sbn.notification
-        Log.d(
+        DebugLog.d(
             TAG,
-            "Posted pkg=$pkg category=${posted?.category} channel=${posted?.channelId} key=${sbn.key} " +
+            "Posted pkg=$pkg category=${posted?.category} channel=${posted?.channelId} key=${DebugLog.redactKey(sbn.key)} " +
                 "callType=${posted?.extras?.takeIf { it.containsKey(Notification.EXTRA_CALL_TYPE) }?.getInt(Notification.EXTRA_CALL_TYPE)} " +
                 "fullScreen=${posted?.fullScreenIntent != null} ongoing=${sbn.isOngoing} " +
                 "chrono=${posted?.extras?.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER)} silent=${isSilent(sbn.key)}"
@@ -103,6 +111,9 @@ class NotificationTrigger : NotificationListenerService() {
             }
             return
         }
+        // A ringing call's key re-posted as anything but a call (WhatsApp can turn it into its
+        // missed-call notification in place) means it is no longer ringing. No-op for other keys.
+        IncomingCallProcessor.submitVoipEnded(applicationContext, sbn.key)
 
         if (!isEligiblePostedNotification(sbn)) return
 
@@ -112,7 +123,7 @@ class NotificationTrigger : NotificationListenerService() {
 
     private fun enqueue(event: ListenerEvent) {
         if (!events.trySend(event).isSuccess) {
-            Log.w(TAG, "Dropped listener event after shutdown")
+            DebugLog.w(TAG, "Dropped listener event after shutdown")
         }
     }
 
@@ -165,7 +176,7 @@ class NotificationTrigger : NotificationListenerService() {
         lastKnownCycling = snapshot.isCycleNotifications
 
         if (!snapshot.isEnabled || !snapshot.isNotificationsEnabled) {
-            Log.i(TAG, "Notifications disabled -> stopping queued lights")
+            DebugLog.i(TAG, "Notifications disabled -> stopping queued lights")
             tracker.clear()
             LightController.get(applicationContext).clearAlert()
             syncNotificationMonitor()
@@ -214,14 +225,14 @@ class NotificationTrigger : NotificationListenerService() {
             (sbn.notification.flags and Notification.FLAG_NO_CLEAR) != 0 ||
             (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY) != 0
         ) {
-            Log.d(TAG, "Ignoring ongoing/summary notification from ${sbn.packageName}")
+            DebugLog.d(TAG, "Ignoring ongoing/summary notification from ${sbn.packageName}")
             return false
         }
 
         // Missed calls pass even when silent (WhatsApp posts them on a low-importance channel);
         // resolveAlert only lets a silent one light through the Missed Calls rule.
         if (sbn.notification.category != Notification.CATEGORY_MISSED_CALL && isSilent(sbn.key)) {
-            Log.d(TAG, "Ignoring silent/ambient notification from ${sbn.packageName}")
+            DebugLog.d(TAG, "Ignoring silent/ambient notification from ${sbn.packageName}")
             return false
         }
         return true
@@ -251,10 +262,10 @@ class NotificationTrigger : NotificationListenerService() {
             snapshot.isCallLightsEnabled && snapshot.isMissedCallsEnabled
         ) {
             if (snapshot.missedCallsPattern == PatternMode.OFF) {
-                Log.i(TAG, "Missed Call Match ($pkg) but Missed Calls is OFF -> NO LIGHT")
+                DebugLog.i(TAG, "Missed Call Match ($pkg) but Missed Calls is OFF -> NO LIGHT")
                 return null
             }
-            Log.i(TAG, "Missed Call Match ($pkg)")
+            DebugLog.i(TAG, "Missed Call Match ($pkg)")
             return ResolvedAlert(
                 "missed_call",
                 snapshot.missedCallsPattern,
@@ -267,7 +278,7 @@ class NotificationTrigger : NotificationListenerService() {
             )
         }
         if (notification.category == Notification.CATEGORY_MISSED_CALL && isSilent(key)) {
-            Log.i(TAG, "Silent missed call ($pkg) with Missed Calls off -> NO LIGHT")
+            DebugLog.i(TAG, "Silent missed call ($pkg) with Missed Calls off -> NO LIGHT")
             return null
         }
 
@@ -275,10 +286,10 @@ class NotificationTrigger : NotificationListenerService() {
         val contactRule = if (senderName.isNotBlank()) snapshot.findMessageRuleForSender(senderName) else null
         if (contactRule != null) {
             if (contactRule.pattern == PatternMode.OFF) {
-                Log.i(TAG, "Priority 1 Match: Contact '${contactRule.name}' is OFF -> NO LIGHT")
+                DebugLog.i(TAG, "Priority 1 Match: Contact rule ${contactRule.id} is OFF -> NO LIGHT")
                 return null
             }
-            Log.i(TAG, "Priority 1 Match: Contact '${contactRule.name}'")
+            DebugLog.i(TAG, "Priority 1 Match: Contact rule ${contactRule.id}")
             return ResolvedAlert(
                 "contact_${contactRule.id}",
                 contactRule.pattern,
@@ -294,12 +305,12 @@ class NotificationTrigger : NotificationListenerService() {
         // Favourites sit above app rules: a starred contact is more specific than the app they message from.
         if (snapshot.isFavouriteNotifEnabled && isFavouriteContactName(applicationContext, senderName)) {
             if (snapshot.favouriteNotifPattern == PatternMode.OFF) {
-                Log.i(TAG, "Favourite Match: '$senderName' but Favourite Contacts is OFF -> NO LIGHT")
+                DebugLog.i(TAG, "Favourite Match ($pkg) but Favourite Contacts is OFF -> NO LIGHT")
                 return null
             }
-            Log.i(TAG, "Favourite Match: '$senderName'")
+            DebugLog.i(TAG, "Favourite Match ($pkg)")
             return ResolvedAlert(
-                "favourite_${senderName.trim().lowercase()}",
+                "favourite_${Integer.toHexString(senderName.trim().lowercase().hashCode())}",
                 snapshot.favouriteNotifPattern,
                 snapshot.favouriteNotifColor,
                 snapshot.favouriteNotifFaceDownMode,
@@ -313,7 +324,7 @@ class NotificationTrigger : NotificationListenerService() {
         val appRule = snapshot.findRuleForPackage(pkg)
         if (appRule != null) {
             if (appRule.pattern == PatternMode.OFF) {
-                Log.i(TAG, "Priority 2 Match: App '${appRule.appName}' is OFF -> NO LIGHT")
+                DebugLog.i(TAG, "Priority 2 Match: App '${appRule.appName}' is OFF -> NO LIGHT")
                 return null
             }
             val color = if (appRule.isAutoColor) {
@@ -321,7 +332,7 @@ class NotificationTrigger : NotificationListenerService() {
             } else {
                 appRule.color
             }
-            Log.i(TAG, "Priority 2 Match: App '${appRule.appName}' ($pkg)")
+            DebugLog.i(TAG, "Priority 2 Match: App '${appRule.appName}' ($pkg)")
             return ResolvedAlert(
                 "app_${appRule.packageName}",
                 appRule.pattern,
@@ -335,12 +346,12 @@ class NotificationTrigger : NotificationListenerService() {
         }
 
         if (!snapshot.isDefaultNotifEnabled) {
-            Log.i(TAG, "Priority 3 Match: General Default is disabled -> NO LIGHT")
+            DebugLog.i(TAG, "Priority 3 Match: General Default is disabled -> NO LIGHT")
             return null
         }
         val defaultPattern = snapshot.defaultNotifPattern
         if (defaultPattern == PatternMode.OFF) {
-            Log.i(TAG, "Priority 3 Match: General Default is OFF -> NO LIGHT")
+            DebugLog.i(TAG, "Priority 3 Match: General Default is OFF -> NO LIGHT")
             return null
         }
         val defaultColor = if (snapshot.isDefaultNotifAutoColor) {
@@ -352,7 +363,7 @@ class NotificationTrigger : NotificationListenerService() {
         } else {
             snapshot.defaultNotifColor
         }
-        Log.i(TAG, "Priority 3 Match: General Default ($pkg)")
+        DebugLog.i(TAG, "Priority 3 Match: General Default ($pkg)")
         return ResolvedAlert(
             slotId = "fallback_$pkg",
             pattern = defaultPattern,
@@ -402,13 +413,13 @@ class NotificationTrigger : NotificationListenerService() {
         isCycle: Boolean
     ) {
         if (added.emptiedSlotId != null && isCycle) {
-            Log.i(TAG, "Slot ${added.emptiedSlotId} emptied after rule change -> removing from cycle")
+            DebugLog.i(TAG, "Slot ${added.emptiedSlotId} emptied after rule change -> removing from cycle")
             controller.removeNotificationAlert(added.emptiedSlotId)
         }
         if (added.changed && (isCycle || added.slot.id == tracker.latestSlot()?.id)) {
             dispatchSlot(controller, snapshot, added.slot, isCycle)
         } else if (!added.changed) {
-            Log.d(TAG, "Ignoring update for existing slot ${added.slot.id}")
+            DebugLog.d(TAG, "Ignoring update for existing slot ${added.slot.id}")
         }
     }
 
@@ -471,11 +482,11 @@ class NotificationTrigger : NotificationListenerService() {
         val controller = LightController.get(applicationContext)
         if (isCycle) {
             removals.filter { it.slotEmptied && it.slotId != null }.forEach { removal ->
-                Log.i(TAG, "Slot ${removal.slotId} has no remaining sources -> removing from cycle")
+                DebugLog.i(TAG, "Slot ${removal.slotId} has no remaining sources -> removing from cycle")
                 controller.removeNotificationAlert(removal.slotId!!)
             }
         } else if (removals.any { it.wasLatest }) {
-            Log.i(TAG, "Latest standard-mode notification dismissed -> stopping lights")
+            DebugLog.i(TAG, "Latest standard-mode notification dismissed -> stopping lights")
             controller.clearAlert()
         }
         syncNotificationMonitor()

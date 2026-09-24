@@ -1,6 +1,6 @@
 # Privacy Policy for HiLight Plus
 
-**Last updated:** September 23, 2026
+**Last updated:** September 24, 2026
 
 **HiLight Plus** ("we", "our", or "the app") is developed by **mwilky**. We are committed to protecting your privacy. This Privacy Policy outlines how your information is handled when you use HiLight Plus.
 
@@ -8,7 +8,7 @@
 
 ## 1. Summary: 100% On-Device Processing
 HiLight Plus operates **entirely on your device**. 
-- We do **not** collect, store, transmit, sell, or share any personal information.
+- We do **not** collect, store, transmit, sell, or share any personal information. A debug log stays on your device and is only sent if you choose to share it (see section 3).
 - The app does **not** connect to external servers or cloud services. The only network activity is Google Play Billing, used to process the one-off purchase; Google's handling of that transaction is covered by Google's own privacy policy.
 - The app does **not** include third-party tracking, analytics, or advertising SDKs.
 
@@ -34,6 +34,11 @@ HiLight Plus requests sensitive Android permissions solely to deliver real-time 
 
 ## 3. Data Storage & Preferences
 All your custom configurations (color choices, animation speeds, per-contact rules, and per-app settings) are stored locally on your device using Android's encrypted **DataStore / SharedPreferences**. You can completely wipe this data at any time by clearing the app data in Android Settings or using the "Reset Onboarding & Rules" button within the app.
+
+### Debug Log
+To help diagnose problems, the app keeps a small debug log on your device (at most about 512 KB, with the oldest entries dropped first). It records what the lights were doing and why: app package names, which rule matched, notification categories, and connection and permission events. It does **not** record contact names, phone numbers, or notification contents.
+- The log never leaves your device on its own. It is only sent if you tap **Share** on the About page, which opens Android's share sheet so you choose the recipient. The shared report also lists your device model, Android version, permission status, and your settings and rules, with contact rules identified by an internal ID rather than a name.
+- You can delete the log at any time with **Clear** on the About page, or by clearing the app's data.
 
 ---
 

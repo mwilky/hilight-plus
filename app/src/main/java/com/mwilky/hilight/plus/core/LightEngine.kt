@@ -1,8 +1,8 @@
 package com.mwilky.hilight.plus.core
 
 import android.os.SystemClock
-import android.util.Log
 import com.mwilky.hilight.plus.BatteryPattern
+import com.mwilky.hilight.plus.DebugLog
 import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.LowBatteryPattern
 import com.mwilky.hilight.plus.QuietHoursMode
@@ -140,11 +140,16 @@ class LightEngine {
     // instead of taking turns. A single visible alert still plays its own pattern.
     private var splitRing = false
 
+    // What the ring was last showing, so each change is logged once rather than every frame.
+    private var lastRenderReason: String? = null
+    private var lastTickElapsedMs = 0L
+    private var lastTickUptimeMs = 0L
+
     fun start(): Boolean {
         synchronized(lock) {
             if (running) return true
             if (!lights.connect()) {
-                Log.e(TAG, "Failed to connect to lights backend")
+                DebugLog.e(TAG, "Failed to connect to lights backend")
                 return false
             }
             running = true
@@ -152,7 +157,7 @@ class LightEngine {
                 isDaemon = false
                 start()
             }
-            Log.i(TAG, "LightEngine started with ${lights.ledCount} LEDs")
+            DebugLog.i(TAG, "LightEngine started with ${lights.ledCount} LEDs")
             return true
         }
     }
@@ -199,6 +204,7 @@ class LightEngine {
             )
             syncNotificationTimer(now)
             needsSessionReset = true
+            DebugLog.i(TAG, "startIncomingCall: pattern=$pattern, color=${hex(color)}, requiresFaceDown=$requiresFaceDown, dndMode=$dndMode, quietHoursMode=$quietHoursMode")
         }
     }
 
@@ -206,6 +212,7 @@ class LightEngine {
         synchronized(lock) {
             if (incomingCallAlert == null) return
             incomingCallAlert = null
+            DebugLog.i(TAG, "stopIncomingCall")
             val now = SystemClock.elapsedRealtime()
             syncNotificationTimer(now)
             cycleStartTimeMs = now
@@ -243,7 +250,7 @@ class LightEngine {
             activeAlerts.clear()
             currentAlertIndex = 0
             needsSessionReset = true
-            Log.i(TAG, "triggerAlert: pattern=$pattern, color=$color, durationMs=$durationMs, requiresFaceDown=$requiresFaceDown, dndMode=$dndMode, quietHoursMode=$quietHoursMode")
+            DebugLog.i(TAG, "triggerAlert: pattern=$pattern, color=$color, durationMs=$durationMs, requiresFaceDown=$requiresFaceDown, dndMode=$dndMode, quietHoursMode=$quietHoursMode")
         }
     }
 
@@ -293,7 +300,7 @@ class LightEngine {
             if (notificationVisible(requiresFaceDown, dndMode, quietHoursMode, quietStartOverride, quietEndOverride)) {
                 needsSessionReset = true
             }
-            Log.i(TAG, "postAlert [key=$key]: pattern=$pattern, color=$color, speedMs=$speedMs (queue size=${activeAlerts.size}, requiresFaceDown=$requiresFaceDown, dndMode=$dndMode, quietHoursMode=$quietHoursMode)")
+            DebugLog.i(TAG, "postAlert [key=$key]: pattern=$pattern, color=$color, speedMs=$speedMs (queue size=${activeAlerts.size}, requiresFaceDown=$requiresFaceDown, dndMode=$dndMode, quietHoursMode=$quietHoursMode)")
         }
     }
 
@@ -307,7 +314,7 @@ class LightEngine {
             val now = SystemClock.elapsedRealtime()
             testAlert = TestAlert(pattern, color, brightness, speedMs, now, now + durationMs)
             needsSessionReset = true
-            Log.i(TAG, "testAlert: pattern=$pattern, color=$color, durationMs=$durationMs")
+            DebugLog.i(TAG, "testAlert: pattern=$pattern, color=$color, durationMs=$durationMs")
         }
     }
 
@@ -316,7 +323,7 @@ class LightEngine {
             if (testAlert == null) return
             testAlert = null
             needsSessionReset = true
-            Log.i(TAG, "cancelTestAlert")
+            DebugLog.i(TAG, "cancelTestAlert")
         }
     }
 
@@ -328,7 +335,7 @@ class LightEngine {
             syncNotificationTimer(now)
             cycleStartTimeMs = now
             needsSessionReset = true
-            Log.i(TAG, "setDeviceFaceDown: $faceDown")
+            DebugLog.i(TAG, "setDeviceFaceDown: $faceDown")
         }
     }
 
@@ -337,7 +344,7 @@ class LightEngine {
             if (dndActive == active) return
             dndActive = active
             onLiveConditionChanged()
-            Log.i(TAG, "setDndActive: $active")
+            DebugLog.i(TAG, "setDndActive: $active")
         }
     }
 
@@ -346,7 +353,7 @@ class LightEngine {
             if (dndSuppressEnabled == enabled) return
             dndSuppressEnabled = enabled
             onLiveConditionChanged()
-            Log.i(TAG, "setDndSuppressEnabled: $enabled")
+            DebugLog.i(TAG, "setDndSuppressEnabled: $enabled")
         }
     }
 
@@ -354,7 +361,7 @@ class LightEngine {
         synchronized(lock) {
             if (splitRing == enabled) return
             splitRing = enabled
-            Log.i(TAG, "setSplitRing: $enabled")
+            DebugLog.i(TAG, "setSplitRing: $enabled")
         }
     }
 
@@ -370,7 +377,7 @@ class LightEngine {
             quietHoursStartMinutes = startMinutes
             quietHoursEndMinutes = endMinutes
             onLiveConditionChanged()
-            Log.i(TAG, "setQuietHours: enabled=$enabled, start=$startMinutes, end=$endMinutes")
+            DebugLog.i(TAG, "setQuietHours: enabled=$enabled, start=$startMinutes, end=$endMinutes")
         }
     }
 
@@ -402,7 +409,7 @@ class LightEngine {
                 quietStartOverride, quietEndOverride
             )
             onLiveConditionChanged()
-            Log.i(TAG, "setBatteryConfig: enabled=$enabled, chargingPattern=$chargingPattern, requiresFaceDown=$requiresFaceDown, dndMode=$dndMode")
+            DebugLog.i(TAG, "setBatteryConfig: enabled=$enabled, chargingPattern=$chargingPattern, requiresFaceDown=$requiresFaceDown, dndMode=$dndMode")
         }
     }
 
@@ -421,7 +428,7 @@ class LightEngine {
             batteryCharging = charging
             batteryFull = full
             onLiveConditionChanged()
-            Log.i(TAG, "setBatteryState: level=$levelPercent, charging=$charging, full=$full")
+            DebugLog.i(TAG, "setBatteryState: level=$levelPercent, charging=$charging, full=$full")
         }
     }
 
@@ -443,7 +450,7 @@ class LightEngine {
                     currentAlertIndex = 0
                     cycleStartTimeMs = SystemClock.elapsedRealtime()
                 }
-                Log.i(TAG, "removeAlert [key=$key] (remaining queue=${activeAlerts.size})")
+                DebugLog.i(TAG, "removeAlert [key=$key] (remaining queue=${activeAlerts.size})")
                 if (incomingCallAlert == null && activeAlerts.isEmpty() && directAlert == null && !batteryActiveNow()) {
                     lights.blank()
                 }
@@ -456,6 +463,7 @@ class LightEngine {
      */
     fun clearAlert() {
         synchronized(lock) {
+            DebugLog.i(TAG, "clearAlert (queue=${activeAlerts.size}, latest=${directAlert != null})")
             directAlert = null
             directAlertTimer.clear()
             activeAlerts.clear()
@@ -468,6 +476,7 @@ class LightEngine {
 
     fun turnOff() {
         synchronized(lock) {
+            DebugLog.i(TAG, "turnOff")
             incomingCallAlert = null
             directAlert = null
             directAlertTimer.clear()
@@ -492,7 +501,7 @@ class LightEngine {
             } catch (e: InterruptedException) {
                 break
             } catch (t: Throwable) {
-                Log.w(TAG, "Render loop error: ${t.message}", t)
+                DebugLog.w(TAG, "Render loop error: ${t.message}", t)
                 try {
                     Thread.sleep(250)
                 } catch (ignored: InterruptedException) {
@@ -512,6 +521,7 @@ class LightEngine {
             }
 
             val now = SystemClock.elapsedRealtime()
+            noteFrameGap(now, SystemClock.uptimeMillis())
             val nowMinutes = currentMinutesOfDay()
             syncNotificationTimer(now)
             val call = incomingCallAlert
@@ -526,12 +536,14 @@ class LightEngine {
 
             if (testAlert != null && now >= testAlert!!.expiresAtMs) {
                 testAlert = null
+                DebugLog.d(TAG, "Test alert expired")
             }
             val test = testAlert
 
             if (directAlert != null && directAlertTimer.remainingMs(now) == 0L) {
                 directAlert = null
                 directAlertTimer.clear()
+                DebugLog.i(TAG, "Latest-only alert timed out")
             }
             val direct = directAlert
 
@@ -567,7 +579,9 @@ class LightEngine {
                 if (batteryEligible) renderBattery = true
             }
 
+            var reason: String
             if (test != null) {
+                reason = "test ${test.pattern}"
                 currentPattern = test.pattern
                 currentColor = test.color
                 currentBrightness = test.brightness
@@ -575,12 +589,14 @@ class LightEngine {
                 elapsedMs = now - test.startedAtMs
             } else if (call != null) {
                 if (callVisible) {
+                    reason = "call ${call.pattern} ${hex(call.color)}"
                     currentPattern = call.pattern
                     currentColor = call.color
                     currentBrightness = call.brightness
                     currentSpeed = call.speedMs
                     elapsedMs = now - call.startedAtMs
                 } else {
+                    reason = "off (call hidden by conditions)"
                     useBatteryIfEligible()
                 }
             } else if (!batterySuppressesNotifications && direct != null && notificationVisible(
@@ -588,6 +604,7 @@ class LightEngine {
                     direct.quietStartOverride, direct.quietEndOverride, nowMinutes
                 )
             ) {
+                reason = "latest-only ${direct.pattern} ${hex(direct.color)}"
                 currentPattern = direct.pattern
                 currentColor = direct.color
                 currentBrightness = direct.brightness
@@ -597,11 +614,14 @@ class LightEngine {
                 val eligibleStart = firstEligibleAlertIndex(currentAlertIndex)
                 val splitAlerts = if (splitRing && eligibleStart != null) visibleAlertsNewestFirst(nowMinutes) else emptyList()
                 if (eligibleStart == null) {
+                    reason = "off (${activeAlerts.size} queued, hidden by conditions)"
                     useBatteryIfEligible()
                 } else if (splitAlerts.size >= 2) {
+                    reason = "split ${splitAlerts.take(PatternRenderer.MAX_SPLIT_SEGMENTS).map { it.key }}"
                     splitColors = LongArray(minOf(splitAlerts.size, PatternRenderer.MAX_SPLIT_SEGMENTS)) { splitAlerts[it].color }
                     currentBrightness = splitAlerts[0].brightness
                 } else {
+                    reason = "queue ${visibleAlertsNewestFirst(nowMinutes).map { it.key }}"
                     if (currentAlertIndex != eligibleStart) {
                         currentAlertIndex = eligibleStart
                         cycleStartTimeMs = now
@@ -628,8 +648,22 @@ class LightEngine {
                     elapsedMs = (now - cycleStartTimeMs).coerceIn(0L, singleCycleDuration)
                 }
             } else {
+                reason = when {
+                    direct != null || activeAlerts.isNotEmpty() ->
+                        if (batterySuppressesNotifications) "off (notifications under battery)" else "off (latest-only alert hidden by conditions)"
+                    else -> "off"
+                }
                 useBatteryIfEligible()
             }
+
+            if (renderBattery) {
+                reason = when {
+                    batteryCharging -> "battery charging"
+                    batteryFull -> "battery full"
+                    else -> "battery low"
+                }
+            }
+            noteRender(reason)
 
             if (renderBattery && battery != null) {
                 if (needsSessionReset || !lights.isSessionOpen) {
@@ -695,6 +729,54 @@ class LightEngine {
             lights.pushFrame(frame)
         }
     }
+
+    /**
+     * The LEDs hold whatever frame was pushed last, so a gap between ticks while lit shows up as
+     * the ring frozen mid-animation. Uptime stops while the CPU is suspended and elapsed time
+     * doesn't, which tells a device that slept apart from a render loop that was blocked.
+     */
+    private fun noteFrameGap(elapsedMs: Long, uptimeMs: Long) {
+        if (lastTickElapsedMs != 0L && lights.isSessionOpen) {
+            val gap = elapsedMs - lastTickElapsedMs
+            if (gap > FRAME_GAP_LOG_MS) {
+                val asleep = gap - (uptimeMs - lastTickUptimeMs)
+                if (asleep > FRAME_GAP_LOG_MS) {
+                    DebugLog.w(TAG, "Ring froze for ${gap}ms: device was asleep for ${asleep}ms (showing: $lastRenderReason)")
+                } else {
+                    DebugLog.w(TAG, "Ring froze for ${gap}ms while awake: render loop blocked (showing: $lastRenderReason)")
+                }
+            }
+        }
+        lastTickElapsedMs = elapsedMs
+        lastTickUptimeMs = uptimeMs
+    }
+
+    private fun noteRender(reason: String) {
+        if (reason == lastRenderReason) return
+        lastRenderReason = reason
+        DebugLog.i(TAG, "Ring -> $reason")
+    }
+
+    /** Everything the engine is holding, for a debug report. */
+    fun describeState(): String = synchronized(lock) {
+        val now = SystemClock.elapsedRealtime()
+        buildString {
+            appendLine("ring=$lastRenderReason, sessionOpen=${lights.isSessionOpen}, leds=${lights.ledCount}, running=$running, renderThreadAlive=${renderThread?.isAlive}, lastFrame=${now - lastTickElapsedMs}ms ago")
+            appendLine("faceDown=$deviceFaceDown, dndActive=$dndActive, dndSuppress=$dndSuppressEnabled, quietHours=$quietHoursEnabled $quietHoursStartMinutes-$quietHoursEndMinutes, splitRing=$splitRing")
+            appendLine("test=${testAlert?.let { "${it.pattern} ${hex(it.color)}, ${it.expiresAtMs - now}ms left" }}")
+            appendLine("call=${incomingCallAlert?.let { "${it.pattern} ${hex(it.color)}, ringing ${(now - it.startedAtMs) / 1000}s, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}" }}")
+            appendLine("latestOnly=${directAlert?.let { "${it.pattern} ${hex(it.color)}, ${directAlertTimer.remainingMs(now)}ms left, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}" }}")
+            appendLine("queue (${activeAlerts.size}):")
+            activeAlerts.forEach {
+                val expiry = if (it.expiresAtMs == Long.MAX_VALUE) "until dismissed" else "${it.expiresAtMs - now}ms left"
+                appendLine("  ${it.key}: ${it.pattern} ${hex(it.color)}, $expiry, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}")
+            }
+            val stateAge = if (batteryStateUpdatedAtMs == 0L) "never" else "${(now - batteryStateUpdatedAtMs) / 1000}s ago"
+            append("battery=${batteryConfig?.let { "enabled=${it.enabled}, pattern=${it.chargingPattern}, overrides=${it.overridesNotifications}" }}, level=$batteryLevel, charging=$batteryCharging, full=$batteryFull, updated $stateAge")
+        }
+    }
+
+    private fun hex(color: Long): String = "#%08X".format(color and 0xFFFFFFFFL)
 
     /** Queue order is post order, so the newest alert is last; the split ring shows newest at the top. */
     private fun visibleAlertsNewestFirst(nowMinutes: Int): List<QueuedAlert> =
@@ -840,6 +922,7 @@ class LightEngine {
     companion object {
         private const val TAG = "LightEngine"
         private const val FRAME_MS = 33L // ~30 FPS
+        private const val FRAME_GAP_LOG_MS = 1_000L
 
         // Comfortably longer than the app's battery heartbeat, so a missed beat or two doesn't
         // blink the display, but short enough that a dead app can't strand the LEDs on.

@@ -2,7 +2,6 @@ package com.mwilky.hilight.plus
 
 import android.app.Activity
 import android.app.Application
-import android.util.Log
 import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
@@ -103,7 +102,7 @@ class Licensing(
         billing.startConnection(object : BillingClientStateListener {
             override fun onBillingSetupFinished(result: BillingResult) {
                 if (result.responseCode != BillingClient.BillingResponseCode.OK) {
-                    Log.w(TAG, "Billing setup failed: ${result.debugMessage}")
+                    DebugLog.w(TAG, "Billing setup failed: ${result.debugMessage}")
                     return
                 }
                 refreshPurchases()
@@ -128,7 +127,7 @@ class Licensing(
         }
         val start = store.trialStartMillis.first() ?: System.currentTimeMillis()
         val written = withContext(Dispatchers.IO) { shizuku.putGlobalString(GLOBAL_TRIAL_START, start.toString()) }
-        if (!written) Log.w(TAG, "Couldn't record trial start in Settings.Global")
+        if (!written) DebugLog.w(TAG, "Couldn't record trial start in Settings.Global")
         store.setTrialStartMillis(start)
     }
 
@@ -169,7 +168,7 @@ class Licensing(
             .build()
         val result = billing.launchBillingFlow(activity, params)
         if (result.responseCode != BillingClient.BillingResponseCode.OK) {
-            Log.w(TAG, "launchBillingFlow failed: ${result.debugMessage}")
+            DebugLog.w(TAG, "launchBillingFlow failed: ${result.debugMessage}")
         }
     }
 
@@ -187,7 +186,7 @@ class Licensing(
             .build()
         billing.queryProductDetailsAsync(params) { result, queryResult ->
             if (result.responseCode != BillingClient.BillingResponseCode.OK) {
-                Log.w(TAG, "queryProductDetails failed: ${result.debugMessage}")
+                DebugLog.w(TAG, "queryProductDetails failed: ${result.debugMessage}")
                 return@queryProductDetailsAsync
             }
             val details = queryResult.productDetailsList.firstOrNull { it.productId == PRODUCT_ID } ?: return@queryProductDetailsAsync
@@ -202,7 +201,7 @@ class Licensing(
             BillingClient.BillingResponseCode.OK -> purchases?.let { applyPurchases(it, fromFlow = true) }
             BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED -> refreshPurchases()
             BillingClient.BillingResponseCode.USER_CANCELED -> Unit
-            else -> Log.w(TAG, "Purchase update failed: ${result.debugMessage}")
+            else -> DebugLog.w(TAG, "Purchase update failed: ${result.debugMessage}")
         }
     }
 
@@ -229,7 +228,7 @@ class Licensing(
             .build()
         billing.acknowledgePurchase(params) { result ->
             if (result.responseCode != BillingClient.BillingResponseCode.OK) {
-                Log.w(TAG, "acknowledgePurchase failed: ${result.debugMessage}")
+                DebugLog.w(TAG, "acknowledgePurchase failed: ${result.debugMessage}")
             }
         }
     }

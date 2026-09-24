@@ -4,7 +4,8 @@ import android.hardware.lights.Light
 import android.hardware.lights.LightState
 import android.os.Binder
 import android.os.IBinder
-import android.util.Log
+import android.os.SystemClock
+import com.mwilky.hilight.plus.DebugLog
 import java.lang.reflect.Method
 
 /**
@@ -53,10 +54,10 @@ class PixelLightsManager {
                 .map { it.id }
                 .toIntArray()
 
-            Log.i(TAG, "Connected to ${ledIds.size} Pixel 11 rear LEDs (IDs: ${ledIds.joinToString()})")
+            DebugLog.i(TAG, "Connected to ${ledIds.size} Pixel 11 rear LEDs (IDs: ${ledIds.joinToString()})")
             return ledIds.isNotEmpty()
         } catch (e: Throwable) {
-            Log.e(TAG, "Failed to initialize PixelLightsManager: ${e.message}", e)
+            DebugLog.e(TAG, "Failed to initialize PixelLightsManager: ${e.message}", e)
             return false
         }
     }
@@ -76,7 +77,7 @@ class PixelLightsManager {
             isSessionOpen = true
             true
         } catch (e: Throwable) {
-            Log.w(TAG, "openSession failed: ${e.message}")
+            DebugLog.w(TAG, "openSession failed: ${e.message}")
             false
         }
     }
@@ -87,7 +88,7 @@ class PixelLightsManager {
         try {
             mCloseSession?.invoke(s, token)
         } catch (e: Throwable) {
-            Log.w(TAG, "closeSession failed: ${e.message}")
+            DebugLog.w(TAG, "closeSession failed: ${e.message}")
         } finally {
             isSessionOpen = false
         }
@@ -102,9 +103,12 @@ class PixelLightsManager {
                 val color = colors[i % colors.size]
                 LightState.Builder().setColor(color).build()
             }
+            val startMs = SystemClock.uptimeMillis()
             mSetLightStates?.invoke(s, token, ledIds, states)
+            val tookMs = SystemClock.uptimeMillis() - startMs
+            if (tookMs > SLOW_FRAME_LOG_MS) DebugLog.w(TAG, "setLightStates took ${tookMs}ms")
         } catch (e: Throwable) {
-            Log.w(TAG, "pushFrame failed: ${e.message}")
+            DebugLog.w(TAG, "pushFrame failed: ${e.message}")
             closeSession()
         }
     }
@@ -133,5 +137,6 @@ class PixelLightsManager {
     companion object {
         private const val TAG = "PixelLightsManager"
         private const val BLANK_FRAME_GAP_MS = 20L
+        private const val SLOW_FRAME_LOG_MS = 250L
     }
 }

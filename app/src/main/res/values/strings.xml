@@ -265,4 +265,18 @@
     <string name="about_version_label">Version</string>
     <string name="about_status_section_header">System Health &amp; Permissions</string>
     <string name="about_stock_ok_desc">Pixel\'s own \'Calls from favourites\' lighting is off. Gemini may still use the lights if this option is enabled.</string>
+    <string name="about_debug_log_header">Troubleshooting</string>
+    <string name="about_debug_log_title">Debug log</string>
+    <plurals name="about_debug_log_entry_count">
+        <item quantity="one">%d entry</item>
+        <item quantity="other">%d entries</item>
+    </plurals>
+    <string name="about_debug_log_desc">If the ring stays lit or does something unexpected, share this log as soon as you can. It includes your settings and what the lights were doing. Contact names and message text are left out.</string>
+    <string name="about_debug_log_empty">Nothing logged yet.</string>
+    <string name="about_debug_log_share">Share</string>
+    <string name="about_debug_log_clear">Clear</string>
+    <string name="about_debug_log_share_title">Share debug log</string>
+    <string name="about_debug_log_share_subject">HiLight Plus debug log (%1$s)</string>
+    <string name="about_debug_log_share_body">What happened, and roughly when:\n\n</string>
+    <string name="about_debug_log_share_failed">Couldn\'t prepare the log</string>
 </resources>

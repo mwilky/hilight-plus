@@ -9,7 +9,6 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
-import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -47,13 +46,13 @@ object NativeHiLightDetector {
     private val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean, uri: Uri?) {
             super.onChange(selfChange, uri)
-            Log.d(TAG, "ContentObserver triggered with uri: $uri")
+            DebugLog.d(TAG, "ContentObserver triggered with uri: $uri")
             appContext?.let { check(it) }
         }
 
         override fun onChange(selfChange: Boolean) {
             super.onChange(selfChange)
-            Log.d(TAG, "ContentObserver triggered (selfChange=$selfChange)")
+            DebugLog.d(TAG, "ContentObserver triggered (selfChange=$selfChange)")
             appContext?.let { check(it) }
         }
     }
@@ -69,10 +68,10 @@ object NativeHiLightDetector {
                 if (uri != null) {
                     cr.registerContentObserver(uri, true, observer)
                     observerRegistered = true
-                    Log.d(TAG, "Registered ContentObserver on Settings.Secure for '$KEY_FAVORITE_CALLS'")
+                    DebugLog.d(TAG, "Registered ContentObserver on Settings.Secure for '$KEY_FAVORITE_CALLS'")
                 }
             } catch (e: Throwable) {
-                Log.w(TAG, "Failed to register ContentObserver: $e")
+                DebugLog.w(TAG, "Failed to register ContentObserver: $e")
             }
         }
 
@@ -87,7 +86,7 @@ object NativeHiLightDetector {
             if (bridge.isConnected()) {
                 val shizukuVal = bridge.getSecureString(KEY_FAVORITE_CALLS)
                 val parsed = parseFavoriteCallsSetting(shizukuVal)
-                Log.i(TAG, "Shizuku privileged read: '$KEY_FAVORITE_CALLS'='$shizukuVal' => $parsed")
+                DebugLog.i(TAG, "Shizuku privileged read: '$KEY_FAVORITE_CALLS'='$shizukuVal' => $parsed")
                 return parsed
             }
         }

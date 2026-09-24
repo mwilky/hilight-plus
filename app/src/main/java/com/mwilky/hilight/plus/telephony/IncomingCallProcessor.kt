@@ -2,8 +2,8 @@ package com.mwilky.hilight.plus.telephony
 
 import android.content.Context
 import android.provider.ContactsContract
-import android.util.Log
 import com.mwilky.hilight.plus.AppStore
+import com.mwilky.hilight.plus.DebugLog
 import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.FaceDownMode
 import com.mwilky.hilight.plus.LightController
@@ -15,8 +15,10 @@ import com.mwilky.hilight.plus.dataStore
 import com.mwilky.hilight.plus.isFavouriteContactName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -43,6 +45,7 @@ internal object IncomingCallProcessor {
     // The one call currently ringing, by notification key.
     private var ringingKey: String? = null
     private var ringingCallerName: String = ""
+    private var ringTimeout: Job? = null
 
     init {
         scope.launch {
@@ -50,7 +53,7 @@ internal object IncomingCallProcessor {
                 try {
                     lock.withLock { handle(event) }
                 } catch (t: Throwable) {
-                    Log.e(TAG, "Call event failed", t)
+                    DebugLog.e(TAG, "Call event failed", t)
                 }
             }
         }
@@ -65,6 +68,11 @@ internal object IncomingCallProcessor {
     /** The notification under [key] was removed or is no longer a ringing call. */
     fun submitVoipEnded(appContext: Context, key: String) {
         events.trySend(CallEvent.Ended(appContext, key))
+    }
+
+    /** The notification listener is gone, so no removal will ever end a ringing call. */
+    fun submitListenerGone(appContext: Context) {
+        events.trySend(CallEvent.ListenerGone(appContext))
     }
 
     /** Listener reconnected: a tracked call whose notification is gone has ended. */
@@ -91,20 +99,43 @@ internal object IncomingCallProcessor {
         val store = AppStore.get(event.appContext)
         when (event) {
             is CallEvent.Ringing -> {
+                if (event.key != ringingKey) {
+                    DebugLog.i(TAG, "Call ringing (${DebugLog.redactKey(event.key)})")
+                    startRingTimeout(event.appContext, event.key)
+                }
                 ringingKey = event.key
                 ringingCallerName = event.callerName
                 startResolvedCall(event.appContext, store, controller, event.callerName)
             }
-            is CallEvent.Ended -> if (event.key == ringingKey) endCall(controller)
+            is CallEvent.Ended -> if (event.key == ringingKey) endCall(controller, "ended or answered")
             is CallEvent.ShadeSync -> {
                 val key = ringingKey
-                if (key != null && key !in event.shadeKeys) endCall(controller)
+                if (key != null && key !in event.shadeKeys) endCall(controller, "gone after listener reconnect")
             }
+            is CallEvent.TimedOut -> if (event.key == ringingKey) {
+                DebugLog.w(TAG, "Call still ringing after ${MAX_RING_MS / 1000}s with no end seen")
+                endCall(controller, "ring timed out")
+            }
+            is CallEvent.ListenerGone -> if (ringingKey != null) endCall(controller, "lost with the notification listener")
         }
     }
 
-    private fun endCall(controller: LightController) {
-        Log.i(TAG, "Call ended or answered, stopping call lights")
+    /**
+     * Nothing rings for minutes: the network or app gives up well before this. A call whose end
+     * was never seen (a re-post that didn't read as answered, a missed removal) still goes dark.
+     */
+    private fun startRingTimeout(appContext: Context, key: String) {
+        ringTimeout?.cancel()
+        ringTimeout = scope.launch {
+            delay(MAX_RING_MS)
+            events.trySend(CallEvent.TimedOut(appContext, key))
+        }
+    }
+
+    private fun endCall(controller: LightController, reason: String) {
+        DebugLog.i(TAG, "Call $reason, stopping call lights")
+        ringTimeout?.cancel()
+        ringTimeout = null
         ringingKey = null
         ringingCallerName = ""
         stopCallLights(controller)
@@ -122,7 +153,7 @@ internal object IncomingCallProcessor {
     ) {
         val snapshot = store.snapshot()
         if (!snapshot.isEnabled || !snapshot.isCallLightsEnabled) {
-            Log.d(TAG, "Call lights are disabled; keeping session but stopping lights")
+            DebugLog.d(TAG, "Call lights are disabled; keeping session but stopping lights")
             stopCallLights(controller)
             return
         }
@@ -142,7 +173,7 @@ internal object IncomingCallProcessor {
         val matchedRule = if (contactName != null) snapshot.findRuleForContactName(contactName) else null
 
         if (matchedRule != null && matchedRule.isEnabled) {
-            Log.i(TAG, "Matched custom rule for '${matchedRule.name}': ${matchedRule.pattern}")
+            DebugLog.i(TAG, "Matched custom rule ${matchedRule.id}: ${matchedRule.pattern}")
             startCallAlert(
                 context,
                 snapshot,
@@ -161,7 +192,7 @@ internal object IncomingCallProcessor {
         if (isSavedContact && contactName != null && snapshot.isFavouriteCallsEnabled &&
             isFavouriteContactName(context, contactName)
         ) {
-            Log.i(TAG, "Caller '$contactName' is a favourite contact -> Favourite Contacts")
+            DebugLog.i(TAG, "Caller is a favourite contact -> Favourite Contacts")
             startCallAlert(
                 context,
                 snapshot,
@@ -179,13 +210,13 @@ internal object IncomingCallProcessor {
 
         if (isSavedContact) {
             if (matchedRule != null) {
-                Log.i(TAG, "Custom rule for '${matchedRule.name}' is disabled -> All Other Contacts")
+                DebugLog.i(TAG, "Custom rule ${matchedRule.id} is disabled -> All Other Contacts")
             } else {
-                Log.i(TAG, "Caller '$contactName' is a saved contact (no custom rule) -> All Other Contacts")
+                DebugLog.i(TAG, "Caller is a saved contact (no custom rule) -> All Other Contacts")
             }
             triggerOtherContactsAlert(context, snapshot, controller)
         } else {
-            Log.i(TAG, "Caller is unsaved / not in contacts -> Unknown & Private Numbers")
+            DebugLog.i(TAG, "Caller is unsaved / not in contacts -> Unknown & Private Numbers")
             triggerUnknownAlert(context, snapshot, controller)
         }
     }
@@ -235,7 +266,7 @@ internal object IncomingCallProcessor {
         if (snapshot.isOtherContactsEnabled) {
             val pattern = snapshot.otherContactsPattern
             val color = snapshot.otherContactsColor
-            Log.i(TAG, "Triggering Other Contacts lighting: $pattern, color=$color")
+            DebugLog.i(TAG, "Triggering Other Contacts lighting: $pattern, color=$color")
             startCallAlert(
                 context,
                 snapshot,
@@ -249,7 +280,7 @@ internal object IncomingCallProcessor {
                 color
             )
         } else {
-            Log.i(TAG, "Other Contacts lights are disabled")
+            DebugLog.i(TAG, "Other Contacts lights are disabled")
             stopCallLights(controller)
         }
     }
@@ -262,7 +293,7 @@ internal object IncomingCallProcessor {
         if (snapshot.isUnknownNumbersEnabled) {
             val pattern = snapshot.unknownNumbersPattern
             val color = snapshot.unknownNumbersColor
-            Log.i(TAG, "Triggering Unknown/Private lighting: $pattern, color=$color")
+            DebugLog.i(TAG, "Triggering Unknown/Private lighting: $pattern, color=$color")
             startCallAlert(
                 context,
                 snapshot,
@@ -276,7 +307,7 @@ internal object IncomingCallProcessor {
                 color
             )
         } else {
-            Log.i(TAG, "Unknown/Private lights are disabled")
+            DebugLog.i(TAG, "Unknown/Private lights are disabled")
             stopCallLights(controller)
         }
     }
@@ -299,7 +330,10 @@ internal object IncomingCallProcessor {
         data class Ringing(override val appContext: Context, val key: String, val callerName: String) : CallEvent
         data class Ended(override val appContext: Context, val key: String) : CallEvent
         data class ShadeSync(override val appContext: Context, val shadeKeys: Set<String>) : CallEvent
+        data class TimedOut(override val appContext: Context, val key: String) : CallEvent
+        data class ListenerGone(override val appContext: Context) : CallEvent
     }
 
     private const val TAG = "IncomingCallProcessor"
+    private const val MAX_RING_MS = 3 * 60_000L
 }

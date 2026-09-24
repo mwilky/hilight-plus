@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
+import android.os.Process
 import com.mwilky.hilight.plus.core.DeviceOrientationDetector
 import com.mwilky.hilight.plus.core.PatternRenderer
 import kotlinx.coroutines.CoroutineScope
@@ -26,6 +27,10 @@ import kotlinx.coroutines.launch
  */
 class LightController private constructor(private val app: Application) {
 
+    // First, so everything constructed below already logs into the shareable log.
+    val debugLog = DebugLogStore.get(app).also {
+        DebugLog.i(TAG, "App process started (${BuildConfig.VERSION_NAME}, pid ${Process.myPid()})")
+    }
     val store = AppStore.get(app)
     val shizuku = ShizukuBridge.get(app)
     val licensing = Licensing(app, store, shizuku)
@@ -420,6 +425,8 @@ class LightController private constructor(private val app: Application) {
     }
 
     companion object {
+        private const val TAG = "LightController"
+
         // Well inside the daemon's staleness window, so ordinary jitter never trips it.
         private const val BATTERY_HEARTBEAT_MS = 60_000L
 

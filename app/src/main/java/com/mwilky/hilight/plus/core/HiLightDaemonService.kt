@@ -1,8 +1,9 @@
 package com.mwilky.hilight.plus.core
 
 import android.os.Process
-import android.util.Log
+import android.os.RemoteException
 import com.mwilky.hilight.plus.BatteryPattern
+import com.mwilky.hilight.plus.DebugLog
 import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.LowBatteryPattern
 import com.mwilky.hilight.plus.QuietHoursMode
@@ -22,12 +23,15 @@ class HiLightDaemonService : IHiLightService.Stub() {
     @Volatile
     private var entitled = true
 
+    private var logSink: DebugLog.Sink? = null
+
     init {
+        DebugLog.source = "daemon"
         try {
             engine.start()
-            Log.i(TAG, "HiLightDaemonService started (PID ${Process.myPid()}, UID ${Process.myUid()}, ${engine.ledCount} LEDs)")
+            DebugLog.i(TAG, "HiLightDaemonService started (PID ${Process.myPid()}, UID ${Process.myUid()}, ${engine.ledCount} LEDs)")
         } catch (t: Throwable) {
-            Log.e(TAG, "Failed to start HiLightDaemonService: ${t.message}", t)
+            DebugLog.e(TAG, "Failed to start HiLightDaemonService: ${t.message}", t)
         }
     }
 
@@ -240,7 +244,7 @@ class HiLightDaemonService : IHiLightService.Stub() {
             }
             if (process.exitValue() != 0 || output == "null") null else output.orEmpty()
         } catch (t: Throwable) {
-            Log.e(TAG, "settings ${args.joinToString(" ")} failed: ${t.message}", t)
+            DebugLog.e(TAG, "settings ${args.joinToString(" ")} failed: ${t.message}", t)
             null
         } finally {
             process?.destroy()
@@ -254,14 +258,39 @@ class HiLightDaemonService : IHiLightService.Stub() {
     override fun setEntitled(entitled: Boolean) {
         if (this.entitled == entitled) return
         this.entitled = entitled
+        DebugLog.i(TAG, "setEntitled: $entitled")
         if (!entitled) {
             engine.stopIncomingCall()
             engine.clearAlert()
         }
     }
 
+    /**
+     * Sends this process's log lines to the app from now on, starting with any logged before the
+     * app registered. A newer sink (the app reconnected) replaces the old one.
+     */
+    override fun setLogSink(sink: ILogSink?) {
+        logSink?.let { DebugLog.detach(it) }
+        logSink = null
+        if (sink == null) return
+        val forwarder = object : DebugLog.Sink {
+            override fun write(line: String) {
+                try {
+                    sink.onLog(line)
+                } catch (_: RemoteException) {
+                    DebugLog.detach(this)
+                }
+            }
+        }
+        logSink = forwarder
+        DebugLog.attach(forwarder)
+    }
+
+    override fun dumpState(): String =
+        "pid=${Process.myPid()} uid=${Process.myUid()} entitled=$entitled\n" + engine.describeState()
+
     override fun destroy() {
-        Log.i(TAG, "HiLightDaemonService destroying...")
+        DebugLog.i(TAG, "HiLightDaemonService destroying...")
         engine.stop()
         exitProcess(0)
     }
