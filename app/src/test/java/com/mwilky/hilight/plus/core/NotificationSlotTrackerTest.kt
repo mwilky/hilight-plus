@@ -176,4 +176,25 @@ class NotificationSlotTrackerTest {
         assertNull(tracker.latestSlot())
         assertEquals(0, tracker.sourceCount)
     }
+
+    @Test
+    fun aNewNotificationMovesItsSlotToTheNewestEnd() {
+        val tracker = NotificationSlotTracker()
+        tracker.add("wa_1", "app_whatsapp", PatternMode.PULSE, 0xFF25D366)
+        tracker.add("gm_1", "app_gmail", PatternMode.PULSE, 0xFFEA4335)
+        tracker.add("wa_2", "app_whatsapp", PatternMode.PULSE, 0xFF25D366)
+
+        assertEquals(listOf("app_gmail", "app_whatsapp"), tracker.slotsInOrder().map { it.id })
+    }
+
+    @Test
+    fun anUnchangedRepostKeepsTheSlotWhereItIs() {
+        val tracker = NotificationSlotTracker()
+        tracker.add("wa_1", "app_whatsapp", PatternMode.PULSE, 0xFF25D366)
+        tracker.add("gm_1", "app_gmail", PatternMode.PULSE, 0xFFEA4335)
+        val repost = tracker.add("wa_1", "app_whatsapp", PatternMode.PULSE, 0xFF25D366)
+
+        assertFalse(repost.changed)
+        assertEquals(listOf("app_whatsapp", "app_gmail"), tracker.slotsInOrder().map { it.id })
+    }
 }

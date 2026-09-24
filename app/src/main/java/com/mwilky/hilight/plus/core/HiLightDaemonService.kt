@@ -3,6 +3,7 @@ package com.mwilky.hilight.plus.core
 import android.os.Process
 import android.os.RemoteException
 import com.mwilky.hilight.plus.BatteryPattern
+import com.mwilky.hilight.plus.BuildConfig
 import com.mwilky.hilight.plus.DebugLog
 import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.LowBatteryPattern
@@ -28,6 +29,8 @@ class HiLightDaemonService : IHiLightService.Stub() {
 
     init {
         DebugLog.source = "daemon"
+        killStaleDaemons()
+        DebugLog.d(TAG, "System lights before start:\n${lightsDump()}")
         try {
             engine.start()
             DebugLog.i(TAG, "HiLightDaemonService started (PID ${Process.myPid()}, UID ${Process.myUid()}, ${engine.ledCount} LEDs)")
@@ -257,6 +260,46 @@ class HiLightDaemonService : IHiLightService.Stub() {
     }
 
     /**
+     * Runs a shell command and returns all of its stdout, or null on failure / timeout. For
+     * diagnostics only: nothing here should depend on the exact output format.
+     */
+    private fun runCommand(vararg args: String): String? {
+        var process: java.lang.Process? = null
+        return try {
+            process = Runtime.getRuntime().exec(arrayOf(*args))
+            val output = process.inputStream.bufferedReader().use { it.readText() }
+            runCatching { process.errorStream.close() }
+            if (!process.waitFor(2, TimeUnit.SECONDS)) {
+                process.destroyForcibly()
+                return null
+            }
+            output.trimEnd()
+        } catch (t: Throwable) {
+            DebugLog.w(TAG, "${args.joinToString(" ")} failed: ${t.message}")
+            null
+        } finally {
+            process?.destroy()
+        }
+    }
+
+    /** The system lights service's own view, including every open session on the ring. */
+    private fun lightsDump(): String = runCommand("dumpsys", "lights") ?: "unavailable"
+
+    /**
+     * An older copy of this process that Shizuku lost track of would keep its light session, and
+     * its last frame, alive, and can outrank ours. Only one should ever run, so end the others.
+     */
+    private fun killStaleDaemons() {
+        val name = "${BuildConfig.APPLICATION_ID}:$PROCESS_SUFFIX"
+        val pids = runCommand("pidof", name)?.split(' ')?.mapNotNull { it.trim().toIntOrNull() }.orEmpty()
+        for (pid in pids) {
+            if (pid == Process.myPid()) continue
+            DebugLog.w(TAG, "Killing stale daemon process $pid")
+            Process.killProcess(pid)
+        }
+    }
+
+    /**
      * Trial expired and not purchased: stop showing alerts and refuse new ones. The test
      * channel stays open so the paywall can still demo the lights.
      */
@@ -292,7 +335,26 @@ class HiLightDaemonService : IHiLightService.Stub() {
     }
 
     override fun dumpState(): String =
-        "pid=${Process.myPid()} uid=${Process.myUid()} entitled=$entitled\n" + engine.describeState()
+        "pid=${Process.myPid()} uid=${Process.myUid()} entitled=$entitled\n" + engine.describeState() +
+            "\n\n-- dumpsys lights --\n" + lightsDump()
+
+    override fun isRingStuck(): Boolean {
+        val mismatch = engine.ringMismatch() ?: return false
+        DebugLog.w(TAG, "Ring doesn't match what this process sent: $mismatch\n${lightsDump()}")
+        return true
+    }
+
+    /**
+     * Logs what's holding the ring, then exits. The process ending is what makes the lights
+     * service drop every session it opened, including any stuck one this process lost hold of.
+     * The app reconnects and a fresh process starts.
+     */
+    override fun restart() {
+        DebugLog.w(TAG, "Reset requested. Engine state:\n${engine.describeState()}")
+        DebugLog.w(TAG, "System lights at reset:\n${lightsDump()}")
+        engine.stop()
+        exitProcess(0)
+    }
 
     override fun destroy() {
         DebugLog.i(TAG, "HiLightDaemonService destroying...")
@@ -302,5 +364,8 @@ class HiLightDaemonService : IHiLightService.Stub() {
 
     companion object {
         private const val TAG = "HiLightDaemonService"
+
+        /** Shizuku names the process `<applicationId>:<suffix>`. */
+        const val PROCESS_SUFFIX = "hilight_daemon"
     }
 }

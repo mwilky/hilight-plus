@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import android.os.Process
+import android.os.SystemClock
 import com.mwilky.hilight.plus.core.DeviceOrientationDetector
 import com.mwilky.hilight.plus.core.PatternRenderer
 import kotlinx.coroutines.CoroutineScope
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Coordinates persistent preferences ([AppStore]) and privileged hardware lighting execution ([ShizukuBridge]).
@@ -68,6 +70,16 @@ class LightController private constructor(private val app: Application) {
     @Volatile
     private var lastBatteryFull = false
 
+    // A ring left on one of our old sessions (the render loop can't reach it any more) is only
+    // noticed by the user when they pick the phone up, so that's when to check for it.
+    private val unlockReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action != Intent.ACTION_USER_PRESENT) return
+            scope.launch { healStuckRing() }
+        }
+    }
+    private var lastAutoResetMs = 0L
+
     private val batteryReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action != Intent.ACTION_BATTERY_CHANGED) return
@@ -90,6 +102,14 @@ class LightController private constructor(private val app: Application) {
         app.registerReceiver(
             dndReceiver,
             IntentFilter(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED),
+            Context.RECEIVER_EXPORTED
+        )
+
+        // Exported because SystemUI, not the system server, sends USER_PRESENT, and a
+        // not-exported receiver never gets it. Only the system may send this action.
+        app.registerReceiver(
+            unlockReceiver,
+            IntentFilter(Intent.ACTION_USER_PRESENT),
             Context.RECEIVER_EXPORTED
         )
 
@@ -176,6 +196,26 @@ class LightController private constructor(private val app: Application) {
                 }
             }
         }
+    }
+
+    /**
+     * Restarts the daemon when the LEDs don't show what it sent, which clears a session it lost
+     * hold of. At most once per [AUTO_RESET_MIN_GAP_MS], so a check that keeps failing (another
+     * system feature legitimately using the ring) can't restart it on every unlock.
+     */
+    private suspend fun healStuckRing() {
+        if (!withContext(Dispatchers.IO) { shizuku.isRingStuck() }) {
+            DebugLog.d(TAG, "Ring check after unlock: matches")
+            return
+        }
+        val now = SystemClock.elapsedRealtime()
+        if (lastAutoResetMs != 0L && now - lastAutoResetMs < AUTO_RESET_MIN_GAP_MS) {
+            DebugLog.w(TAG, "Ring looks stuck again soon after an automatic reset; leaving it")
+            return
+        }
+        lastAutoResetMs = now
+        DebugLog.w(TAG, "Ring looks stuck after unlock -> resetting the lights service")
+        shizuku.resetDaemon()
     }
 
     fun setEnabled(enabled: Boolean) {
@@ -432,6 +472,7 @@ class LightController private constructor(private val app: Application) {
 
     companion object {
         private const val TAG = "LightController"
+        private const val AUTO_RESET_MIN_GAP_MS = 30 * 60_000L
 
         // Well inside the daemon's staleness window, so ordinary jitter never trips it.
         private const val BATTERY_HEARTBEAT_MS = 60_000L

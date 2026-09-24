@@ -28,4 +28,6 @@ interface IHiLightService {
     void setLogSink(ILogSink sink);
     String dumpState();
     void setSplitAnimation(String animation);
+    void restart();
+    boolean isRingStuck();
 }

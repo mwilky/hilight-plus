@@ -17,10 +17,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 
 /**
@@ -42,6 +46,11 @@ class ShizukuBridge private constructor(private val app: Application) {
     private val _state = MutableStateFlow(State.NOT_RUNNING)
     val state: StateFlow<State> = _state.asStateFlow()
 
+    // One event per daemon connection. A fresh daemon starts dark, so whoever still has alerts
+    // waiting (the notification listener, the call processor) sends them again.
+    private val _connections = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val connections: SharedFlow<Unit> = _connections.asSharedFlow()
+
     private var service: IHiLightService? = null
     private var lastError: String? = null
     private var manuallyDisconnected = false
@@ -53,9 +62,9 @@ class ShizukuBridge private constructor(private val app: Application) {
         ComponentName(BuildConfig.APPLICATION_ID, HiLightDaemonService::class.java.name)
     )
         .daemon(false)
-        .processNameSuffix("hilight_daemon")
+        .processNameSuffix(HiLightDaemonService.PROCESS_SUFFIX)
         .debuggable(BuildConfig.DEBUG)
-        .version(14)
+        .version(15)
 
     // Receives the daemon's log lines so they land in the same shareable log as the app's.
     private val logSink = object : ILogSink.Stub() {
@@ -99,6 +108,7 @@ class ShizukuBridge private constructor(private val app: Application) {
             lastBatteryState?.let { sendBatteryState(it) }
             lastEntitled?.let { sendEntitled(it) }
             onAvailabilityChanged?.invoke()
+            _connections.tryEmit(Unit)
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
@@ -299,6 +309,30 @@ class ShizukuBridge private constructor(private val app: Application) {
     }
 
     fun errorText(): String? = lastError
+
+    /**
+     * Restarts the daemon. Its process exiting makes the system drop every light session it held,
+     * which clears a ring frozen on a session nothing can update any more. Reconnects on its own.
+     */
+    suspend fun resetDaemon() {
+        val s = service ?: return
+        DebugLog.i("HiLightPlus", "Resetting the lights service")
+        // The daemon exits mid-call, so this normally ends in a DeadObjectException.
+        withContext(Dispatchers.IO) { runCatching { s.restart() } }
+        runCatching { Shizuku.unbindUserService(args, connection, true) }
+        service = null
+        _state.value = State.NOT_RUNNING
+        onAvailabilityChanged?.invoke()
+        scheduleReconnect()
+    }
+
+    /** Whether the LEDs show something other than what the daemon sent. False when unknown. */
+    fun isRingStuck(): Boolean {
+        val s = service ?: return false
+        return runCatching { s.isRingStuck() }
+            .onFailure { markDead("isRingStuck", it) }
+            .getOrDefault(false)
+    }
 
     /** What the daemon is holding right now, for debug reports. Null when it isn't reachable. */
     fun dumpDaemonState(): String? {

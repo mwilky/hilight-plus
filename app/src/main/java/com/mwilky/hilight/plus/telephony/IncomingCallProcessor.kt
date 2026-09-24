@@ -70,6 +70,11 @@ internal object IncomingCallProcessor {
         events.trySend(CallEvent.Ended(appContext, key))
     }
 
+    /** A (re)started daemon is dark, so a call still ringing needs lighting again. */
+    fun submitDaemonConnected(appContext: Context) {
+        events.trySend(CallEvent.DaemonConnected(appContext))
+    }
+
     /** The notification listener is gone, so no removal will ever end a ringing call. */
     fun submitListenerGone(appContext: Context) {
         events.trySend(CallEvent.ListenerGone(appContext))
@@ -117,6 +122,10 @@ internal object IncomingCallProcessor {
                 endCall(controller, "ring timed out")
             }
             is CallEvent.ListenerGone -> if (ringingKey != null) endCall(controller, "lost with the notification listener")
+            is CallEvent.DaemonConnected -> if (ringingKey != null) {
+                DebugLog.i(TAG, "Lights service connected -> relighting the ringing call")
+                startResolvedCall(event.appContext, store, controller, ringingCallerName)
+            }
         }
     }
 
@@ -332,6 +341,7 @@ internal object IncomingCallProcessor {
         data class ShadeSync(override val appContext: Context, val shadeKeys: Set<String>) : CallEvent
         data class TimedOut(override val appContext: Context, val key: String) : CallEvent
         data class ListenerGone(override val appContext: Context) : CallEvent
+        data class DaemonConnected(override val appContext: Context) : CallEvent
     }
 
     private const val TAG = "IncomingCallProcessor"

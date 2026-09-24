@@ -41,7 +41,7 @@ import com.mwilky.hilight.plus.ui.ExpressiveStatusCard
 import com.mwilky.hilight.plus.ui.StandardDiagnosticCard
 
 @Composable
-private fun ButtonLabel(icon: ImageVector?, text: String) {
+internal fun ButtonLabel(icon: ImageVector?, text: String) {
     if (icon != null) {
         Icon(icon, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
         Spacer(Modifier.width(ButtonDefaults.IconSpacing))

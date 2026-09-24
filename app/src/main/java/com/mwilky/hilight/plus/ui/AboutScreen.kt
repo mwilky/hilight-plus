@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -42,6 +43,7 @@ import com.mwilky.hilight.plus.NativeHiLightDetector
 import com.mwilky.hilight.plus.R
 import com.mwilky.hilight.plus.ShizukuBridge
 import com.mwilky.hilight.plus.StockHiLightState
+import com.mwilky.hilight.plus.ui.diagnostics.ButtonLabel
 import com.mwilky.hilight.plus.ui.diagnostics.CallPermissionsCard
 import com.mwilky.hilight.plus.ui.diagnostics.NotificationAccessCard
 import com.mwilky.hilight.plus.ui.diagnostics.PermissionState
@@ -146,7 +148,11 @@ fun AboutScreen(controller: LightController) {
                 }
             }
         },
-        onClearLog = { controller.debugLog.clear() }
+        onClearLog = { controller.debugLog.clear() },
+        onResetLights = {
+            scope.launch { controller.shizuku.resetDaemon() }
+            Toast.makeText(context, R.string.about_debug_log_reset_started, Toast.LENGTH_SHORT).show()
+        }
     )
 }
 
@@ -196,7 +202,8 @@ fun AboutContent(
     logLines: List<DebugLogStore.Line>,
     isSharingLog: Boolean,
     onShareLog: () -> Unit,
-    onClearLog: () -> Unit
+    onClearLog: () -> Unit,
+    onResetLights: () -> Unit
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
@@ -292,8 +299,10 @@ fun AboutContent(
             DebugLogCard(
                 lines = logLines,
                 isSharing = isSharingLog,
+                canResetLights = shizukuState == ShizukuBridge.State.CONNECTED,
                 onShare = onShareLog,
-                onClear = onClearLog
+                onClear = onClearLog,
+                onResetLights = onResetLights
             )
         }
     }
@@ -303,8 +312,10 @@ fun AboutContent(
 private fun DebugLogCard(
     lines: List<DebugLogStore.Line>,
     isSharing: Boolean,
+    canResetLights: Boolean,
     onShare: () -> Unit,
-    onClear: () -> Unit
+    onClear: () -> Unit,
+    onResetLights: () -> Unit
 ) {
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = lines.lastIndex.coerceAtLeast(0))
     // Follow new lines while the view is at the bottom; stop once the user scrolls up to read.
@@ -362,21 +373,32 @@ private fun DebugLogCard(
                 OutlinedButton(
                     onClick = onClear,
                     enabled = lines.isNotEmpty(),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    shapes = ButtonDefaults.shapes()
                 ) {
-                    Icon(Icons.Rounded.DeleteSweep, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.about_debug_log_clear))
+                    ButtonLabel(Icons.Rounded.DeleteSweep, stringResource(R.string.about_debug_log_clear))
                 }
                 Button(
                     onClick = onShare,
                     enabled = !isSharing,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    shapes = ButtonDefaults.shapes()
                 ) {
-                    Icon(Icons.Rounded.Share, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.about_debug_log_share))
+                    ButtonLabel(Icons.Rounded.Share, stringResource(R.string.about_debug_log_share))
                 }
+            }
+            Text(
+                stringResource(R.string.about_debug_log_reset_desc),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            FilledTonalButton(
+                onClick = onResetLights,
+                enabled = canResetLights,
+                modifier = Modifier.fillMaxWidth(),
+                shapes = ButtonDefaults.shapes()
+            ) {
+                ButtonLabel(Icons.Rounded.RestartAlt, stringResource(R.string.about_debug_log_reset))
             }
         }
     }
@@ -465,7 +487,8 @@ fun AboutScreenPreview() {
             ),
             isSharingLog = false,
             onShareLog = {},
-            onClearLog = {}
+            onClearLog = {},
+            onResetLights = {}
         )
     }
 }

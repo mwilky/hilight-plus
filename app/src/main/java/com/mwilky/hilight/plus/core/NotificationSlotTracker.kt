@@ -81,6 +81,12 @@ internal class NotificationSlotTracker {
         slot.quietEndMinutes = quietEndMinutes
         slot.contributors.add(sourceKey)
         sourceToSlot[sourceKey] = slotId
+        // Keep slots in the order the daemon's queue ends up in: every changed add is re-sent,
+        // which moves that slot to the newest end there, so a replay rebuilds the same order.
+        if (!unchanged) {
+            slots.remove(slotId)
+            slots[slotId] = slot
+        }
         if (becomeLatest) {
             latestSourceKey = sourceKey
         }

@@ -50,6 +50,12 @@ class NotificationTrigger : NotificationListenerService() {
                 enqueue(ListenerEvent.SettingsChanged)
             }
         }
+        scope.launch {
+            LightController.get(applicationContext).shizuku.connections.collect {
+                enqueue(ListenerEvent.DaemonConnected)
+                IncomingCallProcessor.submitDaemonConnected(applicationContext)
+            }
+        }
     }
 
     override fun onListenerConnected() {
@@ -145,6 +151,7 @@ class NotificationTrigger : NotificationListenerService() {
                 )
             }
             is ListenerEvent.SettingsChanged -> handleSettingsChanged()
+            is ListenerEvent.DaemonConnected -> handleDaemonConnected()
         }
     }
 
@@ -217,6 +224,24 @@ class NotificationTrigger : NotificationListenerService() {
             )
         }
         syncNotificationMonitor()
+    }
+
+    /**
+     * A (re)started daemon holds no alerts, so send it every slot still waiting. Newest-only is
+     * left out: its alert was timed, and the tracker still names the latest source long after
+     * that time ran out, so replaying it could light something that has already finished.
+     */
+    private suspend fun handleDaemonConnected() {
+        val snapshot = AppStore.get(applicationContext).snapshot()
+        if (!snapshot.isEnabled || !snapshot.isNotificationsEnabled || !snapshot.isCycleNotifications) return
+        val slots = tracker.slotsInOrder()
+        if (slots.isEmpty()) return
+        DebugLog.i(TAG, "Lights service connected -> replaying ${slots.size} waiting alert(s)")
+        val controller = LightController.get(applicationContext)
+        if (tracker.hasRestrictedSlot()) {
+            controller.setDeviceFaceDown(DeviceOrientationDetector.isDeviceFaceDown(applicationContext))
+        }
+        slots.forEach { dispatchSlot(controller, snapshot, it, isCycle = true) }
     }
 
     private fun isEligiblePostedNotification(sbn: StatusBarNotification): Boolean {
@@ -531,6 +556,7 @@ class NotificationTrigger : NotificationListenerService() {
         data class Removed(val key: String) : ListenerEvent
         data class Reconnect(val shadeKeys: Set<String>?) : ListenerEvent
         data object SettingsChanged : ListenerEvent
+        data object DaemonConnected : ListenerEvent
     }
 
     companion object {

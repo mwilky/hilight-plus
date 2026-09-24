@@ -100,7 +100,8 @@ internal object DebugReport {
         quietEnd: Int?,
         extra: String? = null
     ) {
-        val window = if (quietStart != null && quietEnd != null) " ${time(quietStart)}-${time(quietEnd)}" else ""
+        // A rule's own window is only used when it skips the Conditions page's quiet hours.
+        val window = if (quiet == QuietHoursMode.SKIP && quietStart != null && quietEnd != null) " ${time(quietStart)}-${time(quietEnd)}" else ""
         append("  $label: ${if (enabled) "on" else "off"}, $pattern ").append("#%08X".format(color and 0xFFFFFFFFL))
         append(", faceDown=$faceDown, dnd=$dnd, quiet=$quiet$window")
         if (extra != null) append(", $extra")

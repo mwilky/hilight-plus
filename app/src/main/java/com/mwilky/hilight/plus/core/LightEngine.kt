@@ -779,11 +779,14 @@ class LightEngine {
         DebugLog.i(TAG, "Ring -> $reason")
     }
 
+    /** See [PixelLightsManager.ringMismatch]. Under the lock so it can't race a frame. */
+    fun ringMismatch(): String? = synchronized(lock) { lights.ringMismatch() }
+
     /** Everything the engine is holding, for a debug report. */
     fun describeState(): String = synchronized(lock) {
         val now = SystemClock.elapsedRealtime()
         buildString {
-            appendLine("ring=$lastRenderReason, sessionOpen=${lights.isSessionOpen}, leds=${lights.ledCount}, running=$running, renderThreadAlive=${renderThread?.isAlive}, lastFrame=${now - lastTickElapsedMs}ms ago")
+            appendLine("ring=$lastRenderReason, sessionOpen=${lights.isSessionOpen}, unclosedSessions=${lights.unclosedSessionCount}, leds=${lights.ledCount}, running=$running, renderThreadAlive=${renderThread?.isAlive}, lastFrame=${now - lastTickElapsedMs}ms ago")
             appendLine("faceDown=$deviceFaceDown, dndActive=$dndActive, dndSuppress=$dndSuppressEnabled, quietHours=$quietHoursEnabled $quietHoursStartMinutes-$quietHoursEndMinutes, splitRing=$splitRing (${splitAnimation.id})")
             appendLine("test=${testAlert?.let { "${it.pattern} ${hex(it.color)}, ${it.expiresAtMs - now}ms left" }}")
             appendLine("call=${incomingCallAlert?.let { "${it.pattern} ${hex(it.color)}, ringing ${(now - it.startedAtMs) / 1000}s, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}" }}")
