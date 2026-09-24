@@ -67,6 +67,8 @@ dependencies {
     implementation(libs.api)
     implementation(libs.provider)
     implementation(libs.billing.ktx)
+    // Play Billing pulls in androidx.fragment 1.1.0 via play-services-base; force a current release.
+    implementation(libs.androidx.fragment)
     testImplementation(libs.junit)
     testImplementation(libs.json)
 }
