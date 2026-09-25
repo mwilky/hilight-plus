@@ -1,0 +1,113 @@
+[CENTER]
+[SIZE=6][B][APP][Android 17+] HiLight Plus[/B][/SIZE]
+[SIZE=4][I]Custom rear LED ring lighting for the Google Pixel 11 Pro series[/I][/SIZE]
+
+[/CENTER]
+[TABLE]
+[TR]
+[TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/calls.png[/IMG][/TD]
+[TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/rule-editor.png[/IMG][/TD]
+[TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/split-ring.png[/IMG][/TD]
+[TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/battery.png[/IMG][/TD]
+[/TR]
+[/TABLE]
+
+[CENTER]
+[SIZE=3][URL='https://t.me/+XW1xL8tZE2w0ZDc0'][B]Join the Telegram Support & Discussion Group[/B][/URL][/SIZE]
+[/CENTER]
+
+[B]HiLight Plus[/B] unleashes the hardware potential of the eight-LED rear ring on the Google Pixel 11 Pro series.
+
+While stock Pixel software limits the ring to Gemini interactions and basic calls from favourites, HiLight Plus takes over the ring to provide full customization: granular per-contact or per-app patterns, battery telemetry indicators, split-ring alert arcs, and extensive scheduling conditions.
+
+Gemini's stock lighting states remain untouched. All processing executes locally on-device—no accounts, no tracking, and zero telemetry.
+
+[HR][/HR]
+
+[SIZE=5][B]Features[/B][/SIZE]
+
+[B]Incoming Calls[/B]
+[LIST]
+[*]Dedicated pattern and hex/preset colour per contact.
+[*]Configurable fallback defaults for other saved contacts and unknown callers.
+[*]Favourites style for starred contacts, used when a caller has no rule of their own.
+[*]Universal support: works across cellular calls and VoIP (WhatsApp, Teams, Google Meet, etc.).
+[*]Active render loop stays lit until the call is answered or rejected.
+[*]Optional missed-call style that stays lit until the missed-call notification is dismissed.
+[/LIST]
+
+[B]Notifications[/B]
+[LIST]
+[*]Per-sender and per-app rules with dynamic colour extraction from app icons.
+[*]Starred contacts can share a favourites style, sitting between a sender's own rule and the app rule.
+[*]13 distinct LED animation patterns: [I]Solid, Breathe, Pulse, Wave, Comet, Orbit, Beacon, Ripple, Sparkle, Rainbow[/I], plus copies of Gemini's own [I]Listening, Thinking[/I] and [I]Replying[/I] effects.
+[*]Multi-alert ring management:
+[LIST]
+[*][B]Newest only:[/B] Displays the most recent notification for a set duration.
+[*][B]Take turns:[/B] Sequentially cycles through active notifications until dismissed.
+[*][B]Split the ring:[/B] Partitions the 8-LED ring into distinct coloured arcs (up to 4 notifications concurrently). Arcs can breathe, stay solid, brighten in turn (Spotlight) or circle the ring (Rotate).
+[/LIST]
+[*]Instant cleanup: lights turn off the moment the notification is cleared from the shade.
+[/LIST]
+
+[B]Battery & Charging Status[/B]
+[LIST]
+[*]Live charging gauge, fill animations, or gradient rings when connected to power.
+[*]Dynamic red-to-green gradient mapped to charge percentage, or static user colours.
+[*]Full-charge indicator with an auto-off sleep timer.
+[*]Customizable low-battery alert threshold.
+[*]Configurable layer priority (can sit below alerts or override standard notifications).
+[/LIST]
+
+[B]Gating & Environment Conditions[/B]
+[LIST]
+[*]Face-down only mode (accelerometer engages only when alerts are pending).
+[*]Automatic Do Not Disturb (DND) suppression.
+[*]Global quiet hours scheduler with per-rule override options.
+[/LIST]
+
+[B]Extras[/B]
+[LIST]
+[*]Live pattern preview on a ring mock-up, and a Test on LEDs button in every rule editor.
+[*]Guided onboarding that detects each setting as you flip it, with a notification that follows you into Settings to take the pairing code.
+[*]Live debug log for the app and daemon, with one-tap share (contact names left out).
+[*]Reset lights button that frees a stuck ring without a reboot, plus an automatic check on unlock.
+[/LIST]
+
+[HR][/HR]
+
+[SIZE=5][B]Requirements[/B][/SIZE]
+
+[LIST=1]
+[*][B]Google Pixel 11 Pro / Pro XL[/B] running [B]Android 17 (API 37)[/B].
+[*][B]Developer options and Wireless debugging[/B] for setup. No root or Shizuku needed: HiLight Plus pairs once with the phone's own Wireless debugging to start a small shell-privileged daemon that reaches the lights service, then reconnects by itself, including after a reboot.
+[*][B]To keep working[/B], Developer options must stay on along with at least one of USB debugging or Wireless debugging. Wi-Fi is needed whenever the daemon has to start (setup, reboot, update), as Wireless debugging only runs on Wi-Fi.
+[*][B][URL='https://shizuku.rikka.app/']Shizuku[/URL][/B] (optional) is still supported, via Wireless Debugging or Root, for anyone who already uses it.
+[*][B]Stock "Calls from favourites" disabled[/B] in system settings to prevent hardware race conditions. Onboarding verifies this setup automatically.
+[/LIST]
+
+[HR][/HR]
+
+[SIZE=5][B]Downloads, Support & Pricing[/B][/SIZE]
+
+[LIST]
+[*][B]Google Play Store:[/B] [URL='https://play.google.com/store/apps/details?id=com.mwilky.hilight.plus']Download on Google Play[/URL]
+[I](Includes a full-featured 7-day trial, followed by a single one-time in-app purchase. No subscriptions.)[/I]
+[*][B]Community & Support:[/B] [URL='https://t.me/+XW1xL8tZE2w0ZDc0']Join the Telegram Group[/URL]
+[*][B]Source Code / Self-Build:[/B] The project is fully open source under the GPL-3.0 licence. You are welcome to compile the APK yourself using standard Gradle commands.
+[/LIST]
+
+[HR][/HR]
+
+
+[SIZE=2][B]XDA : DevDB Information
+HiLight Plus, App for the Google Pixel 11 Pro
+
+Contributors:[/B] mwilky
+[B]Community:[/B] [URL='https://t.me/+XW1xL8tZE2w0ZDc0']Telegram Group[/URL]
+[B]Source Code:[/B] [URL]https://github.com/mwilky/hilight-plus[/URL]
+[B]License:[/B] GNU General Public License v3.0 (GPL-3.0)
+
+[B]Version Information
+Status:[/B] Stable
+[B]Target OS:[/B] Android 17 (API 37)[/SIZE]
