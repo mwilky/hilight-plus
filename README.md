@@ -22,7 +22,7 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 **Notifications**
 - Rules per message sender and per app, plus a general default with automatic colour taken from the app icon.
 - Starred contacts can share a favourites style, which sits between a sender's own rule and the app rule.
-- Ten patterns: solid, breathe, pulse, wave, comet, orbit, beacon, ripple, sparkle and rainbow.
+- Thirteen patterns: solid, breathe, pulse, wave, comet, orbit, beacon, ripple, sparkle, rainbow, and copies of Gemini's own listening, thinking and replying effects.
 - Three ways to handle several notifications at once:
   - *Newest only* lights the latest for a chosen duration.
   - *Take turns* plays each waiting notification's pattern in turn until it is dismissed.

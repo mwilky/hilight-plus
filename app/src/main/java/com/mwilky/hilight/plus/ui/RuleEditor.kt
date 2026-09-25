@@ -89,6 +89,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -253,7 +254,7 @@ private fun RuleEditorContent(
     }
 
     val patterns = remember { PatternMode.entries.filter { it != PatternMode.OFF } }
-    val isColorEnabled = selectedPattern != PatternMode.RAINBOW
+    val isColorEnabled = !selectedPattern.hasFixedColors
     val canPickManualColor = isColorEnabled && (!showAutoColorToggle || !isAutoColor)
     val manualColorAlpha by animateFloatAsState(
         targetValue = if (canPickManualColor) 1.0f else 0.35f,
@@ -664,15 +665,18 @@ private fun PatternCard(
         modifier = Modifier.width(88.dp)
     ) {
         Column(
-            modifier = Modifier.padding(vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             PatternRing(pattern = pattern, color = color, elapsedMs = elapsedMs, renderer = renderer, size = 48.dp)
+            // Two lines for every card, so longer names wrap and all cards stay the same height.
             Text(
                 text = stringResource(pattern.titleRes),
                 style = MaterialTheme.typography.labelMedium,
-                maxLines = 1,
+                textAlign = TextAlign.Center,
+                minLines = 2,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
         }

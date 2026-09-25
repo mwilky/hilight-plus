@@ -178,6 +178,34 @@ class PatternRenderer {
                 }
             }
 
+            "gemini_listening", "gemini_thinking" -> {
+                // Stock Gemini comet: each LED fades through its own evenly spaced colour steps.
+                val steps = if (pattern.lowercase() == "gemini_listening") GEMINI_LISTENING_STEPS else GEMINI_THINKING_STEPS
+                val phase = (elapsedTimeMs % speed) / speed.toDouble() * (steps[0].size - 1)
+                val index = phase.toInt()
+                for (i in 0 until count) {
+                    val led = steps[i % steps.size]
+                    val c = lerpColor(led[index], led[index + 1], phase - index)
+                    frame[i] = scaleColor(c, clampedBrightness.toDouble())
+                }
+            }
+
+            "gemini_replying" -> {
+                val t = elapsedTimeMs % speed
+                for (i in 0 until count) {
+                    val (times, color) = GEMINI_REPLYING_KEYS[i % GEMINI_REPLYING_KEYS.size]
+                    // Every LED fades to black at the same moment; the shorter ones come back
+                    // early and hold their colour until the loop restarts.
+                    val k = when {
+                        t < times[0] -> 1.0 - t / times[0].toDouble()
+                        t < times[1] -> 0.0
+                        t < times[2] -> (t - times[1]) / (times[2] - times[1]).toDouble()
+                        else -> 1.0
+                    }
+                    frame[i] = if (k > 0.001) scaleColor(color, k * clampedBrightness) else 0x00000000
+                }
+            }
+
             else -> {
                 // Diagnostic: "led:N" lights only LED N, so the index order the lights service
                 // reports can be checked against where each LED physically sits on the ring.
@@ -413,6 +441,16 @@ class PatternRenderer {
         return (a shl 24) or (r shl 16) or (g shl 8) or b
     }
 
+    private fun lerpColor(from: Int, to: Int, fraction: Double): Int {
+        val f = fraction.coerceIn(0.0, 1.0)
+        fun channel(shift: Int): Int {
+            val a = (from ushr shift) and 0xFF
+            val b = (to ushr shift) and 0xFF
+            return (a + (b - a) * f).roundToInt().coerceIn(0, 255)
+        }
+        return (0xFF shl 24) or (channel(16) shl 16) or (channel(8) shl 8) or channel(0)
+    }
+
     private fun hsvToRgb(hue: Double, saturation: Float, value: Float): Int {
         val h = ((hue % 360.0) + 360.0) % 360.0
         val s = saturation.coerceIn(0f, 1f)
@@ -490,6 +528,41 @@ class PatternRenderer {
             }
             return layout
         }
+
+        // Stock Gemini ring effects, read back from the lights service while Gemini played them
+        // (ILightsManager.getLightSequence). One row per LED, top LED first; colour steps are
+        // evenly spaced over the loop and the last one matches the first so the loop is seamless.
+        private val GEMINI_LISTENING_STEPS = arrayOf(
+            intArrayOf(0x0099FF, 0x0000FF, 0x0000FF, 0x0000FF, 0x0099FF, 0xC7FCFF, 0xC7FCFF, 0x00FFFF, 0x0099FF),
+            intArrayOf(0x00FFFF, 0x00C8FF, 0x0000FF, 0x0000FF, 0x0000FF, 0x0099FF, 0xC7FCFF, 0xC7FCFF, 0x00FFFF),
+            intArrayOf(0xC7FCFF, 0x00FFFF, 0x0099FF, 0x0000FF, 0x0000FF, 0x0000FF, 0x0099FF, 0xC7FCFF, 0xC7FCFF),
+            intArrayOf(0xC8FCFF, 0xC7FCFF, 0x00FFFF, 0x0099FF, 0x0000FF, 0x0000FF, 0x0000FF, 0x0099FF, 0xC7FCFF),
+            intArrayOf(0x0099FF, 0xC7FCFF, 0xC7FCFF, 0x00FFFF, 0x0099FF, 0x0000FF, 0x0000FF, 0x0000FF, 0x0099FF),
+            intArrayOf(0x0000FF, 0x0099FF, 0xC7FCFF, 0xC7FCFF, 0x00FFFF, 0x0099FF, 0x0000FF, 0x0000FF, 0x0000FF),
+            intArrayOf(0x0000FF, 0x0000FF, 0x0099FF, 0xC7FCFF, 0xC7FCFF, 0x00FFFF, 0x0099FF, 0x0000FF, 0x0000FF),
+            intArrayOf(0x0000FF, 0x0000FF, 0x0000FF, 0x0099FF, 0xC7FCFF, 0xC7FCFF, 0x00FFFF, 0x0099FF, 0x0000FF)
+        )
+        private val GEMINI_THINKING_STEPS = arrayOf(
+            intArrayOf(0x0099FF, 0x0000FF, 0x0000FF, 0x0000FF, 0x0099FF, 0xC7FCFF, 0xC7FCFF, 0xC7FCFF, 0x0099FF),
+            intArrayOf(0x00FFFF, 0x0099FF, 0x0000FF, 0x0000FF, 0x0000FF, 0x0099FF, 0x00C7FF, 0xC7FCFF, 0xC7FCFF),
+            intArrayOf(0xC7FCFF, 0x00FFFF, 0x0099FF, 0x0000FF, 0x0000FF, 0x0000FF, 0x0099FF, 0x00C7FF, 0xC7FCFF),
+            intArrayOf(0xC7FCFF, 0xC7FCFF, 0x00FFFF, 0x0099FF, 0x0000FF, 0x0000FF, 0x0000FF, 0x0099FF, 0x00C7FF),
+            intArrayOf(0x0099FF, 0xC7FCFF, 0xC7FCFF, 0x00FFFF, 0x0099FF, 0x0000FF, 0x0000FF, 0x0000FF, 0x0099FF),
+            intArrayOf(0x0000FF, 0x0099FF, 0xC7FCFF, 0xC7FCFF, 0x00FFFF, 0x0099FF, 0x0000FF, 0x0000FF, 0x0000FF),
+            intArrayOf(0x0000FF, 0x0000FF, 0x0099FF, 0xC7FCFF, 0xC7FCFF, 0x00FFFF, 0x0099FF, 0x0000FF, 0x0000FF),
+            intArrayOf(0x0000FF, 0x0000FF, 0x0000F4, 0x3399FF, 0xC7FCFF, 0xC7FCFF, 0xC7FCFF, 0x0099FF, 0x0000FF)
+        )
+        // Per LED: (end of fade out, end of dark hold, back at full colour) in ms, and the colour.
+        private val GEMINI_REPLYING_KEYS = arrayOf(
+            longArrayOf(500, 1000, 1300) to 0xFFFF00,
+            longArrayOf(500, 1000, 1300) to 0xFF4600,
+            longArrayOf(500, 750, 1133) to 0x9600FF,
+            longArrayOf(500, 500, 966) to 0x0000FF,
+            longArrayOf(500, 500, 966) to 0x0000FF,
+            longArrayOf(500, 500, 966) to 0x0000FF,
+            longArrayOf(500, 750, 1133) to 0x0000FF,
+            longArrayOf(500, 1000, 1300) to 0x00FF00
+        )
 
         private const val BATTERY_BREATHE_MS = 2200L
         private const val BATTERY_HEARTBEAT_MS = 1800L

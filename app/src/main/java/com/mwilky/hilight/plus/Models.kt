@@ -13,7 +13,14 @@ enum class PatternMode(val id: String, val titleRes: Int) {
     BEACON("beacon", R.string.pattern_beacon),
     RIPPLE("ripple", R.string.pattern_ripple),
     SPARKLE("sparkle", R.string.pattern_sparkle),
-    RAINBOW("rainbow", R.string.pattern_rainbow);
+    RAINBOW("rainbow", R.string.pattern_rainbow),
+    GEMINI_LISTENING("gemini_listening", R.string.pattern_gemini_listening),
+    GEMINI_THINKING("gemini_thinking", R.string.pattern_gemini_thinking),
+    GEMINI_REPLYING("gemini_replying", R.string.pattern_gemini_replying);
+
+    /** Patterns that draw their own fixed colours, so a rule's colour has no effect on them. */
+    val hasFixedColors: Boolean
+        get() = this == RAINBOW || this == GEMINI_LISTENING || this == GEMINI_THINKING || this == GEMINI_REPLYING
 
     fun speedMs(fallback: Long = 1000L): Long = when (this) {
         BREATHE -> 2000L
@@ -25,6 +32,9 @@ enum class PatternMode(val id: String, val titleRes: Int) {
         SPARKLE -> 1400L
         RAINBOW -> 1200L
         PULSE -> 850L
+        GEMINI_LISTENING -> 3200L
+        GEMINI_THINKING -> 800L
+        GEMINI_REPLYING -> 1300L
         else -> fallback
     }
 }

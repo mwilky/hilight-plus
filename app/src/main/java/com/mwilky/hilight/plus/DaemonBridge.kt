@@ -123,7 +123,7 @@ class DaemonBridge private constructor(private val app: Application) {
         .daemon(false)
         .processNameSuffix(HiLightDaemonService.PROCESS_SUFFIX)
         .debuggable(BuildConfig.DEBUG)
-        .version(16)
+        .version(17)
 
     // Receives the daemon's log lines so they land in the same shareable log as the app's.
     private val logSink = object : ILogSink.Stub() {

@@ -303,6 +303,9 @@
     <string name="pattern_ripple">Ripple</string>
     <string name="pattern_sparkle">Sparkle</string>
     <string name="pattern_rainbow">Rainbow</string>
+    <string name="pattern_gemini_listening">Gemini listening</string>
+    <string name="pattern_gemini_thinking">Gemini thinking</string>
+    <string name="pattern_gemini_replying">Gemini replying</string>
     <string name="battery_pattern_gauge">Gauge</string>
     <string name="battery_pattern_charge_fill">Charge fill</string>
     <string name="battery_pattern_gradient_ring">Gradient ring</string>
