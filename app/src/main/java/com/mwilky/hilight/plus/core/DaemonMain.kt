@@ -122,6 +122,9 @@ object DaemonMain {
             val extras = Bundle().apply {
                 putBinder(DaemonBinderContract.EXTRA_BINDER, service)
                 putInt(DaemonBinderContract.EXTRA_VERSION, BuildConfig.VERSION_CODE)
+                // Set from CLASSPATH at launch. Every install gets a new path, so this also tells
+                // apart two builds that share a version code.
+                putString(DaemonBinderContract.EXTRA_APK_PATH, System.getProperty("java.class.path"))
             }
             val attribution = AttributionSource.Builder(Process.myUid())
                 .setPackageName(SHELL_PACKAGE)
@@ -151,5 +154,6 @@ object DaemonBinderContract {
     const val METHOD_ATTACH = "attach"
     const val EXTRA_BINDER = "binder"
     const val EXTRA_VERSION = "version"
+    const val EXTRA_APK_PATH = "apk_path"
     const val EXTRA_CLIENT_TOKEN = "client"
 }

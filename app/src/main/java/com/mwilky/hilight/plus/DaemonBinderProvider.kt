@@ -29,11 +29,12 @@ class DaemonBinderProvider : ContentProvider() {
         if (method != DaemonBinderContract.METHOD_ATTACH || extras == null) return null
         val binder = extras.getBinder(DaemonBinderContract.EXTRA_BINDER)
         val version = extras.getInt(DaemonBinderContract.EXTRA_VERSION)
+        val apkPath = extras.getString(DaemonBinderContract.EXTRA_APK_PATH)
         val context = context ?: return null
         // Through the controller (built on the main thread) so everything that reacts to a
         // connection is already listening.
         Handler(Looper.getMainLooper()).post {
-            LightController.get(context).daemon.onBuiltInBinder(binder, version)
+            LightController.get(context).daemon.onBuiltInBinder(binder, version, apkPath)
         }
         return Bundle().apply { putBinder(DaemonBinderContract.EXTRA_CLIENT_TOKEN, clientToken) }
     }

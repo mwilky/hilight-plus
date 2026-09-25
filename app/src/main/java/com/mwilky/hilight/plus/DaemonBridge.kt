@@ -463,7 +463,7 @@ class DaemonBridge private constructor(private val app: Application) {
      * Called (on a binder thread) by the provider when a built-in daemon hands over its binder:
      * right after it starts, and again whenever this app process was restarted.
      */
-    fun onBuiltInBinder(binder: IBinder?, version: Int) {
+    fun onBuiltInBinder(binder: IBinder?, version: Int, apkPath: String?) {
         scope.launch {
             if (manuallyDisconnected) {
                 // Paused: this daemon was supposed to be gone.
@@ -477,9 +477,11 @@ class DaemonBridge private constructor(private val app: Application) {
             if (!attach(binder, Method.BUILT_IN)) return@launch
             wireless.markRanThisBoot()
             binder?.linkToDeath({ scope.launch { onBuiltInDied(binder) } }, 0)
-            if (version != BuildConfig.VERSION_CODE) {
-                // From before an app update: keep using it until a fresh one replaces it.
-                DebugLog.i("HiLightPlus", "Daemon is from version $version; starting a current one")
+            // A daemon from before this build reports no path; its version code alone decides.
+            val otherInstall = apkPath != null && apkPath != app.applicationInfo.sourceDir
+            if (version != BuildConfig.VERSION_CODE || otherInstall) {
+                // From before an app update or reinstall: keep using it until a fresh one replaces it.
+                DebugLog.i("HiLightPlus", "Daemon is from version $version at $apkPath; starting a current one")
                 builtInJob?.cancel()
                 awaitRunningDaemon = false
                 replaceStaleDaemon()
