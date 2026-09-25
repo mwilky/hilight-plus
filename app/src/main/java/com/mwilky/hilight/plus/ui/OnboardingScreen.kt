@@ -15,10 +15,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
-import androidx.compose.material.icons.rounded.AdminPanelSettings
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.PhoneInTalk
 import androidx.compose.material.icons.rounded.ScreenRotation
@@ -27,6 +27,7 @@ import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,12 +55,12 @@ import com.mwilky.hilight.plus.LightController
 import com.mwilky.hilight.plus.Licensing
 import com.mwilky.hilight.plus.NativeHiLightDetector
 import com.mwilky.hilight.plus.R
-import com.mwilky.hilight.plus.ShizukuBridge
+import com.mwilky.hilight.plus.DaemonBridge
 import com.mwilky.hilight.plus.StockHiLightState
+import com.mwilky.hilight.plus.adb.SetupState
 import com.mwilky.hilight.plus.ui.diagnostics.CallPermissionsCard
 import com.mwilky.hilight.plus.ui.diagnostics.NotificationAccessCard
 import com.mwilky.hilight.plus.ui.diagnostics.PermissionState
-import com.mwilky.hilight.plus.ui.diagnostics.ShizukuStatusCard
 import com.mwilky.hilight.plus.ui.diagnostics.StockConflictCard
 import com.mwilky.hilight.plus.ui.diagnostics.rememberCallPermissionLauncher
 import com.mwilky.hilight.plus.ui.diagnostics.rememberPermissionState
@@ -67,7 +68,7 @@ import kotlinx.coroutines.delay
 
 enum class OnboardingStep {
     WELCOME,
-    SHIZUKU,
+    CONNECT,
     STOCK_CONFLICT,
     PERMISSIONS,
     TRIAL
@@ -76,7 +77,7 @@ enum class OnboardingStep {
 /**
  * Per-step look: hero shape, hero icon and which dynamic colour role tints the step.
  */
-private class StepStyle(
+internal class StepStyle(
     val shape: RoundedPolygon,
     val icon: ImageVector,
     val container: Color,
@@ -86,15 +87,15 @@ private class StepStyle(
 )
 
 @Composable
-private fun stepStyle(step: OnboardingStep): StepStyle {
+internal fun stepStyle(step: OnboardingStep): StepStyle {
     val c = MaterialTheme.colorScheme
     return when (step) {
         OnboardingStep.WELCOME -> StepStyle(
             MaterialShapes.Cookie9Sided, Icons.Rounded.Lightbulb,
             c.primaryContainer, c.onPrimaryContainer, c.primary, c.onPrimary
         )
-        OnboardingStep.SHIZUKU -> StepStyle(
-            MaterialShapes.Clover4Leaf, Icons.Rounded.AdminPanelSettings,
+        OnboardingStep.CONNECT -> StepStyle(
+            MaterialShapes.Clover4Leaf, Icons.Rounded.Link,
             c.secondaryContainer, c.onSecondaryContainer, c.secondary, c.onSecondary
         )
         OnboardingStep.STOCK_CONFLICT -> StepStyle(
@@ -118,11 +119,11 @@ fun OnboardingScreen(
     onComplete: () -> Unit
 ) {
     val context = LocalContext.current
-    var currentStep by remember { mutableStateOf(OnboardingStep.WELCOME) }
-    var showShizukuSkipDialog by remember { mutableStateOf(false) }
+    var currentStep by rememberSaveable { mutableStateOf(OnboardingStep.WELCOME) }
+    var showConnectSkipDialog by remember { mutableStateOf(false) }
 
     val stockState by NativeHiLightDetector.state.collectAsStateWithLifecycle()
-    val shizukuState by controller.shizuku.state.collectAsStateWithLifecycle()
+    val connectionState by controller.daemon.state.collectAsStateWithLifecycle()
     val licenseStatus by controller.licensing.status.collectAsStateWithLifecycle()
     val activity = LocalActivity.current
 
@@ -151,8 +152,8 @@ fun OnboardingScreen(
     }
     val isNextEnabled = when (currentStep) {
         OnboardingStep.WELCOME -> true
-        // Reviewers and first-time users can go on without Shizuku; onNext confirms first.
-        OnboardingStep.SHIZUKU -> true
+        // Reviewers and first-time users can go on without connecting; onNext confirms first.
+        OnboardingStep.CONNECT -> true
         OnboardingStep.STOCK_CONFLICT -> !stockState.favoriteCallsActive
         OnboardingStep.PERMISSIONS -> permissionState.hasContactsPermission && permissionState.isNotifAccessGranted
         OnboardingStep.TRIAL -> true
@@ -168,8 +169,8 @@ fun OnboardingScreen(
         onNext = {
             when {
                 currentStep == OnboardingStep.TRIAL -> onComplete()
-                currentStep == OnboardingStep.SHIZUKU && shizukuState != ShizukuBridge.State.CONNECTED ->
-                    showShizukuSkipDialog = true
+                currentStep == OnboardingStep.CONNECT && connectionState != DaemonBridge.State.CONNECTED ->
+                    showConnectSkipDialog = true
                 else -> advance()
             }
         }
@@ -180,15 +181,7 @@ fun OnboardingScreen(
                 stockState = stockState,
                 onOpenSettings = { NativeHiLightDetector.openHiLightSettings(context) }
             )
-            OnboardingStep.SHIZUKU -> ShizukuStepContent(
-                shizukuState = shizukuState,
-                errorText = controller.shizuku.errorText(),
-                onRequestPermission = { controller.shizuku.requestPermission() },
-                onConnect = { controller.shizuku.connectManually() },
-                onDisconnect = { controller.shizuku.unbind() },
-                onOpenShizuku = { controller.shizuku.openShizukuApp(context) },
-                onRestartApp = { controller.shizuku.restartApp(context) }
-            )
+            OnboardingStep.CONNECT -> ConnectStep(controller = controller, allowShizuku = true)
             OnboardingStep.PERMISSIONS -> PermissionsStepContent(
                 permissionState = permissionState,
                 onRequestCallPerms = requestCallPermissions,
@@ -202,23 +195,23 @@ fun OnboardingScreen(
         }
     }
 
-    if (showShizukuSkipDialog) {
+    if (showConnectSkipDialog) {
         AlertDialog(
-            onDismissRequest = { showShizukuSkipDialog = false },
+            onDismissRequest = { showConnectSkipDialog = false },
             icon = { Icon(Icons.Rounded.Warning, contentDescription = null) },
-            title = { Text(stringResource(R.string.onboarding_shizuku_skip_title)) },
-            text = { Text(stringResource(R.string.onboarding_shizuku_skip_desc)) },
+            title = { Text(stringResource(R.string.onboarding_connect_skip_title)) },
+            text = { Text(stringResource(R.string.onboarding_connect_skip_desc)) },
             confirmButton = {
                 TextButton(onClick = {
-                    showShizukuSkipDialog = false
+                    showConnectSkipDialog = false
                     advance()
                 }) {
-                    Text(stringResource(R.string.onboarding_shizuku_skip_confirm))
+                    Text(stringResource(R.string.onboarding_connect_skip_confirm))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showShizukuSkipDialog = false }) {
-                    Text(stringResource(R.string.onboarding_shizuku_skip_cancel))
+                TextButton(onClick = { showConnectSkipDialog = false }) {
+                    Text(stringResource(R.string.onboarding_connect_skip_cancel))
                 }
             }
         )
@@ -287,7 +280,7 @@ private fun OnboardingScaffold(
  * Large expressive shape that morphs from the previous step's shape into the current one.
  */
 @Composable
-private fun StepHero(
+internal fun StepHero(
     step: OnboardingStep,
     style: StepStyle,
     modifier: Modifier = Modifier
@@ -443,7 +436,7 @@ private fun OnboardingBottomBar(
  * Fades and lifts a child into place, delayed by its [index] so siblings arrive one after another.
  */
 @Composable
-private fun Modifier.staggeredEntrance(index: Int): Modifier {
+internal fun Modifier.staggeredEntrance(index: Int): Modifier {
     val progress = remember { Animatable(0f) }
     val spec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     LaunchedEffect(Unit) {
@@ -461,7 +454,7 @@ private fun Modifier.staggeredEntrance(index: Int): Modifier {
  * Scrolling step body. Children are wrapped so each one enters with a stagger.
  */
 @Composable
-private fun StepColumn(
+internal fun StepColumn(
     title: String,
     vararg items: @Composable () -> Unit
 ) {
@@ -486,7 +479,7 @@ private fun StepColumn(
 }
 
 @Composable
-private fun StepBody(text: String) {
+internal fun StepBody(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.bodyLarge,
@@ -514,33 +507,6 @@ private fun StockConflictStepContent(
         { StepBody(stringResource(R.string.onboarding_stock_desc1)) },
         { StepBody(stringResource(R.string.onboarding_stock_desc2)) },
         { StockConflictCard(stockState = stockState, onOpenSettings = onOpenSettings) }
-    )
-}
-
-@Composable
-private fun ShizukuStepContent(
-    shizukuState: ShizukuBridge.State,
-    errorText: String?,
-    onRequestPermission: () -> Unit,
-    onConnect: () -> Unit,
-    onDisconnect: () -> Unit,
-    onOpenShizuku: () -> Unit,
-    onRestartApp: () -> Unit
-) {
-    StepColumn(
-        stringResource(R.string.onboarding_shizuku_title),
-        { StepBody(stringResource(R.string.onboarding_shizuku_desc)) },
-        {
-            ShizukuStatusCard(
-                shizukuState = shizukuState,
-                shizukuError = errorText,
-                onDisconnect = onDisconnect,
-                onConnect = onConnect,
-                onRequestPermission = onRequestPermission,
-                onOpenShizukuApp = onOpenShizuku,
-                onRestartApp = onRestartApp
-            )
-        }
     )
 }
 
@@ -656,18 +622,23 @@ fun OnboardingStep1Preview() {
     OnboardingStepPreview(OnboardingStep.WELCOME) { WelcomeStepContent() }
 }
 
-@Preview(name = "Step 2 - Shizuku Access", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "Step 2 - Connect", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 fun OnboardingStep2Preview() {
-    OnboardingStepPreview(OnboardingStep.SHIZUKU) {
-        ShizukuStepContent(
-            shizukuState = ShizukuBridge.State.NEEDS_PERMISSION,
-            errorText = null,
-            onRequestPermission = {},
-            onConnect = {},
-            onDisconnect = {},
-            onOpenShizuku = {},
-            onRestartApp = {}
+    OnboardingStepPreview(OnboardingStep.CONNECT) {
+        ConnectStepContent(
+            setup = SetupState(devOptionsOn = true, wifiConnected = true),
+            connectionState = DaemonBridge.State.NEEDS_SETUP,
+            connectionMethod = DaemonBridge.Method.BUILT_IN,
+            connectionError = null,
+            notificationsAllowed = true,
+            allowShizuku = true,
+            showShizuku = false,
+            onToggleShizuku = {},
+            onOpenStep = {},
+            onSubmitCode = {},
+            onRetry = {},
+            shizukuActions = ShizukuActions()
         )
     }
 }

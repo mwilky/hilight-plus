@@ -67,6 +67,12 @@ dependencies {
     implementation(libs.api)
     implementation(libs.provider)
     implementation(libs.billing.ktx)
+    // Pairs with and connects to the phone's own Wireless debugging, to start the daemon without
+    // Shizuku. Conscrypt supplies the TLS 1.3 key export the pairing protocol needs.
+    implementation(libs.libadb.android)
+    implementation(libs.conscrypt.android)
+    // Already pulled in by libadb at runtime; declared to build the pairing certificate.
+    implementation(libs.bcprov)
     // Play Billing pulls in androidx.fragment 1.1.0 via play-services-base; force a current release.
     implementation(libs.androidx.fragment)
     testImplementation(libs.junit)

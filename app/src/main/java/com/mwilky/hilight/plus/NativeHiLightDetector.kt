@@ -82,11 +82,11 @@ object NativeHiLightDetector {
 
     private fun readFavoriteCalls(app: Context): StockHiLightState {
         if (app is Application) {
-            val bridge = ShizukuBridge.get(app)
+            val bridge = DaemonBridge.get(app)
             if (bridge.isConnected()) {
-                val shizukuVal = bridge.getSecureString(KEY_FAVORITE_CALLS)
-                val parsed = parseFavoriteCallsSetting(shizukuVal)
-                DebugLog.i(TAG, "Shizuku privileged read: '$KEY_FAVORITE_CALLS'='$shizukuVal' => $parsed")
+                val value = bridge.getSecureString(KEY_FAVORITE_CALLS)
+                val parsed = parseFavoriteCallsSetting(value)
+                DebugLog.i(TAG, "Privileged read: '$KEY_FAVORITE_CALLS'='$value' => $parsed")
                 return parsed
             }
         }

@@ -72,9 +72,9 @@ import com.mwilky.hilight.plus.FaceDownMode
 import com.mwilky.hilight.plus.LowBatteryPattern
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.R
-import com.mwilky.hilight.plus.ShizukuBridge
+import com.mwilky.hilight.plus.DaemonBridge
 import com.mwilky.hilight.plus.core.PatternRenderer
-import com.mwilky.hilight.plus.ui.diagnostics.ShizukuStatusCard
+import com.mwilky.hilight.plus.ui.diagnostics.ConnectionStatusCard
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlin.math.roundToInt
@@ -89,13 +89,15 @@ import kotlin.math.roundToInt
  */
 @Composable
 fun HomeBatteryPage(
-    shizukuState: ShizukuBridge.State,
-    shizukuError: String?,
-    onDisconnectShizuku: () -> Unit,
-    onConnectShizuku: () -> Unit,
+    connectionState: DaemonBridge.State,
+    connectionMethod: DaemonBridge.Method,
+    connectionError: String?,
+    onPauseConnection: () -> Unit,
+    onResumeConnection: () -> Unit,
     onRequestShizukuPermission: () -> Unit,
     onOpenShizukuApp: () -> Unit,
     onRestartApp: () -> Unit,
+    onSetUpConnection: () -> Unit,
     battery: BatterySettings,
     globalQuietStartMinutes: Int,
     globalQuietEndMinutes: Int,
@@ -115,15 +117,17 @@ fun HomeBatteryPage(
             .padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        if (shizukuState != ShizukuBridge.State.CONNECTED) {
-            ShizukuStatusCard(
-                shizukuState = shizukuState,
-                shizukuError = shizukuError,
-                onDisconnect = onDisconnectShizuku,
-                onConnect = onConnectShizuku,
+        if (connectionState != DaemonBridge.State.CONNECTED) {
+            ConnectionStatusCard(
+                connectionState = connectionState,
+                connectionMethod = connectionMethod,
+                connectionError = connectionError,
+                onDisconnect = onPauseConnection,
+                onConnect = onResumeConnection,
                 onRequestPermission = onRequestShizukuPermission,
                 onOpenShizukuApp = onOpenShizukuApp,
-                onRestartApp = onRestartApp
+                onRestartApp = onRestartApp,
+                onSetUp = onSetUpConnection
             )
         }
 

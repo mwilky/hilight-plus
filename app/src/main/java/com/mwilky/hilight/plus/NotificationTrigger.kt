@@ -51,7 +51,7 @@ class NotificationTrigger : NotificationListenerService() {
             }
         }
         scope.launch {
-            LightController.get(applicationContext).shizuku.connections.collect {
+            LightController.get(applicationContext).daemon.connections.collect {
                 enqueue(ListenerEvent.DaemonConnected)
                 IncomingCallProcessor.submitDaemonConnected(applicationContext)
             }

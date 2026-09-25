@@ -16,9 +16,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.*
@@ -41,13 +43,13 @@ import com.mwilky.hilight.plus.DebugReport
 import com.mwilky.hilight.plus.LightController
 import com.mwilky.hilight.plus.NativeHiLightDetector
 import com.mwilky.hilight.plus.R
-import com.mwilky.hilight.plus.ShizukuBridge
+import com.mwilky.hilight.plus.DaemonBridge
 import com.mwilky.hilight.plus.StockHiLightState
 import com.mwilky.hilight.plus.ui.diagnostics.ButtonLabel
 import com.mwilky.hilight.plus.ui.diagnostics.CallPermissionsCard
 import com.mwilky.hilight.plus.ui.diagnostics.NotificationAccessCard
 import com.mwilky.hilight.plus.ui.diagnostics.PermissionState
-import com.mwilky.hilight.plus.ui.diagnostics.ShizukuStatusCard
+import com.mwilky.hilight.plus.ui.diagnostics.ConnectionStatusCard
 import com.mwilky.hilight.plus.ui.diagnostics.StockConflictCard
 import com.mwilky.hilight.plus.ui.diagnostics.rememberCallPermissionLauncher
 import com.mwilky.hilight.plus.ui.diagnostics.rememberPermissionState
@@ -57,13 +59,14 @@ import kotlinx.coroutines.launch
 
 /**
  * About & Diagnostics Screen:
- * Displays App Version, System Health diagnostics (Shizuku, stock conflict resolver & permissions inspector).
+ * Displays App Version, System Health diagnostics (ring connection, stock conflict resolver & permissions inspector).
  */
 @Composable
-fun AboutScreen(controller: LightController) {
+fun AboutScreen(controller: LightController, onSetUpConnection: () -> Unit) {
     val context = LocalContext.current
     val stockState by NativeHiLightDetector.state.collectAsStateWithLifecycle()
-    val shizukuState by controller.shizuku.state.collectAsStateWithLifecycle()
+    val connectionState by controller.daemon.state.collectAsStateWithLifecycle()
+    val connectionMethod by controller.daemon.method.collectAsStateWithLifecycle()
 
     val permissionState = rememberPermissionState()
     val requestCallPermissions = rememberCallPermissionLauncher(permissionState)
@@ -118,13 +121,15 @@ fun AboutScreen(controller: LightController) {
                 walkingLed = 0
             }
         },
-        shizukuState = shizukuState,
-        shizukuError = controller.shizuku.errorText(),
-        onDisconnectShizuku = { controller.shizuku.unbind() },
-        onConnectShizuku = { controller.shizuku.connectManually() },
-        onRequestShizukuPermission = { controller.shizuku.requestPermission() },
-        onOpenShizukuApp = { controller.shizuku.openShizukuApp(context) },
-        onRestartApp = { controller.shizuku.restartApp(context) },
+        connectionState = connectionState,
+        connectionMethod = connectionMethod,
+        connectionError = controller.daemon.errorText(),
+        onPauseConnection = { controller.daemon.unbind() },
+        onResumeConnection = { controller.daemon.connectManually() },
+        onRequestShizukuPermission = { controller.daemon.requestPermission() },
+        onOpenShizukuApp = { controller.daemon.openShizukuApp(context) },
+        onRestartApp = { controller.daemon.restartApp(context) },
+        onSetUpConnection = onSetUpConnection,
         stockState = stockState,
         permissionState = permissionState,
         onOpenSettings = { NativeHiLightDetector.openHiLightSettings(context) },
@@ -150,7 +155,7 @@ fun AboutScreen(controller: LightController) {
         },
         onClearLog = { controller.debugLog.clear() },
         onResetLights = {
-            scope.launch { controller.shizuku.resetDaemon() }
+            scope.launch { controller.daemon.resetDaemon() }
             Toast.makeText(context, R.string.about_debug_log_reset_started, Toast.LENGTH_SHORT).show()
         }
     )
@@ -185,14 +190,16 @@ private const val LED_WALK_ROUNDS = 2
 
 @Composable
 fun AboutContent(
-    shizukuState: ShizukuBridge.State,
+    connectionState: DaemonBridge.State,
+    connectionMethod: DaemonBridge.Method,
     onTitleCardTap: () -> Unit = {},
-    shizukuError: String?,
-    onDisconnectShizuku: () -> Unit,
-    onConnectShizuku: () -> Unit,
+    connectionError: String?,
+    onPauseConnection: () -> Unit,
+    onResumeConnection: () -> Unit,
     onRequestShizukuPermission: () -> Unit,
     onOpenShizukuApp: () -> Unit,
     onRestartApp: () -> Unit,
+    onSetUpConnection: () -> Unit,
     stockState: StockHiLightState,
     permissionState: PermissionState,
     onOpenSettings: () -> Unit,
@@ -268,15 +275,49 @@ fun AboutContent(
 
             RuleGroupHeader(stringResource(R.string.about_status_section_header))
 
-            ShizukuStatusCard(
-                shizukuState = shizukuState,
-                shizukuError = shizukuError,
-                onDisconnect = onDisconnectShizuku,
-                onConnect = onConnectShizuku,
+            ConnectionStatusCard(
+                connectionState = connectionState,
+                connectionMethod = connectionMethod,
+                connectionError = connectionError,
+                onDisconnect = onPauseConnection,
+                onConnect = onResumeConnection,
                 onRequestPermission = onRequestShizukuPermission,
                 onOpenShizukuApp = onOpenShizukuApp,
-                onRestartApp = onRestartApp
+                onRestartApp = onRestartApp,
+                onSetUp = onSetUpConnection
             )
+
+            if (connectionMethod == DaemonBridge.Method.SHIZUKU) {
+                ListItem(
+                    modifier = Modifier
+                        .clip(MaterialTheme.shapes.extraLarge)
+                        .clickable(onClick = onSetUpConnection),
+                    leadingContent = {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(MaterialShapes.Cookie9Sided.toShape())
+                                .background(MaterialTheme.colorScheme.secondaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Rounded.Link,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    },
+                    supportingContent = { Text(stringResource(R.string.about_switch_builtin_desc)) },
+                    trailingContent = {
+                        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null)
+                    },
+                    verticalAlignment = Alignment.CenterVertically,
+                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                    shapes = ListItemDefaults.shapes(shape = MaterialTheme.shapes.extraLarge)
+                ) {
+                    Text(stringResource(R.string.about_switch_builtin_title))
+                }
+            }
 
             StockConflictCard(
                 stockState = stockState,
@@ -299,7 +340,7 @@ fun AboutContent(
             DebugLogCard(
                 lines = logLines,
                 isSharing = isSharingLog,
-                canResetLights = shizukuState == ShizukuBridge.State.CONNECTED,
+                canResetLights = connectionState == DaemonBridge.State.CONNECTED,
                 onShare = onShareLog,
                 onClear = onClearLog,
                 onResetLights = onResetLights
@@ -461,13 +502,15 @@ private fun DebugLogEntry(text: String) {
 fun AboutScreenPreview() {
     HiLightPlusTheme {
         AboutContent(
-            shizukuState = ShizukuBridge.State.CONNECTED,
-            shizukuError = null,
-            onDisconnectShizuku = {},
-            onConnectShizuku = {},
+            connectionState = DaemonBridge.State.CONNECTED,
+            connectionMethod = DaemonBridge.Method.SHIZUKU,
+            connectionError = null,
+            onPauseConnection = {},
+            onResumeConnection = {},
             onRequestShizukuPermission = {},
             onOpenShizukuApp = {},
             onRestartApp = {},
+            onSetUpConnection = {},
             stockState = StockHiLightState(favoriteCallsActive = false, known = true),
             permissionState = PermissionState(
                 context = LocalContext.current,

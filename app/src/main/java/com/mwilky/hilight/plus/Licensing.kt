@@ -33,12 +33,12 @@ import kotlinx.coroutines.withContext
  * The trial clock starts the first time the daemon connects, because the app can't do anything
  * before then. Its start time lives in Settings.Global (written by the shell-UID daemon), so it
  * survives clearing app data and reinstalling; [AppStore] only holds a local copy so the UI can
- * render before Shizuku is up. The purchase is a single non-consumable Play product.
+ * render before the daemon is up. The purchase is a single non-consumable Play product.
  */
 class Licensing(
     app: Application,
     private val store: AppStore,
-    private val shizuku: ShizukuBridge
+    private val daemon: DaemonBridge
 ) {
 
     data class Status(
@@ -95,8 +95,8 @@ class Licensing(
 
     init {
         scope.launch {
-            shizuku.state.collect { state ->
-                if (state == ShizukuBridge.State.CONNECTED) syncTrialStart()
+            daemon.state.collect { state ->
+                if (state == DaemonBridge.State.CONNECTED) syncTrialStart()
             }
         }
         billing.startConnection(object : BillingClientStateListener {
@@ -120,13 +120,13 @@ class Licensing(
      * (or from the local copy, if the daemon was somehow never able to record it before).
      */
     private suspend fun syncTrialStart() {
-        val remote = withContext(Dispatchers.IO) { shizuku.getGlobalString(GLOBAL_TRIAL_START) }?.toLongOrNull()
+        val remote = withContext(Dispatchers.IO) { daemon.getGlobalString(GLOBAL_TRIAL_START) }?.toLongOrNull()
         if (remote != null) {
             store.setTrialStartMillis(remote)
             return
         }
         val start = store.trialStartMillis.first() ?: System.currentTimeMillis()
-        val written = withContext(Dispatchers.IO) { shizuku.putGlobalString(GLOBAL_TRIAL_START, start.toString()) }
+        val written = withContext(Dispatchers.IO) { daemon.putGlobalString(GLOBAL_TRIAL_START, start.toString()) }
         if (!written) DebugLog.w(TAG, "Couldn't record trial start in Settings.Global")
         store.setTrialStartMillis(start)
     }

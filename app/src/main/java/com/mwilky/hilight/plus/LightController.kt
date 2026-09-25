@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Coordinates persistent preferences ([AppStore]) and privileged hardware lighting execution ([ShizukuBridge]).
+ * Coordinates persistent preferences ([AppStore]) and privileged hardware lighting execution ([DaemonBridge]).
  */
 class LightController private constructor(private val app: Application) {
 
@@ -34,8 +34,8 @@ class LightController private constructor(private val app: Application) {
         DebugLog.i(TAG, "App process started (${BuildConfig.VERSION_NAME}, pid ${Process.myPid()})")
     }
     val store = AppStore.get(app)
-    val shizuku = ShizukuBridge.get(app)
-    val licensing = Licensing(app, store, shizuku)
+    val daemon = DaemonBridge.get(app)
+    val licensing = Licensing(app, store, daemon)
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     @Volatile
@@ -121,49 +121,49 @@ class LightController private constructor(private val app: Application) {
         )?.let { batteryReceiver.onReceive(app, it) }
 
         DeviceOrientationDetector.onOrientationChanged = { faceDown ->
-            shizuku.setDeviceFaceDown(faceDown)
+            daemon.setDeviceFaceDown(faceDown)
         }
 
-        shizuku.onAvailabilityChanged = {
-            shizuku.setDeviceFaceDown(DeviceOrientationDetector.lastKnownFaceDown)
-            shizuku.setDndActive(lastDndActive)
+        daemon.onAvailabilityChanged = {
+            daemon.setDeviceFaceDown(DeviceOrientationDetector.lastKnownFaceDown)
+            daemon.setDndActive(lastDndActive)
             NativeHiLightDetector.check(app)
             syncState()
             scope.launch { pushLiveConditions() }
         }
 
         scope.launch {
-            shizuku.state.collect { NativeHiLightDetector.check(app) }
+            daemon.state.collect { NativeHiLightDetector.check(app) }
         }
         scope.launch {
             store.isEnabled.collect { syncState() }
         }
         scope.launch {
-            licensing.isEntitled.collect { shizuku.setEntitled(it) }
+            licensing.isEntitled.collect { daemon.setEntitled(it) }
         }
         scope.launch {
             store.isNotificationsEnabled.collect { enabled ->
-                if (!enabled) shizuku.clearAlert()
+                if (!enabled) daemon.clearAlert()
             }
         }
         scope.launch {
             store.isCallLightsEnabled.collect { enabled ->
-                if (!enabled) shizuku.stopIncomingCall()
+                if (!enabled) daemon.stopIncomingCall()
             }
         }
         scope.launch {
             store.suppressDuringDnd.collect { enabled ->
-                shizuku.setDndSuppressEnabled(enabled)
+                daemon.setDndSuppressEnabled(enabled)
             }
         }
         scope.launch {
             store.multiAlertMode.collect { mode ->
-                shizuku.setSplitRing(mode == MultiAlertMode.SPLIT)
+                daemon.setSplitRing(mode == MultiAlertMode.SPLIT)
             }
         }
         scope.launch {
             store.splitAnimation.collect { animation ->
-                shizuku.setSplitAnimation(animation)
+                daemon.setSplitAnimation(animation)
             }
         }
         scope.launch {
@@ -173,7 +173,7 @@ class LightController private constructor(private val app: Application) {
                 store.quietHoursEndMinutes
             ) { enabled, start, end -> Triple(enabled, start, end) }
                 .collect { (enabled, start, end) ->
-                    shizuku.setQuietHours(enabled, start, end)
+                    daemon.setQuietHours(enabled, start, end)
                 }
         }
         scope.launch {
@@ -192,7 +192,7 @@ class LightController private constructor(private val app: Application) {
             while (isActive) {
                 delay(BATTERY_HEARTBEAT_MS)
                 if (batteryLayerCouldRender()) {
-                    shizuku.setBatteryState(lastBatteryLevel, lastBatteryCharging, lastBatteryFull)
+                    daemon.setBatteryState(lastBatteryLevel, lastBatteryCharging, lastBatteryFull)
                 }
             }
         }
@@ -204,7 +204,7 @@ class LightController private constructor(private val app: Application) {
      * system feature legitimately using the ring) can't restart it on every unlock.
      */
     private suspend fun healStuckRing() {
-        if (!withContext(Dispatchers.IO) { shizuku.isRingStuck() }) {
+        if (!withContext(Dispatchers.IO) { daemon.isRingStuck() }) {
             DebugLog.d(TAG, "Ring check after unlock: matches")
             return
         }
@@ -215,7 +215,7 @@ class LightController private constructor(private val app: Application) {
         }
         lastAutoResetMs = now
         DebugLog.w(TAG, "Ring looks stuck after unlock -> resetting the lights service")
-        shizuku.resetDaemon()
+        daemon.resetDaemon()
     }
 
     fun setEnabled(enabled: Boolean) {
@@ -242,7 +242,7 @@ class LightController private constructor(private val app: Application) {
         quietEndMinutes: Int? = null
     ) {
         val calculatedSpeed = pattern.speedMs(speedMs)
-        shizuku.triggerAlert(
+        daemon.triggerAlert(
             pattern = pattern.id,
             color = color,
             brightness = brightness,
@@ -273,7 +273,7 @@ class LightController private constructor(private val app: Application) {
         quietEndMinutes: Int? = null
     ) {
         val calculatedSpeed = pattern.speedMs(speedMs)
-        shizuku.postAlert(
+        daemon.postAlert(
             key = key,
             pattern = pattern.id,
             color = color,
@@ -292,7 +292,7 @@ class LightController private constructor(private val app: Application) {
      * Removes an active notification alert by key when dismissed or swiped away.
      */
     fun removeNotificationAlert(key: String) {
-        shizuku.removeAlert(key)
+        daemon.removeAlert(key)
     }
 
     /**
@@ -300,7 +300,7 @@ class LightController private constructor(private val app: Application) {
      * DND and quiet-hours gating, and never disturbs whatever notification is actually active.
      */
     fun testPattern(pattern: PatternMode, color: Long, durationMs: Long = 3000L) {
-        shizuku.testAlert(
+        daemon.testAlert(
             pattern = pattern.id,
             color = color,
             brightness = 1.0f,
@@ -311,7 +311,7 @@ class LightController private constructor(private val app: Application) {
 
     /** Diagnostic: lights only LED [index] for [durationMs], via the same test channel as [testPattern]. */
     fun testSingleLed(index: Int, durationMs: Long) {
-        shizuku.testAlert(
+        daemon.testAlert(
             pattern = PatternRenderer.SINGLE_LED_PREFIX + index,
             color = 0xFFFF0000,
             brightness = 1.0f,
@@ -324,7 +324,7 @@ class LightController private constructor(private val app: Application) {
      * Cancels an in-progress LED test preview, e.g. when the rule editor is closed early.
      */
     fun cancelTestPattern() {
-        shizuku.cancelTestAlert()
+        daemon.cancelTestAlert()
     }
 
     /**
@@ -342,7 +342,7 @@ class LightController private constructor(private val app: Application) {
         quietEndMinutes: Int? = null
     ) {
         val calculatedSpeed = pattern.speedMs(speedMs)
-        shizuku.startIncomingCall(
+        daemon.startIncomingCall(
             pattern = pattern.id,
             color = color,
             brightness = brightness,
@@ -356,20 +356,20 @@ class LightController private constructor(private val app: Application) {
     }
 
     fun setDeviceFaceDown(faceDown: Boolean) {
-        shizuku.setDeviceFaceDown(faceDown)
+        daemon.setDeviceFaceDown(faceDown)
     }
 
     fun setDndActive(dndActive: Boolean) {
         lastDndActive = dndActive
-        shizuku.setDndActive(dndActive)
+        daemon.setDndActive(dndActive)
     }
 
     private suspend fun pushLiveConditions() {
-        shizuku.setDndActive(lastDndActive)
-        shizuku.setDndSuppressEnabled(store.suppressDuringDnd.first())
-        shizuku.setSplitRing(store.multiAlertMode.first() == MultiAlertMode.SPLIT)
-        shizuku.setSplitAnimation(store.splitAnimation.first())
-        shizuku.setQuietHours(
+        daemon.setDndActive(lastDndActive)
+        daemon.setDndSuppressEnabled(store.suppressDuringDnd.first())
+        daemon.setSplitRing(store.multiAlertMode.first() == MultiAlertMode.SPLIT)
+        daemon.setSplitAnimation(store.splitAnimation.first())
+        daemon.setQuietHours(
             store.quietHoursEnabled.first(),
             store.quietHoursStartMinutes.first(),
             store.quietHoursEndMinutes.first()
@@ -379,14 +379,14 @@ class LightController private constructor(private val app: Application) {
             store.isEnabled.first() && licensing.isEntitled.value,
             store.isOnlyWhenFaceDown.first()
         )
-        shizuku.setBatteryState(lastBatteryLevel, lastBatteryCharging, lastBatteryFull)
+        daemon.setBatteryState(lastBatteryLevel, lastBatteryCharging, lastBatteryFull)
     }
 
     private fun pushBatteryConfig(settings: BatterySettings, masterEnabled: Boolean, globalOnlyWhenFaceDown: Boolean) {
         lastBatterySettings = settings
         lastMasterEnabled = masterEnabled
         lastBatteryRequiresFaceDown = settings.faceDownMode.requiresFaceDown(globalOnlyWhenFaceDown)
-        shizuku.setBatteryConfig(
+        daemon.setBatteryConfig(
             enabled = masterEnabled && settings.enabled,
             chargingPattern = settings.chargingPattern,
             lowPattern = settings.lowPattern,
@@ -410,7 +410,7 @@ class LightController private constructor(private val app: Application) {
         lastBatteryLevel = percent
         lastBatteryCharging = charging
         lastBatteryFull = full
-        shizuku.setBatteryState(percent, charging, full)
+        daemon.setBatteryState(percent, charging, full)
         syncBatteryOrientationMonitor()
     }
 
@@ -445,14 +445,14 @@ class LightController private constructor(private val app: Application) {
      * Stops the call override without deleting pending notification alerts.
      */
     fun stopIncomingCallAlert() {
-        shizuku.stopIncomingCall()
+        daemon.stopIncomingCall()
     }
 
     /**
      * Clears notification / transient alerts without interrupting an incoming call.
      */
     fun clearAlert() {
-        shizuku.clearAlert()
+        daemon.clearAlert()
         syncState()
     }
 
@@ -460,13 +460,13 @@ class LightController private constructor(private val app: Application) {
         scope.launch {
             val enabled = store.isEnabled.first()
             if (!enabled) {
-                shizuku.turnOff()
+                daemon.turnOff()
             }
         }
     }
 
     fun refreshStatus() {
-        shizuku.refresh()
+        daemon.refresh()
         licensing.refreshPurchases()
     }
 

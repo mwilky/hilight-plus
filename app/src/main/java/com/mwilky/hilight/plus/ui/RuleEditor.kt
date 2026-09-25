@@ -103,7 +103,7 @@ import com.mwilky.hilight.plus.FaceDownMode
 import com.mwilky.hilight.plus.LightController
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.QuietHoursMode
-import com.mwilky.hilight.plus.ShizukuBridge
+import com.mwilky.hilight.plus.DaemonBridge
 import com.mwilky.hilight.plus.R
 import com.mwilky.hilight.plus.core.PatternRenderer
 import kotlinx.coroutines.delay
@@ -231,7 +231,7 @@ private fun RuleEditorContent(
     }
 
     // Test-on-LEDs: previews the current pattern/color on the physical lights.
-    val shizukuState by controller.shizuku.state.collectAsStateWithLifecycle()
+    val connectionState by controller.daemon.state.collectAsStateWithLifecycle()
     var isTesting by remember { mutableStateOf(false) }
     LaunchedEffect(isTesting) {
         if (isTesting) {
@@ -307,7 +307,7 @@ private fun RuleEditorContent(
                     elapsedMs = clockMs,
                     renderer = renderer,
                     isTesting = isTesting,
-                    testEnabled = shizukuState == ShizukuBridge.State.CONNECTED,
+                    testEnabled = connectionState == DaemonBridge.State.CONNECTED,
                     onToggleTest = ::toggleTest
                 )
             }

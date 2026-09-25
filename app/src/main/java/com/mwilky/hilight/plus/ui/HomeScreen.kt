@@ -60,7 +60,7 @@ import com.mwilky.hilight.plus.NativeHiLightDetector
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.R
 import com.mwilky.hilight.plus.SettingsSnapshot
-import com.mwilky.hilight.plus.ShizukuBridge
+import com.mwilky.hilight.plus.DaemonBridge
 import com.mwilky.hilight.plus.SplitAnimation
 import com.mwilky.hilight.plus.StockHiLightState
 import com.mwilky.hilight.plus.core.PatternRenderer
@@ -80,13 +80,15 @@ import java.util.UUID
 @Composable
 fun HomeScreen(
     controller: LightController,
+    onSetUpConnection: () -> Unit,
     viewModel: HomeViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val renderer = remember { PatternRenderer() }
 
     val stockState by NativeHiLightDetector.state.collectAsStateWithLifecycle()
-    val shizukuState by controller.shizuku.state.collectAsStateWithLifecycle()
+    val connectionState by controller.daemon.state.collectAsStateWithLifecycle()
+    val connectionMethod by controller.daemon.method.collectAsStateWithLifecycle()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val licenseStatus by controller.licensing.status.collectAsStateWithLifecycle()
     val activity = LocalActivity.current
@@ -156,15 +158,17 @@ fun HomeScreen(
     }
 
     HomeContent(
-        shizukuState = shizukuState,
-        shizukuError = controller.shizuku.errorText(),
+        connectionState = connectionState,
+        connectionMethod = connectionMethod,
+        connectionError = controller.daemon.errorText(),
         licenseStatus = licenseStatus,
         onBuy = { activity?.let { controller.licensing.purchase(it) } },
-        onDisconnectShizuku = { controller.shizuku.unbind() },
-        onConnectShizuku = { controller.shizuku.connectManually() },
-        onRequestShizukuPermission = { controller.shizuku.requestPermission() },
-        onOpenShizukuApp = { controller.shizuku.openShizukuApp(context) },
-        onRestartApp = { controller.shizuku.restartApp(context) },
+        onPauseConnection = { controller.daemon.unbind() },
+        onResumeConnection = { controller.daemon.connectManually() },
+        onRequestShizukuPermission = { controller.daemon.requestPermission() },
+        onOpenShizukuApp = { controller.daemon.openShizukuApp(context) },
+        onRestartApp = { controller.daemon.restartApp(context) },
+        onSetUpConnection = onSetUpConnection,
         stockState = stockState,
         onOpenStockSettings = { NativeHiLightDetector.openHiLightSettings(context) },
         permissionState = permissionState,
@@ -519,13 +523,15 @@ fun HomeScreen(
  */
 @Composable
 fun HomeContent(
-    shizukuState: ShizukuBridge.State,
-    shizukuError: String?,
-    onDisconnectShizuku: () -> Unit,
-    onConnectShizuku: () -> Unit,
+    connectionState: DaemonBridge.State,
+    connectionMethod: DaemonBridge.Method,
+    connectionError: String?,
+    onPauseConnection: () -> Unit,
+    onResumeConnection: () -> Unit,
     onRequestShizukuPermission: () -> Unit,
     onOpenShizukuApp: () -> Unit,
     onRestartApp: () -> Unit,
+    onSetUpConnection: () -> Unit,
     stockState: StockHiLightState,
     onOpenStockSettings: () -> Unit,
     permissionState: PermissionState,
@@ -608,13 +614,15 @@ fun HomeContent(
             ) { page ->
                 when (page) {
                     0 -> HomeCallsPage(
-                        shizukuState = shizukuState,
-                        shizukuError = shizukuError,
-                        onDisconnectShizuku = onDisconnectShizuku,
-                        onConnectShizuku = onConnectShizuku,
+                        connectionState = connectionState,
+                        connectionMethod = connectionMethod,
+                        connectionError = connectionError,
+                        onPauseConnection = onPauseConnection,
+                        onResumeConnection = onResumeConnection,
                         onRequestShizukuPermission = onRequestShizukuPermission,
                         onOpenShizukuApp = onOpenShizukuApp,
                         onRestartApp = onRestartApp,
+                        onSetUpConnection = onSetUpConnection,
                         stockState = stockState,
                         onOpenStockSettings = onOpenStockSettings,
                         permissionState = permissionState,
@@ -637,13 +645,15 @@ fun HomeContent(
                         renderer = renderer
                     )
                     1 -> HomeNotifsPage(
-                        shizukuState = shizukuState,
-                        shizukuError = shizukuError,
-                        onDisconnectShizuku = onDisconnectShizuku,
-                        onConnectShizuku = onConnectShizuku,
+                        connectionState = connectionState,
+                        connectionMethod = connectionMethod,
+                        connectionError = connectionError,
+                        onPauseConnection = onPauseConnection,
+                        onResumeConnection = onResumeConnection,
                         onRequestShizukuPermission = onRequestShizukuPermission,
                         onOpenShizukuApp = onOpenShizukuApp,
                         onRestartApp = onRestartApp,
+                        onSetUpConnection = onSetUpConnection,
                         permissionState = permissionState,
                         onOpenNotifSettings = onOpenNotifSettings,
                         state = state,
@@ -666,13 +676,15 @@ fun HomeContent(
                         renderer = renderer
                     )
                     else -> HomeBatteryPage(
-                        shizukuState = shizukuState,
-                        shizukuError = shizukuError,
-                        onDisconnectShizuku = onDisconnectShizuku,
-                        onConnectShizuku = onConnectShizuku,
+                        connectionState = connectionState,
+                        connectionMethod = connectionMethod,
+                        connectionError = connectionError,
+                        onPauseConnection = onPauseConnection,
+                        onResumeConnection = onResumeConnection,
                         onRequestShizukuPermission = onRequestShizukuPermission,
                         onOpenShizukuApp = onOpenShizukuApp,
                         onRestartApp = onRestartApp,
+                        onSetUpConnection = onSetUpConnection,
                         battery = state.battery,
                         globalQuietStartMinutes = state.quietHoursStartMinutes,
                         globalQuietEndMinutes = state.quietHoursEndMinutes,
@@ -977,13 +989,15 @@ fun HomeScreenPreviewContent(
 
     HiLightPlusTheme {
         HomeContent(
-            shizukuState = ShizukuBridge.State.CONNECTED,
-            shizukuError = null,
-            onDisconnectShizuku = {},
-            onConnectShizuku = {},
+            connectionState = DaemonBridge.State.CONNECTED,
+            connectionMethod = DaemonBridge.Method.BUILT_IN,
+            connectionError = null,
+            onPauseConnection = {},
+            onResumeConnection = {},
             onRequestShizukuPermission = {},
             onOpenShizukuApp = {},
             onRestartApp = {},
+            onSetUpConnection = {},
             stockState = StockHiLightState(favoriteCallsActive = false),
             onOpenStockSettings = {},
             permissionState = PermissionState(

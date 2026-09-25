@@ -19,19 +19,89 @@
     <string name="onboarding_stock_desc2">Turn it off in system settings so HiLight Plus has the lights to itself. Gemini and other system features can still use them.</string>
     <string name="onboarding_stock_card_title">Calls from favourites</string>
     <string name="onboarding_stock_conflict_active_desc">This is still on in system settings and will clash with HiLight Plus. Tap below to turn it off.</string>
-    <string name="onboarding_stock_unknown_desc">Couldn\'t read this setting yet. Connect Shizuku to check it.</string>
+    <string name="onboarding_stock_unknown_desc">Couldn\'t read this setting yet. Connect HiLight Plus to the ring to check it.</string>
     <string name="onboarding_stock_status_conflict">Still on</string>
     <string name="onboarding_stock_status_ready">Off</string>
     <string name="onboarding_stock_status_unknown">Unknown</string>
     <string name="onboarding_stock_btn_open">Open system settings</string>
 
-    <!-- Onboarding Step 3: Shizuku Hardware Access -->
-    <string name="onboarding_shizuku_title">Connect Shizuku</string>
-    <string name="onboarding_shizuku_desc">Android doesn\'t let apps control the rear lights directly. HiLight Plus uses Shizuku to reach them without root. Connect it below, or continue and connect later from the Home screen.</string>
-    <string name="onboarding_shizuku_skip_title">Continue without Shizuku?</string>
-    <string name="onboarding_shizuku_skip_desc">You can set up rules, but the rear lights won\'t do anything until Shizuku is connected. The Shizuku card on the Home screen will walk you through it whenever you\'re ready.</string>
-    <string name="onboarding_shizuku_skip_confirm">Continue anyway</string>
-    <string name="onboarding_shizuku_skip_cancel">Go back</string>
+    <!-- Onboarding Step 3: Connect to the ring (built-in connection, Shizuku optional) -->
+    <string name="connect_title">Connect to the ring</string>
+    <string name="connect_desc">Android only lets the phone\'s own developer tools reach the rear lights, so HiLight Plus uses them, entirely on your phone. Three switches, once, and each one ticks itself off.</string>
+    <string name="connect_step_dev_title">Turn on Developer options</string>
+    <string name="connect_step_dev_desc">Tap Build number 7 times. HiLight Plus opens the right screen for you.</string>
+    <string name="connect_step_dev_done">Developer options is on.</string>
+    <string name="connect_step_dev_btn">Open About phone</string>
+    <string name="connect_step_wireless_title">Turn on Wireless debugging</string>
+    <string name="connect_step_wireless_desc">Switch on Wireless debugging. If you\'re asked, allow it on this network.</string>
+    <string name="connect_step_wireless_done">Wireless debugging is on.</string>
+    <string name="connect_step_wireless_btn">Open Developer options</string>
+    <string name="connect_step_wifi_desc">Connect to Wi-Fi first. Wireless debugging only works on Wi-Fi, not mobile data.</string>
+    <string name="connect_step_pair_title">Pair with HiLight Plus</string>
+    <string name="connect_step_pair_desc">Tap Wireless debugging, then Pair device with pairing code. Type the 6-digit code into HiLight Plus\'s notification.</string>
+    <string name="connect_step_pair_desc_in_app">Tap Wireless debugging, then Pair device with pairing code. Come back here and type the 6-digit code.</string>
+    <string name="connect_step_pair_code_desc">Type the 6-digit code shown under Pair device with pairing code.</string>
+    <string name="connect_step_pair_connecting">Connecting&#8230;</string>
+    <string name="connect_step_pair_wrong">That code didn\'t match. Tap Pair device with pairing code again for a new one.</string>
+    <string name="connect_step_pair_failed">Paired, but the lights service didn\'t start. Try again.</string>
+    <string name="connect_step_pair_btn">Open Wireless debugging</string>
+    <string name="connect_step_pair_retry">Try again</string>
+    <string name="connect_code_label">Pairing code</string>
+    <string name="connect_code_btn">Pair</string>
+    <string name="connect_use_shizuku">Already use Shizuku?</string>
+    <string name="connect_use_builtin">Use the built-in connection instead</string>
+    <string name="onboarding_connect_skip_title">Continue without connecting?</string>
+    <string name="onboarding_connect_skip_desc">You can set up rules, but the rear lights won\'t do anything until HiLight Plus is connected. The card on the Home screen will walk you through it whenever you\'re ready.</string>
+    <string name="onboarding_connect_skip_confirm">Continue anyway</string>
+    <string name="onboarding_connect_skip_cancel">Go back</string>
+
+    <!-- Connect screen (from Home, About, or the switch-over prompt) -->
+    <string name="connect_screen_close">Not now</string>
+    <string name="connect_screen_done">Done</string>
+    <string name="connect_success_title">You\'re all set</string>
+    <string name="connect_success_desc">HiLight Plus now connects by itself, including after a restart. To keep the lights working, leave Developer options on, with Wireless debugging or USB debugging on too.</string>
+    <string name="connect_success_shizuku_title">Shizuku</string>
+    <string name="connect_success_shizuku_desc">HiLight Plus doesn\'t need Shizuku any more. You can uninstall it if nothing else uses it.</string>
+    <string name="connect_success_shizuku_status">Not needed</string>
+    <string name="connect_success_shizuku_btn">Open Shizuku\'s app info</string>
+
+    <!-- One-time prompt for people updating from a Shizuku-only version -->
+    <string name="migration_title">HiLight Plus no longer needs Shizuku</string>
+    <string name="migration_desc">Connect once and the app looks after itself: no second app to keep running, and it reconnects after a restart.</string>
+    <string name="migration_switch">Switch now (about 30 seconds)</string>
+    <string name="migration_not_now">Not now</string>
+
+    <!-- Shown while the app pairs with and starts the lights service -->
+    <string name="connection_notif_channel">Ring connection</string>
+    <string name="connection_notif_channel_desc">Shown for a few seconds while HiLight Plus starts the lights service.</string>
+    <string name="connection_notif_title">Connecting to the rear lights&#8230;</string>
+
+    <!-- Setup guide notification -->
+    <string name="setup_notif_channel">Setup help</string>
+    <string name="setup_notif_channel_desc">Guides you through connecting HiLight Plus to the rear lights.</string>
+    <string name="setup_notif_build_title">Tap Build number 7 times</string>
+    <string name="setup_notif_build_text">It\'s at the bottom of About phone. Keep tapping until you see \"You are now a developer\".</string>
+    <string name="setup_notif_wifi_title">Connect to Wi-Fi</string>
+    <string name="setup_notif_wifi_text">Wireless debugging only works on Wi-Fi.</string>
+    <string name="setup_notif_wireless_title">Now turn on Wireless debugging</string>
+    <string name="setup_notif_wireless_text">It\'s in Developer options. Tap here to go straight there.</string>
+    <string name="setup_notif_pair_title">Tap Pair device with pairing code</string>
+    <string name="setup_notif_pair_text">Tap Wireless debugging, then Pair device with pairing code.</string>
+    <string name="setup_notif_code_title">Type the 6-digit code</string>
+    <string name="setup_notif_code_text">Tap Enter code and type the code shown on screen.</string>
+    <string name="setup_notif_code_action">Enter code</string>
+    <string name="setup_notif_code_hint">6-digit code</string>
+    <string name="setup_notif_connecting_title">Connecting&#8230;</string>
+    <string name="setup_notif_connecting_text">Starting the lights service.</string>
+    <string name="setup_notif_wrong_title">That code didn\'t match</string>
+    <string name="setup_notif_wrong_text">Tap Pair device with pairing code again for a new one.</string>
+    <string name="setup_notif_failed_title">Couldn\'t connect</string>
+    <string name="setup_notif_failed_text">Open HiLight Plus to try again.</string>
+    <string name="setup_notif_open_app">Open HiLight Plus</string>
+    <string name="setup_notif_done_title">You\'re all set</string>
+    <string name="setup_notif_done_text">HiLight Plus is connected to the rear lights.</string>
+    <string name="setup_notif_network_title">Allow Wireless debugging on this Wi-Fi</string>
+    <string name="setup_notif_network_text">HiLight Plus needs it for a few seconds to start the lights. Tap here, then choose Always allow on this network when Android asks.</string>
 
     <!-- Onboarding Step 4: Permissions -->
     <string name="onboarding_perms_title">Permissions</string>
@@ -67,7 +137,7 @@
         <item quantity="one">%1$d day left</item>
         <item quantity="other">%1$d days left</item>
     </plurals>
-    <string name="license_desc_pending">Your %1$d-day trial starts the first time Shizuku connects.</string>
+    <string name="license_desc_pending">Your %1$d-day trial starts the first time HiLight Plus connects to the ring.</string>
     <string name="license_desc_trial">Everything is unlocked during the trial. Keep it forever with a one-off purchase. No subscription.</string>
     <string name="license_desc_trial_price">Everything is unlocked during the trial. Keep it forever for %1$s, one-off. No subscription.</string>
     <string name="license_desc_expired">Your trial is over, so the lights are paused. Your rules are saved and pick up again the moment you unlock.</string>
@@ -85,6 +155,28 @@
     <string name="nav_home">Home</string>
     <string name="nav_conditions">Conditions</string>
     <string name="nav_about">About</string>
+
+    <!-- Ring connection status card (built-in or Shizuku) -->
+    <string name="connect_card_title">Rear lights</string>
+    <string name="connect_desc_connected">Connected. Keep Developer options on, with Wireless debugging or USB debugging, and the lights keep working.</string>
+    <string name="connect_desc_needs_setup">HiLight Plus needs a one-time connection to reach the rear lights. It takes about a minute, with no extra app to install.</string>
+    <string name="connect_desc_waiting_wifi">The lights come back as soon as you\'re on Wi-Fi. Wireless debugging, which HiLight Plus uses to reach them, only runs on Wi-Fi.</string>
+    <string name="connect_desc_connecting">Starting the lights service&#8230;</string>
+    <string name="connect_desc_turning_on">Turning on Wireless debugging so HiLight Plus can start the lights.</string>
+    <string name="connect_desc_waiting_wireless">Waiting for Wireless debugging to be ready. Just after a restart this can take a few seconds.</string>
+    <string name="connect_desc_asking_network">Android is asking whether to allow Wireless debugging on this Wi-Fi. Choose Always allow on this network and the lights will start.</string>
+    <string name="connect_status_asking_network">Needs your answer</string>
+    <string name="connect_status_needs_setup">Set-up needed</string>
+    <string name="connect_status_waiting_wifi">Waiting for Wi-Fi</string>
+    <string name="connect_status_dev_off">Developer options off</string>
+    <string name="connect_status_network_not_allowed">Allow this Wi-Fi</string>
+    <string name="connect_desc_network_not_allowed">Wireless debugging hasn\'t been allowed on this Wi-Fi network yet, so HiLight Plus can\'t start the lights. Tap Ask again, then choose Always allow on this network when Android asks.</string>
+    <string name="connect_btn_ask_again">Ask again</string>
+    <string name="connect_desc_dev_off">Developer options is off, which stops the lights service. Tap Build number 7 times in About phone to turn it back on, and HiLight Plus reconnects by itself.</string>
+    <string name="connect_btn_set_up">Set up</string>
+    <string name="connect_btn_wifi">Turn on Wi-Fi</string>
+    <string name="about_switch_builtin_title">Switch to the built-in connection</string>
+    <string name="about_switch_builtin_desc">No Shizuku needed, and it reconnects by itself after a restart.</string>
 
     <!-- Shizuku Status Card -->
     <string name="shizuku_card_title">Shizuku</string>

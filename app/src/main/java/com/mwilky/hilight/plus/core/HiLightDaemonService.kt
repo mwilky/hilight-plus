@@ -1,5 +1,8 @@
 package com.mwilky.hilight.plus.core
 
+import android.content.Context
+import android.os.Binder
+import android.os.Parcel
 import android.os.Process
 import android.os.RemoteException
 import com.mwilky.hilight.plus.BatteryPattern
@@ -15,10 +18,17 @@ import java.util.concurrent.TimeUnit
 import kotlin.system.exitProcess
 
 /**
- * Privileged Shizuku UserService running under Shell UID (2000).
+ * Privileged daemon running under Shell UID (2000), started either by Shizuku (as a UserService)
+ * or by the app itself over Wireless debugging ([DaemonMain]).
  * Implements [IHiLightService] to receive strongly-typed commands from the app.
+ *
+ * Only [appUid] (and this process's own UID, which is how Shizuku tears it down) may call in:
+ * the binder is a shell-privileged surface, so nothing else on the phone should be able to use it.
  */
-class HiLightDaemonService : IHiLightService.Stub() {
+class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
+
+    /** Shizuku constructs UserServices with a Context for the app's package. */
+    constructor(context: Context) : this(context.applicationInfo.uid)
 
     private val engine = LightEngine()
 
@@ -37,6 +47,17 @@ class HiLightDaemonService : IHiLightService.Stub() {
         } catch (t: Throwable) {
             DebugLog.e(TAG, "Failed to start HiLightDaemonService: ${t.message}", t)
         }
+    }
+
+    override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+        if (code in FIRST_CALL_TRANSACTION..LAST_CALL_TRANSACTION) {
+            val caller = Binder.getCallingUid()
+            if (caller != appUid && caller != Process.myUid() && caller != Process.ROOT_UID) {
+                DebugLog.w(TAG, "Rejected call $code from UID $caller")
+                throw SecurityException("UID $caller may not use the HiLight Plus daemon")
+            }
+        }
+        return super.onTransact(code, data, reply, flags)
     }
 
     override fun triggerAlert(
@@ -235,6 +256,31 @@ class HiLightDaemonService : IHiLightService.Stub() {
         return true
     }
 
+    override fun getVersionCode(): Int = BuildConfig.VERSION_CODE
+
+    /**
+     * Lets the app write Settings.Global itself, so it can turn Wireless debugging back on after a
+     * reboot and restart this daemon without asking the user to do anything.
+     */
+    override fun grantWriteSecureSettings(): Boolean {
+        val granted = try {
+            val process = Runtime.getRuntime().exec(
+                arrayOf("pm", "grant", BuildConfig.APPLICATION_ID, "android.permission.WRITE_SECURE_SETTINGS")
+            )
+            if (process.waitFor(5, TimeUnit.SECONDS)) {
+                process.exitValue() == 0
+            } else {
+                process.destroyForcibly()
+                false
+            }
+        } catch (t: Throwable) {
+            DebugLog.e(TAG, "pm grant failed: ${t.message}", t)
+            false
+        }
+        DebugLog.i(TAG, "grantWriteSecureSettings: $granted")
+        return granted
+    }
+
     /**
      * Runs the `settings` shell command. Returns the first line of stdout, an empty string when
      * the command succeeded silently (e.g. `put`), or null on failure / timeout / "null".
@@ -286,8 +332,9 @@ class HiLightDaemonService : IHiLightService.Stub() {
     private fun lightsDump(): String = runCommand("dumpsys", "lights") ?: "unavailable"
 
     /**
-     * An older copy of this process that Shizuku lost track of would keep its light session, and
-     * its last frame, alive, and can outrank ours. Only one should ever run, so end the others.
+     * An older copy of this process (one Shizuku lost track of, one from before an app update, or
+     * one started by the other launcher) would keep its light session, and its last frame, alive,
+     * and can outrank ours. Only one should ever run, so end the others.
      */
     private fun killStaleDaemons() {
         val name = "${BuildConfig.APPLICATION_ID}:$PROCESS_SUFFIX"
@@ -365,7 +412,7 @@ class HiLightDaemonService : IHiLightService.Stub() {
     companion object {
         private const val TAG = "HiLightDaemonService"
 
-        /** Shizuku names the process `<applicationId>:<suffix>`. */
+        /** The process is named `<applicationId>:<suffix>`, by Shizuku or by [DaemonMain]. */
         const val PROCESS_SUFFIX = "hilight_daemon"
     }
 }

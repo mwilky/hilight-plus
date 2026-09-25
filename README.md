@@ -43,14 +43,20 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 
 **Extras**
 - Live preview of every pattern on a diffused ring mock-up, and a Test on LEDs button in each rule editor.
-- Onboarding that checks Shizuku, permissions and the stock HiLight setting that would otherwise fight for the ring, and explains the trial.
+- Onboarding that connects to the ring, checks permissions and the stock HiLight setting that would otherwise fight for the ring, and explains the trial. Connecting is a self-ticking checklist: each switch is detected as you flip it, Settings opens at the right row, and a notification follows you there so you can type the pairing code without coming back to the app.
+- People updating from a Shizuku-only version get a one-time prompt to switch to the built-in connection, which then keeps itself running across restarts.
 - A live debug log on the About page, covering the app and the daemon, with one-tap clear and share. A shared report adds device and permission status, what the daemon is holding and every setting and rule, with contact names left out.
 - A Reset lights button that restarts the daemon, freeing a ring stuck on a stale light session without restarting the phone. Waiting notifications and a ringing call light again once it reconnects. The app also checks the ring on unlock and resets automatically if the LEDs don't show what the daemon last sent.
 
 ## Requirements
 
 - Google Pixel 11 Pro series running Android 17 (API 37). The app targets the rear `LIGHT_TYPE_APPLICATION` LEDs and will find none on other devices.
-- [Shizuku](https://shizuku.rikka.app/) running, either over wireless debugging or root. Android does not let apps drive the rear lights directly, so HiLight Plus runs a small daemon under Shizuku's shell permission to reach the lights service.
+- Developer options turned on, and Wireless debugging for setup. Android does not let apps drive the rear lights directly, so HiLight Plus pairs once with the phone's own Wireless debugging and uses it to start a small daemon with shell permission that reaches the lights service. After that it reconnects by itself, including after a reboot.
+- **To keep working:** Developer options stays on, and so does at least one of **USB debugging** or **Wireless debugging**. The daemon runs under the phone's debugging service, which Android stops when both are off.
+  - With USB debugging on, the app switches Wireless debugging off again after each start.
+  - With USB debugging off, Wireless debugging stays on. If you turn it off, the lights stop and the app switches it back on to restart them.
+- Wi-Fi whenever the daemon needs starting (setup, a reboot, an update), because Wireless debugging only runs on Wi-Fi. Once running, it needs no network. On a Wi-Fi network where Wireless debugging has never been allowed, Android asks first; the app says what to do and carries on once you allow it.
+- Or, instead, [Shizuku](https://shizuku.rikka.app/) running, over wireless debugging or root. It is still supported for anyone who already uses it.
 - The stock "Calls from favourites" HiLight option turned off, otherwise both will try to drive the ring at once. Onboarding checks this for you. Gemini's own use of the ring is untouched: its state changes are not broadcast in a way an app can intercept in real time, so that stays stock behaviour.
 
 ## Permissions
@@ -59,16 +65,21 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 |---|---|
 | Contacts | Tell saved callers and senders from unknown ones, spot starred favourites, match them to your rules, and pick contacts when creating a rule |
 | Notification access | Notice incoming calls, new notifications and app calls, and know when they are dismissed |
-| Shizuku | Talk to the lights daemon over local Binder IPC |
+| Internet | Connect to the phone's own Wireless debugging over loopback (127.0.0.1) to start the lights daemon. Nothing is sent off the device |
+| Local network access | Find the pairing dialog, which Wireless debugging advertises over mDNS on the phone itself |
+| Notifications | The setup guide that follows you into Settings and takes the pairing code |
+| Run at startup | Start the lights daemon again after a reboot or an app update |
+| Write secure settings | Granted by the daemon itself after the first connection, so the app can switch Wireless debugging on for a start (after a reboot, say), and off again straight after when USB debugging is on |
+| Shizuku (optional) | Talk to the lights daemon over local Binder IPC, for people who start it through Shizuku |
 
-No phone-state or call-log permission is used: incoming calls, cellular or app, are recognised from the dialer's own call notification. Contacts and notification content never leave the device. The only network activity is Google Play Billing for the purchase. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for the full policy.
+No phone-state or call-log permission is used: incoming calls, cellular or app, are recognised from the dialer's own call notification. Contacts and notification content never leave the device. The only network activity off the phone is Google Play Billing for the purchase; the Wireless debugging connection is to the phone itself. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for the full policy.
 
 ## How it works
 
 The app has two halves:
 
 - **The app process** hosts the UI, the notification listener and the battery receiver. It resolves each event against your rules and decides colour, pattern and conditions.
-- **The daemon** (`HiLightDaemonService`) runs under Shizuku with shell UID. It owns the render loop at roughly 30 frames per second, talks to `ILightsManager` through reflection, and applies live gating for face-down, Do Not Disturb and quiet hours so lights already playing react to changes. The app and daemon talk over an AIDL interface.
+- **The daemon** (`HiLightDaemonService`) runs with shell UID. The app starts it itself over Wireless debugging (`WirelessAdb` pairs once, then launches `DaemonMain` through `app_process`, and the daemon hands its binder back through a content provider), or Shizuku starts it as a UserService. Only the app's UID may call it. It owns the render loop at roughly 30 frames per second, talks to `ILightsManager` through reflection, and applies live gating for face-down, Do Not Disturb and quiet hours so lights already playing react to changes. The app and daemon talk over an AIDL interface.
 
 Face-down detection samples the accelerometer only while something is waiting to light, so there is no idle sensor cost.
 
@@ -86,11 +97,11 @@ Standard Android Gradle project. Open in Android Studio or run:
 
 Release builds are minified with R8. There is also a `debugMinified` variant, signed with the debug key, for checking the shrunk app on a device. Keep the `mapping.txt` from each release build for readable crash reports.
 
-Unit tests cover the rule model, JSON round-tripping, contact matching, quiet hours, the pattern renderer, the battery and split-ring layouts, the call-state machine and the notification slot tracker. Anything that touches the LEDs needs a physical Pixel.
+Unit tests cover the rule model, JSON round-tripping, contact matching, quiet hours, the pattern renderer, the battery and split-ring layouts, the call-state machine, the notification slot tracker and the connect-setup guide. Anything that touches the LEDs needs a physical Pixel.
 
 ## Pricing
 
-The [Google Play](https://play.google.com/store/apps/details?id=com.mwilky.hilight.plus) build is free for 7 days, then a single one-off purchase unlocks it for good. No subscription. The trial starts the first time Shizuku connects and is recorded in a system setting, so it survives clearing app data.
+The [Google Play](https://play.google.com/store/apps/details?id=com.mwilky.hilight.plus) build is free for 7 days, then a single one-off purchase unlocks it for good. No subscription. The trial starts the first time HiLight Plus connects to the ring and is recorded in a system setting, so it survives clearing app data.
 
 The source is GPL-3.0 and you are welcome to build and install it yourself. A self-built APK is signed with your own key, so it cannot be updated from Play and does not include the purchase. Buying the Play version is the way to support development.
 

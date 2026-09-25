@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -18,6 +19,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mwilky.hilight.plus.ui.AboutScreen
 import com.mwilky.hilight.plus.ui.ConditionsScreen
+import com.mwilky.hilight.plus.ui.ConnectMigrationSheet
+import com.mwilky.hilight.plus.ui.ConnectScreen
 import com.mwilky.hilight.plus.ui.HiLightPlusTheme
 import com.mwilky.hilight.plus.ui.HomeScreen
 import com.mwilky.hilight.plus.ui.OnboardingScreen
@@ -55,6 +58,8 @@ class MainActivity : ComponentActivity() {
                             controller = controller,
                             onComplete = {
                                 scope.launch {
+                                    // Set up with this version, so the switch-over prompt isn't for them.
+                                    store.setConnectPromptShown()
                                     store.setOnboardingCompleted(true)
                                 }
                             }
@@ -90,7 +95,27 @@ private enum class NavTab(val titleRes: Int, val icon: ImageVector) {
 
 @Composable
 private fun MainAppNavigation(controller: LightController) {
-    var selectedTab by remember { mutableStateOf(NavTab.HOME) }
+    var selectedTab by rememberSaveable { mutableStateOf(NavTab.HOME) }
+    var showConnect by rememberSaveable { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val promptShown by controller.store.isConnectPromptShown.collectAsStateWithLifecycle(initialValue = true)
+    val paired = remember(showConnect) { controller.daemon.wireless.isPaired() }
+
+    if (showConnect) {
+        ConnectScreen(controller = controller, onClose = { showConnect = false })
+        return
+    }
+
+    // People updating from a Shizuku-only version hear about the built-in connection once.
+    if (!promptShown && !paired) {
+        ConnectMigrationSheet(
+            onSwitch = {
+                scope.launch { controller.store.setConnectPromptShown() }
+                showConnect = true
+            },
+            onNotNow = { scope.launch { controller.store.setConnectPromptShown() } }
+        )
+    }
 
     Scaffold(
         bottomBar = {
@@ -113,9 +138,9 @@ private fun MainAppNavigation(controller: LightController) {
                 .padding(bottom = padding.calculateBottomPadding())
         ) {
             when (selectedTab) {
-                NavTab.HOME -> HomeScreen(controller = controller)
+                NavTab.HOME -> HomeScreen(controller = controller, onSetUpConnection = { showConnect = true })
                 NavTab.CONDITIONS -> ConditionsScreen()
-                NavTab.ABOUT -> AboutScreen(controller = controller)
+                NavTab.ABOUT -> AboutScreen(controller = controller, onSetUpConnection = { showConnect = true })
             }
         }
     }

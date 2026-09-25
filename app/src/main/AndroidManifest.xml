@@ -1,10 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Contacts: match callers and senders to rules. Calls themselves are seen through the
          notification listener, so no phone-state or call-log permission is needed. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
+
+    <!-- Built-in connection: the app pairs with and connects to the phone's own Wireless
+         debugging (loopback only; nothing leaves the device) to start the lights daemon.
+         Local network access covers finding the pairing dialog over mDNS where Android asks for it.
+         WRITE_SECURE_SETTINGS is granted by the daemon itself (pm grant), so the app can turn
+         Wireless debugging back on after a reboot; it can't be granted any other way. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission
+        android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
 
     <!-- Shizuku API Permission & package query -->
     <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
@@ -35,6 +51,14 @@
             android:multiprocess="false"
             android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
+        <!-- Where a daemon started over Wireless debugging hands over its binder. It runs as the
+             shell user, so this is exported and only accepts calls from that user. -->
+        <provider
+            android:name=".DaemonBinderProvider"
+            android:authorities="${applicationId}.daemon"
+            android:exported="true"
+            android:multiprocess="false" />
+
         <!-- Hands the debug report to whichever app the user shares it with. -->
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -55,6 +79,33 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Restarts the daemon after a reboot or an app update. -->
+        <receiver
+            android:name=".DaemonStartReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Keeps the app awake for the few seconds it takes to pair and start the daemon, which
+             otherwise stalls once the app is frozen in the background. -->
+        <service
+            android:name=".adb.ConnectionService"
+            android:exported="false"
+            android:foregroundServiceType="shortService" />
+
+        <!-- The "allow this Wi-Fi" notification: makes Android ask about the network again. -->
+        <receiver
+            android:name=".adb.AllowNetworkReceiver"
+            android:exported="false" />
+
+        <!-- The pairing code typed into the setup notification. -->
+        <receiver
+            android:name=".adb.PairingCodeReceiver"
+            android:exported="false" />
 
         <service
             android:name=".NotificationTrigger"

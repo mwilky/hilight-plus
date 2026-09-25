@@ -23,6 +23,8 @@ class AppStore private constructor(private val appContext: Context) {
 
     companion object {
         private val KEY_ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
+        // Whether the one-time "no longer needs Shizuku" prompt has been shown (or wasn't needed).
+        private val KEY_CONNECT_PROMPT_SHOWN = booleanPreferencesKey("connect_prompt_shown")
         // Licensing. Trial start is a local copy of the Settings.Global value the daemon owns.
         private val KEY_TRIAL_START_MS = longPreferencesKey("trial_start_ms")
         private val KEY_PURCHASED = booleanPreferencesKey("purchased")
@@ -121,6 +123,9 @@ class AppStore private constructor(private val appContext: Context) {
     val isOnboardingCompleted: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_ONBOARDING_COMPLETED] ?: false }
 
+    val isConnectPromptShown: Flow<Boolean> = appContext.dataStore.data
+        .map { it[KEY_CONNECT_PROMPT_SHOWN] ?: false }
+
     val isEnabled: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_ENABLED] ?: true }
 
@@ -173,6 +178,10 @@ class AppStore private constructor(private val appContext: Context) {
 
     suspend fun setOnboardingCompleted(completed: Boolean) {
         appContext.dataStore.edit { it[KEY_ONBOARDING_COMPLETED] = completed }
+    }
+
+    suspend fun setConnectPromptShown() {
+        appContext.dataStore.edit { it[KEY_CONNECT_PROMPT_SHOWN] = true }
     }
 
     suspend fun setEnabled(enabled: Boolean) {

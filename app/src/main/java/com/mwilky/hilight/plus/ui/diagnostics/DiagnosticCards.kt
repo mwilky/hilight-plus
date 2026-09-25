@@ -14,6 +14,7 @@ import androidx.compose.material.icons.rounded.AdminPanelSettings
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Key
+import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.NotificationAdd
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Contacts
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -31,12 +33,14 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mwilky.hilight.plus.R
-import com.mwilky.hilight.plus.ShizukuBridge
+import com.mwilky.hilight.plus.DaemonBridge
 import com.mwilky.hilight.plus.StockHiLightState
+import com.mwilky.hilight.plus.adb.SetupIntents
 import com.mwilky.hilight.plus.ui.ExpressiveStatusCard
 import com.mwilky.hilight.plus.ui.StandardDiagnosticCard
 
@@ -65,46 +69,74 @@ private fun ErrorButton(onClick: () -> Unit, icon: ImageVector?, text: String, m
 }
 
 /**
- * Shizuku privileged-access status: connection state, why it's not connected, and the
- * one relevant action for that state (authorize, connect, install, retry...).
+ * Ring access status for whichever way the daemon is started (built-in or Shizuku): connection
+ * state, why it's not connected, and the one relevant action for that state.
  */
 @Composable
-fun ShizukuStatusCard(
-    shizukuState: ShizukuBridge.State,
-    shizukuError: String?,
+fun ConnectionStatusCard(
+    connectionState: DaemonBridge.State,
+    connectionMethod: DaemonBridge.Method,
+    connectionError: String?,
     onDisconnect: () -> Unit,
     onConnect: () -> Unit,
     onRequestPermission: () -> Unit,
     onOpenShizukuApp: () -> Unit,
-    onRestartApp: () -> Unit
+    onRestartApp: () -> Unit,
+    onSetUp: () -> Unit
 ) {
-    val isConnected = shizukuState == ShizukuBridge.State.CONNECTED
-    val isExplicitlyDisconnected = shizukuState == ShizukuBridge.State.DISCONNECTED
+    val context = LocalContext.current
+    val isConnected = connectionState == DaemonBridge.State.CONNECTED
+    // Waiting or working, not broken: a neutral colour rather than the error one.
+    val isQuiet = connectionState in setOf(
+        DaemonBridge.State.DISCONNECTED,
+        DaemonBridge.State.WAITING_FOR_WIFI,
+        DaemonBridge.State.CONNECTING,
+        DaemonBridge.State.TURNING_ON_WIRELESS_DEBUGGING,
+        DaemonBridge.State.WAITING_FOR_WIRELESS_DEBUGGING,
+        DaemonBridge.State.ASKING_TO_ALLOW_NETWORK
+    )
+    val builtIn = connectionMethod == DaemonBridge.Method.BUILT_IN
 
     ExpressiveStatusCard(
-        title = stringResource(R.string.shizuku_card_title),
-        subtitle = when (shizukuState) {
-            ShizukuBridge.State.CONNECTED -> stringResource(R.string.shizuku_desc_connected)
-            ShizukuBridge.State.DISCONNECTED -> stringResource(R.string.shizuku_desc_disconnected)
-            ShizukuBridge.State.NEEDS_PERMISSION -> stringResource(R.string.shizuku_desc_needs_permission)
-            ShizukuBridge.State.NOT_RUNNING -> stringResource(R.string.shizuku_desc_not_running)
-            ShizukuBridge.State.NOT_INSTALLED -> stringResource(R.string.shizuku_desc_not_installed)
-            ShizukuBridge.State.CONNECTING -> stringResource(R.string.shizuku_desc_connecting)
-            else -> shizukuError ?: stringResource(R.string.shizuku_status_disconnected)
+        title = if (builtIn) stringResource(R.string.connect_card_title) else stringResource(R.string.shizuku_card_title),
+        subtitle = when (connectionState) {
+            DaemonBridge.State.CONNECTED ->
+                if (builtIn) stringResource(R.string.connect_desc_connected) else stringResource(R.string.shizuku_desc_connected)
+            DaemonBridge.State.DISCONNECTED -> stringResource(R.string.shizuku_desc_disconnected)
+            DaemonBridge.State.NEEDS_SETUP -> stringResource(R.string.connect_desc_needs_setup)
+            DaemonBridge.State.DEV_OPTIONS_OFF -> stringResource(R.string.connect_desc_dev_off)
+            DaemonBridge.State.NETWORK_NOT_ALLOWED -> stringResource(R.string.connect_desc_network_not_allowed)
+            DaemonBridge.State.WAITING_FOR_WIFI -> stringResource(R.string.connect_desc_waiting_wifi)
+            DaemonBridge.State.NEEDS_PERMISSION -> stringResource(R.string.shizuku_desc_needs_permission)
+            DaemonBridge.State.NOT_RUNNING -> stringResource(R.string.shizuku_desc_not_running)
+            DaemonBridge.State.NOT_INSTALLED -> stringResource(R.string.shizuku_desc_not_installed)
+            DaemonBridge.State.CONNECTING ->
+                if (builtIn) stringResource(R.string.connect_desc_connecting) else stringResource(R.string.shizuku_desc_connecting)
+            DaemonBridge.State.TURNING_ON_WIRELESS_DEBUGGING -> stringResource(R.string.connect_desc_turning_on)
+            DaemonBridge.State.WAITING_FOR_WIRELESS_DEBUGGING -> stringResource(R.string.connect_desc_waiting_wireless)
+            DaemonBridge.State.ASKING_TO_ALLOW_NETWORK -> stringResource(R.string.connect_desc_asking_network)
+            else -> connectionError ?: stringResource(R.string.shizuku_status_disconnected)
         },
         icon = if (isConnected) Icons.Rounded.VerifiedUser else Icons.Rounded.AdminPanelSettings,
-        statusText = when (shizukuState) {
-            ShizukuBridge.State.CONNECTED -> stringResource(R.string.shizuku_status_connected)
-            ShizukuBridge.State.DISCONNECTED -> stringResource(R.string.shizuku_status_disconnected_paused)
-            ShizukuBridge.State.CONNECTING -> stringResource(R.string.shizuku_status_connecting)
-            ShizukuBridge.State.NEEDS_PERMISSION -> stringResource(R.string.shizuku_status_needs_permission)
-            ShizukuBridge.State.NOT_RUNNING -> stringResource(R.string.shizuku_status_not_running)
-            ShizukuBridge.State.NOT_INSTALLED -> stringResource(R.string.shizuku_status_not_installed)
+        statusText = when (connectionState) {
+            DaemonBridge.State.CONNECTED -> stringResource(R.string.shizuku_status_connected)
+            DaemonBridge.State.DISCONNECTED -> stringResource(R.string.shizuku_status_disconnected_paused)
+            DaemonBridge.State.CONNECTING,
+            DaemonBridge.State.TURNING_ON_WIRELESS_DEBUGGING,
+            DaemonBridge.State.WAITING_FOR_WIRELESS_DEBUGGING -> stringResource(R.string.shizuku_status_connecting)
+            DaemonBridge.State.ASKING_TO_ALLOW_NETWORK -> stringResource(R.string.connect_status_asking_network)
+            DaemonBridge.State.NEEDS_SETUP -> stringResource(R.string.connect_status_needs_setup)
+            DaemonBridge.State.DEV_OPTIONS_OFF -> stringResource(R.string.connect_status_dev_off)
+            DaemonBridge.State.NETWORK_NOT_ALLOWED -> stringResource(R.string.connect_status_network_not_allowed)
+            DaemonBridge.State.WAITING_FOR_WIFI -> stringResource(R.string.connect_status_waiting_wifi)
+            DaemonBridge.State.NEEDS_PERMISSION -> stringResource(R.string.shizuku_status_needs_permission)
+            DaemonBridge.State.NOT_RUNNING -> stringResource(R.string.shizuku_status_not_running)
+            DaemonBridge.State.NOT_INSTALLED -> stringResource(R.string.shizuku_status_not_installed)
             else -> stringResource(R.string.shizuku_status_disconnected)
         },
         accentColor = if (isConnected) {
             MaterialTheme.colorScheme.primary
-        } else if (isExplicitlyDisconnected) {
+        } else if (isQuiet) {
             MaterialTheme.colorScheme.onSurfaceVariant
         } else {
             MaterialTheme.colorScheme.error
@@ -120,8 +152,8 @@ fun ShizukuStatusCard(
             MaterialTheme.colorScheme.onSurfaceVariant
         },
         bottomAction = {
-            when (shizukuState) {
-                ShizukuBridge.State.CONNECTED -> {
+            when (connectionState) {
+                DaemonBridge.State.CONNECTED -> {
                     OutlinedButton(
                         onClick = onDisconnect,
                         modifier = Modifier.fillMaxWidth(),
@@ -133,22 +165,51 @@ fun ShizukuStatusCard(
                         ButtonLabel(Icons.Rounded.PowerSettingsNew, stringResource(R.string.shizuku_btn_disconnect))
                     }
                 }
-                ShizukuBridge.State.DISCONNECTED -> {
+                DaemonBridge.State.DISCONNECTED -> {
                     Button(onClick = onConnect, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) {
                         ButtonLabel(Icons.Rounded.PowerSettingsNew, stringResource(R.string.shizuku_btn_connect))
                     }
                 }
-                ShizukuBridge.State.NEEDS_PERMISSION -> {
+                DaemonBridge.State.NEEDS_SETUP -> {
+                    Button(onClick = onSetUp, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) {
+                        ButtonLabel(Icons.Rounded.Link, stringResource(R.string.connect_btn_set_up))
+                    }
+                }
+                DaemonBridge.State.NETWORK_NOT_ALLOWED -> {
+                    Button(onClick = onConnect, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) {
+                        ButtonLabel(Icons.Rounded.Refresh, stringResource(R.string.connect_btn_ask_again))
+                    }
+                }
+                DaemonBridge.State.DEV_OPTIONS_OFF -> {
+                    // Developer options is hidden while it's off; Build number brings it back.
+                    Button(
+                        onClick = { SetupIntents.open(context, SetupIntents.aboutPhone(context)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shapes = ButtonDefaults.shapes()
+                    ) {
+                        ButtonLabel(Icons.Rounded.Settings, stringResource(R.string.connect_step_dev_btn))
+                    }
+                }
+                DaemonBridge.State.WAITING_FOR_WIFI -> {
+                    OutlinedButton(
+                        onClick = { SetupIntents.open(context, SetupIntents.wifi(context)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shapes = ButtonDefaults.shapes()
+                    ) {
+                        ButtonLabel(Icons.Rounded.Wifi, stringResource(R.string.connect_btn_wifi))
+                    }
+                }
+                DaemonBridge.State.NEEDS_PERMISSION -> {
                     Button(onClick = onRequestPermission, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) {
                         ButtonLabel(Icons.Rounded.Key, stringResource(R.string.shizuku_btn_authorize))
                     }
                 }
-                ShizukuBridge.State.NOT_INSTALLED -> {
+                DaemonBridge.State.NOT_INSTALLED -> {
                     Button(onClick = onOpenShizukuApp, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) {
                         ButtonLabel(Icons.Rounded.Download, stringResource(R.string.shizuku_btn_install))
                     }
                 }
-                ShizukuBridge.State.NOT_RUNNING -> {
+                DaemonBridge.State.NOT_RUNNING -> {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -161,7 +222,10 @@ fun ShizukuStatusCard(
                         }
                     }
                 }
-                ShizukuBridge.State.CONNECTING -> null
+                DaemonBridge.State.CONNECTING,
+                DaemonBridge.State.TURNING_ON_WIRELESS_DEBUGGING,
+                DaemonBridge.State.WAITING_FOR_WIRELESS_DEBUGGING,
+                DaemonBridge.State.ASKING_TO_ALLOW_NETWORK -> null
                 else -> {
                     Button(onClick = onConnect, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) {
                         ButtonLabel(Icons.Rounded.Refresh, stringResource(R.string.shizuku_btn_retry))

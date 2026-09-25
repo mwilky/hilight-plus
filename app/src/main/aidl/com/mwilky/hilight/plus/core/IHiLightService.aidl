@@ -30,4 +30,6 @@ interface IHiLightService {
     void setSplitAnimation(String animation);
     void restart();
     boolean isRingStuck();
+    int getVersionCode();
+    boolean grantWriteSecureSettings();
 }

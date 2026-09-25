@@ -39,7 +39,7 @@ internal object DebugReport {
 
     private suspend fun header(context: Context, controller: LightController): String {
         val snapshot = controller.store.snapshot()
-        val daemonState = withContext(Dispatchers.IO) { controller.shizuku.dumpDaemonState() }
+        val daemonState = withContext(Dispatchers.IO) { controller.daemon.dumpDaemonState() }
         val licence = controller.licensing.status.value
         val stock = NativeHiLightDetector.state.value
         val now = System.currentTimeMillis()
@@ -52,7 +52,7 @@ internal object DebugReport {
             appendLine()
 
             appendLine("== Status ==")
-            appendLine("Shizuku: ${controller.shizuku.state.value}${controller.shizuku.errorText()?.let { " ($it)" } ?: ""}")
+            appendLine("Daemon: ${controller.daemon.state.value} via ${controller.daemon.method.value}${controller.daemon.errorText()?.let { " ($it)" } ?: ""}")
             appendLine("Notification access: granted=${isNotificationListenerEnabled(context)}, listener connected=${NotificationTrigger.isListenerConnected}")
             appendLine("Contacts permission: ${context.checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED}")
             appendLine("Stock favourite-calls HiLight: ${if (stock.known) stock.favoriteCallsActive else "unknown"}")
