@@ -27,11 +27,15 @@ object DeviceOrientationDetector {
     const val TOKEN_BATTERY = "battery"
 
     private const val TAG = "DeviceOrientation"
+    private const val TILT_DETECTOR = "android.sensor.tilt_detector"
+    private const val FLIP_WAKE_MS = 2_000L
 
     private val monitorTokens = mutableSetOf<String>()
     private var activeSensorManager: SensorManager? = null
     private var activeListener: SensorEventListener? = null
     private var lastReportedFaceDown: Boolean? = null
+    private var flipWakeLock: PowerManager.WakeLock? = null
+    private var tiltListener: SensorEventListener? = null
 
     @Volatile
     var lastKnownFaceDown: Boolean = false
@@ -148,6 +152,11 @@ object DeviceOrientationDetector {
             ?: return
 
         lastReportedFaceDown = null
+        // Keeps the CPU up after a tilt or flip, so gravity readings arrive and the daemon can
+        // put the new look on the ring before the phone sleeps again.
+        flipWakeLock = (context.getSystemService(Context.POWER_SERVICE) as? PowerManager)
+            ?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "hilight-plus:flip")
+            ?.apply { setReferenceCounted(false) }
         activeSensorManager = sensorManager
         activeListener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent?) {
@@ -160,6 +169,7 @@ object DeviceOrientationDetector {
                 rememberFaceDown(faceDown)
                 if (faceDown != lastReportedFaceDown) {
                     lastReportedFaceDown = faceDown
+                    runCatching { flipWakeLock?.acquire(FLIP_WAKE_MS) }
                     DebugLog.i(TAG, "Device orientation flipped -> isFaceDown=$faceDown")
                     onOrientationChanged?.invoke(faceDown)
                 }
@@ -169,15 +179,37 @@ object DeviceOrientationDetector {
         }
 
         sensorManager.registerListener(activeListener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
-        DebugLog.i(TAG, "Started orientation monitoring for pending alerts")
+
+        // Gravity doesn't wake the CPU: while the phone sleeps its readings wait for something
+        // else to wake it, so a flip would go unseen. The wake-up tilt detector fires in the
+        // sensor hub when the phone turns about 35 degrees, which wakes us to read gravity.
+        val tilt = sensorManager.getSensorList(Sensor.TYPE_ALL)
+            .firstOrNull { it.stringType == TILT_DETECTOR && it.isWakeUpSensor }
+        if (tilt != null) {
+            tiltListener = object : SensorEventListener {
+                override fun onSensorChanged(event: SensorEvent?) {
+                    runCatching { flipWakeLock?.acquire(FLIP_WAKE_MS) }
+                    DebugLog.d(TAG, "Tilt detected, reading orientation")
+                    activeListener?.let { sensorManager.flush(it) }
+                }
+
+                override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+            }
+            sensorManager.registerListener(tiltListener, tilt, SensorManager.SENSOR_DELAY_NORMAL)
+        }
+        DebugLog.i(TAG, "Started orientation monitoring for pending alerts (tilt wake-up=${tilt != null})")
     }
 
     private fun stopMonitoringLocked() {
+        tiltListener?.let { activeSensorManager?.unregisterListener(it) }
+        tiltListener = null
         activeListener?.let {
             activeSensorManager?.unregisterListener(it)
             activeListener = null
             activeSensorManager = null
             lastReportedFaceDown = null
+            flipWakeLock?.let { if (it.isHeld) runCatching { it.release() } }
+            flipWakeLock = null
             DebugLog.i(TAG, "Stopped orientation monitoring")
         }
     }
