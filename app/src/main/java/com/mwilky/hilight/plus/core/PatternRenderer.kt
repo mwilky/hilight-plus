@@ -75,16 +75,9 @@ class PatternRenderer {
 
             "comet" -> {
                 val headPos = ((elapsedTimeMs % speed) / speed.toDouble()) * count
-                val tailLength = 3.5
                 for (i in 0 until count) {
-                    var diff = (headPos - i + count) % count
-                    if (diff < 0) diff += count
-                    val k = if (diff <= tailLength) {
-                        (1.0 - (diff / tailLength)).coerceIn(0.0, 1.0)
-                    } else {
-                        0.0
-                    }
-                    frame[i] = if (k > 0.01) scaleColor(baseColor, k * k * clampedBrightness) else 0x00000000
+                    val k = cometLevel(headPos - i, count, COMET_TAIL)
+                    frame[i] = if (k > 0.01) scaleColor(baseColor, k * clampedBrightness) else 0x00000000
                 }
             }
 
@@ -92,19 +85,13 @@ class PatternRenderer {
                 // Dual counter-rotating colliding comets
                 val phase = (elapsedTimeMs % speed) / speed.toDouble()
                 val head1 = phase * count
-                val head2 = ((1.0 - phase) * count + count) % count
-                val tailLength = 3.0
+                val head2 = (1.0 - phase) * count
 
                 for (i in 0 until count) {
-                    var diff1 = (head1 - i + count) % count
-                    if (diff1 < 0) diff1 += count
-                    val k1 = if (diff1 <= tailLength) (1.0 - (diff1 / tailLength)).coerceIn(0.0, 1.0) else 0.0
-
-                    var diff2 = (head2 - i + count) % count
-                    if (diff2 < 0) diff2 += count
-                    val k2 = if (diff2 <= tailLength) (1.0 - (diff2 / tailLength)).coerceIn(0.0, 1.0) else 0.0
-
-                    val combined = (k1 * k1 + k2 * k2).coerceIn(0.0, 1.0)
+                    // The second comet runs the other way, so its tail trails on the other side.
+                    val k1 = cometLevel(head1 - i, count, ORBIT_TAIL)
+                    val k2 = cometLevel(i - head2, count, ORBIT_TAIL)
+                    val combined = (k1 + k2).coerceIn(0.0, 1.0)
                     frame[i] = if (combined > 0.01) scaleColor(baseColor, combined * clampedBrightness) else 0x00000000
                 }
             }
@@ -145,10 +132,13 @@ class PatternRenderer {
                         4 -> 4.0
                         else -> 0.0
                     }
-                    val targetPhase = distFromTop / 4.0
+                    // The crest reaches the top a window after the loop starts and the bottom a
+                    // window before it ends, so every LED is dark at the loop point and it doesn't
+                    // snap from bottom to top.
+                    val targetPhase = RIPPLE_WINDOW + distFromTop / 4.0 * (1.0 - 2.0 * RIPPLE_WINDOW)
                     val diff = abs(phase - targetPhase)
-                    val k = if (diff < 0.35) {
-                        val t = diff / 0.35
+                    val k = if (diff < RIPPLE_WINDOW) {
+                        val t = diff / RIPPLE_WINDOW
                         (1.0 + cos(t * PI)) / 2.0
                     } else 0.0
 
@@ -157,15 +147,24 @@ class PatternRenderer {
             }
 
             "sparkle" -> {
-                // Organic multi-LED gemstone twinkle
-                val phase = (elapsedTimeMs % speed) / speed.toDouble()
-                val seedOffset = doubleArrayOf(0.0, 0.37, 0.71, 0.19, 0.83, 0.53, 0.07, 0.61)
-
+                // Glints at uneven places round the ring, each at its own brightness, so the loop
+                // doesn't show as a repeating sweep. Two per LED per loop: one glint is three
+                // keyframes (dark, peak, dark) and the hardware allows nine per LED.
+                // Glints are spaced evenly round the whole loop and the last ones run on past the
+                // end into the start, so as many are showing at the loop point as anywhere else.
+                val t = elapsedTimeMs % speed
+                val spacing = speed / SPARKLE_ORDER.size.toDouble()
+                val rise = SPARKLE_GLINT_MS * SPARKLE_RISE
                 for (i in 0 until count) {
-                    val offset = if (i < seedOffset.size) seedOffset[i] else (i * 0.23) % 1.0
-                    val ledPhase = (phase + offset) % 1.0
-                    val k = (1.0 - cos(ledPhase * 2.0 * PI)) / 2.0
-                    val intensity = (k * k * k) * clampedBrightness // Cubic curve for sharp twinkle glints
+                    var k = 0.0
+                    for (n in SPARKLE_ORDER.indices) {
+                        if (SPARKLE_ORDER[n] != i % SPARKLE_LEDS) continue
+                        val since = ((t - n * spacing) % speed + speed) % speed
+                        if (since >= SPARKLE_GLINT_MS) continue
+                        val shape = if (since < rise) since / rise else 1.0 - (since - rise) / (SPARKLE_GLINT_MS - rise)
+                        k = maxOf(k, shape * SPARKLE_PEAKS[n])
+                    }
+                    val intensity = k * clampedBrightness
                     frame[i] = if (intensity > 0.02) scaleColor(baseColor, intensity) else 0x00000000
                 }
             }
@@ -441,6 +440,23 @@ class PatternRenderer {
         return (a shl 24) or (r shl 16) or (g shl 8) or b
     }
 
+    /**
+     * Brightness of an LED [behind] LEDs behind a comet's head (negative when the head hasn't
+     * reached it yet), on a ring of [count]. With only eight LEDs, one snapping to full as the head
+     * arrives reads as LEDs blinking in turn, so the LED ahead fades up over [COMET_LEAD] of a
+     * spacing and the tail eases out over [tail] LEDs. Most of the ring stays dark, which is what
+     * keeps a comet looking like one light rather than a wave.
+     */
+    private fun cometLevel(behind: Double, count: Int, tail: Double): Double {
+        val diff = ((behind % count) + count) % count
+        val k = when {
+            diff >= count - COMET_LEAD -> (diff - (count - COMET_LEAD)) / COMET_LEAD
+            diff <= tail -> 1.0 - diff / tail
+            else -> 0.0
+        }.coerceIn(0.0, 1.0)
+        return k * k * (3.0 - 2.0 * k)
+    }
+
     private fun lerpColor(from: Int, to: Int, fraction: Double): Int {
         val f = fraction.coerceIn(0.0, 1.0)
         fun channel(shift: Int): Int {
@@ -482,6 +498,21 @@ class PatternRenderer {
 
     companion object {
         const val SINGLE_LED_PREFIX = "led:"
+
+        private const val COMET_LEAD = 0.5
+        private const val COMET_TAIL = 2.0
+        private const val ORBIT_TAIL = 1.5
+        private const val RIPPLE_WINDOW = 0.25
+
+        // Which LED glints at each of the loop's evenly spaced slots: every LED twice, never a
+        // ring neighbour straight after, and the same LED never within four slots, counting
+        // round the loop point too.
+        private val SPARKLE_ORDER = intArrayOf(6, 3, 0, 4, 1, 7, 2, 5, 1, 6, 3, 0, 5, 2, 7, 4)
+        private val SPARKLE_PEAKS = doubleArrayOf(1.0, 0.7, 0.9, 0.6, 1.0, 0.75, 0.55, 0.95, 0.8, 0.65, 1.0, 0.7, 0.9, 0.6, 0.85, 1.0)
+        private const val SPARKLE_LEDS = 8
+        private const val SPARKLE_GLINT_MS = 500.0
+        // Share of a glint spent brightening; the rest is its fade.
+        private const val SPARKLE_RISE = 0.25
 
         private const val SPLIT_BREATHE_MS = 2400L
         // Never dip low enough that "on" reads as bleed from a neighbour.

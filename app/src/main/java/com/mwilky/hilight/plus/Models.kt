@@ -29,7 +29,7 @@ enum class PatternMode(val id: String, val titleRes: Int) {
         ORBIT -> 1000L
         BEACON -> 750L
         RIPPLE -> 900L
-        SPARKLE -> 1400L
+        SPARKLE -> 3200L
         RAINBOW -> 1200L
         PULSE -> 850L
         GEMINI_LISTENING -> 3200L
