@@ -227,12 +227,15 @@ class NotificationTrigger : NotificationListenerService() {
     }
 
     /**
-     * A (re)started daemon holds no alerts, so send it every slot still waiting. Newest-only is
+     * Makes the daemon's alerts match the waiting slots. A daemon that kept running while this
+     * process was away still holds its alerts, and any removal made meanwhile was dropped, so it
+     * is cleared first rather than trusted. Then every slot still waiting is sent. Newest-only is
      * left out: its alert was timed, and the tracker still names the latest source long after
      * that time ran out, so replaying it could light something that has already finished.
      */
     private suspend fun handleDaemonConnected() {
         val snapshot = AppStore.get(applicationContext).snapshot()
+        LightController.get(applicationContext).clearAlert()
         if (!snapshot.isEnabled || !snapshot.isNotificationsEnabled || !snapshot.isCycleNotifications) return
         val slots = tracker.slotsInOrder()
         if (slots.isEmpty()) return
