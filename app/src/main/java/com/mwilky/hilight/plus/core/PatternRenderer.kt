@@ -524,6 +524,31 @@ class PatternRenderer {
         private const val SPLIT_SPOTLIGHT_PEAK = 0.9
         private const val SPLIT_ROTATE_STEP_MS = 800L
 
+        /**
+         * How long [renderBatteryFrame] takes to repeat for the look it would show, so it can be
+         * handed to the hardware as one loop. Looks that don't move repeat at any length.
+         */
+        fun batteryLoopMs(pattern: BatteryPattern, charging: Boolean, full: Boolean, low: Boolean, lowPattern: LowBatteryPattern): Long = when {
+            full -> BATTERY_FULL_SWEEP_PERIOD_MS
+            low && !charging -> when (lowPattern) {
+                LowBatteryPattern.HEARTBEAT -> BATTERY_HEARTBEAT_MS
+                LowBatteryPattern.BREATHE -> BATTERY_BREATHE_MS
+                LowBatteryPattern.SOLID -> STATIC_LOOP_MS
+            }
+            pattern == BatteryPattern.GAUGE -> STATIC_LOOP_MS
+            else -> BATTERY_BREATHE_MS
+        }
+
+        /** How long [renderSplitFrame] takes to repeat for [colorCount] arcs. */
+        fun splitLoopMs(animation: SplitAnimation, colorCount: Int, ledCount: Int): Long = when (animation) {
+            SplitAnimation.BREATHE -> SPLIT_BREATHE_MS
+            SplitAnimation.SOLID -> STATIC_LOOP_MS
+            SplitAnimation.SPOTLIGHT -> SPLIT_SPOTLIGHT_STEP_MS * (splitLayout(colorCount, ledCount).max() + 1)
+            SplitAnimation.ROTATE -> SPLIT_ROTATE_STEP_MS * maxOf(1, ledCount)
+        }
+
+        private const val STATIC_LOOP_MS = 1000L
+
         /** Each arc needs at least one lit LED plus its gap, and more than four arcs stop being countable. */
         const val MAX_SPLIT_SEGMENTS = 4
 

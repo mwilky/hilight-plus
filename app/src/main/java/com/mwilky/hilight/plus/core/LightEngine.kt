@@ -12,7 +12,11 @@ import com.mwilky.hilight.plus.currentMinutesOfDay
 /**
  * Clean, lightweight render engine driving the Pixel 11 rear LEDs.
  * Supports multi-notification cyclic rendering across active unread alerts.
- * Runs at ~30 FPS (33ms period).
+ *
+ * Whatever the ring should show is handed to the lights hardware as one looping [RingEffect]
+ * when it changes, and the hardware plays it by itself, including while the CPU sleeps. The loop
+ * then only wakes for state changes and timers. Without effect support it falls back to pushing
+ * frames at ~30 FPS.
  */
 class LightEngine {
 
@@ -146,6 +150,21 @@ class LightEngine {
     private var splitKeys: List<String>? = null
     private var splitStartedAtMs = 0L
 
+    // Hardware effects: what the open session is showing, so an effect is only sent when that
+    // changes, and whether the render loop is pushing frames (fallback) and so needs to tick fast.
+    private var shownEffectKey: List<Any?>? = null
+    private var shownEffectInfo: String? = null
+    private var effectsFailed = false
+    private var framesDriving = true
+    private var directGeneration = 0
+    private var wakePending = false
+    // When the queue's next turn is due, so the loop wakes to send it.
+    private var nextTurnAtMs: Long? = null
+    private val forceFramesProperty = runCatching {
+        Class.forName("android.os.SystemProperties")
+            .getMethod("getBoolean", String::class.java, Boolean::class.javaPrimitiveType)
+    }.getOrNull()
+
     // What the ring was last showing, so each change is logged once rather than every frame.
     private var lastRenderReason: String? = null
     private var lastTickElapsedMs = 0L
@@ -211,6 +230,7 @@ class LightEngine {
             syncNotificationTimer(now)
             needsSessionReset = true
             DebugLog.i(TAG, "startIncomingCall: pattern=$pattern, color=${hex(color)}, requiresFaceDown=$requiresFaceDown, dndMode=$dndMode, quietHoursMode=$quietHoursMode")
+            wake()
         }
     }
 
@@ -223,6 +243,7 @@ class LightEngine {
             syncNotificationTimer(now)
             cycleStartTimeMs = now
             needsSessionReset = true
+            wake()
         }
     }
 
@@ -257,6 +278,8 @@ class LightEngine {
             currentAlertIndex = 0
             needsSessionReset = true
             DebugLog.i(TAG, "triggerAlert: pattern=$pattern, color=$color, durationMs=$durationMs, requiresFaceDown=$requiresFaceDown, dndMode=$dndMode, quietHoursMode=$quietHoursMode")
+            directGeneration++
+            wake()
         }
     }
 
@@ -307,6 +330,7 @@ class LightEngine {
                 needsSessionReset = true
             }
             DebugLog.i(TAG, "postAlert [key=$key]: pattern=$pattern, color=$color, speedMs=$speedMs (queue size=${activeAlerts.size}, requiresFaceDown=$requiresFaceDown, dndMode=$dndMode, quietHoursMode=$quietHoursMode)")
+            wake()
         }
     }
 
@@ -321,6 +345,7 @@ class LightEngine {
             testAlert = TestAlert(pattern, color, brightness, speedMs, now, now + durationMs)
             needsSessionReset = true
             DebugLog.i(TAG, "testAlert: pattern=$pattern, color=$color, durationMs=$durationMs")
+            wake()
         }
     }
 
@@ -330,6 +355,7 @@ class LightEngine {
             testAlert = null
             needsSessionReset = true
             DebugLog.i(TAG, "cancelTestAlert")
+            wake()
         }
     }
 
@@ -342,6 +368,7 @@ class LightEngine {
             cycleStartTimeMs = now
             needsSessionReset = true
             DebugLog.i(TAG, "setDeviceFaceDown: $faceDown")
+            wake()
         }
     }
 
@@ -368,6 +395,7 @@ class LightEngine {
             if (splitRing == enabled) return
             splitRing = enabled
             DebugLog.i(TAG, "setSplitRing: $enabled")
+            wake()
         }
     }
 
@@ -377,6 +405,7 @@ class LightEngine {
             splitAnimation = animation
             splitKeys = null
             DebugLog.i(TAG, "setSplitAnimation: ${animation.id}")
+            wake()
         }
     }
 
@@ -452,6 +481,7 @@ class LightEngine {
         syncNotificationTimer(now)
         cycleStartTimeMs = now
         needsSessionReset = true
+        wake()
     }
 
     /**
@@ -466,6 +496,7 @@ class LightEngine {
                     cycleStartTimeMs = SystemClock.elapsedRealtime()
                 }
                 DebugLog.i(TAG, "removeAlert [key=$key] (remaining queue=${activeAlerts.size})")
+                wake()
                 if (incomingCallAlert == null && activeAlerts.isEmpty() && directAlert == null && !batteryActiveNow()) {
                     lights.blank()
                 }
@@ -479,6 +510,7 @@ class LightEngine {
     fun clearAlert() {
         synchronized(lock) {
             DebugLog.i(TAG, "clearAlert (queue=${activeAlerts.size}, latest=${directAlert != null})")
+            wake()
             directAlert = null
             directAlertTimer.clear()
             activeAlerts.clear()
@@ -492,6 +524,7 @@ class LightEngine {
     fun turnOff() {
         synchronized(lock) {
             DebugLog.i(TAG, "turnOff")
+            wake()
             incomingCallAlert = null
             directAlert = null
             directAlertTimer.clear()
@@ -512,7 +545,15 @@ class LightEngine {
         while (running) {
             try {
                 tick()
-                Thread.sleep(FRAME_MS)
+                // While the hardware plays an effect there's nothing to push, so sleep until
+                // something changes or a timer is due.
+                synchronized(lock) {
+                    if (!wakePending) {
+                        val waitMs = if (framesDriving) FRAME_MS else idleWaitMs(SystemClock.elapsedRealtime())
+                        lockObject.wait(waitMs)
+                    }
+                    wakePending = false
+                }
             } catch (e: InterruptedException) {
                 break
             } catch (t: Throwable) {
@@ -526,6 +567,75 @@ class LightEngine {
         }
     }
 
+    // Any wraps java.lang.Object, whose monitor methods Kotlin hides.
+    @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
+    private val lockObject get() = lock as java.lang.Object
+
+    /** Wakes the render loop for a state change. Call with [lock] held. */
+    private fun wake() {
+        wakePending = true
+        lockObject.notifyAll()
+    }
+
+    /** How long the loop can sleep while an effect plays: until the next timer, at most a second. */
+    private fun idleWaitMs(now: Long): Long {
+        var due = now + IDLE_TICK_MS
+        testAlert?.let { due = minOf(due, it.expiresAtMs) }
+        if (directAlert != null) due = minOf(due, now + directAlertTimer.remainingMs(now))
+        activeAlerts.forEach { if (it.expiresAtMs != Long.MAX_VALUE) due = minOf(due, it.expiresAtMs) }
+        nextTurnAtMs?.let { due = minOf(due, it) }
+        return (due - now).coerceIn(FRAME_MS, IDLE_TICK_MS)
+    }
+
+    private fun effectsEnabled(): Boolean {
+        if (!lights.supportsEffects || effectsFailed) return false
+        // `adb shell setprop debug.hilightplus.frames true` forces the frame route, for comparison.
+        val forced = runCatching { forceFramesProperty?.invoke(null, FORCE_FRAMES_PROPERTY, false) as? Boolean }.getOrNull()
+        return forced != true
+    }
+
+    /**
+     * Shows [key]'s look as a hardware effect, building it with [build] only when the look
+     * changed since it was last sent. Looks that don't move go out as effects too: a frame sent
+     * while the hardware plays an effect may not replace it. [iterations] above 0 lets the
+     * hardware stop by itself after that many loops.
+     */
+    private fun showEffect(key: List<Any?>, iterations: Int = 0, build: () -> RingEffect) {
+        framesDriving = false
+        if (needsSessionReset || !lights.isSessionOpen) {
+            lights.openSession(sessionPriority)
+            needsSessionReset = false
+            shownEffectKey = null
+        }
+        if (key == shownEffectKey && lights.isSessionOpen) return
+        val effect = build()
+        val shown = lights.playEffect(effect, iterations)
+        if (!shown) {
+            // Refused, not a lost session: frames from here on, until the daemon restarts.
+            if (lights.isSessionOpen) {
+                effectsFailed = true
+                DebugLog.w(TAG, "Light effect refused; falling back to frames")
+            }
+            framesDriving = true
+            shownEffectKey = null
+            return
+        }
+        shownEffectKey = key
+        val kind = if (effect.isStatic) "static effect" else "effect"
+        shownEffectInfo = "$kind ${effect.durationMs}ms x${if (iterations > 0) iterations else "∞"}, ${effect.leds.maxOf { it.colors.size }} keyframes"
+        DebugLog.i(TAG, "Ring effect: $shownEffectInfo")
+    }
+
+    /** One loop of a rule pattern, lasting [loopMs], as a hardware effect. */
+    private fun patternEffect(pattern: String, color: Long, brightness: Float, speedMs: Long, loopMs: Long): RingEffect =
+        RingEffect.sample(loopMs, lights.effectPeriodMs, lights.ledCount) { t ->
+            renderer.renderFrame(pattern, color, brightness, speedMs, t, lights.ledCount)
+        }
+
+    /** Loops needed to cover [remainingMs], so a timed alert's effect ends by itself. */
+    private fun loopsFor(remainingMs: Long, loopMs: Long): Int =
+        ((remainingMs + loopMs - 1) / maxOf(1L, loopMs)).coerceIn(1L, Int.MAX_VALUE.toLong()).toInt()
+
     private fun tick() {
         synchronized(lock) {
             if (!running) return
@@ -536,7 +646,8 @@ class LightEngine {
             }
 
             val now = SystemClock.elapsedRealtime()
-            noteFrameGap(now, SystemClock.uptimeMillis())
+            // Gaps only matter while frames drive the ring; an effect keeps playing through them.
+            if (framesDriving) noteFrameGap(now, SystemClock.uptimeMillis()) else lastTickElapsedMs = 0L
             val nowMinutes = currentMinutesOfDay()
             syncNotificationTimer(now)
             val call = incomingCallAlert
@@ -589,6 +700,10 @@ class LightEngine {
             var elapsedMs = now
             var renderBattery = false
             var splitColors: LongArray? = null
+            // For the effect route: what identifies the look on show, and how long a timed one has left.
+            var effectKey: List<Any?> = emptyList()
+            var effectRemainingMs: Long? = null
+            nextTurnAtMs = null
 
             fun useBatteryIfEligible() {
                 if (batteryEligible) renderBattery = true
@@ -602,6 +717,8 @@ class LightEngine {
                 currentBrightness = test.brightness
                 currentSpeed = test.speedMs
                 elapsedMs = now - test.startedAtMs
+                effectKey = listOf("test", test)
+                effectRemainingMs = test.expiresAtMs - now
             } else if (call != null) {
                 if (callVisible) {
                     reason = "call ${call.pattern} ${hex(call.color)}"
@@ -610,6 +727,7 @@ class LightEngine {
                     currentBrightness = call.brightness
                     currentSpeed = call.speedMs
                     elapsedMs = now - call.startedAtMs
+                    effectKey = listOf("call", call)
                 } else {
                     reason = "off (call hidden by conditions)"
                     useBatteryIfEligible()
@@ -625,6 +743,8 @@ class LightEngine {
                 currentBrightness = direct.brightness
                 currentSpeed = direct.speedMs
                 elapsedMs = directAlertTimer.elapsedMs(now)
+                effectKey = listOf("latest", directGeneration, direct)
+                effectRemainingMs = directAlertTimer.remainingMs(now)
             } else if (!batterySuppressesNotifications && activeAlerts.isNotEmpty()) {
                 val eligibleStart = firstEligibleAlertIndex(currentAlertIndex)
                 val splitAlerts = if (splitRing && eligibleStart != null) visibleAlertsNewestFirst(nowMinutes) else emptyList()
@@ -641,7 +761,8 @@ class LightEngine {
                     splitColors = LongArray(minOf(splitAlerts.size, PatternRenderer.MAX_SPLIT_SEGMENTS)) { splitAlerts[it].color }
                     currentBrightness = splitAlerts[0].brightness
                 } else {
-                    reason = "queue ${visibleAlertsNewestFirst(nowMinutes).map { it.key }}"
+                    val turns = visibleAlertsNewestFirst(nowMinutes)
+                    reason = "queue ${turns.map { it.key }}"
                     if (currentAlertIndex != eligibleStart) {
                         currentAlertIndex = eligibleStart
                         cycleStartTimeMs = now
@@ -666,6 +787,15 @@ class LightEngine {
 
                     // Clamp elapsed time strictly within [0, singleCycleDuration]
                     elapsedMs = (now - cycleStartTimeMs).coerceIn(0L, singleCycleDuration)
+
+                    // A lone alert simply loops. With several, each turn is its own effect, sent
+                    // when the turn starts: one effect holding every turn wouldn't fit the hardware.
+                    effectKey = if (turns.size <= 1) {
+                        listOf("queue", activeAlertToRender)
+                    } else {
+                        nextTurnAtMs = cycleStartTimeMs + singleCycleDuration
+                        listOf("turn", currentAlertIndex, cycleStartTimeMs, activeAlertToRender)
+                    }
                 }
             } else {
                 reason = when {
@@ -685,6 +815,58 @@ class LightEngine {
                 }
             }
             noteRender(reason)
+            val useEffects = effectsEnabled()
+            framesDriving = !useEffects
+            val period = lights.effectPeriodMs
+            val count = lights.ledCount
+
+            if (renderBattery && battery != null && useEffects) {
+                val low = !batteryCharging && !batteryFull && battery.lowWarningEnabled &&
+                    batteryLevel <= battery.lowThresholdPercent
+                val loopMs = PatternRenderer.batteryLoopMs(battery.chargingPattern, batteryCharging, batteryFull, low, battery.lowPattern)
+                showEffect(listOf("battery", battery, batteryLevel, batteryCharging, batteryFull, low)) {
+                    RingEffect.sample(loopMs, period, count) { t ->
+                        renderer.renderBatteryFrame(
+                            pattern = battery.chargingPattern,
+                            lowPattern = battery.lowPattern,
+                            levelPercent = batteryLevel,
+                            charging = batteryCharging,
+                            full = batteryFull,
+                            low = low,
+                            autoColor = battery.autoColor,
+                            fixedColor = battery.color,
+                            brightness = 1.0f,
+                            elapsedTimeMs = t,
+                            ledCount = count
+                        )
+                    }
+                }
+                return
+            }
+
+            if (splitColors != null && useEffects) {
+                val colors = splitColors
+                val animation = splitAnimation
+                val loopMs = PatternRenderer.splitLoopMs(animation, colors.size, count)
+                showEffect(listOf("split", colors.toList(), currentBrightness, animation)) {
+                    RingEffect.sample(loopMs, period, count) { t ->
+                        renderer.renderSplitFrame(colors, currentBrightness, t, count, animation)
+                    }
+                }
+                return
+            }
+
+            if (!currentPattern.equals("off", ignoreCase = true) && useEffects) {
+                val loopMs = currentSpeed.coerceAtLeast(200L)
+                val iterations = effectRemainingMs?.let { loopsFor(it, loopMs) } ?: 0
+                val pattern = currentPattern
+                val color = currentColor
+                val brightness = currentBrightness
+                val speed = currentSpeed
+                showEffect(effectKey, iterations) { patternEffect(pattern, color, brightness, speed, loopMs) }
+                return
+            }
+            shownEffectKey = null
 
             if (renderBattery && battery != null) {
                 if (needsSessionReset || !lights.isSessionOpen) {
@@ -787,6 +969,7 @@ class LightEngine {
         val now = SystemClock.elapsedRealtime()
         buildString {
             appendLine("ring=$lastRenderReason, sessionOpen=${lights.isSessionOpen}, unclosedSessions=${lights.unclosedSessionCount}, leds=${lights.ledCount}, running=$running, renderThreadAlive=${renderThread?.isAlive}, lastFrame=${now - lastTickElapsedMs}ms ago")
+            appendLine("route=${if (framesDriving) "frames" else "effects"}, effectsSupported=${lights.supportsEffects}, effectsFailed=$effectsFailed, period=${lights.effectPeriodMs}ms, showing=${shownEffectKey?.let { shownEffectInfo }}")
             appendLine("faceDown=$deviceFaceDown, dndActive=$dndActive, dndSuppress=$dndSuppressEnabled, quietHours=$quietHoursEnabled $quietHoursStartMinutes-$quietHoursEndMinutes, splitRing=$splitRing (${splitAnimation.id})")
             appendLine("test=${testAlert?.let { "${it.pattern} ${hex(it.color)}, ${it.expiresAtMs - now}ms left" }}")
             appendLine("call=${incomingCallAlert?.let { "${it.pattern} ${hex(it.color)}, ringing ${(now - it.startedAtMs) / 1000}s, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}" }}")
@@ -948,6 +1131,10 @@ class LightEngine {
         private const val TAG = "LightEngine"
         private const val FRAME_MS = 33L // ~30 FPS
         private const val FRAME_GAP_LOG_MS = 1_000L
+        // Longest the loop sleeps while an effect plays, so conditions like quiet hours and the
+        // battery heartbeat are still checked about once a second.
+        private const val IDLE_TICK_MS = 1_000L
+        private const val FORCE_FRAMES_PROPERTY = "debug.hilightplus.frames"
 
         // Comfortably longer than the app's battery heartbeat, so a missed beat or two doesn't
         // blink the display, but short enough that a dead app can't strand the LEDs on.

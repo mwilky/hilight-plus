@@ -23,6 +23,7 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 - Rules per message sender and per app, plus a general default with automatic colour taken from the app icon.
 - Starred contacts can share a favourites style, which sits between a sender's own rule and the app rule.
 - Thirteen patterns: solid, breathe, pulse, wave, comet, orbit, beacon, ripple, sparkle, rainbow, and copies of Gemini's own listening, thinking and replying effects.
+- Every pattern, including the Gemini ones, is handed to the ring's own light controller as a looping effect, the same way stock Gemini lights it. The ring animates by itself instead of the app redrawing it many times a second.
 - Three ways to handle several notifications at once:
   - *Newest only* lights the latest for a chosen duration.
   - *Take turns* plays each waiting notification's pattern in turn until it is dismissed.
@@ -79,9 +80,9 @@ No phone-state or call-log permission is used: incoming calls, cellular or app, 
 The app has two halves:
 
 - **The app process** hosts the UI, the notification listener and the battery receiver. It resolves each event against your rules and decides colour, pattern and conditions.
-- **The daemon** (`HiLightDaemonService`) runs with shell UID. The app starts it itself over Wireless debugging (`WirelessAdb` pairs once, then launches `DaemonMain` through `app_process`, and the daemon hands its binder back through a content provider), or Shizuku starts it as a UserService. Only the app's UID may call it. It owns the render loop at roughly 30 frames per second, talks to `ILightsManager` through reflection, and applies live gating for face-down, Do Not Disturb and quiet hours so lights already playing react to changes. The app and daemon talk over an AIDL interface.
+- **The daemon** (`HiLightDaemonService`) runs with shell UID. The app starts it itself over Wireless debugging (`WirelessAdb` pairs once, then launches `DaemonMain` through `app_process`, and the daemon hands its binder back through a content provider), or Shizuku starts it as a UserService. Only the app's UID may call it. It talks to `ILightsManager` through reflection and applies live gating for face-down, Do Not Disturb and quiet hours so lights already playing react to changes. Whenever what the ring should show changes, it sends one Android 17 light effect (`setLightEffect`): `RingEffect` samples the pattern over a loop and reduces each LED to at most nine keyframes, since the Pixel lights HAL crashes on larger effects, and turning patterns are built from one LED shifted round the ring. The ring's controller then plays it with no further calls. If the lights service refuses effects, the daemon falls back to pushing frames at roughly 30 per second. The app and daemon talk over an AIDL interface.
 
-Face-down detection samples the accelerometer only while something is waiting to light, so there is no idle sensor cost.
+Face-down detection reads the gravity sensor only while something is waiting to light, so there is no idle sensor cost. Gravity doesn't wake a sleeping phone, so it is paired with the wake-up tilt detector, which fires in the sensor hub when the phone turns and wakes the app to check.
 
 ## Building
 
@@ -97,7 +98,7 @@ Standard Android Gradle project. Open in Android Studio or run:
 
 Release builds are minified with R8. There is also a `debugMinified` variant, signed with the debug key, for checking the shrunk app on a device. Keep the `mapping.txt` from each release build for readable crash reports.
 
-Unit tests cover the rule model, JSON round-tripping, contact matching, quiet hours, the pattern renderer, the battery and split-ring layouts, the call-state machine, the notification slot tracker and the connect-setup guide. Anything that touches the LEDs needs a physical Pixel.
+Unit tests cover the rule model, JSON round-tripping, contact matching, quiet hours, the pattern renderer, the battery and split-ring layouts, the conversion of every look into a hardware effect within the keyframe budget, the call-state machine, the notification slot tracker and the connect-setup guide. Anything that touches the LEDs needs a physical Pixel.
 
 ## Pricing
 

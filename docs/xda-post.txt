@@ -41,6 +41,7 @@ Gemini's stock lighting states remain untouched. All processing executes locally
 [*]Per-sender and per-app rules with dynamic colour extraction from app icons.
 [*]Starred contacts can share a favourites style, sitting between a sender's own rule and the app rule.
 [*]13 distinct LED animation patterns: [I]Solid, Breathe, Pulse, Wave, Comet, Orbit, Beacon, Ripple, Sparkle, Rainbow[/I], plus copies of Gemini's own [I]Listening, Thinking[/I] and [I]Replying[/I] effects.
+[*]Every pattern, Gemini ones included, runs on the ring's own light controller as a looping effect, the same way stock Gemini lights it: smooth, and without the app redrawing it many times a second.
 [*]Multi-alert ring management:
 [LIST]
 [*][B]Newest only:[/B] Displays the most recent notification for a set duration.
