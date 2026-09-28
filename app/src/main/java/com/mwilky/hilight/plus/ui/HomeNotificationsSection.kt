@@ -48,6 +48,7 @@ import com.mwilky.hilight.plus.AppNotificationRule
 import com.mwilky.hilight.plus.MessageContactRule
 import com.mwilky.hilight.plus.MultiAlertMode
 import com.mwilky.hilight.plus.R
+import com.mwilky.hilight.plus.RuleSort
 import com.mwilky.hilight.plus.SettingsSnapshot
 import com.mwilky.hilight.plus.DaemonBridge
 import com.mwilky.hilight.plus.SplitAnimation
@@ -81,18 +82,24 @@ fun HomeNotifsPage(
     onToggleMessageRule: (MessageContactRule, Boolean) -> Unit,
     onEditMessageRule: (MessageContactRule) -> Unit,
     onDeleteMessageRule: (String) -> Unit,
+    onChangeMessageRuleSort: (RuleSort) -> Unit,
     onAddMessageContact: () -> Unit,
     onToggleAppRule: (AppNotificationRule, Boolean) -> Unit,
     onEditAppRule: (AppNotificationRule) -> Unit,
     onDeleteAppRule: (String) -> Unit,
+    onChangeAppRuleSort: (RuleSort) -> Unit,
     onAddApp: () -> Unit,
     onChangeDuration: (Int) -> Unit,
     onChangeMultiAlertMode: (MultiAlertMode) -> Unit,
     onChangeSplitAnimation: (SplitAnimation) -> Unit,
     renderer: PatternRenderer
 ) {
-    val messageRules = state.messageContactRules
-    val appRules = state.appRules
+    val messageRules = remember(state.messageContactRules, state.messageRuleSort) {
+        state.messageRuleSort.sorted(state.messageContactRules, MessageContactRule::name)
+    }
+    val appRules = remember(state.appRules, state.appRuleSort) {
+        state.appRuleSort.sorted(state.appRules, AppNotificationRule::appName)
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -160,7 +167,12 @@ fun HomeNotifsPage(
                     )
                 }
 
-                RuleGroupHeader(stringResource(R.string.notifs_contact_rules_header, messageRules.size))
+                RuleGroupHeader(
+                    text = stringResource(R.string.notifs_contact_rules_header, messageRules.size),
+                    action = if (messageRules.size > 1) {
+                        { RuleSortButton(state.messageRuleSort, RuleSort.CONTACT_OPTIONS, forContacts = true, onSortChange = onChangeMessageRuleSort) }
+                    } else null
+                )
                 if (messageRules.isEmpty()) {
                     EmptyRuleHint(stringResource(R.string.notifs_no_contact_rules), Icons.AutoMirrored.Rounded.Message)
                 } else {
@@ -186,7 +198,12 @@ fun HomeNotifsPage(
                 }
                 AddRuleButton(stringResource(R.string.calls_add_contact_btn), Icons.Rounded.PersonAdd, onAddMessageContact)
 
-                RuleGroupHeader(stringResource(R.string.notifs_app_rules_header, appRules.size))
+                RuleGroupHeader(
+                    text = stringResource(R.string.notifs_app_rules_header, appRules.size),
+                    action = if (appRules.size > 1) {
+                        { RuleSortButton(state.appRuleSort, RuleSort.APP_OPTIONS, forContacts = false, onSortChange = onChangeAppRuleSort) }
+                    } else null
+                )
                 if (appRules.isEmpty()) {
                     EmptyRuleHint(stringResource(R.string.notifs_no_app_rules), Icons.Rounded.Apps)
                 } else {

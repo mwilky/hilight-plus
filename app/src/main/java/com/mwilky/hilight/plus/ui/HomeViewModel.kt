@@ -13,6 +13,7 @@ import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.FaceDownMode
 import com.mwilky.hilight.plus.MessageContactRule
 import com.mwilky.hilight.plus.MultiAlertMode
+import com.mwilky.hilight.plus.RuleSort
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.SettingsSnapshot
@@ -53,6 +54,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteMessageContactRule(ruleId: String) = launch { store.deleteMessageContactRule(ruleId) }
     fun saveAppRule(rule: AppNotificationRule) = launch { store.saveAppRule(rule) }
     fun deleteAppRule(packageName: String) = launch { store.deleteAppRule(packageName) }
+    fun setCallRuleSort(sort: RuleSort) = launch { store.setCallRuleSort(sort) }
+    fun setMessageRuleSort(sort: RuleSort) = launch { store.setMessageRuleSort(sort) }
+    fun setAppRuleSort(sort: RuleSort) = launch { store.setAppRuleSort(sort) }
 
     fun setOtherContactsStyle(
         pattern: PatternMode,

@@ -296,6 +296,13 @@
     <string name="section_off_hint">Turned off. Your rules are kept and apply again when you switch back on.</string>
     <string name="rule_edit_cd">Edit rule</string>
     <string name="rule_delete_cd">Delete rule</string>
+    <string name="rule_sort_added">Date added</string>
+    <string name="rule_sort_name_asc">Name A–Z</string>
+    <string name="rule_sort_name_desc">Name Z–A</string>
+    <string name="rule_sort_first_name_asc">First name A–Z</string>
+    <string name="rule_sort_first_name_desc">First name Z–A</string>
+    <string name="rule_sort_last_name_asc">Last name A–Z</string>
+    <string name="rule_sort_last_name_desc">Last name Z–A</string>
     <string name="duration_seconds">%1$ds</string>
     <string name="duration_minutes">%1$dm</string>
     <string name="duration_minutes_seconds">%1$dm %2$ds</string>

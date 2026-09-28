@@ -25,6 +25,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.mwilky.hilight.plus.ContactRule
 import com.mwilky.hilight.plus.R
+import com.mwilky.hilight.plus.RuleSort
 import com.mwilky.hilight.plus.SettingsSnapshot
 import com.mwilky.hilight.plus.DaemonBridge
 import com.mwilky.hilight.plus.StockHiLightState
@@ -70,10 +72,13 @@ fun HomeCallsPage(
     onToggleCallContactRule: (ContactRule, Boolean) -> Unit,
     onEditCallContactRule: (ContactRule) -> Unit,
     onDeleteCallContactRule: (String) -> Unit,
+    onChangeCallRuleSort: (RuleSort) -> Unit,
     onAddCallContact: () -> Unit,
     renderer: PatternRenderer
 ) {
-    val rules = state.contactRules
+    val rules = remember(state.contactRules, state.callRuleSort) {
+        state.callRuleSort.sorted(state.contactRules, ContactRule::name)
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -173,7 +178,12 @@ fun HomeCallsPage(
                     )
                 }
 
-                RuleGroupHeader(stringResource(R.string.calls_custom_rules_header, rules.size))
+                RuleGroupHeader(
+                    text = stringResource(R.string.calls_custom_rules_header, rules.size),
+                    action = if (rules.size > 1) {
+                        { RuleSortButton(state.callRuleSort, RuleSort.CONTACT_OPTIONS, forContacts = true, onSortChange = onChangeCallRuleSort) }
+                    } else null
+                )
                 if (rules.isEmpty()) {
                     EmptyRuleHint(stringResource(R.string.calls_no_rules), Icons.AutoMirrored.Rounded.PhoneCallback)
                 } else {

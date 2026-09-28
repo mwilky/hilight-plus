@@ -1,6 +1,7 @@
 package com.mwilky.hilight.plus
 
 import org.json.JSONObject
+import java.text.Collator
 
 enum class PatternMode(val id: String, val titleRes: Int) {
     OFF("off", R.string.pattern_off),
@@ -121,6 +122,42 @@ enum class QuietHoursMode(val id: String) {
 
     companion object {
         fun fromId(id: String?) = entries.find { it.id == id } ?: INHERIT
+    }
+}
+
+/**
+ * How a custom-rule list is shown. Display only: rules match by exact name or package,
+ * so the order never changes which rule lights. [ADDED] is the order they were saved in.
+ */
+enum class RuleSort(val titleRes: Int, val contactTitleRes: Int = titleRes) {
+    ADDED(R.string.rule_sort_added),
+    NAME_ASC(R.string.rule_sort_name_asc, R.string.rule_sort_first_name_asc),
+    NAME_DESC(R.string.rule_sort_name_desc, R.string.rule_sort_first_name_desc),
+    LAST_NAME_ASC(R.string.rule_sort_last_name_asc),
+    LAST_NAME_DESC(R.string.rule_sort_last_name_desc);
+
+    /** Alphabetical by the user's locale, so accented names sort beside their plain letters. */
+    fun <T> sorted(rules: List<T>, nameOf: (T) -> String): List<T> {
+        if (this == ADDED) return rules
+        val collator = Collator.getInstance()
+        val byName = compareBy(collator, nameOf)
+        val byLastName = compareBy<T, String>(collator) { lastName(nameOf(it)) }.then(byName)
+        return rules.sortedWith(
+            when (this) {
+                NAME_ASC -> byName
+                NAME_DESC -> byName.reversed()
+                LAST_NAME_ASC -> byLastName
+                else -> byLastName.reversed()
+            }
+        )
+    }
+
+    companion object {
+        val CONTACT_OPTIONS = entries.toList()
+        val APP_OPTIONS = listOf(ADDED, NAME_ASC, NAME_DESC)
+
+        /** The last word of a display name; a one-word name ("Mom") is its own last name. */
+        private fun lastName(name: String): String = name.trim().substringAfterLast(' ')
     }
 }
 

@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
@@ -47,6 +48,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -70,6 +72,7 @@ import com.mwilky.hilight.plus.FaceDownMode
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.R
+import com.mwilky.hilight.plus.RuleSort
 import com.mwilky.hilight.plus.core.PatternRenderer
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -276,14 +279,59 @@ fun AnimatedText(
     }
 }
 
+/** Group title, with an optional trailing control such as [RuleSortButton]. */
 @Composable
-fun RuleGroupHeader(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 4.dp, top = 8.dp)
-    )
+fun RuleGroupHeader(text: String, action: (@Composable () -> Unit)? = null) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 4.dp, top = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f)
+        )
+        action?.invoke()
+    }
+}
+
+/**
+ * Shows a custom-rule list's current order; tapping opens the choices, current one ticked.
+ * [forContacts] labels name sorts as first name, beside the last-name options.
+ */
+@Composable
+fun RuleSortButton(
+    sort: RuleSort,
+    options: List<RuleSort>,
+    forContacts: Boolean,
+    onSortChange: (RuleSort) -> Unit
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    fun RuleSort.label() = if (forContacts) contactTitleRes else titleRes
+    Box {
+        TextButton(onClick = { menuOpen = true }, shapes = ButtonDefaults.shapes()) {
+            Icon(Icons.AutoMirrored.Rounded.Sort, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+            Text(stringResource(sort.label()), maxLines = 1)
+        }
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(option.label())) },
+                    trailingIcon = if (option == sort) {
+                        { Icon(Icons.Rounded.Check, contentDescription = null) }
+                    } else null,
+                    onClick = {
+                        menuOpen = false
+                        onSortChange(option)
+                    }
+                )
+            }
+        }
+    }
 }
 
 @Composable

@@ -79,6 +79,7 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_MISSED_CALLS_QUIET_END = intPreferencesKey("missed_calls_quiet_end")
 
         private val KEY_CALL_RULES_JSON = stringPreferencesKey("contact_rules_json")
+        private val KEY_CALL_RULES_SORT = stringPreferencesKey("contact_rules_sort")
 
         // Notification & Messaging Settings
         private val KEY_NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
@@ -105,6 +106,8 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_FAV_NOTIF_QUIET_END = intPreferencesKey("fav_notif_quiet_end")
         private val KEY_MESSAGE_CONTACT_RULES_JSON = stringPreferencesKey("message_contact_rules_json")
         private val KEY_APP_RULES_JSON = stringPreferencesKey("app_rules_json")
+        private val KEY_MESSAGE_CONTACT_RULES_SORT = stringPreferencesKey("message_contact_rules_sort")
+        private val KEY_APP_RULES_SORT = stringPreferencesKey("app_rules_sort")
 
         // Battery Indicator Settings
         private val KEY_BATTERY_JSON = stringPreferencesKey("battery_settings_json")
@@ -253,6 +256,18 @@ class AppStore private constructor(private val appContext: Context) {
 
     suspend fun setSplitAnimation(animation: SplitAnimation) {
         appContext.dataStore.edit { it[KEY_SPLIT_ANIMATION] = animation.id }
+    }
+
+    suspend fun setCallRuleSort(sort: RuleSort) {
+        appContext.dataStore.edit { it[KEY_CALL_RULES_SORT] = sort.name }
+    }
+
+    suspend fun setMessageRuleSort(sort: RuleSort) {
+        appContext.dataStore.edit { it[KEY_MESSAGE_CONTACT_RULES_SORT] = sort.name }
+    }
+
+    suspend fun setAppRuleSort(sort: RuleSort) {
+        appContext.dataStore.edit { it[KEY_APP_RULES_SORT] = sort.name }
     }
 
     /** Falls back to the pre-1.1.3 on/off cycle switch for installs that never picked a mode. */
@@ -471,6 +486,7 @@ class AppStore private constructor(private val appContext: Context) {
             quietHoursEndMinutes = prefs[KEY_QUIET_HOURS_END] ?: d.quietHoursEndMinutes,
             isCallLightsEnabled = prefs[KEY_CALL_LIGHTS_ENABLED] ?: d.isCallLightsEnabled,
             contactRules = readContactRules(prefs[KEY_CALL_RULES_JSON]),
+            callRuleSort = enumOr(prefs[KEY_CALL_RULES_SORT], d.callRuleSort),
             isOtherContactsEnabled = prefs[KEY_OTHER_CONTACTS_ENABLED] ?: d.isOtherContactsEnabled,
             otherContactsColor = prefs[KEY_OTHER_CONTACTS_COLOR] ?: d.otherContactsColor,
             otherContactsPattern = enumOr(prefs[KEY_OTHER_CONTACTS_PATTERN], d.otherContactsPattern),
@@ -526,6 +542,8 @@ class AppStore private constructor(private val appContext: Context) {
             favouriteNotifQuietHoursEndMinutes = prefs[KEY_FAV_NOTIF_QUIET_END] ?: d.favouriteNotifQuietHoursEndMinutes,
             messageContactRules = readMessageRules(prefs[KEY_MESSAGE_CONTACT_RULES_JSON]),
             appRules = readAppRules(prefs[KEY_APP_RULES_JSON]),
+            messageRuleSort = enumOr(prefs[KEY_MESSAGE_CONTACT_RULES_SORT], d.messageRuleSort),
+            appRuleSort = enumOr(prefs[KEY_APP_RULES_SORT], d.appRuleSort),
             battery = BatterySettings.fromJson(prefs[KEY_BATTERY_JSON]),
             gemini = GeminiSettings.fromJson(prefs[KEY_GEMINI_JSON])
         )
@@ -559,6 +577,7 @@ data class SettingsSnapshot(
     val quietHoursEndMinutes: Int,
     val isCallLightsEnabled: Boolean,
     val contactRules: List<ContactRule>,
+    val callRuleSort: RuleSort,
     val isOtherContactsEnabled: Boolean,
     val otherContactsColor: Long,
     val otherContactsPattern: PatternMode,
@@ -614,6 +633,8 @@ data class SettingsSnapshot(
     val favouriteNotifQuietHoursEndMinutes: Int?,
     val messageContactRules: List<MessageContactRule>,
     val appRules: List<AppNotificationRule>,
+    val messageRuleSort: RuleSort,
+    val appRuleSort: RuleSort,
     val battery: BatterySettings,
     val gemini: GeminiSettings = GeminiSettings()
 ) {
@@ -646,6 +667,7 @@ val DEFAULT_SETTINGS_SNAPSHOT = SettingsSnapshot(
     quietHoursEndMinutes = 7 * 60,
     isCallLightsEnabled = true,
     contactRules = emptyList(),
+    callRuleSort = RuleSort.ADDED,
     isOtherContactsEnabled = true,
     otherContactsColor = 0xFF4285F4,
     otherContactsPattern = PatternMode.PULSE,
@@ -703,6 +725,8 @@ val DEFAULT_SETTINGS_SNAPSHOT = SettingsSnapshot(
     favouriteNotifQuietHoursEndMinutes = null,
     messageContactRules = emptyList(),
     appRules = emptyList(),
+    messageRuleSort = RuleSort.ADDED,
+    appRuleSort = RuleSort.ADDED,
     battery = BatterySettings()
 )
 

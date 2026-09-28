@@ -61,6 +61,7 @@ import com.mwilky.hilight.plus.MultiAlertMode
 import com.mwilky.hilight.plus.NativeHiLightDetector
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.R
+import com.mwilky.hilight.plus.RuleSort
 import com.mwilky.hilight.plus.SettingsSnapshot
 import com.mwilky.hilight.plus.DaemonBridge
 import com.mwilky.hilight.plus.SplitAnimation
@@ -193,6 +194,7 @@ fun HomeScreen(
         },
         onEditCallContactRule = { rule -> callRuleBeingEdited = rule },
         onDeleteCallContactRule = viewModel::deleteContactRule,
+        onChangeCallRuleSort = viewModel::setCallRuleSort,
         onAddCallContact = { callContactPickerLauncher.launch(null) },
         onToggleNotifs = viewModel::setNotificationsEnabled,
         onChangeDuration = viewModel::setNotificationDurationSeconds,
@@ -207,12 +209,14 @@ fun HomeScreen(
         },
         onEditMessageRule = { rule -> msgRuleBeingEdited = rule },
         onDeleteMessageRule = viewModel::deleteMessageContactRule,
+        onChangeMessageRuleSort = viewModel::setMessageRuleSort,
         onAddMessageContact = { msgContactPickerLauncher.launch(null) },
         onToggleAppRule = { rule, isEnabled ->
             viewModel.saveAppRule(rule.copy(isEnabled = isEnabled))
         },
         onEditAppRule = { rule -> appRuleBeingEdited = rule },
         onDeleteAppRule = viewModel::deleteAppRule,
+        onChangeAppRuleSort = viewModel::setAppRuleSort,
         onAddApp = { isPickingApp = true },
         onBatteryChange = viewModel::setBattery,
         renderer = renderer,
@@ -591,6 +595,7 @@ fun HomeContent(
     onToggleCallContactRule: (ContactRule, Boolean) -> Unit,
     onEditCallContactRule: (ContactRule) -> Unit,
     onDeleteCallContactRule: (String) -> Unit,
+    onChangeCallRuleSort: (RuleSort) -> Unit,
     onAddCallContact: () -> Unit,
     // Notifications
     onToggleNotifs: (Boolean) -> Unit,
@@ -604,10 +609,12 @@ fun HomeContent(
     onToggleMessageRule: (MessageContactRule, Boolean) -> Unit,
     onEditMessageRule: (MessageContactRule) -> Unit,
     onDeleteMessageRule: (String) -> Unit,
+    onChangeMessageRuleSort: (RuleSort) -> Unit,
     onAddMessageContact: () -> Unit,
     onToggleAppRule: (AppNotificationRule, Boolean) -> Unit,
     onEditAppRule: (AppNotificationRule) -> Unit,
     onDeleteAppRule: (String) -> Unit,
+    onChangeAppRuleSort: (RuleSort) -> Unit,
     onAddApp: () -> Unit,
     // Battery
     onBatteryChange: (BatterySettings) -> Unit,
@@ -683,6 +690,7 @@ fun HomeContent(
                         onToggleCallContactRule = onToggleCallContactRule,
                         onEditCallContactRule = onEditCallContactRule,
                         onDeleteCallContactRule = onDeleteCallContactRule,
+                        onChangeCallRuleSort = onChangeCallRuleSort,
                         onAddCallContact = onAddCallContact,
                         renderer = renderer
                     )
@@ -707,10 +715,12 @@ fun HomeContent(
                         onToggleMessageRule = onToggleMessageRule,
                         onEditMessageRule = onEditMessageRule,
                         onDeleteMessageRule = onDeleteMessageRule,
+                        onChangeMessageRuleSort = onChangeMessageRuleSort,
                         onAddMessageContact = onAddMessageContact,
                         onToggleAppRule = onToggleAppRule,
                         onEditAppRule = onEditAppRule,
                         onDeleteAppRule = onDeleteAppRule,
+                        onChangeAppRuleSort = onChangeAppRuleSort,
                         onAddApp = onAddApp,
                         onChangeDuration = onChangeDuration,
                         onChangeMultiAlertMode = onChangeMultiAlertMode,
@@ -1097,6 +1107,7 @@ fun HomeScreenPreviewContent(
             onToggleCallContactRule = { _, _ -> },
             onEditCallContactRule = {},
             onDeleteCallContactRule = {},
+            onChangeCallRuleSort = {},
             onAddCallContact = {},
             onToggleNotifs = {},
             onChangeDuration = {},
@@ -1107,10 +1118,12 @@ fun HomeScreenPreviewContent(
             onToggleMessageRule = { _, _ -> },
             onEditMessageRule = {},
             onDeleteMessageRule = {},
+            onChangeMessageRuleSort = {},
             onAddMessageContact = {},
             onToggleAppRule = { _, _ -> },
             onEditAppRule = {},
             onDeleteAppRule = {},
+            onChangeAppRuleSort = {},
             onAddApp = {},
             onBatteryChange = {},
             renderer = PatternRenderer(),

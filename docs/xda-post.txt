@@ -77,6 +77,7 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 [B]Extras[/B]
 [LIST]
 [*]Live pattern preview on a ring mock-up, and a Test on LEDs button in every rule editor.
+[*]Sort custom rule lists from their header: contacts by first or last name, apps by name, A–Z or Z–A.
 [*]Guided onboarding that detects each setting as you flip it, with a notification that follows you into Settings to take the pairing code.
 [*]Live debug log for the app and daemon, with one-tap share (contact names left out).
 [*]Reset lights button that frees a stuck ring without a reboot, plus an automatic check on unlock.

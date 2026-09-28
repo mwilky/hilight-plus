@@ -50,6 +50,7 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 
 **Extras**
 - Live preview of every pattern on a diffused ring mock-up, and a Test on LEDs button in each rule editor.
+- Custom rule lists can be sorted from their header: contacts by first or last name, apps by name, A–Z or Z–A, or left in the order they were added. Each list remembers its own choice.
 - Onboarding that connects to the ring, checks permissions and the stock HiLight setting that would otherwise fight for the ring, and explains the trial. Connecting is a self-ticking checklist: each switch is detected as you flip it, Settings opens at the right row, and a notification follows you there so you can type the pairing code without coming back to the app.
 - People updating from a Shizuku-only version get a one-time prompt to switch to the built-in connection, which then keeps itself running across restarts.
 - A live debug log on the About page, covering the app and the daemon, with one-tap clear and share. A shared report adds device and permission status, what the daemon is holding and every setting and rule, with contact names left out.
@@ -104,7 +105,7 @@ Standard Android Gradle project. Open in Android Studio or run:
 
 Release builds are minified with R8. There is also a `debugMinified` variant, signed with the debug key, for checking the shrunk app on a device. Keep the `mapping.txt` from each release build for readable crash reports.
 
-Unit tests cover the rule model, JSON round-tripping, contact matching, quiet hours, the pattern renderer, the battery and split-ring layouts, the conversion of every look into a hardware effect within the keyframe budget, the Gemini log parser, the call-state machine, the notification slot tracker and the connect-setup guide. Anything that touches the LEDs needs a physical Pixel.
+Unit tests cover the rule model, JSON round-tripping, contact matching, rule sorting, quiet hours, the pattern renderer, the battery and split-ring layouts, the conversion of every look into a hardware effect within the keyframe budget, the Gemini log parser, the call-state machine, the notification slot tracker and the connect-setup guide. Anything that touches the LEDs needs a physical Pixel.
 
 ## Pricing
 
