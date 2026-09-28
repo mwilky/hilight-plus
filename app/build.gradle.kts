@@ -11,8 +11,12 @@ android {
         applicationId = "com.mwilky.hilight.plus"
         minSdk = 37
         targetSdk = 37
-        versionCode = 14
-        versionName = "1.2.0"
+        versionCode = 15
+        versionName = "1.2.1"
+
+        // Only the Pixel 11 series is supported, and it's arm64 only; skips the other ABIs'
+        // copies of Conscrypt's native library.
+        ndk { abiFilters += "arm64-v8a" }
     }
 
     buildTypes {
@@ -42,6 +46,12 @@ android {
         compose = true
         aidl = true
         buildConfig = true
+    }
+
+    packaging {
+        // BouncyCastle's post-quantum tables and message bundles; the app only uses it to build
+        // the Wireless debugging pairing certificate.
+        resources.excludes += listOf("org/bouncycastle/pqc/**", "org/bouncycastle/x509/*.properties")
     }
 
     compileOptions {
