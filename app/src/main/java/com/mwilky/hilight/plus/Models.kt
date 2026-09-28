@@ -378,6 +378,102 @@ data class BatterySettings(
     }
 }
 
+/** A Gemini state HiLight Plus can light the ring for, in the order Gemini goes through them. */
+enum class GeminiState(val id: String, val titleRes: Int) {
+    LISTENING("listening", R.string.gemini_state_listening),
+    THINKING("thinking", R.string.gemini_state_thinking),
+    REPLYING("replying", R.string.gemini_state_replying);
+
+    companion object {
+        fun fromId(id: String?) = entries.find { it.id == id }
+    }
+}
+
+/**
+ * How the ring looks during one [GeminiState], and when it may show: the same conditions every
+ * rule has, following the Conditions page unless set otherwise.
+ */
+data class GeminiLook(
+    val isEnabled: Boolean,
+    val pattern: PatternMode,
+    val color: Long = DEFAULT_GEMINI_COLOR,
+    val faceDownMode: FaceDownMode = FaceDownMode.INHERIT,
+    val dndMode: DndMode = DndMode.INHERIT,
+    val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT,
+    val quietHoursStartMinutes: Int? = null,
+    val quietHoursEndMinutes: Int? = null
+) {
+    fun toJson(): JSONObject = JSONObject().apply {
+        putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes)
+    }
+
+    companion object {
+        fun fromJson(json: JSONObject?, default: GeminiLook): GeminiLook {
+            if (json == null) return default
+            val shared = json.readSharedRuleFields(default.color)
+            return GeminiLook(
+                isEnabled = json.optBoolean("isEnabled", default.isEnabled),
+                pattern = if (json.has("pattern")) shared.pattern else default.pattern,
+                color = shared.color,
+                faceDownMode = shared.faceDownMode,
+                dndMode = shared.dndMode,
+                quietHoursMode = shared.quietHoursMode,
+                quietHoursStartMinutes = shared.quietHoursStartMinutes,
+                quietHoursEndMinutes = shared.quietHoursEndMinutes
+            )
+        }
+    }
+}
+
+/**
+ * Taking over the ring from stock Gemini feedback: a look per state, defaulting to copies of the
+ * stock animations. On by default, since onboarding has the stock feedback turned off so HiLight
+ * Plus can take over. A single global config, like [BatterySettings].
+ */
+data class GeminiSettings(
+    val enabled: Boolean = true,
+    val listening: GeminiLook = GeminiLook(isEnabled = true, pattern = PatternMode.GEMINI_LISTENING),
+    val thinking: GeminiLook = GeminiLook(isEnabled = true, pattern = PatternMode.GEMINI_THINKING),
+    val replying: GeminiLook = GeminiLook(isEnabled = true, pattern = PatternMode.GEMINI_REPLYING)
+) {
+    fun look(state: GeminiState): GeminiLook = when (state) {
+        GeminiState.LISTENING -> listening
+        GeminiState.THINKING -> thinking
+        GeminiState.REPLYING -> replying
+    }
+
+    fun withLook(state: GeminiState, look: GeminiLook): GeminiSettings = when (state) {
+        GeminiState.LISTENING -> copy(listening = look)
+        GeminiState.THINKING -> copy(thinking = look)
+        GeminiState.REPLYING -> copy(replying = look)
+    }
+
+    fun toJson(): JSONObject = JSONObject().apply {
+        put("enabled", enabled)
+        GeminiState.entries.forEach { put(it.id, look(it).toJson()) }
+    }
+
+    companion object {
+        fun fromJson(raw: String?): GeminiSettings {
+            if (raw.isNullOrBlank()) return GeminiSettings()
+            return try {
+                val json = JSONObject(raw)
+                val d = GeminiSettings()
+                GeminiSettings(
+                    enabled = json.optBoolean("enabled", d.enabled),
+                    listening = GeminiLook.fromJson(json.optJSONObject(GeminiState.LISTENING.id), d.listening),
+                    thinking = GeminiLook.fromJson(json.optJSONObject(GeminiState.THINKING.id), d.thinking),
+                    replying = GeminiLook.fromJson(json.optJSONObject(GeminiState.REPLYING.id), d.replying)
+                )
+            } catch (_: Exception) {
+                GeminiSettings()
+            }
+        }
+    }
+}
+
+private const val DEFAULT_GEMINI_COLOR = 0xFF4285F4L
+
 /**
  * The pattern/color/enable/condition fields every rule type shares, read and written
  * identically regardless of what the rule targets (a contact, a sender, or an app).

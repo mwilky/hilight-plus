@@ -245,23 +245,72 @@ fun StockConflictCard(
     stockState: StockHiLightState,
     onOpenSettings: () -> Unit
 ) {
-    val isConflict = stockState.known && stockState.favoriteCallsActive
-    val isKnown = stockState.known
+    StockSettingCard(
+        title = stringResource(R.string.onboarding_stock_card_title),
+        active = stockState.favoriteCallsActive,
+        known = stockState.known,
+        conflictDesc = stringResource(R.string.onboarding_stock_conflict_active_desc),
+        okDesc = stringResource(R.string.about_stock_ok_desc),
+        onOpenSettings = onOpenSettings
+    )
+}
+
+/**
+ * Pixel's native Gemini feedback lighting. It only clashes while HiLight Plus is taking over
+ * Gemini's states ([takeoverEnabled]); otherwise it's simply what lights the ring for Gemini.
+ */
+@Composable
+fun GeminiStockCard(
+    stockState: StockHiLightState,
+    takeoverEnabled: Boolean,
+    onOpenSettings: () -> Unit
+) {
+    val stockOn = stockState.geminiFeedbackActive
+    StockSettingCard(
+        title = stringResource(R.string.gemini_stock_card_title),
+        active = stockOn && takeoverEnabled,
+        known = stockState.geminiKnown,
+        conflictDesc = stringResource(R.string.gemini_stock_conflict_desc),
+        okDesc = stringResource(
+            when {
+                stockOn -> R.string.gemini_stock_handling_desc
+                takeoverEnabled -> R.string.gemini_stock_ok_desc
+                else -> R.string.gemini_stock_neither_desc
+            }
+        ),
+        okStatus = if (stockOn) stringResource(R.string.gemini_stock_status_on) else null,
+        onOpenSettings = onOpenSettings
+    )
+}
+
+/** One stock HiLight setting that would clash with HiLight Plus while it's on. */
+@Composable
+private fun StockSettingCard(
+    title: String,
+    active: Boolean,
+    known: Boolean,
+    conflictDesc: String,
+    okDesc: String,
+    onOpenSettings: () -> Unit,
+    // What to call the setting when it's fine as it is; "Off" unless given.
+    okStatus: String? = null
+) {
+    val isConflict = known && active
 
     StandardDiagnosticCard(
-        title = stringResource(R.string.onboarding_stock_card_title),
+        title = title,
         subtitle = when {
-            isConflict -> stringResource(R.string.onboarding_stock_conflict_active_desc)
-            !isKnown -> stringResource(R.string.onboarding_stock_unknown_desc)
-            else -> stringResource(R.string.about_stock_ok_desc)
+            isConflict -> conflictDesc
+            !known -> stringResource(R.string.onboarding_stock_unknown_desc)
+            else -> okDesc
         },
-        icon = if (isConflict || !isKnown) Icons.Rounded.Warning else Icons.Rounded.CheckCircle,
+        icon = if (isConflict || !known) Icons.Rounded.Warning else Icons.Rounded.CheckCircle,
         statusText = when {
             isConflict -> stringResource(R.string.onboarding_stock_status_conflict)
-            !isKnown -> stringResource(R.string.onboarding_stock_status_unknown)
-            else -> stringResource(R.string.onboarding_stock_status_ready)
+            !known -> stringResource(R.string.onboarding_stock_status_unknown)
+            else -> okStatus ?: stringResource(R.string.onboarding_stock_status_ready)
         },
-        isOk = isKnown && !isConflict,
+        isOk = known && !isConflict,
         bottomAction = if (isConflict) {
             {
                 ErrorButton(

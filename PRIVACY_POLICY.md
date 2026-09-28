@@ -1,6 +1,6 @@
 # Privacy Policy for HiLight Plus
 
-**Last updated:** September 25, 2026
+**Last updated:** September 28, 2026
 
 **HiLight Plus** ("we", "our", or "the app") is developed by **mwilky**. We are committed to protecting your privacy. This Privacy Policy outlines how your information is handled when you use HiLight Plus.
 
@@ -37,6 +37,10 @@ HiLight Plus requests sensitive Android permissions solely to deliver real-time 
 ### E. Shizuku Privileged Access, optional (`moe.shizuku.manager.permission.API_V23`)
 - **Purpose:** For people who prefer Shizuku, used to communicate with the local Shizuku service via local Android Binder IPC to control the Pixel device's rear hardware LED array.
 - **Data Handling:** Binder IPC communication remains entirely local to your device.
+
+### F. Gemini's App Log (no extra permission)
+- **Purpose:** To light the ring for Gemini's listening, thinking and replying states, which Gemini doesn't announce to other apps. While Gemini lights are on, the helper process reads the log output of the Gemini app only and looks for the lines that mark each change of state.
+- **Data Handling:** Each line is checked in memory and discarded straight away; nothing Gemini logs is stored or sent. Only the resulting state change (for example "listening") is noted in the debug log described in section 3. Turning Gemini lights off stops the reading.
 
 ---
 

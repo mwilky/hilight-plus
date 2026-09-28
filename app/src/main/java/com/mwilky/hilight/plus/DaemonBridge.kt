@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import org.json.JSONObject
 import rikka.shizuku.Shizuku
 
 /**
@@ -123,7 +124,7 @@ class DaemonBridge private constructor(private val app: Application) {
         .daemon(false)
         .processNameSuffix(HiLightDaemonService.PROCESS_SUFFIX)
         .debuggable(BuildConfig.DEBUG)
-        .version(19)
+        .version(20)
 
     // Receives the daemon's log lines so they land in the same shareable log as the app's.
     private val logSink = object : ILogSink.Stub() {
@@ -600,6 +601,7 @@ class DaemonBridge private constructor(private val app: Application) {
         lastBatteryConfig?.let { sendBatteryConfig(it) }
         lastBatteryState?.let { sendBatteryState(it) }
         lastEntitled?.let { sendEntitled(it) }
+        lastGeminiConfig?.let { sendGeminiConfig(it) }
         onAvailabilityChanged?.invoke()
         _connections.tryEmit(Unit)
         afterConnect(bound, via)
@@ -1054,6 +1056,38 @@ class DaemonBridge private constructor(private val app: Application) {
 
     private fun sendEntitled(entitled: Boolean) {
         runRemote("setEntitled") { it.setEntitled(entitled) }
+    }
+
+    /** Cached and replayed on (re)connect, like the battery config. */
+    private var lastGeminiConfig: Pair<Boolean, String>? = null
+
+    /**
+     * Sends the Gemini takeover config. [enabled] already folds in the master switch and licence;
+     * each state's face-down choice is resolved against [globalOnlyWhenFaceDown] here, as the
+     * battery config's is.
+     */
+    fun setGeminiConfig(settings: GeminiSettings, enabled: Boolean, globalOnlyWhenFaceDown: Boolean) {
+        val states = JSONObject()
+        GeminiState.entries.forEach { state ->
+            val look = settings.look(state)
+            if (!look.isEnabled) return@forEach
+            states.put(state.id, JSONObject().apply {
+                put("pattern", look.pattern.id)
+                put("color", look.color)
+                put("requiresFaceDown", look.faceDownMode.requiresFaceDown(globalOnlyWhenFaceDown))
+                put("dndMode", look.dndMode.id)
+                put("quietHoursMode", look.quietHoursMode.id)
+                put("quietStart", look.quietHoursStartMinutes ?: -1)
+                put("quietEnd", look.quietHoursEndMinutes ?: -1)
+            })
+        }
+        val config = enabled to states.toString()
+        lastGeminiConfig = config
+        sendGeminiConfig(config)
+    }
+
+    private fun sendGeminiConfig(config: Pair<Boolean, String>) {
+        runRemote("setGeminiConfig") { it.setGeminiConfig(config.first, config.second) }
     }
 
     fun turnOff() {

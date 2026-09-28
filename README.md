@@ -2,7 +2,7 @@
 
 Custom rear LED lighting for the Google Pixel 11 Pro.
 
-Pixel's built-in HiLight lights the rear ring for two things: calls from favourites, and Gemini's listening, thinking and replying states. HiLight Plus replaces the first and leaves the second alone. It takes over the eight-LED ring behind the camera bar and lets you decide what it shows: a colour and pattern per contact or app, a charging gauge, a low-battery warning, and rules for when it should stay dark. Everything runs on-device with no accounts and no analytics; the only network use is the Google Play purchase.
+Pixel's built-in HiLight lights the rear ring for two things: calls from favourites, and Gemini's listening, thinking and replying states. HiLight Plus replaces both. It takes over the eight-LED ring behind the camera bar and lets you decide what it shows: a colour and pattern per contact or app, your own looks for Gemini's states, a charging gauge, a low-battery warning, and rules for when it should stay dark. Everything runs on-device with no accounts and no analytics; the only network use is the Google Play purchase.
 
 <p align="center">
   <img src="docs/screenshots/calls.png" width="24%" alt="Calls page with per-contact rules" />
@@ -36,6 +36,12 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 - Low-battery warning below a threshold you choose.
 - Battery sits underneath calls and notifications, or can be set to take priority over notifications.
 
+**Gemini**
+- Replaces Pixel's own Gemini feedback with a pattern and colour for each of Gemini's listening, thinking and replying states, defaulting to copies of the stock animations. On by default.
+- Each state can be switched off, and follows the conditions below or its own, like any rule.
+- Gemini shows above notifications and battery, and below calls.
+- Gemini broadcasts none of this, so the daemon follows Gemini's own app log, on the phone only. A Gemini update that changes what it logs can stop the ring following until HiLight Plus is updated.
+
 **Conditions**
 - Only light when the phone is face down.
 - Skip during Do Not Disturb.
@@ -58,7 +64,7 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
   - With USB debugging off, Wireless debugging stays on. If you turn it off, the lights stop and the app switches it back on to restart them.
 - Wi-Fi whenever the daemon needs starting (setup, a reboot, an update), because Wireless debugging only runs on Wi-Fi. Once running, it needs no network. On a Wi-Fi network where Wireless debugging has never been allowed, Android asks first; the app says what to do and carries on once you allow it.
 - Or, instead, [Shizuku](https://shizuku.rikka.app/) running, over wireless debugging or root. It is still supported for anyone who already uses it.
-- The stock "Calls from favourites" HiLight option turned off, otherwise both will try to drive the ring at once. Onboarding checks this for you. Gemini's own use of the ring is untouched: its state changes are not broadcast in a way an app can intercept in real time, so that stays stock behaviour.
+- The stock "Calls from favourites" and Gemini feedback HiLight options turned off, otherwise both will try to drive the ring at once. Onboarding checks this for you.
 
 ## Permissions
 
@@ -80,7 +86,7 @@ No phone-state or call-log permission is used: incoming calls, cellular or app, 
 The app has two halves:
 
 - **The app process** hosts the UI, the notification listener and the battery receiver. It resolves each event against your rules and decides colour, pattern and conditions.
-- **The daemon** (`HiLightDaemonService`) runs with shell UID. The app starts it itself over Wireless debugging (`WirelessAdb` pairs once, then launches `DaemonMain` through `app_process`, and the daemon hands its binder back through a content provider), or Shizuku starts it as a UserService. Only the app's UID may call it. It talks to `ILightsManager` through reflection and applies live gating for face-down, Do Not Disturb and quiet hours so lights already playing react to changes. Whenever what the ring should show changes, it sends one Android 17 light effect (`setLightEffect`): `RingEffect` samples the pattern over a loop and reduces each LED to at most nine keyframes, since the Pixel lights HAL crashes on larger effects, and turning patterns are built from one LED shifted round the ring. The ring's controller then plays it with no further calls. If the lights service refuses effects, the daemon falls back to pushing frames at roughly 30 per second. The app and daemon talk over an AIDL interface.
+- **The daemon** (`HiLightDaemonService`) runs with shell UID. The app starts it itself over Wireless debugging (`WirelessAdb` pairs once, then launches `DaemonMain` through `app_process`, and the daemon hands its binder back through a content provider), or Shizuku starts it as a UserService. Only the app's UID may call it. It talks to `ILightsManager` through reflection and applies live gating for face-down, Do Not Disturb and quiet hours so lights already playing react to changes. Whenever what the ring should show changes, it sends one Android 17 light effect (`setLightEffect`): `RingEffect` samples the pattern over a loop and reduces each LED to at most nine keyframes, since the Pixel lights HAL crashes on larger effects, and turning patterns are built from one LED shifted round the ring. The ring's controller then plays it with no further calls. If the lights service refuses effects, the daemon falls back to pushing frames at roughly 30 per second. While Gemini lights are on, `GeminiWatcher` follows Gemini's log (a `logcat` limited to Gemini's UID, matched on message text since Gemini's tags are obfuscated) and `GeminiLogParser` turns it into listening, thinking, replying or idle, with a time limit on each state so the ring can't be left lit. The app and daemon talk over an AIDL interface.
 
 Face-down detection reads the gravity sensor only while something is waiting to light, so there is no idle sensor cost. Gravity doesn't wake a sleeping phone, so it is paired with the wake-up tilt detector, which fires in the sensor hub when the phone turns and wakes the app to check.
 
@@ -98,7 +104,7 @@ Standard Android Gradle project. Open in Android Studio or run:
 
 Release builds are minified with R8. There is also a `debugMinified` variant, signed with the debug key, for checking the shrunk app on a device. Keep the `mapping.txt` from each release build for readable crash reports.
 
-Unit tests cover the rule model, JSON round-tripping, contact matching, quiet hours, the pattern renderer, the battery and split-ring layouts, the conversion of every look into a hardware effect within the keyframe budget, the call-state machine, the notification slot tracker and the connect-setup guide. Anything that touches the LEDs needs a physical Pixel.
+Unit tests cover the rule model, JSON round-tripping, contact matching, quiet hours, the pattern renderer, the battery and split-ring layouts, the conversion of every look into a hardware effect within the keyframe budget, the Gemini log parser, the call-state machine, the notification slot tracker and the connect-setup guide. Anything that touches the LEDs needs a physical Pixel.
 
 ## Pricing
 

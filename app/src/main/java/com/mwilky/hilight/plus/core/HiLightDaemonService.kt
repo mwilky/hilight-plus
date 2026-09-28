@@ -9,9 +9,12 @@ import com.mwilky.hilight.plus.BatteryPattern
 import com.mwilky.hilight.plus.BuildConfig
 import com.mwilky.hilight.plus.DebugLog
 import com.mwilky.hilight.plus.DndMode
+import com.mwilky.hilight.plus.GeminiState
 import com.mwilky.hilight.plus.LowBatteryPattern
+import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.SplitAnimation
+import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.concurrent.TimeUnit
@@ -31,6 +34,11 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
     constructor(context: Context) : this(context.applicationInfo.uid)
 
     private val engine = LightEngine()
+    private val geminiWatcher = GeminiWatcher { engine.setGeminiState(it) }
+
+    // The last Gemini config the app sent, so a change of entitlement can apply it again.
+    private var geminiEnabled = false
+    private var geminiLooks: Map<GeminiState, LightEngine.GeminiLookSpec> = emptyMap()
 
     @Volatile
     private var entitled = true
@@ -358,6 +366,43 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
             engine.stopIncomingCall()
             engine.clearAlert()
         }
+        applyGemini()
+    }
+
+    override fun setGeminiConfig(enabled: Boolean, statesJson: String?) {
+        val states = runCatching { JSONObject(statesJson ?: "{}") }.getOrElse {
+            DebugLog.w(TAG, "Bad Gemini config: ${it.message}")
+            JSONObject()
+        }
+        geminiEnabled = enabled
+        geminiLooks = buildMap {
+            for (state in GeminiState.entries) {
+                val look = states.optJSONObject(state.id) ?: continue
+                val pattern = look.optString("pattern")
+                if (pattern.isEmpty()) continue
+                put(
+                    state,
+                    LightEngine.GeminiLookSpec(
+                        pattern = pattern,
+                        color = look.optLong("color"),
+                        speedMs = PatternMode.entries.find { it.id == pattern }?.speedMs() ?: 1000L,
+                        requiresFaceDown = look.optBoolean("requiresFaceDown"),
+                        dndMode = DndMode.fromId(look.optString("dndMode")),
+                        quietHoursMode = QuietHoursMode.fromId(look.optString("quietHoursMode")),
+                        quietStartOverride = look.optInt("quietStart", -1).takeIf { it >= 0 },
+                        quietEndOverride = look.optInt("quietEnd", -1).takeIf { it >= 0 }
+                    )
+                )
+            }
+        }
+        applyGemini()
+    }
+
+    /** Watches Gemini only while the feature is on and paid for, with at least one state lit. */
+    private fun applyGemini() {
+        val on = geminiEnabled && entitled && geminiLooks.isNotEmpty()
+        engine.setGeminiConfig(on, geminiLooks)
+        geminiWatcher.setEnabled(on)
     }
 
     /**
@@ -399,12 +444,14 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
     override fun restart() {
         DebugLog.w(TAG, "Reset requested. Engine state:\n${engine.describeState()}")
         DebugLog.w(TAG, "System lights at reset:\n${lightsDump()}")
+        geminiWatcher.setEnabled(false)
         engine.stop()
         exitProcess(0)
     }
 
     override fun destroy() {
         DebugLog.i(TAG, "HiLightDaemonService destroying...")
+        geminiWatcher.setEnabled(false)
         engine.stop()
         exitProcess(0)
     }

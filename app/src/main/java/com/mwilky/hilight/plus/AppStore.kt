@@ -108,6 +108,7 @@ class AppStore private constructor(private val appContext: Context) {
 
         // Battery Indicator Settings
         private val KEY_BATTERY_JSON = stringPreferencesKey("battery_settings_json")
+        private val KEY_GEMINI_JSON = stringPreferencesKey("gemini_settings_json")
 
         @Volatile
         private var instance: AppStore? = null
@@ -166,6 +167,9 @@ class AppStore private constructor(private val appContext: Context) {
 
     val battery: Flow<BatterySettings> = appContext.dataStore.data
         .map { BatterySettings.fromJson(it[KEY_BATTERY_JSON]) }
+
+    val gemini: Flow<GeminiSettings> = appContext.dataStore.data
+        .map { GeminiSettings.fromJson(it[KEY_GEMINI_JSON]) }
 
     /**
      * Every Home-screen-relevant setting in one snapshot, rebuilt whenever any of them
@@ -386,6 +390,10 @@ class AppStore private constructor(private val appContext: Context) {
         }
     }
 
+    suspend fun setGemini(settings: GeminiSettings) {
+        appContext.dataStore.edit { it[KEY_GEMINI_JSON] = settings.toJson().toString() }
+    }
+
     suspend fun setBattery(settings: BatterySettings) {
         appContext.dataStore.edit { it[KEY_BATTERY_JSON] = settings.toJson().toString() }
     }
@@ -518,7 +526,8 @@ class AppStore private constructor(private val appContext: Context) {
             favouriteNotifQuietHoursEndMinutes = prefs[KEY_FAV_NOTIF_QUIET_END] ?: d.favouriteNotifQuietHoursEndMinutes,
             messageContactRules = readMessageRules(prefs[KEY_MESSAGE_CONTACT_RULES_JSON]),
             appRules = readAppRules(prefs[KEY_APP_RULES_JSON]),
-            battery = BatterySettings.fromJson(prefs[KEY_BATTERY_JSON])
+            battery = BatterySettings.fromJson(prefs[KEY_BATTERY_JSON]),
+            gemini = GeminiSettings.fromJson(prefs[KEY_GEMINI_JSON])
         )
     }
 
@@ -605,7 +614,8 @@ data class SettingsSnapshot(
     val favouriteNotifQuietHoursEndMinutes: Int?,
     val messageContactRules: List<MessageContactRule>,
     val appRules: List<AppNotificationRule>,
-    val battery: BatterySettings
+    val battery: BatterySettings,
+    val gemini: GeminiSettings = GeminiSettings()
 ) {
     /** CYCLE and SPLIT both keep every waiting alert queued; only LATEST uses the timed single alert. */
     val isCycleNotifications: Boolean get() = multiAlertMode.keepsQueue

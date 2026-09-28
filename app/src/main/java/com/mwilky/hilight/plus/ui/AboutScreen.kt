@@ -44,12 +44,14 @@ import com.mwilky.hilight.plus.LightController
 import com.mwilky.hilight.plus.NativeHiLightDetector
 import com.mwilky.hilight.plus.R
 import com.mwilky.hilight.plus.DaemonBridge
+import com.mwilky.hilight.plus.GeminiSettings
 import com.mwilky.hilight.plus.StockHiLightState
 import com.mwilky.hilight.plus.ui.diagnostics.ButtonLabel
 import com.mwilky.hilight.plus.ui.diagnostics.CallPermissionsCard
 import com.mwilky.hilight.plus.ui.diagnostics.NotificationAccessCard
 import com.mwilky.hilight.plus.ui.diagnostics.PermissionState
 import com.mwilky.hilight.plus.ui.diagnostics.ConnectionStatusCard
+import com.mwilky.hilight.plus.ui.diagnostics.GeminiStockCard
 import com.mwilky.hilight.plus.ui.diagnostics.StockConflictCard
 import com.mwilky.hilight.plus.ui.diagnostics.rememberCallPermissionLauncher
 import com.mwilky.hilight.plus.ui.diagnostics.rememberPermissionState
@@ -65,6 +67,7 @@ import kotlinx.coroutines.launch
 fun AboutScreen(controller: LightController, onSetUpConnection: () -> Unit) {
     val context = LocalContext.current
     val stockState by NativeHiLightDetector.state.collectAsStateWithLifecycle()
+    val gemini by controller.store.gemini.collectAsStateWithLifecycle(GeminiSettings())
     val connectionState by controller.daemon.state.collectAsStateWithLifecycle()
     val connectionMethod by controller.daemon.method.collectAsStateWithLifecycle()
 
@@ -131,6 +134,7 @@ fun AboutScreen(controller: LightController, onSetUpConnection: () -> Unit) {
         onRestartApp = { controller.daemon.restartApp(context) },
         onSetUpConnection = onSetUpConnection,
         stockState = stockState,
+        geminiEnabled = gemini.enabled,
         permissionState = permissionState,
         onOpenSettings = { NativeHiLightDetector.openHiLightSettings(context) },
         onRequestPhonePerms = requestCallPermissions,
@@ -203,6 +207,7 @@ fun AboutContent(
     stockState: StockHiLightState,
     permissionState: PermissionState,
     onOpenSettings: () -> Unit,
+    geminiEnabled: Boolean = false,
     onRequestPhonePerms: () -> Unit,
     onOpenNotifSettings: () -> Unit,
     onOpenAppSettings: () -> Unit,
@@ -321,6 +326,12 @@ fun AboutContent(
 
             StockConflictCard(
                 stockState = stockState,
+                onOpenSettings = onOpenSettings
+            )
+
+            GeminiStockCard(
+                stockState = stockState,
+                takeoverEnabled = geminiEnabled,
                 onOpenSettings = onOpenSettings
             )
 
@@ -511,7 +522,7 @@ fun AboutScreenPreview() {
             onOpenShizukuApp = {},
             onRestartApp = {},
             onSetUpConnection = {},
-            stockState = StockHiLightState(favoriteCallsActive = false, known = true),
+            stockState = StockHiLightState(favoriteCallsActive = false, known = true, geminiFeedbackActive = true, geminiKnown = true),
             permissionState = PermissionState(
                 context = LocalContext.current,
                 isContactsGranted = true,

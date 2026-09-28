@@ -4,6 +4,7 @@ import android.os.SystemClock
 import com.mwilky.hilight.plus.BatteryPattern
 import com.mwilky.hilight.plus.DebugLog
 import com.mwilky.hilight.plus.DndMode
+import com.mwilky.hilight.plus.GeminiState
 import com.mwilky.hilight.plus.LowBatteryPattern
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.SplitAnimation
@@ -134,6 +135,26 @@ class LightEngine {
     // In-app "test on LEDs" preview. Takes top render priority and ignores face-down/DND/quiet-hours
     // gating, but never touches the notification queue or direct alert state, so it can't disturb them.
     private var testAlert: TestAlert? = null
+
+    /** How the ring looks during one Gemini state, and the conditions it shows under. */
+    data class GeminiLookSpec(
+        val pattern: String,
+        val color: Long,
+        val speedMs: Long,
+        val requiresFaceDown: Boolean,
+        val dndMode: DndMode,
+        val quietHoursMode: QuietHoursMode,
+        val quietStartOverride: Int?,
+        val quietEndOverride: Int?
+    )
+
+    // Taking over from stock Gemini feedback: what Gemini is doing, when it started, and how each
+    // state looks. Sits above notifications and battery and below calls. A state its conditions
+    // hide leaves the ring to whatever is beneath.
+    private var geminiEnabled = false
+    private var geminiLooks: Map<GeminiState, GeminiLookSpec> = emptyMap()
+    private var geminiState: GeminiState? = null
+    private var geminiStateSinceMs = 0L
 
     // Multi-Notification Cyclic Queue
     private val activeAlerts = mutableListOf<QueuedAlert>()
@@ -359,6 +380,29 @@ class LightEngine {
         }
     }
 
+    /** Replaces the Gemini looks. Turning the feature off drops any state on show. */
+    fun setGeminiConfig(enabled: Boolean, looks: Map<GeminiState, GeminiLookSpec>) {
+        synchronized(lock) {
+            geminiEnabled = enabled
+            geminiLooks = looks
+            if (!enabled) geminiState = null
+            needsSessionReset = true
+            wake()
+            DebugLog.i(TAG, "setGeminiConfig: enabled=$enabled, looks=${looks.keys.map { it.id }}")
+        }
+    }
+
+    /** What Gemini is doing now, from its log; null when idle. */
+    fun setGeminiState(state: GeminiState?) {
+        synchronized(lock) {
+            if (geminiState == state) return
+            geminiState = if (geminiEnabled) state else null
+            geminiStateSinceMs = SystemClock.elapsedRealtime()
+            needsSessionReset = true
+            wake()
+        }
+    }
+
     fun setDeviceFaceDown(faceDown: Boolean) {
         synchronized(lock) {
             if (deviceFaceDown == faceDown) return
@@ -531,6 +575,7 @@ class LightEngine {
             activeAlerts.clear()
             currentAlertIndex = 0
             testAlert = null
+            geminiState = null
             // Also drop the battery reading, so the layer can't simply light back up on the next
             // tick and undo the blank. It resumes when the app pushes a fresh reading.
             batteryStateUpdatedAtMs = 0L
@@ -584,6 +629,7 @@ class LightEngine {
         if (directAlert != null) due = minOf(due, now + directAlertTimer.remainingMs(now))
         activeAlerts.forEach { if (it.expiresAtMs != Long.MAX_VALUE) due = minOf(due, it.expiresAtMs) }
         nextTurnAtMs?.let { due = minOf(due, it) }
+        geminiState?.let { due = minOf(due, geminiStateSinceMs + GeminiLogParser.maxDurationMs(it)) }
         return (due - now).coerceIn(FRAME_MS, IDLE_TICK_MS)
     }
 
@@ -666,6 +712,25 @@ class LightEngine {
             }
             val test = testAlert
 
+            geminiState?.let {
+                if (now - geminiStateSinceMs >= GeminiLogParser.maxDurationMs(it)) {
+                    DebugLog.w(TAG, "Gemini ${it.id} ran past its limit; treating Gemini as idle")
+                    geminiState = null
+                }
+            }
+            val geminiLook = geminiState?.takeIf { geminiEnabled }
+                ?.let { state -> geminiLooks[state]?.let { state to it } }
+                ?.takeIf { (_, look) ->
+                    alertVisible(
+                        look.requiresFaceDown,
+                        look.dndMode,
+                        look.quietHoursMode,
+                        look.quietStartOverride,
+                        look.quietEndOverride,
+                        nowMinutes
+                    )
+                }
+
             if (directAlert != null && directAlertTimer.remainingMs(now) == 0L) {
                 directAlert = null
                 directAlertTimer.clear()
@@ -732,6 +797,15 @@ class LightEngine {
                     reason = "off (call hidden by conditions)"
                     useBatteryIfEligible()
                 }
+            } else if (geminiLook != null) {
+                val (state, look) = geminiLook
+                reason = "gemini ${state.id} ${look.pattern}"
+                currentPattern = look.pattern
+                currentColor = look.color
+                currentBrightness = 1.0f
+                currentSpeed = look.speedMs
+                elapsedMs = now - geminiStateSinceMs
+                effectKey = listOf("gemini", state, geminiStateSinceMs, look)
             } else if (!batterySuppressesNotifications && direct != null && notificationVisible(
                     direct.requiresFaceDown, direct.dndMode, direct.quietHoursMode,
                     direct.quietStartOverride, direct.quietEndOverride, nowMinutes
@@ -972,6 +1046,7 @@ class LightEngine {
             appendLine("route=${if (framesDriving) "frames" else "effects"}, effectsSupported=${lights.supportsEffects}, effectsFailed=$effectsFailed, period=${lights.effectPeriodMs}ms, showing=${shownEffectKey?.let { shownEffectInfo }}")
             appendLine("faceDown=$deviceFaceDown, dndActive=$dndActive, dndSuppress=$dndSuppressEnabled, quietHours=$quietHoursEnabled $quietHoursStartMinutes-$quietHoursEndMinutes, splitRing=$splitRing (${splitAnimation.id})")
             appendLine("test=${testAlert?.let { "${it.pattern} ${hex(it.color)}, ${it.expiresAtMs - now}ms left" }}")
+            appendLine("gemini=${if (geminiEnabled) "on, ${geminiState?.id ?: "idle"}${geminiState?.let { ", for ${(now - geminiStateSinceMs) / 1000}s" } ?: ""}, looks=${geminiLooks.map { "${it.key.id}:${it.value.pattern}" }}" else "off"}")
             appendLine("call=${incomingCallAlert?.let { "${it.pattern} ${hex(it.color)}, ringing ${(now - it.startedAtMs) / 1000}s, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}" }}")
             appendLine("latestOnly=${directAlert?.let { "${it.pattern} ${hex(it.color)}, ${directAlertTimer.remainingMs(now)}ms left, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}" }}")
             appendLine("queue (${activeAlerts.size}):")

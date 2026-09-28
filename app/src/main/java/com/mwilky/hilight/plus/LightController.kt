@@ -185,6 +185,14 @@ class LightController private constructor(private val app: Application) {
             ) { settings, enabled, globalFaceDown, entitled -> Triple(settings, enabled && entitled, globalFaceDown) }
                 .collect { (settings, enabled, globalFaceDown) -> pushBatteryConfig(settings, enabled, globalFaceDown) }
         }
+        scope.launch {
+            combine(store.gemini, store.isEnabled, licensing.isEntitled, store.isOnlyWhenFaceDown) { settings, enabled, entitled, globalFaceDown ->
+                Triple(settings, settings.enabled && enabled && entitled, globalFaceDown)
+            }.collect { (settings, enabled, globalFaceDown) ->
+                daemon.setGeminiConfig(settings, enabled, globalFaceDown)
+                syncGeminiOrientationMonitor(settings, enabled, globalFaceDown)
+            }
+        }
         // Heartbeat: the daemon renders the battery layer indefinitely from its own cached
         // reading, so it treats silence as "the app is gone" and goes dark. Keep telling it we're
         // here while the layer could be showing something.
@@ -438,6 +446,21 @@ class LightController private constructor(private val app: Application) {
             DeviceOrientationDetector.retainMonitoring(app, DeviceOrientationDetector.TOKEN_BATTERY)
         } else {
             DeviceOrientationDetector.releaseMonitoring(DeviceOrientationDetector.TOKEN_BATTERY)
+        }
+    }
+
+    /**
+     * Gemini can start at any moment and the daemon needs to know which way up the phone is when
+     * it does, so orientation is watched for as long as a Gemini state requires face-down.
+     */
+    private fun syncGeminiOrientationMonitor(settings: GeminiSettings, enabled: Boolean, globalOnlyWhenFaceDown: Boolean) {
+        val needsFaceDown = enabled && GeminiState.entries.any { state ->
+            settings.look(state).let { it.isEnabled && it.faceDownMode.requiresFaceDown(globalOnlyWhenFaceDown) }
+        }
+        if (needsFaceDown) {
+            DeviceOrientationDetector.retainMonitoring(app, DeviceOrientationDetector.TOKEN_GEMINI)
+        } else {
+            DeviceOrientationDetector.releaseMonitoring(DeviceOrientationDetector.TOKEN_GEMINI)
         }
     }
 

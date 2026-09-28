@@ -23,7 +23,10 @@ import kotlinx.coroutines.launch
  */
 data class StockHiLightState(
     val favoriteCallsActive: Boolean = false,
-    val known: Boolean = false
+    val known: Boolean = false,
+    // Stock Gemini feedback (listening, thinking, replying), read separately.
+    val geminiFeedbackActive: Boolean = false,
+    val geminiKnown: Boolean = false
 )
 
 /**
@@ -35,6 +38,7 @@ object NativeHiLightDetector {
     private const val TAG = "NativeHiLightDetector"
 
     const val KEY_FAVORITE_CALLS = "light_animation_favorite_calls_enabled"
+    const val KEY_GEMINI_FEEDBACK = "light_animation_feedback_enabled"
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val _state = MutableStateFlow(StockHiLightState())
@@ -64,11 +68,11 @@ object NativeHiLightDetector {
 
         if (!observerRegistered) {
             try {
-                val uri = Settings.Secure.getUriFor(KEY_FAVORITE_CALLS)
-                if (uri != null) {
+                for (key in listOf(KEY_FAVORITE_CALLS, KEY_GEMINI_FEEDBACK)) {
+                    val uri = Settings.Secure.getUriFor(key) ?: continue
                     cr.registerContentObserver(uri, true, observer)
                     observerRegistered = true
-                    DebugLog.d(TAG, "Registered ContentObserver on Settings.Secure for '$KEY_FAVORITE_CALLS'")
+                    DebugLog.d(TAG, "Registered ContentObserver on Settings.Secure for '$key'")
                 }
             } catch (e: Throwable) {
                 DebugLog.w(TAG, "Failed to register ContentObserver: $e")
@@ -85,8 +89,9 @@ object NativeHiLightDetector {
             val bridge = DaemonBridge.get(app)
             if (bridge.isConnected()) {
                 val value = bridge.getSecureString(KEY_FAVORITE_CALLS)
-                val parsed = parseFavoriteCallsSetting(value)
-                DebugLog.i(TAG, "Privileged read: '$KEY_FAVORITE_CALLS'='$value' => $parsed")
+                val gemini = bridge.getSecureString(KEY_GEMINI_FEEDBACK)
+                val parsed = parseFavoriteCallsSetting(value).withGeminiFeedback(gemini)
+                DebugLog.i(TAG, "Privileged read: '$KEY_FAVORITE_CALLS'='$value', '$KEY_GEMINI_FEEDBACK'='$gemini' => $parsed")
                 return parsed
             }
         }
@@ -119,6 +124,12 @@ object NativeHiLightDetector {
             }
         }
     }
+}
+
+/** Adds the stock Gemini feedback setting, read the same way as favourite calls. */
+internal fun StockHiLightState.withGeminiFeedback(value: String?): StockHiLightState {
+    val parsed = parseFavoriteCallsSetting(value)
+    return copy(geminiFeedbackActive = parsed.favoriteCallsActive, geminiKnown = parsed.known)
 }
 
 internal fun parseFavoriteCallsSetting(value: String?): StockHiLightState {

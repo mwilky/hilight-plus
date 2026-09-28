@@ -25,6 +25,7 @@ object DeviceOrientationDetector {
     const val TOKEN_NOTIFICATIONS = "notifications"
     const val TOKEN_CALL = "call"
     const val TOKEN_BATTERY = "battery"
+    const val TOKEN_GEMINI = "gemini"
 
     private const val TAG = "DeviceOrientation"
     private const val TILT_DETECTOR = "android.sensor.tilt_detector"

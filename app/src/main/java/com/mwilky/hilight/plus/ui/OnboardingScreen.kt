@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Lightbulb
@@ -61,6 +62,7 @@ import com.mwilky.hilight.plus.adb.SetupState
 import com.mwilky.hilight.plus.ui.diagnostics.CallPermissionsCard
 import com.mwilky.hilight.plus.ui.diagnostics.NotificationAccessCard
 import com.mwilky.hilight.plus.ui.diagnostics.PermissionState
+import com.mwilky.hilight.plus.ui.diagnostics.GeminiStockCard
 import com.mwilky.hilight.plus.ui.diagnostics.StockConflictCard
 import com.mwilky.hilight.plus.ui.diagnostics.rememberCallPermissionLauncher
 import com.mwilky.hilight.plus.ui.diagnostics.rememberPermissionState
@@ -154,7 +156,7 @@ fun OnboardingScreen(
         OnboardingStep.WELCOME -> true
         // Reviewers and first-time users can go on without connecting; onNext confirms first.
         OnboardingStep.CONNECT -> true
-        OnboardingStep.STOCK_CONFLICT -> !stockState.favoriteCallsActive
+        OnboardingStep.STOCK_CONFLICT -> !stockState.favoriteCallsActive && !stockState.geminiFeedbackActive
         OnboardingStep.PERMISSIONS -> permissionState.hasContactsPermission && permissionState.isNotifAccessGranted
         OnboardingStep.TRIAL -> true
     }
@@ -506,7 +508,9 @@ private fun StockConflictStepContent(
         stringResource(R.string.onboarding_stock_title),
         { StepBody(stringResource(R.string.onboarding_stock_desc1)) },
         { StepBody(stringResource(R.string.onboarding_stock_desc2)) },
-        { StockConflictCard(stockState = stockState, onOpenSettings = onOpenSettings) }
+        { StockConflictCard(stockState = stockState, onOpenSettings = onOpenSettings) },
+        // HiLight Plus lights the ring for Gemini instead, so this has to be off too.
+        { GeminiStockCard(stockState = stockState, takeoverEnabled = true, onOpenSettings = onOpenSettings) }
     )
 }
 
@@ -580,6 +584,12 @@ private fun FeaturesHighlightCard() {
                 title = stringResource(R.string.onboarding_feature_battery_title),
                 desc = stringResource(R.string.onboarding_feature_battery_desc)
             )
+            FeatureRow(
+                icon = Icons.Rounded.AutoAwesome,
+                shape = MaterialShapes.Cookie9Sided,
+                title = stringResource(R.string.onboarding_feature_gemini_title),
+                desc = stringResource(R.string.onboarding_feature_gemini_desc)
+            )
         }
     }
 }
@@ -648,7 +658,7 @@ fun OnboardingStep2Preview() {
 fun OnboardingStep3Preview() {
     OnboardingStepPreview(OnboardingStep.STOCK_CONFLICT) {
         StockConflictStepContent(
-            stockState = StockHiLightState(favoriteCallsActive = true, known = true),
+            stockState = StockHiLightState(favoriteCallsActive = true, known = true, geminiFeedbackActive = true, geminiKnown = true),
             onOpenSettings = {}
         )
     }

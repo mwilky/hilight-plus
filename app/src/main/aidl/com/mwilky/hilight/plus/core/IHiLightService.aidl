@@ -32,4 +32,7 @@ interface IHiLightService {
     boolean isRingStuck();
     int getVersionCode();
     boolean grantWriteSecureSettings();
+    // JSON object keyed by Gemini state id: pattern, color, requiresFaceDown, dndMode,
+    // quietHoursMode, quietStart, quietEnd (-1 for none). A missing state stays unlit.
+    void setGeminiConfig(boolean enabled, String statesJson);
 }

@@ -27,4 +27,13 @@ class StockHiLightStateTest {
         assertTrue(state.known)
         assertTrue(state.favoriteCallsActive)
     }
+
+    @Test
+    fun geminiFeedbackIsReadSeparatelyFromFavourites() {
+        val state = parseFavoriteCallsSetting("0").withGeminiFeedback("1")
+        assertFalse(state.favoriteCallsActive)
+        assertTrue(state.geminiKnown)
+        assertTrue(state.geminiFeedbackActive)
+        assertFalse(parseFavoriteCallsSetting("0").withGeminiFeedback(null).geminiKnown)
+    }
 }

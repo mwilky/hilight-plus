@@ -50,6 +50,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mwilky.hilight.plus.AppNotificationRule
 import com.mwilky.hilight.plus.BatterySettings
+import com.mwilky.hilight.plus.GeminiSettings
+import com.mwilky.hilight.plus.GeminiState
 import com.mwilky.hilight.plus.ContactRule
 import com.mwilky.hilight.plus.DEFAULT_SETTINGS_SNAPSHOT
 import com.mwilky.hilight.plus.LightController
@@ -107,6 +109,7 @@ fun HomeScreen(
     var isPickingApp by remember { mutableStateOf(false) }
     var isConfiguringDefaultNotif by remember { mutableStateOf(false) }
     var isConfiguringFavouriteNotif by remember { mutableStateOf(false) }
+    var geminiStateBeingEdited by remember { mutableStateOf<GeminiState?>(null) }
 
     // Pick Contact for Call
     val callContactPickerLauncher = rememberLauncherForActivityResult(
@@ -212,8 +215,44 @@ fun HomeScreen(
         onDeleteAppRule = viewModel::deleteAppRule,
         onAddApp = { isPickingApp = true },
         onBatteryChange = viewModel::setBattery,
-        renderer = renderer
+        renderer = renderer,
+        onGeminiChange = viewModel::setGemini,
+        onEditGeminiState = { geminiStateBeingEdited = it }
     )
+
+    geminiStateBeingEdited?.let { geminiState ->
+        val look = state.gemini.look(geminiState)
+        CustomRuleDialog(
+            title = stringResource(R.string.dialog_configure_title, stringResource(geminiState.titleRes)),
+            initialColor = look.color,
+            initialPattern = look.pattern,
+            initialFaceDown = look.faceDownMode,
+            initialDnd = look.dndMode,
+            initialQuietHours = look.quietHoursMode,
+            initialQuietStart = look.quietHoursStartMinutes ?: state.quietHoursStartMinutes,
+            initialQuietEnd = look.quietHoursEndMinutes ?: state.quietHoursEndMinutes,
+            renderer = renderer,
+            controller = controller,
+            onDismiss = { geminiStateBeingEdited = null },
+            onSave = { result ->
+                viewModel.setGemini(
+                    state.gemini.withLook(
+                        geminiState,
+                        look.copy(
+                            pattern = result.pattern,
+                            color = result.color,
+                            faceDownMode = result.faceDown,
+                            dndMode = result.dndMode,
+                            quietHoursMode = result.quietHoursMode,
+                            quietHoursStartMinutes = result.quietHoursStartMinutes,
+                            quietHoursEndMinutes = result.quietHoursEndMinutes
+                        )
+                    )
+                )
+                geminiStateBeingEdited = null
+            }
+        )
+    }
 
     // Call Contact Dialog
     if (callRuleBeingEdited != null) {
@@ -573,12 +612,15 @@ fun HomeContent(
     // Battery
     onBatteryChange: (BatterySettings) -> Unit,
     renderer: PatternRenderer,
+    // Gemini
+    onGeminiChange: (GeminiSettings) -> Unit = {},
+    onEditGeminiState: (GeminiState) -> Unit = {},
     licenseStatus: Licensing.Status? = null,
     onBuy: () -> Unit = {},
     initialPage: Int = 0
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
-    val pagerState = rememberPagerState(initialPage) { 3 }
+    val pagerState = rememberPagerState(initialPage) { 4 }
     val scope = rememberCoroutineScope()
 
     Scaffold(
@@ -675,7 +717,7 @@ fun HomeContent(
                         onChangeSplitAnimation = onChangeSplitAnimation,
                         renderer = renderer
                     )
-                    else -> HomeBatteryPage(
+                    2 -> HomeBatteryPage(
                         connectionState = connectionState,
                         connectionMethod = connectionMethod,
                         connectionError = connectionError,
@@ -691,6 +733,23 @@ fun HomeContent(
                         onBatteryChange = onBatteryChange,
                         renderer = renderer
                     )
+                    else -> HomeGeminiPage(
+                        connectionState = connectionState,
+                        connectionMethod = connectionMethod,
+                        connectionError = connectionError,
+                        onPauseConnection = onPauseConnection,
+                        onResumeConnection = onResumeConnection,
+                        onRequestShizukuPermission = onRequestShizukuPermission,
+                        onOpenShizukuApp = onOpenShizukuApp,
+                        onRestartApp = onRestartApp,
+                        onSetUpConnection = onSetUpConnection,
+                        gemini = state.gemini,
+                        stockState = stockState,
+                        onOpenStockSettings = onOpenStockSettings,
+                        onGeminiChange = onGeminiChange,
+                        onEditState = onEditGeminiState,
+                        renderer = renderer
+                    )
                 }
             }
         }
@@ -698,7 +757,7 @@ fun HomeContent(
 }
 
 /**
- * Connected three-button toggle group that mirrors the pager position.
+ * Connected toggle group, one button per page, that mirrors the pager position.
  */
 @Composable
 private fun HomePageToggle(
@@ -711,7 +770,8 @@ private fun HomePageToggle(
     val tabs = listOf(
         Icons.Rounded.Call to R.string.home_tab_calls,
         Icons.Rounded.Notifications to R.string.home_tab_notifications,
-        Icons.Rounded.BatteryChargingFull to R.string.home_tab_battery
+        Icons.Rounded.BatteryChargingFull to R.string.home_tab_battery,
+        Icons.Rounded.AutoAwesome to R.string.home_tab_gemini
     )
     val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
@@ -958,6 +1018,12 @@ fun HomeScreenPreviewSplitRing() {
     )
 }
 
+@Preview(name = "Home Screen - Gemini", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+fun HomeScreenPreviewGemini() {
+    HomeScreenPreviewContent(initialPage = 3, gemini = GeminiSettings(enabled = true))
+}
+
 @Composable
 fun HomeScreenPreviewContent(
     hasCallRules: Boolean = false,
@@ -966,7 +1032,8 @@ fun HomeScreenPreviewContent(
     callLightsEnabled: Boolean = true,
     initialPage: Int = 0,
     multiAlertMode: MultiAlertMode = DEFAULT_SETTINGS_SNAPSHOT.multiAlertMode,
-    splitAnimation: SplitAnimation = DEFAULT_SETTINGS_SNAPSHOT.splitAnimation
+    splitAnimation: SplitAnimation = DEFAULT_SETTINGS_SNAPSHOT.splitAnimation,
+    gemini: GeminiSettings = DEFAULT_SETTINGS_SNAPSHOT.gemini
 ) {
     val mockCallContacts = if (hasCallRules) {
         listOf(
@@ -1015,7 +1082,8 @@ fun HomeScreenPreviewContent(
                 messageContactRules = mockMsgContacts,
                 appRules = mockApps,
                 multiAlertMode = multiAlertMode,
-                splitAnimation = splitAnimation
+                splitAnimation = splitAnimation,
+                gemini = gemini
             ),
             onToggleCallLights = {},
             onToggleFavouriteCalls = {},

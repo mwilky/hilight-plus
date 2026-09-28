@@ -20,7 +20,7 @@
 
 While stock Pixel software limits the ring to Gemini interactions and basic calls from favourites, HiLight Plus takes over the ring to provide full customization: granular per-contact or per-app patterns, battery telemetry indicators, split-ring alert arcs, and extensive scheduling conditions.
 
-Gemini's stock lighting states remain untouched. All processing executes locally on-device—no accounts, no tracking, and zero telemetry.
+It can take over Gemini's listening, thinking and replying lights too, in looks you choose. All processing executes locally on-device—no accounts, no tracking, and zero telemetry.
 
 [HR][/HR]
 
@@ -60,6 +60,13 @@ Gemini's stock lighting states remain untouched. All processing executes locally
 [*]Configurable layer priority (can sit below alerts or override standard notifications).
 [/LIST]
 
+[B]Gemini[/B]
+[LIST]
+[*]Replaces Pixel's own Gemini feedback: a pattern and colour for each of Gemini's listening, thinking and replying states, defaulting to copies of the stock animations.
+[*]Each state can be switched off, and follows the gating conditions or its own, like any rule.
+[*]Followed from Gemini's own app log, on the phone only. A Gemini update that changes what it logs can stop the ring following until HiLight Plus is updated.
+[/LIST]
+
 [B]Gating & Environment Conditions[/B]
 [LIST]
 [*]Face-down only mode (accelerometer engages only when alerts are pending).
@@ -84,6 +91,7 @@ Gemini's stock lighting states remain untouched. All processing executes locally
 [*][B]Developer options and Wireless debugging[/B] for setup. No root or Shizuku needed: HiLight Plus pairs once with the phone's own Wireless debugging to start a small shell-privileged daemon that reaches the lights service, then reconnects by itself, including after a reboot.
 [*][B]To keep working[/B], Developer options must stay on along with at least one of USB debugging or Wireless debugging. Wi-Fi is needed whenever the daemon has to start (setup, reboot, update), as Wireless debugging only runs on Wi-Fi.
 [*][B][URL='https://shizuku.rikka.app/']Shizuku[/URL][/B] (optional) is still supported, via Wireless Debugging or Root, for anyone who already uses it.
+[*]Pixel's own [B]Calls from favourites[/B] and [B]Gemini feedback[/B] HiLight options turned off, so the two don't fight over the ring. Onboarding checks this for you.
 [*][B]Stock "Calls from favourites" disabled[/B] in system settings to prevent hardware race conditions. Onboarding verifies this setup automatically.
 [/LIST]
 

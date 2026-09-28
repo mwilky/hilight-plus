@@ -56,6 +56,7 @@ internal object DebugReport {
             appendLine("Notification access: granted=${isNotificationListenerEnabled(context)}, listener connected=${NotificationTrigger.isListenerConnected}")
             appendLine("Contacts permission: ${context.checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED}")
             appendLine("Stock favourite-calls HiLight: ${if (stock.known) stock.favoriteCallsActive else "unknown"}")
+            appendLine("Stock Gemini feedback: ${if (stock.geminiKnown) stock.geminiFeedbackActive else "unknown"}")
             appendLine("Licence: purchased=${licence.purchased}, trial started=${licence.trialStartMillis?.let { Date(it) }}, expired=${licence.trialExpired}, entitled=${licence.entitled}")
             appendLine()
 
@@ -83,6 +84,7 @@ internal object DebugReport {
                 rule("App ${it.packageName}", it.isEnabled, it.pattern, it.color, it.faceDownMode, it.dndMode, it.quietHoursMode, it.quietHoursStartMinutes, it.quietHoursEndMinutes, "autoColor=${it.isAutoColor}")
             }
             appendLine("Battery: ${snapshot.battery}")
+            appendLine("Gemini: ${snapshot.gemini}")
             appendLine()
             appendLine("== Log ==")
         }

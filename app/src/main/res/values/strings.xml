@@ -12,11 +12,13 @@
     <string name="onboarding_feature_conditions_desc">Choose conditions that stop the lights from showing.</string>
     <string name="onboarding_feature_battery_title">Battery</string>
     <string name="onboarding_feature_battery_desc">Show a charging gauge or low-battery warning on the ring.</string>
+    <string name="onboarding_feature_gemini_title">Gemini</string>
+    <string name="onboarding_feature_gemini_desc">Replace Pixel\'s own Gemini lights with your own looks for listening, thinking and replying.</string>
 
     <!-- Onboarding Step 2: Stock HiLight Conflict -->
     <string name="onboarding_stock_title">Pixel\'s built-in HiLight</string>
-    <string name="onboarding_stock_desc1">Your Pixel already has a simple HiLight option called \'Calls from favourites\'. If it stays on, it and HiLight Plus will both try to drive the rear lights at the same time.</string>
-    <string name="onboarding_stock_desc2">Turn it off in system settings so HiLight Plus has the lights to itself. Gemini and other system features can still use them.</string>
+    <string name="onboarding_stock_desc1">Your Pixel already has two simple HiLight options: \'Calls from favourites\' and Gemini feedback. If they stay on, they and HiLight Plus will both try to drive the rear lights at the same time.</string>
+    <string name="onboarding_stock_desc2">Turn both off in system settings so HiLight Plus has the lights to itself. It lights the ring for Gemini instead, in the looks you choose on its Gemini page.</string>
     <string name="onboarding_stock_card_title">Calls from favourites</string>
     <string name="onboarding_stock_conflict_active_desc">This is still on in system settings and will clash with HiLight Plus. Tap below to turn it off.</string>
     <string name="onboarding_stock_unknown_desc">Couldn\'t read this setting yet. Connect HiLight Plus to the ring to check it.</string>
@@ -275,15 +277,21 @@
     <string name="home_tab_calls">Calls</string>
     <string name="home_tab_notifications">Notifications</string>
     <string name="home_tab_battery">Battery</string>
+    <string name="home_tab_gemini">Gemini</string>
     <string name="hero_calls_title">Call lights</string>
     <string name="hero_notifs_title">Notification lights</string>
     <string name="hero_battery_title">Battery lights</string>
+    <string name="hero_gemini_title">Gemini lights</string>
     <string name="hero_status_on">On · %1$s</string>
     <string name="hero_status_battery_on">On</string>
     <string name="hero_status_off">Off</string>
     <plurals name="hero_rule_count">
         <item quantity="one">%d rule</item>
         <item quantity="other">%d rules</item>
+    </plurals>
+    <plurals name="hero_gemini_state_count">
+        <item quantity="one">%d state</item>
+        <item quantity="other">%d states</item>
     </plurals>
     <string name="section_off_hint">Turned off. Your rules are kept and apply again when you switch back on.</string>
     <string name="rule_edit_cd">Edit rule</string>
@@ -306,6 +314,16 @@
     <string name="pattern_gemini_listening">Gemini listening</string>
     <string name="pattern_gemini_thinking">Gemini thinking</string>
     <string name="pattern_gemini_replying">Gemini replying</string>
+    <string name="gemini_states_header">While Gemini is</string>
+    <string name="gemini_state_listening">Listening</string>
+    <string name="gemini_state_thinking">Thinking</string>
+    <string name="gemini_state_replying">Replying</string>
+    <string name="gemini_stock_card_title">Gemini feedback</string>
+    <string name="gemini_stock_conflict_desc">Pixel\'s own Gemini lighting is still on and will clash with HiLight Plus. Tap below and turn off Gemini feedback.</string>
+    <string name="gemini_stock_ok_desc">Pixel\'s own Gemini lighting is off, so HiLight Plus has the ring to itself.</string>
+    <string name="gemini_stock_handling_desc">Pixel is lighting the ring for Gemini. Turn on Gemini lights in HiLight Plus to use your own looks instead.</string>
+    <string name="gemini_stock_neither_desc">Pixel\'s own Gemini lighting is off, and so are Gemini lights in HiLight Plus, so the ring stays dark for Gemini.</string>
+    <string name="gemini_stock_status_on">On</string>
     <string name="battery_pattern_gauge">Gauge</string>
     <string name="battery_pattern_charge_fill">Charge fill</string>
     <string name="battery_pattern_gradient_ring">Gradient ring</string>
@@ -367,7 +385,7 @@
     <string name="about_led_walk_desc">Lighting each LED in turn, 0 to 7. The ring above shows where the app thinks this LED is; compare it with the phone.</string>
     <string name="about_version_label">Version</string>
     <string name="about_status_section_header">System Health &amp; Permissions</string>
-    <string name="about_stock_ok_desc">Pixel\'s own \'Calls from favourites\' lighting is off. Gemini may still use the lights if this option is enabled.</string>
+    <string name="about_stock_ok_desc">Pixel\'s own \'Calls from favourites\' lighting is off.</string>
     <string name="about_debug_log_header">Troubleshooting</string>
     <string name="about_debug_log_title">Debug log</string>
     <plurals name="about_debug_log_entry_count">
