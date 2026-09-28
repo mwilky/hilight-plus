@@ -2,6 +2,7 @@
 
 package com.mwilky.hilight.plus.ui
 
+import android.os.SystemClock
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
@@ -385,9 +386,10 @@ fun AnimatedRingBadge(
             miniFrames = frame(0L)
             return@LaunchedEffect
         }
-        val startMs = System.currentTimeMillis()
+        // One clock shared by every badge, so a rule added later runs in step with the rest
+        // instead of starting its cycle from zero.
         while (isActive) {
-            miniFrames = frame(System.currentTimeMillis() - startMs)
+            miniFrames = frame(SystemClock.uptimeMillis())
             delay(33)
         }
     }
