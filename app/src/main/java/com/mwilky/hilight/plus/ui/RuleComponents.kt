@@ -2,16 +2,20 @@
 
 package com.mwilky.hilight.plus.ui
 
+import android.content.ClipData
 import android.os.SystemClock
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,15 +27,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
 import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.ScreenRotation
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -39,11 +47,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -54,20 +64,35 @@ import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.github.skydoves.colorpicker.compose.HsvColorPicker
+import com.github.skydoves.colorpicker.compose.rememberColorPickerController
 import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.FaceDownMode
 import com.mwilky.hilight.plus.PatternMode
@@ -77,6 +102,7 @@ import com.mwilky.hilight.plus.RuleSort
 import com.mwilky.hilight.plus.core.PatternRenderer
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 /**
  * Large section header with the one prominent toggle for a whole feature (calls / notifications).
@@ -400,6 +426,222 @@ fun AnimatedRingBadge(
             .size(size)
             .clip(CircleShape),
         size = size
+    )
+}
+
+private const val SWATCHES_PER_ROW = 5
+
+/**
+ * The preset [PALETTE] plus a custom swatch that opens [ColorPickerDialog]. The custom swatch
+ * takes on the chosen colour whenever it isn't one of the presets. Selection is only shown
+ * while [enabled], so an auto colour never looks like a manual pick.
+ */
+@Composable
+internal fun ColorSwatchGrid(
+    selectedColor: Long,
+    enabled: Boolean,
+    onSelect: (Long) -> Unit
+) {
+    var showPicker by rememberSaveable { mutableStateOf(false) }
+    val isCustom = selectedColor !in PALETTE
+    val slots = PALETTE.size + 1
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        for (rowStart in 0 until slots step SWATCHES_PER_ROW) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                for (i in rowStart until rowStart + SWATCHES_PER_ROW) {
+                    when {
+                        i < PALETTE.size -> {
+                            val c = PALETTE[i]
+                            ColorSwatch(
+                                color = c,
+                                selected = enabled && selectedColor == c,
+                                enabled = enabled,
+                                onClick = { onSelect(c) }
+                            )
+                        }
+                        i == PALETTE.size -> CustomColorSwatch(
+                            customColor = if (enabled && isCustom) selectedColor else null,
+                            enabled = enabled,
+                            onClick = { showPicker = true }
+                        )
+                        // Keeps the last row's swatches in the same columns as the rows above.
+                        else -> Spacer(Modifier.size(48.dp))
+                    }
+                }
+            }
+        }
+    }
+    if (showPicker) {
+        ColorPickerDialog(
+            initialColor = selectedColor,
+            onDismiss = { showPicker = false },
+            onConfirm = {
+                showPicker = false
+                onSelect(it)
+            }
+        )
+    }
+}
+
+/** A full hue sweep, so the custom swatch reads as "any colour" rather than one more preset. */
+private val HUE_SWEEP = Brush.sweepGradient((0..6).map { Color.hsv(it * 60f % 360f, 1f, 1f) })
+
+/**
+ * Sits after the presets with a hue ring and palette icon, so it always reads as "pick your own".
+ * Filled with [customColor] once one is chosen (and selected, like a preset), grey until then.
+ */
+@Composable
+private fun CustomColorSwatch(
+    customColor: Long?,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    val selected = customColor != null
+    val scale by animateFloatAsState(
+        targetValue = if (selected) 1.12f else 1f,
+        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+        label = "customSwatchScale"
+    )
+    val fill = customColor?.let { Color(it) } ?: MaterialTheme.colorScheme.surfaceContainerHighest
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .scale(scale)
+            .clip(CircleShape)
+            .clickable(enabled = enabled, onClick = onClick)
+            .border(3.dp, HUE_SWEEP, CircleShape)
+            .padding(5.dp)
+            .clip(CircleShape)
+            .background(fill),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            Icons.Rounded.Palette,
+            contentDescription = stringResource(R.string.dialog_custom_color),
+            modifier = Modifier.size(20.dp),
+            tint = when {
+                customColor == null -> MaterialTheme.colorScheme.onSurfaceVariant
+                fill.luminance() > 0.5f -> Color.Black
+                else -> Color.White
+            }
+        )
+    }
+}
+
+private fun toHex(color: Long): String = "%06X".format(color and 0xFFFFFFL)
+
+/**
+ * Keeps only hex digits from typed or pasted text, so "#ff8800", "FF8800" and an ARGB
+ * "#FFFF8800" all end up as "FF8800".
+ */
+internal fun parseHexInput(raw: String): String {
+    val digits = raw.uppercase().filter { it in '0'..'9' || it in 'A'..'F' }
+    return if (digits.length == 8) digits.drop(2) else digits.take(6)
+}
+
+@Composable
+private fun ColorPickerDialog(
+    initialColor: Long,
+    onDismiss: () -> Unit,
+    onConfirm: (Long) -> Unit
+) {
+    val controller = rememberColorPickerController()
+    var picked by rememberSaveable { mutableLongStateOf(initialColor) }
+    // What's in the hex field, which may be half-typed; [picked] only follows complete codes.
+    var hexText by rememberSaveable { mutableStateOf(toHex(initialColor)) }
+    // Read once so the wheel reopens where it was after a rotation or fold.
+    val startColor = remember { Color(picked) }
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+    val copyLabel = stringResource(R.string.dialog_custom_color)
+    // A square wheel as wide as the dialog allows, but short enough for landscape and the cover screen.
+    val wheelSize = (LocalConfiguration.current.screenHeightDp.dp * 0.45f).coerceAtMost(280.dp)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.dialog_custom_color)) },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                HsvColorPicker(
+                    modifier = Modifier.size(wheelSize),
+                    controller = controller,
+                    initialColor = startColor,
+                    onColorChanged = { envelope ->
+                        // The wheel reports the initial colour too; only a touch changes the pick,
+                        // so confirming untouched keeps a preset exactly.
+                        if (envelope.fromUser) {
+                            picked = (envelope.color.toArgb().toLong() and 0xFFFFFFL) or 0xFF000000L
+                            hexText = toHex(picked)
+                        }
+                    }
+                )
+                OutlinedTextField(
+                    value = hexText,
+                    onValueChange = { raw ->
+                        hexText = parseHexInput(raw)
+                        if (hexText.length == 6) {
+                            picked = hexText.toLong(16) or 0xFF000000L
+                            // Not from the user, so the wheel's echo doesn't overwrite the exact code.
+                            controller.selectByColor(Color(picked), fromUser = false)
+                        }
+                    },
+                    label = { Text(stringResource(R.string.dialog_custom_color_hex)) },
+                    prefix = { Text("#") },
+                    leadingIcon = {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(Color(picked))
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                        )
+                    },
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            scope.launch {
+                                clipboard.setClipEntry(
+                                    ClipEntry(ClipData.newPlainText(copyLabel, "#${toHex(picked)}"))
+                                )
+                            }
+                        }) {
+                            Icon(
+                                Icons.Rounded.ContentCopy,
+                                contentDescription = stringResource(R.string.dialog_custom_color_copy)
+                            )
+                        }
+                    },
+                    isError = hexText.length != 6,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Characters,
+                        autoCorrectEnabled = false,
+                        keyboardType = KeyboardType.Ascii,
+                        imeAction = ImeAction.Done
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = HiLightTheme.DialogCardShape
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(picked) }, enabled = hexText.length == 6) {
+                Text(stringResource(R.string.dialog_btn_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.dialog_btn_cancel))
+            }
+        }
     )
 }
 

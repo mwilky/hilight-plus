@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -384,21 +383,11 @@ private fun RuleEditorContent(
                         },
                         style = MaterialTheme.typography.labelLarge
                     )
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        maxItemsInEachRow = 4,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        PALETTE.forEach { c ->
-                            ColorSwatch(
-                                color = c,
-                                selected = selectedColor == c && canPickManualColor,
-                                enabled = canPickManualColor,
-                                onClick = { selectedColor = c }
-                            )
-                        }
-                    }
+                    ColorSwatchGrid(
+                        selectedColor = selectedColor,
+                        enabled = canPickManualColor,
+                        onSelect = { selectedColor = it }
+                    )
                 }
             }
 

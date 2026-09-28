@@ -28,7 +28,7 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 
 [B]Incoming Calls[/B]
 [LIST]
-[*]Dedicated pattern and hex/preset colour per contact.
+[*]Dedicated pattern and colour per contact.
 [*]Configurable fallback defaults for other saved contacts and unknown callers.
 [*]Favourites style for starred contacts, used when a caller has no rule of their own.
 [*]Universal support: works across cellular calls and VoIP (WhatsApp, Teams, Google Meet, etc.).
@@ -41,6 +41,7 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 [*]Per-sender and per-app rules with dynamic colour extraction from app icons.
 [*]Starred contacts can share a favourites style, sitting between a sender's own rule and the app rule.
 [*]13 distinct LED animation patterns: [I]Solid, Breathe, Pulse, Wave, Comet, Orbit, Beacon, Ripple, Sparkle, Rainbow[/I], plus copies of Gemini's own [I]Listening, Thinking[/I] and [I]Replying[/I] effects.
+[*]Eight preset colours or any custom colour from a colour wheel, for every rule, battery and Gemini. Hex codes can be copied and pasted between rules.
 [*]Every pattern, Gemini ones included, runs on the ring's own light controller as a looping effect, the same way stock Gemini lights it: smooth, and without the app redrawing it many times a second.
 [*]Multi-alert ring management:
 [LIST]

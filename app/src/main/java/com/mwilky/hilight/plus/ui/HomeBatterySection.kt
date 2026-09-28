@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -318,21 +317,11 @@ private fun LookGroup(
         onCheckedChange = { onBatteryChange(battery.copy(autoColor = it)) },
         expandedVisible = !battery.autoColor
     ) {
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            maxItemsInEachRow = 4,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            PALETTE.forEach { swatch ->
-                ColorSwatch(
-                    color = swatch,
-                    selected = battery.color == swatch,
-                    enabled = true,
-                    onClick = { onBatteryChange(battery.copy(color = swatch)) }
-                )
-            }
-        }
+        ColorSwatchGrid(
+            selectedColor = battery.color,
+            enabled = true,
+            onSelect = { onBatteryChange(battery.copy(color = it)) }
+        )
     }
 }
 
