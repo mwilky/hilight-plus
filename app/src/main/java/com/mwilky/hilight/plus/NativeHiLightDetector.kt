@@ -132,8 +132,14 @@ internal fun StockHiLightState.withGeminiFeedback(value: String?): StockHiLightS
     return copy(geminiFeedbackActive = parsed.favoriteCallsActive, geminiKnown = parsed.known)
 }
 
+/**
+ * The stock keys aren't written until the user first toggles them, and Settings shows them on by
+ * default, so a successful read that finds no value (empty) means on. A failed read (null) stays
+ * unknown.
+ */
 internal fun parseFavoriteCallsSetting(value: String?): StockHiLightState {
-    if (value.isNullOrBlank()) return StockHiLightState(known = false)
+    if (value == null) return StockHiLightState(known = false)
+    if (value.isBlank()) return StockHiLightState(favoriteCallsActive = true, known = true)
     val active = value == "1" || value.equals("true", ignoreCase = true)
     return StockHiLightState(favoriteCallsActive = active, known = true)
 }

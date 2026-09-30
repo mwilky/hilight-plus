@@ -244,14 +244,18 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
         return engine.ledCount
     }
 
+    /**
+     * Returns the value, an empty string when the key has never been written (so the caller can
+     * apply the stock default), or null when the read failed.
+     */
     override fun getSecureString(key: String?): String? {
         if (key.isNullOrBlank()) return null
-        return runSettings("get", "secure", key)?.takeIf { it.isNotBlank() }
+        return runSettings("get", "secure", key)?.let { if (it == "null") "" else it }
     }
 
     override fun getGlobalString(key: String?): String? {
         if (key.isNullOrBlank()) return null
-        return runSettings("get", "global", key)?.takeIf { it.isNotBlank() }
+        return runSettings("get", "global", key)?.takeIf { it.isNotBlank() && it != "null" }
     }
 
     /**
@@ -291,7 +295,8 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
 
     /**
      * Runs the `settings` shell command. Returns the first line of stdout, an empty string when
-     * the command succeeded silently (e.g. `put`), or null on failure / timeout / "null".
+     * the command succeeded silently (e.g. `put`), or null on failure / timeout. A `get` of a key
+     * that has never been written returns the literal "null".
      */
     private fun runSettings(vararg args: String): String? {
         var process: java.lang.Process? = null
@@ -304,7 +309,7 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
                 process.destroyForcibly()
                 return null
             }
-            if (process.exitValue() != 0 || output == "null") null else output.orEmpty()
+            if (process.exitValue() != 0) null else output.orEmpty()
         } catch (t: Throwable) {
             DebugLog.e(TAG, "settings ${args.joinToString(" ")} failed: ${t.message}", t)
             null

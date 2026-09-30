@@ -36,4 +36,13 @@ class StockHiLightStateTest {
         assertTrue(state.geminiFeedbackActive)
         assertFalse(parseFavoriteCallsSetting("0").withGeminiFeedback(null).geminiKnown)
     }
+
+    @Test
+    fun unwrittenKeysUseStockDefaultOn() {
+        val state = parseFavoriteCallsSetting("").withGeminiFeedback("")
+        assertTrue(state.known)
+        assertTrue(state.favoriteCallsActive)
+        assertTrue(state.geminiKnown)
+        assertTrue(state.geminiFeedbackActive)
+    }
 }
