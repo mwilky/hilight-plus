@@ -235,6 +235,7 @@ fun HomeScreen(
             initialQuietHours = look.quietHoursMode,
             initialQuietStart = look.quietHoursStartMinutes ?: state.quietHoursStartMinutes,
             initialQuietEnd = look.quietHoursEndMinutes ?: state.quietHoursEndMinutes,
+            initialBrightness = look.brightness,
             renderer = renderer,
             controller = controller,
             onDismiss = { geminiStateBeingEdited = null },
@@ -249,7 +250,8 @@ fun HomeScreen(
                             dndMode = result.dndMode,
                             quietHoursMode = result.quietHoursMode,
                             quietHoursStartMinutes = result.quietHoursStartMinutes,
-                            quietHoursEndMinutes = result.quietHoursEndMinutes
+                            quietHoursEndMinutes = result.quietHoursEndMinutes,
+                            brightness = result.brightness
                         )
                     )
                 )
@@ -270,6 +272,7 @@ fun HomeScreen(
             initialQuietHours = rule.quietHoursMode,
             initialQuietStart = rule.quietHoursStartMinutes ?: state.quietHoursStartMinutes,
             initialQuietEnd = rule.quietHoursEndMinutes ?: state.quietHoursEndMinutes,
+            initialBrightness = rule.brightness,
             renderer = renderer,
             controller = controller,
             onDismiss = { callRuleBeingEdited = null },
@@ -282,7 +285,8 @@ fun HomeScreen(
                         dndMode = result.dndMode,
                         quietHoursMode = result.quietHoursMode,
                         quietHoursStartMinutes = result.quietHoursStartMinutes,
-                        quietHoursEndMinutes = result.quietHoursEndMinutes
+                        quietHoursEndMinutes = result.quietHoursEndMinutes,
+                        brightness = result.brightness
                     )
                 )
                 callRuleBeingEdited = null
@@ -301,6 +305,7 @@ fun HomeScreen(
             initialQuietHours = state.favouriteCallsQuietHoursMode,
             initialQuietStart = state.favouriteCallsQuietHoursStartMinutes ?: state.quietHoursStartMinutes,
             initialQuietEnd = state.favouriteCallsQuietHoursEndMinutes ?: state.quietHoursEndMinutes,
+            initialBrightness = state.favouriteCallsBrightness,
             renderer = renderer,
             controller = controller,
             onDismiss = { isConfiguringFavouriteCalls = false },
@@ -312,7 +317,8 @@ fun HomeScreen(
                     result.dndMode,
                     result.quietHoursMode,
                     result.quietHoursStartMinutes,
-                    result.quietHoursEndMinutes
+                    result.quietHoursEndMinutes,
+                    result.brightness
                 )
                 isConfiguringFavouriteCalls = false
             }
@@ -330,6 +336,7 @@ fun HomeScreen(
             initialQuietHours = state.otherContactsQuietHoursMode,
             initialQuietStart = state.otherContactsQuietHoursStartMinutes ?: state.quietHoursStartMinutes,
             initialQuietEnd = state.otherContactsQuietHoursEndMinutes ?: state.quietHoursEndMinutes,
+            initialBrightness = state.otherContactsBrightness,
             renderer = renderer,
             controller = controller,
             onDismiss = { isConfiguringOtherContacts = false },
@@ -341,7 +348,8 @@ fun HomeScreen(
                     result.dndMode,
                     result.quietHoursMode,
                     result.quietHoursStartMinutes,
-                    result.quietHoursEndMinutes
+                    result.quietHoursEndMinutes,
+                    result.brightness
                 )
                 isConfiguringOtherContacts = false
             }
@@ -359,6 +367,7 @@ fun HomeScreen(
             initialQuietHours = state.unknownNumbersQuietHoursMode,
             initialQuietStart = state.unknownNumbersQuietHoursStartMinutes ?: state.quietHoursStartMinutes,
             initialQuietEnd = state.unknownNumbersQuietHoursEndMinutes ?: state.quietHoursEndMinutes,
+            initialBrightness = state.unknownNumbersBrightness,
             renderer = renderer,
             controller = controller,
             onDismiss = { isConfiguringUnknownNumbers = false },
@@ -370,7 +379,8 @@ fun HomeScreen(
                     result.dndMode,
                     result.quietHoursMode,
                     result.quietHoursStartMinutes,
-                    result.quietHoursEndMinutes
+                    result.quietHoursEndMinutes,
+                    result.brightness
                 )
                 isConfiguringUnknownNumbers = false
             }
@@ -388,6 +398,7 @@ fun HomeScreen(
             initialQuietHours = state.missedCallsQuietHoursMode,
             initialQuietStart = state.missedCallsQuietHoursStartMinutes ?: state.quietHoursStartMinutes,
             initialQuietEnd = state.missedCallsQuietHoursEndMinutes ?: state.quietHoursEndMinutes,
+            initialBrightness = state.missedCallsBrightness,
             renderer = renderer,
             controller = controller,
             onDismiss = { isConfiguringMissedCalls = false },
@@ -399,7 +410,8 @@ fun HomeScreen(
                     result.dndMode,
                     result.quietHoursMode,
                     result.quietHoursStartMinutes,
-                    result.quietHoursEndMinutes
+                    result.quietHoursEndMinutes,
+                    result.brightness
                 )
                 isConfiguringMissedCalls = false
             }
@@ -438,6 +450,7 @@ fun HomeScreen(
             initialQuietHours = rule.quietHoursMode,
             initialQuietStart = rule.quietHoursStartMinutes ?: state.quietHoursStartMinutes,
             initialQuietEnd = rule.quietHoursEndMinutes ?: state.quietHoursEndMinutes,
+            initialBrightness = rule.brightness,
             renderer = renderer,
             controller = controller,
             onDismiss = { msgRuleBeingEdited = null },
@@ -450,7 +463,8 @@ fun HomeScreen(
                         dndMode = result.dndMode,
                         quietHoursMode = result.quietHoursMode,
                         quietHoursStartMinutes = result.quietHoursStartMinutes,
-                        quietHoursEndMinutes = result.quietHoursEndMinutes
+                        quietHoursEndMinutes = result.quietHoursEndMinutes,
+                        brightness = result.brightness
                     )
                 )
                 msgRuleBeingEdited = null
@@ -473,6 +487,7 @@ fun HomeScreen(
             initialQuietHours = rule.quietHoursMode,
             initialQuietStart = rule.quietHoursStartMinutes ?: state.quietHoursStartMinutes,
             initialQuietEnd = rule.quietHoursEndMinutes ?: state.quietHoursEndMinutes,
+            initialBrightness = rule.brightness,
             showAutoColorToggle = true,
             initialAutoColor = rule.isAutoColor,
             autoExtractedColor = autoColor,
@@ -489,7 +504,8 @@ fun HomeScreen(
                         dndMode = result.dndMode,
                         quietHoursMode = result.quietHoursMode,
                         quietHoursStartMinutes = result.quietHoursStartMinutes,
-                        quietHoursEndMinutes = result.quietHoursEndMinutes
+                        quietHoursEndMinutes = result.quietHoursEndMinutes,
+                        brightness = result.brightness
                     )
                 )
                 appRuleBeingEdited = null
@@ -508,6 +524,7 @@ fun HomeScreen(
             initialQuietHours = state.favouriteNotifQuietHoursMode,
             initialQuietStart = state.favouriteNotifQuietHoursStartMinutes ?: state.quietHoursStartMinutes,
             initialQuietEnd = state.favouriteNotifQuietHoursEndMinutes ?: state.quietHoursEndMinutes,
+            initialBrightness = state.favouriteNotifBrightness,
             renderer = renderer,
             controller = controller,
             onDismiss = { isConfiguringFavouriteNotif = false },
@@ -519,7 +536,8 @@ fun HomeScreen(
                     result.dndMode,
                     result.quietHoursMode,
                     result.quietHoursStartMinutes,
-                    result.quietHoursEndMinutes
+                    result.quietHoursEndMinutes,
+                    result.brightness
                 )
                 isConfiguringFavouriteNotif = false
             }
@@ -537,6 +555,7 @@ fun HomeScreen(
             initialQuietHours = state.defaultNotifQuietHoursMode,
             initialQuietStart = state.defaultNotifQuietHoursStartMinutes ?: state.quietHoursStartMinutes,
             initialQuietEnd = state.defaultNotifQuietHoursEndMinutes ?: state.quietHoursEndMinutes,
+            initialBrightness = state.defaultNotifBrightness,
             showAutoColorToggle = true,
             initialAutoColor = state.isDefaultNotifAutoColor,
             autoExtractedColor = null,
@@ -552,7 +571,8 @@ fun HomeScreen(
                     result.dndMode,
                     result.quietHoursMode,
                     result.quietHoursStartMinutes,
-                    result.quietHoursEndMinutes
+                    result.quietHoursEndMinutes,
+                    result.brightness
                 )
                 isConfiguringDefaultNotif = false
             }

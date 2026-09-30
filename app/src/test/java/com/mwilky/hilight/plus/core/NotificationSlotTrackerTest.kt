@@ -146,6 +146,16 @@ class NotificationSlotTrackerTest {
     }
 
     @Test
+    fun changingBrightnessMarksTheSlotChangedSoItIsResent() {
+        val tracker = NotificationSlotTracker()
+        tracker.add("key", "app_a", PatternMode.PULSE, 1)
+        val dimmed = tracker.add("key", "app_a", PatternMode.PULSE, 1, brightness = 0.3f)
+
+        assertTrue(dimmed.changed)
+        assertEquals(0.3f, dimmed.slot.brightness)
+    }
+
+    @Test
     fun updatingWithoutBecomingLatestKeepsTheCurrentLatest() {
         val tracker = NotificationSlotTracker()
         tracker.add("old", "app_a", PatternMode.PULSE, 1)

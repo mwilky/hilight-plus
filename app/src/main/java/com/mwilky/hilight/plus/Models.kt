@@ -174,12 +174,13 @@ data class ContactRule(
     val dndMode: DndMode = DndMode.INHERIT,
     val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT,
     val quietHoursStartMinutes: Int? = null,
-    val quietHoursEndMinutes: Int? = null
+    val quietHoursEndMinutes: Int? = null,
+    val brightness: Float = DEFAULT_BRIGHTNESS
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
         put("name", name)
-        putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes)
+        putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes, brightness)
     }
 
     companion object {
@@ -195,7 +196,8 @@ data class ContactRule(
                 dndMode = shared.dndMode,
                 quietHoursMode = shared.quietHoursMode,
                 quietHoursStartMinutes = shared.quietHoursStartMinutes,
-                quietHoursEndMinutes = shared.quietHoursEndMinutes
+                quietHoursEndMinutes = shared.quietHoursEndMinutes,
+                brightness = shared.brightness
             )
         }
     }
@@ -214,12 +216,13 @@ data class MessageContactRule(
     val dndMode: DndMode = DndMode.INHERIT,
     val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT,
     val quietHoursStartMinutes: Int? = null,
-    val quietHoursEndMinutes: Int? = null
+    val quietHoursEndMinutes: Int? = null,
+    val brightness: Float = DEFAULT_BRIGHTNESS
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
         put("name", name)
-        putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes)
+        putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes, brightness)
     }
 
     companion object {
@@ -235,7 +238,8 @@ data class MessageContactRule(
                 dndMode = shared.dndMode,
                 quietHoursMode = shared.quietHoursMode,
                 quietHoursStartMinutes = shared.quietHoursStartMinutes,
-                quietHoursEndMinutes = shared.quietHoursEndMinutes
+                quietHoursEndMinutes = shared.quietHoursEndMinutes,
+                brightness = shared.brightness
             )
         }
     }
@@ -255,13 +259,14 @@ data class AppNotificationRule(
     val dndMode: DndMode = DndMode.INHERIT,
     val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT,
     val quietHoursStartMinutes: Int? = null,
-    val quietHoursEndMinutes: Int? = null
+    val quietHoursEndMinutes: Int? = null,
+    val brightness: Float = DEFAULT_BRIGHTNESS
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("packageName", packageName)
         put("appName", appName)
         put("isAutoColor", isAutoColor)
-        putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes)
+        putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes, brightness)
     }
 
     companion object {
@@ -278,11 +283,24 @@ data class AppNotificationRule(
                 dndMode = shared.dndMode,
                 quietHoursMode = shared.quietHoursMode,
                 quietHoursStartMinutes = shared.quietHoursStartMinutes,
-                quietHoursEndMinutes = shared.quietHoursEndMinutes
+                quietHoursEndMinutes = shared.quietHoursEndMinutes,
+                brightness = shared.brightness
             )
         }
     }
 }
+
+/** Full brightness: what every rule used before brightness could be set. */
+const val DEFAULT_BRIGHTNESS = 1f
+
+/**
+ * Dimmest a rule can be set. The LEDs take 8-bit channels, so much below this a colour's weaker
+ * channels round away to nothing and it stops looking like the colour that was picked.
+ */
+const val MIN_BRIGHTNESS = 0.1f
+
+fun clampBrightness(value: Float): Float =
+    if (value.isNaN()) DEFAULT_BRIGHTNESS else value.coerceIn(MIN_BRIGHTNESS, 1f)
 
 private const val DEFAULT_CONTACT_COLOR = 0xFF4285F4L
 private const val DEFAULT_MESSAGE_COLOR = 0xFF00E5FFL
@@ -438,10 +456,11 @@ data class GeminiLook(
     val dndMode: DndMode = DndMode.INHERIT,
     val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT,
     val quietHoursStartMinutes: Int? = null,
-    val quietHoursEndMinutes: Int? = null
+    val quietHoursEndMinutes: Int? = null,
+    val brightness: Float = DEFAULT_BRIGHTNESS
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
-        putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes)
+        putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes, brightness)
     }
 
     companion object {
@@ -456,7 +475,8 @@ data class GeminiLook(
                 dndMode = shared.dndMode,
                 quietHoursMode = shared.quietHoursMode,
                 quietHoursStartMinutes = shared.quietHoursStartMinutes,
-                quietHoursEndMinutes = shared.quietHoursEndMinutes
+                quietHoursEndMinutes = shared.quietHoursEndMinutes,
+                brightness = shared.brightness
             )
         }
     }
@@ -523,7 +543,8 @@ private data class SharedRuleFields(
     val dndMode: DndMode,
     val quietHoursMode: QuietHoursMode,
     val quietHoursStartMinutes: Int?,
-    val quietHoursEndMinutes: Int?
+    val quietHoursEndMinutes: Int?,
+    val brightness: Float
 )
 
 private fun JSONObject.readSharedRuleFields(defaultColor: Long): SharedRuleFields = SharedRuleFields(
@@ -534,7 +555,9 @@ private fun JSONObject.readSharedRuleFields(defaultColor: Long): SharedRuleField
     dndMode = runCatching { DndMode.valueOf(optString("dndMode", DndMode.INHERIT.name)) }.getOrDefault(DndMode.INHERIT),
     quietHoursMode = runCatching { QuietHoursMode.valueOf(optString("quietHoursMode", QuietHoursMode.INHERIT.name)) }.getOrDefault(QuietHoursMode.INHERIT),
     quietHoursStartMinutes = optionalMinutes("quietHoursStartMinutes"),
-    quietHoursEndMinutes = optionalMinutes("quietHoursEndMinutes")
+    quietHoursEndMinutes = optionalMinutes("quietHoursEndMinutes"),
+    // Rules saved before brightness existed have no key and stay at full brightness.
+    brightness = clampBrightness(optDouble("brightness", DEFAULT_BRIGHTNESS.toDouble()).toFloat())
 )
 
 private fun JSONObject.putSharedRuleFields(
@@ -545,7 +568,8 @@ private fun JSONObject.putSharedRuleFields(
     dndMode: DndMode,
     quietHoursMode: QuietHoursMode,
     quietHoursStartMinutes: Int?,
-    quietHoursEndMinutes: Int?
+    quietHoursEndMinutes: Int?,
+    brightness: Float
 ) {
     put("color", color)
     put("pattern", pattern.name)
@@ -555,6 +579,7 @@ private fun JSONObject.putSharedRuleFields(
     put("quietHoursMode", quietHoursMode.name)
     putOptionalMinutes("quietHoursStartMinutes", quietHoursStartMinutes)
     putOptionalMinutes("quietHoursEndMinutes", quietHoursEndMinutes)
+    put("brightness", brightness.toDouble())
 }
 
 private fun JSONObject.optionalMinutes(key: String): Int? =

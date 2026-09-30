@@ -23,7 +23,8 @@ class RuleModelJsonTest {
             dndMode = DndMode.SKIP,
             quietHoursMode = QuietHoursMode.SKIP,
             quietHoursStartMinutes = 90,
-            quietHoursEndMinutes = 300
+            quietHoursEndMinutes = 300,
+            brightness = 0.4f
         )
         assertEquals(rule, ContactRule.fromJson(rule.toJson()))
     }
@@ -40,7 +41,8 @@ class RuleModelJsonTest {
             dndMode = DndMode.ALWAYS,
             quietHoursMode = QuietHoursMode.ALWAYS,
             quietHoursStartMinutes = null,
-            quietHoursEndMinutes = null
+            quietHoursEndMinutes = null,
+            brightness = 0.1f
         )
         assertEquals(rule, MessageContactRule.fromJson(rule.toJson()))
     }
@@ -58,7 +60,8 @@ class RuleModelJsonTest {
             dndMode = DndMode.INHERIT,
             quietHoursMode = QuietHoursMode.INHERIT,
             quietHoursStartMinutes = 60,
-            quietHoursEndMinutes = 420
+            quietHoursEndMinutes = 420,
+            brightness = 0.7f
         )
         assertEquals(rule, AppNotificationRule.fromJson(rule.toJson()))
     }
@@ -131,6 +134,8 @@ class RuleModelJsonTest {
         assertEquals(QuietHoursMode.SKIP, parsed.quietHoursMode)
         assertEquals(1320, parsed.quietHoursStartMinutes)
         assertEquals(420, parsed.quietHoursEndMinutes)
+        // Saved before brightness existed, so it keeps lighting at full brightness.
+        assertEquals(DEFAULT_BRIGHTNESS, parsed.brightness)
     }
 
     @Test
@@ -155,5 +160,18 @@ class RuleModelJsonTest {
         assertEquals(true, parsed.isAutoColor)
         assertEquals(null, parsed.quietHoursStartMinutes)
         assertEquals(null, parsed.quietHoursEndMinutes)
+        assertEquals(DEFAULT_BRIGHTNESS, parsed.brightness)
+    }
+
+    @Test
+    fun outOfRangeBrightnessIsClampedToWhatTheSliderAllows() {
+        assertEquals(MIN_BRIGHTNESS, ContactRule.fromJson(JSONObject().put("brightness", 0.0)).brightness)
+        assertEquals(MIN_BRIGHTNESS, ContactRule.fromJson(JSONObject().put("brightness", -3.0)).brightness)
+        assertEquals(1f, ContactRule.fromJson(JSONObject().put("brightness", 2.5)).brightness)
+    }
+
+    @Test
+    fun nonNumericBrightnessFallsBackToFull() {
+        assertEquals(DEFAULT_BRIGHTNESS, AppNotificationRule.fromJson(JSONObject().put("brightness", "bright")).brightness)
     }
 }

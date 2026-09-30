@@ -307,11 +307,11 @@ class LightController private constructor(private val app: Application) {
      * Previews a pattern/color on the physical LEDs from the rule editor. Ignores face-down,
      * DND and quiet-hours gating, and never disturbs whatever notification is actually active.
      */
-    fun testPattern(pattern: PatternMode, color: Long, durationMs: Long = 3000L) {
+    fun testPattern(pattern: PatternMode, color: Long, durationMs: Long = 3000L, brightness: Float = DEFAULT_BRIGHTNESS) {
         daemon.testAlert(
             pattern = pattern.id,
             color = color,
-            brightness = 1.0f,
+            brightness = brightness,
             speedMs = pattern.speedMs(),
             durationMs = durationMs
         )

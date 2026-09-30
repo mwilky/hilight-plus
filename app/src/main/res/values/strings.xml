@@ -248,6 +248,8 @@
     <string name="dialog_pattern_label">Pattern</string>
     <string name="dialog_color_label">Colour</string>
     <string name="dialog_color_auto_label">Colour (auto from icon)</string>
+    <string name="brightness_title">Brightness</string>
+    <string name="brightness_value">%1$d%%</string>
     <string name="dialog_custom_color">Custom colour</string>
     <string name="dialog_custom_color_hex">Hex code</string>
     <string name="dialog_custom_color_copy">Copy colour code</string>

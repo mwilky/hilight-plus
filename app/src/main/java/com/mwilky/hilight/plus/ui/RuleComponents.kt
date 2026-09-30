@@ -55,6 +55,7 @@ import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedListItem
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -95,6 +96,7 @@ import com.github.skydoves.colorpicker.compose.HsvColorPicker
 import com.github.skydoves.colorpicker.compose.rememberColorPickerController
 import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.FaceDownMode
+import com.mwilky.hilight.plus.MIN_BRIGHTNESS
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.R
@@ -103,6 +105,7 @@ import com.mwilky.hilight.plus.core.PatternRenderer
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 /**
  * Large section header with the one prominent toggle for a whole feature (calls / notifications).
@@ -428,6 +431,55 @@ fun AnimatedRingBadge(
         size = size
     )
 }
+
+/**
+ * Brightness in [stepPercent] steps from [MIN_BRIGHTNESS] to full, with the current value on the
+ * right. [titleStyle] lets the title match the labels around it.
+ */
+@Composable
+internal fun BrightnessSlider(
+    brightness: Float,
+    onBrightnessChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+    titleStyle: TextStyle = LocalTextStyle.current,
+    stepPercent: Int = 10
+) {
+    Column(modifier = modifier) {
+        BrightnessHeader(
+            value = stringResource(R.string.brightness_value, (brightness * 100).roundToInt()),
+            titleStyle = titleStyle
+        )
+        Slider(
+            value = brightness,
+            onValueChange = { onBrightnessChange(snapBrightness(it, stepPercent)) },
+            valueRange = MIN_BRIGHTNESS..1f,
+            steps = brightnessSteps(stepPercent),
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Composable
+private fun BrightnessHeader(value: String, titleStyle: TextStyle) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(text = stringResource(R.string.brightness_title), style = titleStyle)
+        Text(
+            text = value,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+/** Stops between the slider's ends, one per [stepPercent]. */
+private fun brightnessSteps(stepPercent: Int): Int =
+    ((1f - MIN_BRIGHTNESS) * 100).roundToInt() / stepPercent - 1
+
+private fun snapBrightness(value: Float, stepPercent: Int): Float =
+    (value * 100 / stepPercent).roundToInt() * stepPercent / 100f
 
 private const val SWATCHES_PER_ROW = 5
 

@@ -193,7 +193,8 @@ internal object IncomingCallProcessor {
                 matchedRule.quietHoursStartMinutes,
                 matchedRule.quietHoursEndMinutes,
                 matchedRule.pattern,
-                matchedRule.color
+                matchedRule.color,
+                matchedRule.brightness
             )
             return
         }
@@ -212,7 +213,8 @@ internal object IncomingCallProcessor {
                 snapshot.favouriteCallsQuietHoursStartMinutes,
                 snapshot.favouriteCallsQuietHoursEndMinutes,
                 snapshot.favouriteCallsPattern,
-                snapshot.favouriteCallsColor
+                snapshot.favouriteCallsColor,
+                snapshot.favouriteCallsBrightness
             )
             return
         }
@@ -245,7 +247,8 @@ internal object IncomingCallProcessor {
         quietStartMinutes: Int?,
         quietEndMinutes: Int?,
         pattern: PatternMode,
-        color: Long
+        color: Long,
+        brightness: Float
     ) {
         val requiresFaceDown = faceDownMode.requiresFaceDown(snapshot.isOnlyWhenFaceDown)
         val quietStartOverride = if (quietHoursMode == QuietHoursMode.SKIP) quietStartMinutes else null
@@ -259,6 +262,7 @@ internal object IncomingCallProcessor {
         controller.startIncomingCallAlert(
             pattern = pattern,
             color = color,
+            brightness = brightness,
             requiresFaceDown = requiresFaceDown,
             dndMode = dndMode,
             quietHoursMode = quietHoursMode,
@@ -286,7 +290,8 @@ internal object IncomingCallProcessor {
                 snapshot.otherContactsQuietHoursStartMinutes,
                 snapshot.otherContactsQuietHoursEndMinutes,
                 pattern,
-                color
+                color,
+                snapshot.otherContactsBrightness
             )
         } else {
             DebugLog.i(TAG, "Other Contacts lights are disabled")
@@ -313,7 +318,8 @@ internal object IncomingCallProcessor {
                 snapshot.unknownNumbersQuietHoursStartMinutes,
                 snapshot.unknownNumbersQuietHoursEndMinutes,
                 pattern,
-                color
+                color,
+                snapshot.unknownNumbersBrightness
             )
         } else {
             DebugLog.i(TAG, "Unknown/Private lights are disabled")

@@ -390,6 +390,7 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
                     LightEngine.GeminiLookSpec(
                         pattern = pattern,
                         color = look.optLong("color"),
+                        brightness = look.optDouble("brightness", 1.0).toFloat(),
                         speedMs = PatternMode.entries.find { it.id == pattern }?.speedMs() ?: 1000L,
                         requiresFaceDown = look.optBoolean("requiresFaceDown"),
                         dndMode = DndMode.fromId(look.optString("dndMode")),

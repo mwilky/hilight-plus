@@ -70,6 +70,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -98,6 +99,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mwilky.hilight.plus.DEFAULT_BRIGHTNESS
 import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.FaceDownMode
 import com.mwilky.hilight.plus.LightController
@@ -119,7 +121,8 @@ data class RuleEditorResult(
     val dndMode: DndMode,
     val quietHoursMode: QuietHoursMode,
     val quietHoursStartMinutes: Int,
-    val quietHoursEndMinutes: Int
+    val quietHoursEndMinutes: Int,
+    val brightness: Float
 )
 
 internal val PALETTE = listOf(
@@ -152,7 +155,8 @@ fun CustomRuleDialog(
     initialQuietEnd: Int = 7 * 60,
     showAutoColorToggle: Boolean = false,
     initialAutoColor: Boolean = true,
-    autoExtractedColor: Long? = null
+    autoExtractedColor: Long? = null,
+    initialBrightness: Float = DEFAULT_BRIGHTNESS
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -182,7 +186,8 @@ fun CustomRuleDialog(
             initialQuietEnd = initialQuietEnd,
             showAutoColorToggle = showAutoColorToggle,
             initialAutoColor = initialAutoColor,
-            autoExtractedColor = autoExtractedColor
+            autoExtractedColor = autoExtractedColor,
+            initialBrightness = initialBrightness
         )
     }
 }
@@ -203,7 +208,8 @@ private fun RuleEditorContent(
     initialQuietEnd: Int,
     showAutoColorToggle: Boolean,
     initialAutoColor: Boolean,
-    autoExtractedColor: Long?
+    autoExtractedColor: Long?,
+    initialBrightness: Float
 ) {
     var isAutoColor by remember(initialAutoColor) { mutableStateOf(initialAutoColor) }
     var selectedColor by remember(initialColor) {
@@ -212,6 +218,7 @@ private fun RuleEditorContent(
         )
     }
     var selectedPattern by remember(initialPattern) { mutableStateOf(initialPattern) }
+    var selectedBrightness by remember(initialBrightness) { mutableFloatStateOf(initialBrightness) }
     var selectedFaceDown by remember(initialFaceDown) { mutableStateOf(initialFaceDown) }
     var selectedDnd by remember(initialDnd) { mutableStateOf(initialDnd) }
     var selectedQuietHours by remember(initialQuietHours) { mutableStateOf(initialQuietHours) }
@@ -248,7 +255,7 @@ private fun RuleEditorContent(
             controller.cancelTestPattern()
         } else {
             isTesting = true
-            controller.testPattern(selectedPattern, selectedColor, TEST_DURATION_MS)
+            controller.testPattern(selectedPattern, selectedColor, TEST_DURATION_MS, selectedBrightness)
         }
     }
 
@@ -271,7 +278,8 @@ private fun RuleEditorContent(
                 dndMode = selectedDnd,
                 quietHoursMode = selectedQuietHours,
                 quietHoursStartMinutes = quietStartMinutes,
-                quietHoursEndMinutes = quietEndMinutes
+                quietHoursEndMinutes = quietEndMinutes,
+                brightness = selectedBrightness
             )
         )
     }
@@ -304,6 +312,7 @@ private fun RuleEditorContent(
                 PreviewHeader(
                     pattern = selectedPattern,
                     color = selectedColor,
+                    brightness = selectedBrightness,
                     elapsedMs = clockMs,
                     renderer = renderer,
                     isTesting = isTesting,
@@ -389,6 +398,15 @@ private fun RuleEditorContent(
                         onSelect = { selectedColor = it }
                     )
                 }
+
+                BrightnessSlider(
+                    brightness = selectedBrightness,
+                    onBrightnessChange = { selectedBrightness = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    titleStyle = MaterialTheme.typography.labelLarge
+                )
             }
 
             EditorSection(title = stringResource(R.string.dialog_section_when)) {
@@ -515,12 +533,13 @@ private fun PatternRing(
     color: Long,
     elapsedMs: Long,
     renderer: PatternRenderer,
-    size: Dp
+    size: Dp,
+    brightness: Float = DEFAULT_BRIGHTNESS
 ) {
     val frames = renderer.renderFrame(
         pattern = pattern.id,
         colorLong = color,
-        brightness = 1.0f,
+        brightness = brightness,
         speedMs = pattern.speedMs(),
         elapsedTimeMs = elapsedMs,
         ledCount = 8
@@ -538,6 +557,7 @@ private fun PatternRing(
 private fun PreviewHeader(
     pattern: PatternMode,
     color: Long,
+    brightness: Float,
     elapsedMs: Long,
     renderer: PatternRenderer,
     isTesting: Boolean,
@@ -554,7 +574,7 @@ private fun PreviewHeader(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            PatternRing(pattern = pattern, color = color, elapsedMs = elapsedMs, renderer = renderer, size = 96.dp)
+            PatternRing(pattern = pattern, color = color, elapsedMs = elapsedMs, renderer = renderer, size = 96.dp, brightness = brightness)
             Text(
                 text = stringResource(pattern.titleRes),
                 style = MaterialTheme.typography.labelLarge,
@@ -782,7 +802,8 @@ private fun RuleEditorPreview() {
             initialQuietEnd = 7 * 60,
             showAutoColorToggle = true,
             initialAutoColor = false,
-            autoExtractedColor = 0xFF25D366
+            autoExtractedColor = 0xFF25D366,
+            initialBrightness = 0.6f
         )
     }
 }

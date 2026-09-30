@@ -140,6 +140,7 @@ class LightEngine {
     data class GeminiLookSpec(
         val pattern: String,
         val color: Long,
+        val brightness: Float,
         val speedMs: Long,
         val requiresFaceDown: Boolean,
         val dndMode: DndMode,
@@ -802,7 +803,7 @@ class LightEngine {
                 reason = "gemini ${state.id} ${look.pattern}"
                 currentPattern = look.pattern
                 currentColor = look.color
-                currentBrightness = 1.0f
+                currentBrightness = look.brightness
                 currentSpeed = look.speedMs
                 elapsedMs = now - geminiStateSinceMs
                 effectKey = listOf("gemini", state, geminiStateSinceMs, look)
@@ -1214,9 +1215,9 @@ class LightEngine {
         // Comfortably longer than the app's battery heartbeat, so a missed beat or two doesn't
         // blink the display, but short enough that a dead app can't strand the LEDs on.
         private const val BATTERY_STATE_STALE_MS = 3 * 60_000L
-    }
-}
 
         // A test always hands the ring back, even if a caller (or a mismatched app build) asks
         // for a duration that would otherwise leave it lit for good.
         private const val MAX_TEST_MS = 60_000L
+    }
+}

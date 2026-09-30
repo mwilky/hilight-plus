@@ -1,5 +1,6 @@
 package com.mwilky.hilight.plus.core
 
+import com.mwilky.hilight.plus.DEFAULT_BRIGHTNESS
 import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.QuietHoursMode
@@ -19,7 +20,8 @@ internal class NotificationSlotTracker {
         val dndMode: DndMode,
         val quietHoursMode: QuietHoursMode,
         val quietStartMinutes: Int?,
-        val quietEndMinutes: Int?
+        val quietEndMinutes: Int?,
+        val brightness: Float
     )
 
     data class AddResult(
@@ -48,7 +50,8 @@ internal class NotificationSlotTracker {
         quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT,
         quietStartMinutes: Int? = null,
         quietEndMinutes: Int? = null,
-        becomeLatest: Boolean = true
+        becomeLatest: Boolean = true,
+        brightness: Float = DEFAULT_BRIGHTNESS
     ): AddResult {
         val previous = sourceToSlot[sourceKey]?.let { slots[it] }
         val unchanged = previous != null &&
@@ -60,6 +63,7 @@ internal class NotificationSlotTracker {
             previous.quietHoursMode == quietHoursMode &&
             previous.quietStartMinutes == quietStartMinutes &&
             previous.quietEndMinutes == quietEndMinutes &&
+            previous.brightness == brightness &&
             sourceKey in previous.contributors
 
         val previousSlotId = sourceToSlot[sourceKey]
@@ -70,7 +74,7 @@ internal class NotificationSlotTracker {
         }
 
         val slot = slots.getOrPut(slotId) {
-            MutableSlot(slotId, pattern, color, requiresFaceDown, dndMode, quietHoursMode, quietStartMinutes, quietEndMinutes)
+            MutableSlot(slotId, pattern, color, requiresFaceDown, dndMode, quietHoursMode, quietStartMinutes, quietEndMinutes, brightness)
         }
         slot.pattern = pattern
         slot.color = color
@@ -79,6 +83,7 @@ internal class NotificationSlotTracker {
         slot.quietHoursMode = quietHoursMode
         slot.quietStartMinutes = quietStartMinutes
         slot.quietEndMinutes = quietEndMinutes
+        slot.brightness = brightness
         slot.contributors.add(sourceKey)
         sourceToSlot[sourceKey] = slotId
         // Keep slots in the order the daemon's queue ends up in: every changed add is re-sent,
@@ -146,6 +151,7 @@ internal class NotificationSlotTracker {
         var quietHoursMode: QuietHoursMode,
         var quietStartMinutes: Int?,
         var quietEndMinutes: Int?,
+        var brightness: Float,
         val contributors: MutableSet<String> = linkedSetOf()
     ) {
         fun snapshot(): Slot = Slot(
@@ -157,7 +163,8 @@ internal class NotificationSlotTracker {
             dndMode,
             quietHoursMode,
             quietStartMinutes,
-            quietEndMinutes
+            quietEndMinutes,
+            brightness
         )
     }
 }

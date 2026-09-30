@@ -280,7 +280,8 @@ class NotificationTrigger : NotificationListenerService() {
         val dndMode: DndMode,
         val quietHoursMode: QuietHoursMode,
         val quietStartMinutes: Int? = null,
-        val quietEndMinutes: Int? = null
+        val quietEndMinutes: Int? = null,
+        val brightness: Float = DEFAULT_BRIGHTNESS
     )
 
     private fun resolveAlert(snapshot: SettingsSnapshot, key: String, pkg: String, notification: Notification): ResolvedAlert? {
@@ -302,7 +303,8 @@ class NotificationTrigger : NotificationListenerService() {
                 snapshot.missedCallsDndMode,
                 snapshot.missedCallsQuietHoursMode,
                 snapshot.missedCallsQuietHoursStartMinutes,
-                snapshot.missedCallsQuietHoursEndMinutes
+                snapshot.missedCallsQuietHoursEndMinutes,
+                snapshot.missedCallsBrightness
             )
         }
         if (notification.category == Notification.CATEGORY_MISSED_CALL && isSilent(key)) {
@@ -326,7 +328,8 @@ class NotificationTrigger : NotificationListenerService() {
                 contactRule.dndMode,
                 contactRule.quietHoursMode,
                 contactRule.quietHoursStartMinutes,
-                contactRule.quietHoursEndMinutes
+                contactRule.quietHoursEndMinutes,
+                contactRule.brightness
             )
         }
 
@@ -345,7 +348,8 @@ class NotificationTrigger : NotificationListenerService() {
                 snapshot.favouriteNotifDndMode,
                 snapshot.favouriteNotifQuietHoursMode,
                 snapshot.favouriteNotifQuietHoursStartMinutes,
-                snapshot.favouriteNotifQuietHoursEndMinutes
+                snapshot.favouriteNotifQuietHoursEndMinutes,
+                snapshot.favouriteNotifBrightness
             )
         }
 
@@ -369,7 +373,8 @@ class NotificationTrigger : NotificationListenerService() {
                 appRule.dndMode,
                 appRule.quietHoursMode,
                 appRule.quietHoursStartMinutes,
-                appRule.quietHoursEndMinutes
+                appRule.quietHoursEndMinutes,
+                appRule.brightness
             )
         }
 
@@ -400,7 +405,8 @@ class NotificationTrigger : NotificationListenerService() {
             dndMode = snapshot.defaultNotifDndMode,
             quietHoursMode = snapshot.defaultNotifQuietHoursMode,
             quietStartMinutes = snapshot.defaultNotifQuietHoursStartMinutes,
-            quietEndMinutes = snapshot.defaultNotifQuietHoursEndMinutes
+            quietEndMinutes = snapshot.defaultNotifQuietHoursEndMinutes,
+            brightness = snapshot.defaultNotifBrightness
         )
     }
 
@@ -430,7 +436,8 @@ class NotificationTrigger : NotificationListenerService() {
             resolved.quietHoursMode,
             quietStartOverride,
             quietEndOverride,
-            becomeLatest
+            becomeLatest,
+            resolved.brightness
         )
     }
 
@@ -462,6 +469,7 @@ class NotificationTrigger : NotificationListenerService() {
                 key = slot.id,
                 pattern = slot.pattern,
                 color = slot.color,
+                brightness = slot.brightness,
                 durationMs = 0L,
                 requiresFaceDown = slot.requiresFaceDown,
                 dndMode = slot.dndMode,
@@ -474,6 +482,7 @@ class NotificationTrigger : NotificationListenerService() {
             controller.triggerAlertEffect(
                 pattern = slot.pattern,
                 color = slot.color,
+                brightness = slot.brightness,
                 durationMs = durationMs,
                 requiresFaceDown = slot.requiresFaceDown,
                 dndMode = slot.dndMode,
