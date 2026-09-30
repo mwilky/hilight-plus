@@ -935,6 +935,11 @@ class DaemonBridge private constructor(private val app: Application) {
         runRemote("testAlert") { it.testAlert(pattern, color, brightness, speedMs, durationMs) }
     }
 
+    fun testSplit(colors: LongArray, animation: SplitAnimation, look: SplitLook, durationMs: Long) {
+        DebugLog.i("HiLightPlus", "testSplit: ${colors.size} arcs, animation=${animation.id}, $look, durationMs=$durationMs")
+        runRemote("testSplit") { it.testSplit(colors, animation.id, look.dimmest, look.brightest, look.steady, durationMs) }
+    }
+
     fun cancelTestAlert() {
         runRemote("cancelTestAlert") { it.cancelTestAlert() }
     }

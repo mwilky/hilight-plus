@@ -322,6 +322,14 @@ class LightController private constructor(private val app: Application) {
         )
     }
 
+    /**
+     * Previews the split ring on the physical LEDs, like [testPattern]: [colors] newest first,
+     * whatever the Multiple alerts mode, and cancelled by [cancelTestPattern].
+     */
+    fun testSplit(colors: LongArray, animation: SplitAnimation, look: SplitLook, durationMs: Long) {
+        daemon.testSplit(colors, animation, look, durationMs)
+    }
+
     /** Diagnostic: lights only LED [index] for [durationMs], via the same test channel as [testPattern]. */
     fun testSingleLed(index: Int, durationMs: Long) {
         daemon.testAlert(

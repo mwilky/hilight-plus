@@ -38,4 +38,6 @@ interface IHiLightService {
     // Split ring levels, each 0.1-1.0 of full power: Breathe and Spotlight move between dimmest
     // and brightest, Solid and Rotate hold steady.
     void setSplitLook(float dimmest, float brightest, float steady);
+    // Previews the split ring on the test channel: colors newest first, cancelled by cancelTestAlert.
+    void testSplit(in long[] colors, String animation, float dimmest, float brightest, float steady, long durationMs);
 }

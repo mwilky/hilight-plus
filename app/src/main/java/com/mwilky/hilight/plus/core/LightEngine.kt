@@ -130,8 +130,12 @@ class LightEngine {
         val brightness: Float,
         val speedMs: Long,
         val startedAtMs: Long,
-        val expiresAtMs: Long
+        val expiresAtMs: Long,
+        // Set when previewing the split ring instead of a pattern.
+        val split: SplitTest? = null
     )
+
+    private data class SplitTest(val colors: List<Long>, val animation: SplitAnimation, val look: SplitLook)
 
     // In-app "test on LEDs" preview. Takes top render priority and ignores face-down/DND/quiet-hours
     // gating, but never touches the notification queue or direct alert state, so it can't disturb them.
@@ -369,6 +373,22 @@ class LightEngine {
             testAlert = TestAlert(pattern, color, brightness, speedMs, now, now + durationMs.coerceIn(0L, MAX_TEST_MS))
             needsSessionReset = true
             DebugLog.i(TAG, "testAlert: pattern=$pattern, color=$color, durationMs=$durationMs")
+            wake()
+        }
+    }
+
+    /**
+     * The split ring's version of [testAlert]: [colors] (newest first) as arcs in [animation], on
+     * the same test channel, so it expires, cancels and gives the ring back the same way.
+     */
+    fun testSplit(colors: LongArray, animation: SplitAnimation, look: SplitLook, durationMs: Long) {
+        if (colors.isEmpty()) return
+        synchronized(lock) {
+            val now = SystemClock.elapsedRealtime()
+            val split = SplitTest(colors.take(PatternRenderer.MAX_SPLIT_SEGMENTS), animation, look)
+            testAlert = TestAlert("split", 0L, 1f, 0L, now, now + durationMs.coerceIn(0L, MAX_TEST_MS), split)
+            needsSessionReset = true
+            DebugLog.i(TAG, "testSplit: ${split.colors.size} arcs, ${animation.id}, $look, durationMs=$durationMs")
             wake()
         }
     }
@@ -779,6 +799,8 @@ class LightEngine {
             var splitColors: LongArray? = null
             var splitAnimationShown = splitAnimation
             var splitLookShown = splitLook
+            // When a split test is on show: when it started, which its animation counts from.
+            var splitTestStartMs: Long? = null
             // For the effect route: what identifies the look on show, and how long a timed one has left.
             var effectKey: List<Any?> = emptyList()
             var effectRemainingMs: Long? = null
@@ -789,7 +811,15 @@ class LightEngine {
             }
 
             var reason: String
-            if (test != null) {
+            if (test?.split != null) {
+                reason = "test split ${test.split.animation.id} ${test.split.colors.size} arcs"
+                splitColors = test.split.colors.toLongArray()
+                splitAnimationShown = test.split.animation
+                splitLookShown = test.split.look
+                splitTestStartMs = test.startedAtMs
+                effectKey = listOf("test", test)
+                effectRemainingMs = test.expiresAtMs - now
+            } else if (test != null) {
                 reason = "test ${test.pattern}"
                 currentPattern = test.pattern
                 currentColor = test.color
@@ -936,7 +966,10 @@ class LightEngine {
                 val animation = splitAnimationShown
                 val look = splitLookShown
                 val loopMs = PatternRenderer.splitLoopMs(animation, colors.size, count)
-                showEffect(listOf("split", colors.toList(), look, animation)) {
+                // A test is timed and has its own key, so the real split ring is re-sent after it.
+                val key = if (splitTestStartMs != null) effectKey else listOf("split", colors.toList(), look, animation)
+                val iterations = effectRemainingMs?.let { loopsFor(it, loopMs) } ?: 0
+                showEffect(key, iterations) {
                     RingEffect.sample(loopMs, period, count) { t ->
                         renderer.renderSplitFrame(colors, look, t, count, animation)
                     }
@@ -988,7 +1021,7 @@ class LightEngine {
                     renderer.renderSplitFrame(
                         colors = splitColors,
                         look = splitLookShown,
-                        elapsedTimeMs = now - splitStartedAtMs,
+                        elapsedTimeMs = now - (splitTestStartMs ?: splitStartedAtMs),
                         ledCount = lights.ledCount,
                         animation = splitAnimationShown
                     )

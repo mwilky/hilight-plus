@@ -35,10 +35,12 @@ import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -98,6 +100,8 @@ fun HomeNotifsPage(
     onChangeMultiAlertMode: (MultiAlertMode) -> Unit,
     onChangeSplitAnimation: (SplitAnimation) -> Unit,
     onChangeSplitLook: (SplitLook) -> Unit,
+    onTestSplit: (colors: LongArray, animation: SplitAnimation, look: SplitLook, durationMs: Long) -> Unit,
+    onCancelLedTest: () -> Unit,
     renderer: PatternRenderer
 ) {
     val messageRules = remember(state.messageContactRules, state.messageRuleSort) {
@@ -325,6 +329,13 @@ fun HomeNotifsPage(
                                             onLookChange = onChangeSplitLook
                                         )
                                         SplitRingExample(renderer, state.splitAnimation, state.splitLook)
+                                        SplitTestButton(
+                                            animation = state.splitAnimation,
+                                            look = state.splitLook,
+                                            enabled = connectionState == DaemonBridge.State.CONNECTED,
+                                            onTest = onTestSplit,
+                                            onCancel = onCancelLedTest
+                                        )
                                     }
                                 }
                             }
@@ -350,7 +361,7 @@ private fun SplitRingExample(renderer: PatternRenderer, animation: SplitAnimatio
         val startMs = System.currentTimeMillis()
         while (isActive) {
             frame = renderer.renderSplitFrame(
-                colors = longArrayOf(0xFF00E5FF, 0xFF34A853, 0xFFFF6D00),
+                colors = SPLIT_EXAMPLE_COLORS,
                 look = look,
                 elapsedTimeMs = System.currentTimeMillis() - startMs,
                 animation = animation
@@ -438,6 +449,45 @@ private fun SplitBrightnessControls(
 
 // Finer than the rules' 10%, so the default 45% dimmest level sits on a stop.
 private const val SPLIT_BRIGHTNESS_STEP_PERCENT = 5
+
+/**
+ * Plays the example's three arcs on the physical LEDs. While it plays, a new animation or
+ * brightness restarts it with that look, so it can be tuned by eye on the ring itself.
+ */
+@Composable
+private fun SplitTestButton(
+    animation: SplitAnimation,
+    look: SplitLook,
+    enabled: Boolean,
+    onTest: (colors: LongArray, animation: SplitAnimation, look: SplitLook, durationMs: Long) -> Unit,
+    onCancel: () -> Unit
+) {
+    var isTesting by remember { mutableStateOf(false) }
+    LaunchedEffect(isTesting, animation, look) {
+        if (!isTesting) return@LaunchedEffect
+        onTest(SPLIT_EXAMPLE_COLORS, animation, look, SPLIT_TEST_DURATION_MS)
+        delay(SPLIT_TEST_DURATION_MS)
+        isTesting = false
+    }
+    // Leaving the page or switching mode stops a test still playing, as closing the rule editor does.
+    val testing by rememberUpdatedState(isTesting)
+    DisposableEffect(Unit) {
+        onDispose { if (testing) onCancel() }
+    }
+    TestOnLedsButton(
+        isTesting = isTesting,
+        enabled = enabled,
+        onClick = {
+            if (isTesting) onCancel()
+            isTesting = !isTesting
+        }
+    )
+}
+
+private val SPLIT_EXAMPLE_COLORS = longArrayOf(0xFF00E5FF, 0xFF34A853, 0xFFFF6D00)
+
+// Long enough for Rotate, the slowest animation, to go all the way round once.
+private const val SPLIT_TEST_DURATION_MS = 8000L
 
 private const val DISABLED_ALPHA = 0.38f
 

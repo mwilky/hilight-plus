@@ -202,6 +202,8 @@ fun HomeScreen(
         onChangeMultiAlertMode = viewModel::setMultiAlertMode,
         onChangeSplitAnimation = viewModel::setSplitAnimation,
         onChangeSplitLook = viewModel::setSplitLook,
+        onTestSplit = controller::testSplit,
+        onCancelLedTest = controller::cancelTestPattern,
         onToggleFavouriteNotif = viewModel::setFavouriteNotifEnabled,
         onEditFavouriteNotif = { isConfiguringFavouriteNotif = true },
         onToggleDefaultNotif = viewModel::setDefaultNotifEnabled,
@@ -625,6 +627,8 @@ fun HomeContent(
     onChangeMultiAlertMode: (MultiAlertMode) -> Unit = {},
     onChangeSplitAnimation: (SplitAnimation) -> Unit = {},
     onChangeSplitLook: (SplitLook) -> Unit = {},
+    onTestSplit: (colors: LongArray, animation: SplitAnimation, look: SplitLook, durationMs: Long) -> Unit = { _, _, _, _ -> },
+    onCancelLedTest: () -> Unit = {},
     onToggleFavouriteNotif: (Boolean) -> Unit,
     onEditFavouriteNotif: () -> Unit,
     onToggleDefaultNotif: (Boolean) -> Unit,
@@ -749,6 +753,8 @@ fun HomeContent(
                         onChangeMultiAlertMode = onChangeMultiAlertMode,
                         onChangeSplitAnimation = onChangeSplitAnimation,
                         onChangeSplitLook = onChangeSplitLook,
+                        onTestSplit = onTestSplit,
+                        onCancelLedTest = onCancelLedTest,
                         renderer = renderer
                     )
                     2 -> HomeBatteryPage(

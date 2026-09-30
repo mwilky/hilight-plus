@@ -29,7 +29,7 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 - Three ways to handle several notifications at once:
   - *Newest only* lights the latest for a chosen duration.
   - *Take turns* plays each waiting notification's pattern in turn until it is dismissed.
-  - *Split the ring* gives each waiting notification its own arc in its colour, up to four, newest at the top. The arcs can breathe, stay solid, brighten in turn (*Spotlight*) or circle the ring (*Rotate*). Breathe and Spotlight move between a dimmest and brightest level you set; Solid and Rotate hold one steady level. A note appears when a setting may let neighbouring colours blend or a dim arc look like spill from the next.
+  - *Split the ring* gives each waiting notification its own arc in its colour, up to four, newest at the top. The arcs can breathe, stay solid, brighten in turn (*Spotlight*) or circle the ring (*Rotate*). Breathe and Spotlight move between a dimmest and brightest level you set; Solid and Rotate hold one steady level. A note appears when a setting may let neighbouring colours blend or a dim arc look like spill from the next. It has its own Test on LEDs button.
 - Lights stop when the notification is dismissed.
 
 **Battery**
@@ -51,7 +51,7 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 - Every rule can follow these defaults, always light, or opt out, and rules can carry their own quiet-hours window.
 
 **Extras**
-- Live preview of every pattern on a diffused ring mock-up, and a Test on LEDs button in each rule editor.
+- Live preview of every pattern on a diffused ring mock-up, and a Test on LEDs button in each rule editor. Changing the pattern, colour or brightness while a test plays restarts it with the new look.
 - Custom rule lists can be sorted from their header: contacts by first or last name, apps by name, A–Z or Z–A, or left in the order they were added. Each list remembers its own choice.
 - Onboarding that connects to the ring, checks permissions and the stock HiLight setting that would otherwise fight for the ring, and explains the trial. Connecting is a self-ticking checklist: each switch is detected as you flip it, Settings opens at the right row, and a notification follows you there so you can type the pairing code without coming back to the app.
 - People updating from a Shizuku-only version get a one-time prompt to switch to the built-in connection, which then keeps itself running across restarts.

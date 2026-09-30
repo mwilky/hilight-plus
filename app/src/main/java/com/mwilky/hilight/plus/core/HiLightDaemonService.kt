@@ -183,6 +183,15 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
         engine.testAlert(pattern ?: "solid", color, brightness, speedMs, durationMs)
     }
 
+    override fun testSplit(colors: LongArray?, animation: String?, dimmest: Float, brightest: Float, steady: Float, durationMs: Long) {
+        engine.testSplit(
+            colors ?: LongArray(0),
+            SplitAnimation.fromId(animation),
+            SplitLook(dimmest, brightest, steady).clamped(),
+            durationMs
+        )
+    }
+
     override fun cancelTestAlert() {
         engine.cancelTestAlert()
     }

@@ -240,23 +240,20 @@ private fun RuleEditorContent(
     // Test-on-LEDs: previews the current pattern/color on the physical lights.
     val connectionState by controller.daemon.state.collectAsStateWithLifecycle()
     var isTesting by remember { mutableStateOf(false) }
-    LaunchedEffect(isTesting) {
-        if (isTesting) {
-            delay(TEST_DURATION_MS)
-            isTesting = false
-        }
+    // A new pattern, colour or brightness while a test plays restarts it with that look, so it
+    // can be judged on the ring itself.
+    LaunchedEffect(isTesting, selectedPattern, selectedColor, selectedBrightness) {
+        if (!isTesting) return@LaunchedEffect
+        controller.testPattern(selectedPattern, selectedColor, TEST_DURATION_MS, selectedBrightness)
+        delay(TEST_DURATION_MS)
+        isTesting = false
     }
     DisposableEffect(Unit) {
         onDispose { controller.cancelTestPattern() }
     }
     fun toggleTest() {
-        if (isTesting) {
-            isTesting = false
-            controller.cancelTestPattern()
-        } else {
-            isTesting = true
-            controller.testPattern(selectedPattern, selectedColor, TEST_DURATION_MS, selectedBrightness)
-        }
+        if (isTesting) controller.cancelTestPattern()
+        isTesting = !isTesting
     }
 
     val patterns = remember { PatternMode.entries.filter { it != PatternMode.OFF } }
@@ -580,46 +577,56 @@ private fun PreviewHeader(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            val testContainerColor by animateColorAsState(
-                targetValue = if (isTesting) {
-                    MaterialTheme.colorScheme.errorContainer
-                } else {
-                    MaterialTheme.colorScheme.secondaryContainer
-                },
-                animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-                label = "testButtonContainer"
-            )
-            val testContentColor by animateColorAsState(
-                targetValue = if (isTesting) {
-                    MaterialTheme.colorScheme.onErrorContainer
-                } else {
-                    MaterialTheme.colorScheme.onSecondaryContainer
-                },
-                animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-                label = "testButtonContent"
-            )
-            FilledTonalButton(
-                onClick = onToggleTest,
-                enabled = testEnabled,
-                shapes = ButtonDefaults.shapes(),
-                colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = testContainerColor,
-                    contentColor = testContentColor
-                )
-            ) {
-                Icon(
-                    if (isTesting) Icons.Rounded.Stop else Icons.Rounded.PlayArrow,
-                    contentDescription = null,
-                    modifier = Modifier.size(ButtonDefaults.IconSize)
-                )
-                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                Text(
-                    stringResource(
-                        if (isTesting) R.string.rule_editor_test_leds_stop else R.string.rule_editor_test_leds
-                    )
-                )
-            }
+            TestOnLedsButton(isTesting = isTesting, enabled = testEnabled, onClick = onToggleTest)
         }
+    }
+}
+
+/** Starts or stops a preview on the physical LEDs; turns to Stop while one is playing. */
+@Composable
+internal fun TestOnLedsButton(
+    isTesting: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    val testContainerColor by animateColorAsState(
+        targetValue = if (isTesting) {
+            MaterialTheme.colorScheme.errorContainer
+        } else {
+            MaterialTheme.colorScheme.secondaryContainer
+        },
+        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+        label = "testButtonContainer"
+    )
+    val testContentColor by animateColorAsState(
+        targetValue = if (isTesting) {
+            MaterialTheme.colorScheme.onErrorContainer
+        } else {
+            MaterialTheme.colorScheme.onSecondaryContainer
+        },
+        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+        label = "testButtonContent"
+    )
+    FilledTonalButton(
+        onClick = onClick,
+        enabled = enabled,
+        shapes = ButtonDefaults.shapes(),
+        colors = ButtonDefaults.filledTonalButtonColors(
+            containerColor = testContainerColor,
+            contentColor = testContentColor
+        )
+    ) {
+        Icon(
+            if (isTesting) Icons.Rounded.Stop else Icons.Rounded.PlayArrow,
+            contentDescription = null,
+            modifier = Modifier.size(ButtonDefaults.IconSize)
+        )
+        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+        Text(
+            stringResource(
+                if (isTesting) R.string.rule_editor_test_leds_stop else R.string.rule_editor_test_leds
+            )
+        )
     }
 }
 
