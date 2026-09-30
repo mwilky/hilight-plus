@@ -3,6 +3,7 @@ package com.mwilky.hilight.plus.core
 import com.mwilky.hilight.plus.BatteryPattern
 import com.mwilky.hilight.plus.LowBatteryPattern
 import com.mwilky.hilight.plus.SplitAnimation
+import com.mwilky.hilight.plus.SplitLook
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -261,8 +262,9 @@ class PatternRenderer {
      * Split-ring layer for several waiting notifications: each gets its own arc in its colour,
      * with one dark LED between arcs. On the diffused ring two colours placed side by side just
      * blend into a third, so the gap is what makes "two things" readable rather than "one odd
-     * colour". Whatever the [animation], every arc stays whole and never dims below the point
-     * where it reads as bleed, so the count is readable through the whole cycle.
+     * colour". Whatever the [animation], every arc stays whole, so the count is readable through
+     * the whole cycle. The default [look] also never dims an arc below the point where it reads
+     * as bleed, nor holds steady arcs bright enough to merge; the user may choose otherwise.
      *
      * [colors] is newest first; the newest arc starts at LED 0 (the top) and arcs run clockwise.
      * [elapsedTimeMs] should count from when the current set of arcs appeared, so Spotlight
@@ -270,7 +272,7 @@ class PatternRenderer {
      */
     fun renderSplitFrame(
         colors: LongArray,
-        brightness: Float,
+        look: SplitLook,
         elapsedTimeMs: Long,
         ledCount: Int = 8,
         animation: SplitAnimation = SplitAnimation.BREATHE
@@ -278,7 +280,9 @@ class PatternRenderer {
         val count = maxOf(1, ledCount)
         val layout = splitLayout(colors.size, count)
         val segments = layout.max() + 1
-        val scale = brightness.coerceIn(0f, 1f)
+        val levels = look.clamped()
+        val dimmest = levels.dimmest.toDouble()
+        val brightest = levels.brightest.toDouble()
         val elapsed = maxOf(0L, elapsedTimeMs)
 
         // Rotate moves in whole-LED steps with no crossfade: blending across a gap would merge
@@ -288,9 +292,9 @@ class PatternRenderer {
         fun level(segment: Int): Double = when (animation) {
             SplitAnimation.BREATHE -> {
                 val phase = (elapsed % SPLIT_BREATHE_MS) / SPLIT_BREATHE_MS.toDouble()
-                SPLIT_BREATHE_FLOOR + (1.0 - SPLIT_BREATHE_FLOOR) * (1.0 - cos(phase * 2.0 * PI)) / 2.0
+                dimmest + (brightest - dimmest) * (1.0 - cos(phase * 2.0 * PI)) / 2.0
             }
-            SplitAnimation.SOLID, SplitAnimation.ROTATE -> SPLIT_STEADY_LEVEL
+            SplitAnimation.SOLID, SplitAnimation.ROTATE -> levels.steady.toDouble()
             SplitAnimation.SPOTLIGHT -> {
                 val cycle = SPLIT_SPOTLIGHT_STEP_MS * segments
                 val sinceTurn = (elapsed % cycle) - segment * SPLIT_SPOTLIGHT_STEP_MS
@@ -299,7 +303,7 @@ class PatternRenderer {
                 } else {
                     0.0
                 }
-                SPLIT_SPOTLIGHT_BASE + (SPLIT_SPOTLIGHT_PEAK - SPLIT_SPOTLIGHT_BASE) * lift
+                dimmest + (brightest - dimmest) * lift
             }
         }
 
@@ -307,8 +311,7 @@ class PatternRenderer {
         for (i in 0 until count) {
             val segment = layout[i]
             if (segment >= 0) {
-                frame[(i + shift) % count] =
-                    scaleColor(colors[segment].toInt() or 0xFF000000.toInt(), level(segment) * scale)
+                frame[(i + shift) % count] = scaleColor(colors[segment].toInt() or 0xFF000000.toInt(), level(segment))
             }
         }
         return frame
@@ -515,13 +518,7 @@ class PatternRenderer {
         private const val SPARKLE_RISE = 0.25
 
         private const val SPLIT_BREATHE_MS = 2400L
-        // Never dip low enough that "on" reads as bleed from a neighbour.
-        private const val SPLIT_BREATHE_FLOOR = 0.45
-        // Below full power each LED holds its own colour instead of bleeding into the next.
-        private const val SPLIT_STEADY_LEVEL = 0.5
         private const val SPLIT_SPOTLIGHT_STEP_MS = 900L
-        private const val SPLIT_SPOTLIGHT_BASE = 0.45
-        private const val SPLIT_SPOTLIGHT_PEAK = 0.9
         private const val SPLIT_ROTATE_STEP_MS = 800L
 
         /**

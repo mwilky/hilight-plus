@@ -8,6 +8,7 @@ import com.mwilky.hilight.plus.GeminiState
 import com.mwilky.hilight.plus.LowBatteryPattern
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.SplitAnimation
+import com.mwilky.hilight.plus.SplitLook
 import com.mwilky.hilight.plus.currentMinutesOfDay
 
 /**
@@ -167,6 +168,7 @@ class LightEngine {
     // instead of taking turns. A single visible alert still plays its own pattern.
     private var splitRing = false
     private var splitAnimation = SplitAnimation.BREATHE
+    private var splitLook = SplitLook()
     // The arcs on show and when that set appeared, so a changed set restarts the animation
     // (Spotlight on the newest arc, Rotate with the newest at the top).
     private var splitKeys: List<String>? = null
@@ -450,6 +452,15 @@ class LightEngine {
             splitAnimation = animation
             splitKeys = null
             DebugLog.i(TAG, "setSplitAnimation: ${animation.id}")
+            wake()
+        }
+    }
+
+    fun setSplitLook(look: SplitLook) {
+        synchronized(lock) {
+            if (splitLook == look) return
+            splitLook = look
+            DebugLog.i(TAG, "setSplitLook: $look")
             wake()
         }
     }
@@ -766,6 +777,8 @@ class LightEngine {
             var elapsedMs = now
             var renderBattery = false
             var splitColors: LongArray? = null
+            var splitAnimationShown = splitAnimation
+            var splitLookShown = splitLook
             // For the effect route: what identifies the look on show, and how long a timed one has left.
             var effectKey: List<Any?> = emptyList()
             var effectRemainingMs: Long? = null
@@ -834,7 +847,6 @@ class LightEngine {
                     }
                     reason = "split ${splitAnimation.id} $keys"
                     splitColors = LongArray(minOf(splitAlerts.size, PatternRenderer.MAX_SPLIT_SEGMENTS)) { splitAlerts[it].color }
-                    currentBrightness = splitAlerts[0].brightness
                 } else {
                     val turns = visibleAlertsNewestFirst(nowMinutes)
                     reason = "queue ${turns.map { it.key }}"
@@ -921,11 +933,12 @@ class LightEngine {
 
             if (splitColors != null && useEffects) {
                 val colors = splitColors
-                val animation = splitAnimation
+                val animation = splitAnimationShown
+                val look = splitLookShown
                 val loopMs = PatternRenderer.splitLoopMs(animation, colors.size, count)
-                showEffect(listOf("split", colors.toList(), currentBrightness, animation)) {
+                showEffect(listOf("split", colors.toList(), look, animation)) {
                     RingEffect.sample(loopMs, period, count) { t ->
-                        renderer.renderSplitFrame(colors, currentBrightness, t, count, animation)
+                        renderer.renderSplitFrame(colors, look, t, count, animation)
                     }
                 }
                 return
@@ -974,10 +987,10 @@ class LightEngine {
                 lights.pushFrame(
                     renderer.renderSplitFrame(
                         colors = splitColors,
-                        brightness = currentBrightness,
+                        look = splitLookShown,
                         elapsedTimeMs = now - splitStartedAtMs,
                         ledCount = lights.ledCount,
-                        animation = splitAnimation
+                        animation = splitAnimationShown
                     )
                 )
                 return
@@ -1045,7 +1058,7 @@ class LightEngine {
         buildString {
             appendLine("ring=$lastRenderReason, sessionOpen=${lights.isSessionOpen}, unclosedSessions=${lights.unclosedSessionCount}, leds=${lights.ledCount}, running=$running, renderThreadAlive=${renderThread?.isAlive}, lastFrame=${now - lastTickElapsedMs}ms ago")
             appendLine("route=${if (framesDriving) "frames" else "effects"}, effectsSupported=${lights.supportsEffects}, effectsFailed=$effectsFailed, period=${lights.effectPeriodMs}ms, showing=${shownEffectKey?.let { shownEffectInfo }}")
-            appendLine("faceDown=$deviceFaceDown, dndActive=$dndActive, dndSuppress=$dndSuppressEnabled, quietHours=$quietHoursEnabled $quietHoursStartMinutes-$quietHoursEndMinutes, splitRing=$splitRing (${splitAnimation.id})")
+            appendLine("faceDown=$deviceFaceDown, dndActive=$dndActive, dndSuppress=$dndSuppressEnabled, quietHours=$quietHoursEnabled $quietHoursStartMinutes-$quietHoursEndMinutes, splitRing=$splitRing (${splitAnimation.id}, $splitLook)")
             appendLine("test=${testAlert?.let { "${it.pattern} ${hex(it.color)}, ${it.expiresAtMs - now}ms left" }}")
             appendLine("gemini=${if (geminiEnabled) "on, ${geminiState?.id ?: "idle"}${geminiState?.let { ", for ${(now - geminiStateSinceMs) / 1000}s" } ?: ""}, looks=${geminiLooks.map { "${it.key.id}:${it.value.pattern}" }}" else "off"}")
             appendLine("call=${incomingCallAlert?.let { "${it.pattern} ${hex(it.color)}, ringing ${(now - it.startedAtMs) / 1000}s, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}" }}")

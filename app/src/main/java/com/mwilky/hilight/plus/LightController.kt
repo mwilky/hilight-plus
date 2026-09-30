@@ -167,6 +167,11 @@ class LightController private constructor(private val app: Application) {
             }
         }
         scope.launch {
+            store.splitLook.collect { look ->
+                daemon.setSplitLook(look)
+            }
+        }
+        scope.launch {
             combine(
                 store.quietHoursEnabled,
                 store.quietHoursStartMinutes,
@@ -377,6 +382,7 @@ class LightController private constructor(private val app: Application) {
         daemon.setDndSuppressEnabled(store.suppressDuringDnd.first())
         daemon.setSplitRing(store.multiAlertMode.first() == MultiAlertMode.SPLIT)
         daemon.setSplitAnimation(store.splitAnimation.first())
+        daemon.setSplitLook(store.splitLook.first())
         daemon.setQuietHours(
             store.quietHoursEnabled.first(),
             store.quietHoursStartMinutes.first(),

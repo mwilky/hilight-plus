@@ -54,6 +54,7 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -452,6 +453,37 @@ internal fun BrightnessSlider(
         Slider(
             value = brightness,
             onValueChange = { onBrightnessChange(snapBrightness(it, stepPercent)) },
+            valueRange = MIN_BRIGHTNESS..1f,
+            steps = brightnessSteps(stepPercent),
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+/** [BrightnessSlider] for a look that moves between a dimmest and a brightest level. */
+@Composable
+internal fun BrightnessRangeSlider(
+    dimmest: Float,
+    brightest: Float,
+    onRangeChange: (dimmest: Float, brightest: Float) -> Unit,
+    modifier: Modifier = Modifier,
+    titleStyle: TextStyle = LocalTextStyle.current,
+    stepPercent: Int = 10
+) {
+    Column(modifier = modifier) {
+        BrightnessHeader(
+            value = stringResource(
+                R.string.brightness_range_value,
+                (dimmest * 100).roundToInt(),
+                (brightest * 100).roundToInt()
+            ),
+            titleStyle = titleStyle
+        )
+        RangeSlider(
+            value = dimmest..brightest,
+            onValueChange = { range ->
+                onRangeChange(snapBrightness(range.start, stepPercent), snapBrightness(range.endInclusive, stepPercent))
+            },
             valueRange = MIN_BRIGHTNESS..1f,
             steps = brightnessSteps(stepPercent),
             modifier = Modifier.fillMaxWidth()

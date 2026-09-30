@@ -14,6 +14,7 @@ import com.mwilky.hilight.plus.LowBatteryPattern
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.SplitAnimation
+import com.mwilky.hilight.plus.SplitLook
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -172,6 +173,10 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
 
     override fun setSplitAnimation(animation: String?) {
         engine.setSplitAnimation(SplitAnimation.fromId(animation))
+    }
+
+    override fun setSplitLook(dimmest: Float, brightest: Float, steady: Float) {
+        engine.setSplitLook(SplitLook(dimmest, brightest, steady).clamped())
     }
 
     override fun testAlert(pattern: String?, color: Long, brightness: Float, speedMs: Long, durationMs: Long) {

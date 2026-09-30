@@ -65,6 +65,7 @@ import com.mwilky.hilight.plus.RuleSort
 import com.mwilky.hilight.plus.SettingsSnapshot
 import com.mwilky.hilight.plus.DaemonBridge
 import com.mwilky.hilight.plus.SplitAnimation
+import com.mwilky.hilight.plus.SplitLook
 import com.mwilky.hilight.plus.StockHiLightState
 import com.mwilky.hilight.plus.core.PatternRenderer
 import com.mwilky.hilight.plus.ui.diagnostics.PermissionState
@@ -200,6 +201,7 @@ fun HomeScreen(
         onChangeDuration = viewModel::setNotificationDurationSeconds,
         onChangeMultiAlertMode = viewModel::setMultiAlertMode,
         onChangeSplitAnimation = viewModel::setSplitAnimation,
+        onChangeSplitLook = viewModel::setSplitLook,
         onToggleFavouriteNotif = viewModel::setFavouriteNotifEnabled,
         onEditFavouriteNotif = { isConfiguringFavouriteNotif = true },
         onToggleDefaultNotif = viewModel::setDefaultNotifEnabled,
@@ -622,6 +624,7 @@ fun HomeContent(
     onChangeDuration: (Int) -> Unit,
     onChangeMultiAlertMode: (MultiAlertMode) -> Unit = {},
     onChangeSplitAnimation: (SplitAnimation) -> Unit = {},
+    onChangeSplitLook: (SplitLook) -> Unit = {},
     onToggleFavouriteNotif: (Boolean) -> Unit,
     onEditFavouriteNotif: () -> Unit,
     onToggleDefaultNotif: (Boolean) -> Unit,
@@ -745,6 +748,7 @@ fun HomeContent(
                         onChangeDuration = onChangeDuration,
                         onChangeMultiAlertMode = onChangeMultiAlertMode,
                         onChangeSplitAnimation = onChangeSplitAnimation,
+                        onChangeSplitLook = onChangeSplitLook,
                         renderer = renderer
                     )
                     2 -> HomeBatteryPage(
@@ -1044,7 +1048,8 @@ fun HomeScreenPreviewSplitRing() {
     HomeScreenPreviewContent(
         initialPage = 1,
         multiAlertMode = MultiAlertMode.SPLIT,
-        splitAnimation = SplitAnimation.SOLID
+        splitAnimation = SplitAnimation.SPOTLIGHT,
+        splitLook = SplitLook(dimmest = 0.3f)
     )
 }
 
@@ -1063,6 +1068,7 @@ fun HomeScreenPreviewContent(
     initialPage: Int = 0,
     multiAlertMode: MultiAlertMode = DEFAULT_SETTINGS_SNAPSHOT.multiAlertMode,
     splitAnimation: SplitAnimation = DEFAULT_SETTINGS_SNAPSHOT.splitAnimation,
+    splitLook: SplitLook = DEFAULT_SETTINGS_SNAPSHOT.splitLook,
     gemini: GeminiSettings = DEFAULT_SETTINGS_SNAPSHOT.gemini
 ) {
     val mockCallContacts = if (hasCallRules) {
@@ -1113,6 +1119,7 @@ fun HomeScreenPreviewContent(
                 appRules = mockApps,
                 multiAlertMode = multiAlertMode,
                 splitAnimation = splitAnimation,
+                splitLook = splitLook,
                 gemini = gemini
             ),
             onToggleCallLights = {},

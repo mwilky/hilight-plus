@@ -91,6 +91,9 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_CYCLE_NOTIFICATIONS = booleanPreferencesKey("cycle_notifications")
         private val KEY_MULTI_ALERT_MODE = stringPreferencesKey("multi_alert_mode")
         private val KEY_SPLIT_ANIMATION = stringPreferencesKey("split_animation")
+        private val KEY_SPLIT_DIMMEST = floatPreferencesKey("split_dimmest")
+        private val KEY_SPLIT_BRIGHTEST = floatPreferencesKey("split_brightest")
+        private val KEY_SPLIT_STEADY = floatPreferencesKey("split_steady")
         private val KEY_DEFAULT_NOTIF_ENABLED = booleanPreferencesKey("default_notif_enabled")
         private val KEY_DEFAULT_NOTIF_COLOR = longPreferencesKey("default_notif_color")
         private val KEY_DEFAULT_NOTIF_PATTERN = stringPreferencesKey("default_notif_pattern")
@@ -173,6 +176,9 @@ class AppStore private constructor(private val appContext: Context) {
 
     val splitAnimation: Flow<SplitAnimation> = appContext.dataStore.data
         .map { SplitAnimation.fromId(it[KEY_SPLIT_ANIMATION]) }
+
+    val splitLook: Flow<SplitLook> = appContext.dataStore.data
+        .map(::readSplitLook)
 
     val battery: Flow<BatterySettings> = appContext.dataStore.data
         .map { BatterySettings.fromJson(it[KEY_BATTERY_JSON]) }
@@ -262,6 +268,24 @@ class AppStore private constructor(private val appContext: Context) {
 
     suspend fun setSplitAnimation(animation: SplitAnimation) {
         appContext.dataStore.edit { it[KEY_SPLIT_ANIMATION] = animation.id }
+    }
+
+    suspend fun setSplitLook(look: SplitLook) {
+        val clamped = look.clamped()
+        appContext.dataStore.edit { prefs ->
+            prefs[KEY_SPLIT_DIMMEST] = clamped.dimmest
+            prefs[KEY_SPLIT_BRIGHTEST] = clamped.brightest
+            prefs[KEY_SPLIT_STEADY] = clamped.steady
+        }
+    }
+
+    private fun readSplitLook(prefs: Preferences): SplitLook {
+        val d = SplitLook()
+        return SplitLook(
+            dimmest = prefs[KEY_SPLIT_DIMMEST] ?: d.dimmest,
+            brightest = prefs[KEY_SPLIT_BRIGHTEST] ?: d.brightest,
+            steady = prefs[KEY_SPLIT_STEADY] ?: d.steady
+        ).clamped()
     }
 
     suspend fun setCallRuleSort(sort: RuleSort) {
@@ -545,6 +569,7 @@ class AppStore private constructor(private val appContext: Context) {
             notificationDurationSeconds = prefs[KEY_NOTIFICATION_DURATION_SEC] ?: d.notificationDurationSeconds,
             multiAlertMode = readMultiAlertMode(prefs),
             splitAnimation = SplitAnimation.fromId(prefs[KEY_SPLIT_ANIMATION]),
+            splitLook = readSplitLook(prefs),
             isDefaultNotifEnabled = prefs[KEY_DEFAULT_NOTIF_ENABLED] ?: d.isDefaultNotifEnabled,
             defaultNotifColor = prefs[KEY_DEFAULT_NOTIF_COLOR] ?: d.defaultNotifColor,
             defaultNotifPattern = enumOr(prefs[KEY_DEFAULT_NOTIF_PATTERN], d.defaultNotifPattern),
@@ -642,6 +667,7 @@ data class SettingsSnapshot(
     val notificationDurationSeconds: Int,
     val multiAlertMode: MultiAlertMode,
     val splitAnimation: SplitAnimation,
+    val splitLook: SplitLook,
     val isDefaultNotifEnabled: Boolean,
     val defaultNotifColor: Long,
     val defaultNotifPattern: PatternMode,
@@ -740,6 +766,7 @@ val DEFAULT_SETTINGS_SNAPSHOT = SettingsSnapshot(
     notificationDurationSeconds = 30,
     multiAlertMode = MultiAlertMode.LATEST,
     splitAnimation = SplitAnimation.BREATHE,
+    splitLook = SplitLook(),
     isDefaultNotifEnabled = true,
     defaultNotifColor = 0xFFFFFFFF,
     defaultNotifPattern = PatternMode.PULSE,

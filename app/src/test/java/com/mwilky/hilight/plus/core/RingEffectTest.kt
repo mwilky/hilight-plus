@@ -4,6 +4,7 @@ import com.mwilky.hilight.plus.BatteryPattern
 import com.mwilky.hilight.plus.LowBatteryPattern
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.SplitAnimation
+import com.mwilky.hilight.plus.SplitLook
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -143,12 +144,31 @@ class RingEffectTest {
         val colors = longArrayOf(0xFFFF0000L, 0xFF00FF00L)
         val loop = PatternRenderer.splitLoopMs(SplitAnimation.ROTATE, colors.size, 8)
         val effect = RingEffect.sample(loop, 10L, 8) { t ->
-            renderer.renderSplitFrame(colors, 1f, t, 8, SplitAnimation.ROTATE)
+            renderer.renderSplitFrame(colors, SplitLook(), t, 8, SplitAnimation.ROTATE)
         }
         assertFalse(effect.linear)
         effect.leds.forEach { led ->
             var t = 0L
             led.delaysMs.forEach { t += it; assertEquals("keyframe at $t", 0L, t % 800L) }
+        }
+    }
+
+    @Test
+    fun everySplitBrightnessChoiceFitsTheHardwareBudget() {
+        // The sliders reach any level from 10% to 100%, and over budget the lights HAL aborts.
+        val palette = longArrayOf(0xFFFF0000L, 0xFF00FF00L, 0xFF0000FFL, 0xFFFFAA00L)
+        val levels = listOf(0.1f, 0.25f, 0.45f, 0.7f, 1f)
+        for (animation in SplitAnimation.entries) {
+            for (arcs in 2..4) {
+                for (dimmest in levels) for (brightest in levels) for (steady in levels) {
+                    if (brightest < dimmest) continue
+                    val look = SplitLook(dimmest, brightest, steady)
+                    val effect = RingEffect.sample(PatternRenderer.splitLoopMs(animation, arcs, 8), 33L, 8) { t ->
+                        renderer.renderSplitFrame(palette.copyOf(arcs), look, t, 8, animation)
+                    }
+                    assertTrue("$animation x$arcs $look", effect.leds.all { it.colors.size <= RingEffect.MAX_KEYFRAMES })
+                }
+            }
         }
     }
 
@@ -160,7 +180,7 @@ class RingEffectTest {
             for (arcs in 2..4) {
                 val colors = palette.copyOf(arcs)
                 val effect = RingEffect.sample(PatternRenderer.splitLoopMs(animation, arcs, 8), 33L, 8) { t ->
-                    renderer.renderSplitFrame(colors, 1f, t, 8, animation)
+                    renderer.renderSplitFrame(colors, SplitLook(), t, 8, animation)
                 }
                 assertTrue("$animation x$arcs", effect.leds.all { it.colors.size <= RingEffect.MAX_KEYFRAMES })
             }

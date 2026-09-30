@@ -18,6 +18,7 @@ import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.SettingsSnapshot
 import com.mwilky.hilight.plus.SplitAnimation
+import com.mwilky.hilight.plus.SplitLook
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -38,6 +39,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun setNotificationDurationSeconds(seconds: Int) = launch { store.setNotificationDurationSeconds(seconds) }
     fun setMultiAlertMode(mode: MultiAlertMode) = launch { store.setMultiAlertMode(mode) }
     fun setSplitAnimation(animation: SplitAnimation) = launch { store.setSplitAnimation(animation) }
+    fun setSplitLook(look: SplitLook) = launch { store.setSplitLook(look) }
     fun setDefaultNotifEnabled(enabled: Boolean) = launch { store.setDefaultNotifEnabled(enabled) }
     fun setFavouriteNotifEnabled(enabled: Boolean) = launch { store.setFavouriteNotifEnabled(enabled) }
     fun setBattery(settings: BatterySettings) = launch { store.setBattery(settings) }

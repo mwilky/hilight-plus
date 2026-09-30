@@ -231,8 +231,10 @@
     <string name="settings_multi_split">Split the ring</string>
     <string name="settings_multi_latest_desc">Only the newest notification lights, for the duration above.</string>
     <string name="settings_multi_cycle_desc">Each waiting notification plays its own pattern in turn, until it is dismissed.</string>
-    <string name="settings_multi_split_desc">Each waiting notification gets its own arc of the ring in its colour, with a dark gap between arcs, until it is dismissed. Up to four are shown around the ring, using the animation below instead of each rule\'s pattern. A single notification still plays its own pattern.</string>
+    <string name="settings_multi_split_desc">Each waiting notification gets its own arc of the ring in its colour, with a dark gap between arcs, until it is dismissed. Up to four are shown around the ring, using the animation and brightness below instead of each rule\'s own. A single notification still plays its own pattern.</string>
     <string name="settings_split_animation_title">Animation</string>
+    <string name="settings_split_dim_warning">Below 45%, a dim arc next to a bright one may look like glow spilling over from its neighbour rather than a notification of its own.</string>
+    <string name="settings_split_steady_warning">Above 50%, neighbouring colours may blend into each other and the dark gaps between arcs get harder to see.</string>
     <string name="settings_split_animation_breathe">Breathe</string>
     <string name="settings_split_animation_solid">Solid</string>
     <string name="settings_split_animation_spotlight">Spotlight</string>
@@ -250,6 +252,7 @@
     <string name="dialog_color_auto_label">Colour (auto from icon)</string>
     <string name="brightness_title">Brightness</string>
     <string name="brightness_value">%1$d%%</string>
+    <string name="brightness_range_value">%1$d%%–%2$d%%</string>
     <string name="dialog_custom_color">Custom colour</string>
     <string name="dialog_custom_color_hex">Hex code</string>
     <string name="dialog_custom_color_copy">Copy colour code</string>

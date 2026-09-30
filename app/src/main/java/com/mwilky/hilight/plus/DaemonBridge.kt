@@ -921,6 +921,10 @@ class DaemonBridge private constructor(private val app: Application) {
         runRemote("setSplitAnimation") { it.setSplitAnimation(animation.id) }
     }
 
+    fun setSplitLook(look: SplitLook) {
+        runRemote("setSplitLook") { it.setSplitLook(look.dimmest, look.brightest, look.steady) }
+    }
+
     fun stopIncomingCall() {
         DebugLog.i("HiLightPlus", "stopIncomingCall called")
         runRemote("stopIncomingCall") { it.stopIncomingCall() }

@@ -48,7 +48,7 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 [LIST]
 [*][B]Newest only:[/B] Displays the most recent notification for a set duration.
 [*][B]Take turns:[/B] Sequentially cycles through active notifications until dismissed.
-[*][B]Split the ring:[/B] Partitions the 8-LED ring into distinct coloured arcs (up to 4 notifications concurrently). Arcs can breathe, stay solid, brighten in turn (Spotlight) or circle the ring (Rotate).
+[*][B]Split the ring:[/B] Partitions the 8-LED ring into distinct coloured arcs (up to 4 notifications concurrently). Arcs can breathe, stay solid, brighten in turn (Spotlight) or circle the ring (Rotate), with their own brightness range (Breathe, Spotlight) or steady level (Solid, Rotate).
 [/LIST]
 [*]Instant cleanup: lights turn off the moment the notification is cleared from the shade.
 [/LIST]

@@ -35,4 +35,7 @@ interface IHiLightService {
     // JSON object keyed by Gemini state id: pattern, color, brightness, requiresFaceDown, dndMode,
     // quietHoursMode, quietStart, quietEnd (-1 for none). A missing state stays unlit.
     void setGeminiConfig(boolean enabled, String statesJson);
+    // Split ring levels, each 0.1-1.0 of full power: Breathe and Spotlight move between dimmest
+    // and brightest, Solid and Rotate hold steady.
+    void setSplitLook(float dimmest, float brightest, float steady);
 }

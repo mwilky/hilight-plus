@@ -25,8 +25,10 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.automirrored.rounded.Message
 import androidx.compose.material.icons.rounded.PersonAdd
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedListItem
@@ -45,6 +47,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mwilky.hilight.plus.AppNotificationRule
+import com.mwilky.hilight.plus.SPLIT_READABLE_FLOOR
+import com.mwilky.hilight.plus.SPLIT_SEPARATE_CEILING
 import com.mwilky.hilight.plus.MessageContactRule
 import com.mwilky.hilight.plus.MultiAlertMode
 import com.mwilky.hilight.plus.R
@@ -52,6 +56,7 @@ import com.mwilky.hilight.plus.RuleSort
 import com.mwilky.hilight.plus.SettingsSnapshot
 import com.mwilky.hilight.plus.DaemonBridge
 import com.mwilky.hilight.plus.SplitAnimation
+import com.mwilky.hilight.plus.SplitLook
 import com.mwilky.hilight.plus.core.PatternRenderer
 import com.mwilky.hilight.plus.ui.diagnostics.NotificationAccessCard
 import com.mwilky.hilight.plus.ui.diagnostics.PermissionState
@@ -92,6 +97,7 @@ fun HomeNotifsPage(
     onChangeDuration: (Int) -> Unit,
     onChangeMultiAlertMode: (MultiAlertMode) -> Unit,
     onChangeSplitAnimation: (SplitAnimation) -> Unit,
+    onChangeSplitLook: (SplitLook) -> Unit,
     renderer: PatternRenderer
 ) {
     val messageRules = remember(state.messageContactRules, state.messageRuleSort) {
@@ -313,7 +319,12 @@ fun HomeNotifsPage(
                                             selected = state.splitAnimation,
                                             onSelect = onChangeSplitAnimation
                                         )
-                                        SplitRingExample(renderer, state.splitAnimation)
+                                        SplitBrightnessControls(
+                                            animation = state.splitAnimation,
+                                            look = state.splitLook,
+                                            onLookChange = onChangeSplitLook
+                                        )
+                                        SplitRingExample(renderer, state.splitAnimation, state.splitLook)
                                     }
                                 }
                             }
@@ -331,16 +342,16 @@ fun HomeNotifsPage(
 
 /** Three waiting notifications in the chosen animation, so it's visible before any arrive. */
 @Composable
-private fun SplitRingExample(renderer: PatternRenderer, animation: SplitAnimation) {
+private fun SplitRingExample(renderer: PatternRenderer, animation: SplitAnimation, look: SplitLook) {
     var frame by remember { mutableStateOf(IntArray(8)) }
     // Restarts with each choice, as the ring does when its arcs change, so Spotlight starts on
     // the newest arc and Rotate with the newest at the top.
-    LaunchedEffect(renderer, animation) {
+    LaunchedEffect(renderer, animation, look) {
         val startMs = System.currentTimeMillis()
         while (isActive) {
             frame = renderer.renderSplitFrame(
                 colors = longArrayOf(0xFF00E5FF, 0xFF34A853, 0xFFFF6D00),
-                brightness = 1f,
+                look = look,
                 elapsedTimeMs = System.currentTimeMillis() - startMs,
                 animation = animation
             )
@@ -368,6 +379,65 @@ private fun SplitRingExample(renderer: PatternRenderer, animation: SplitAnimatio
         )
     }
 }
+
+/**
+ * A dimmest-to-brightest range for the animations that move, one steady level for those that
+ * don't, and a note once either leaves the levels that keep every arc readable.
+ */
+@Composable
+private fun SplitBrightnessControls(
+    animation: SplitAnimation,
+    look: SplitLook,
+    onLookChange: (SplitLook) -> Unit
+) {
+    val usesRange = SplitLook.usesRange(animation)
+    if (usesRange) {
+        BrightnessRangeSlider(
+            dimmest = look.dimmest,
+            brightest = look.brightest,
+            onRangeChange = { dimmest, brightest -> onLookChange(look.copy(dimmest = dimmest, brightest = brightest)) },
+            stepPercent = SPLIT_BRIGHTNESS_STEP_PERCENT
+        )
+    } else {
+        BrightnessSlider(
+            brightness = look.steady,
+            onBrightnessChange = { onLookChange(look.copy(steady = it)) },
+            stepPercent = SPLIT_BRIGHTNESS_STEP_PERCENT
+        )
+    }
+    val warning = when {
+        usesRange && look.dimmest < SPLIT_READABLE_FLOOR -> R.string.settings_split_dim_warning
+        !usesRange && look.steady > SPLIT_SEPARATE_CEILING -> R.string.settings_split_steady_warning
+        else -> null
+    }
+    // Keeps the last note on screen while it animates away.
+    var shownWarning by remember { mutableStateOf(warning ?: R.string.settings_split_dim_warning) }
+    if (warning != null) shownWarning = warning
+    AnimatedVisibility(
+        visible = warning != null,
+        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
+            fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
+            fadeOut(MaterialTheme.motionScheme.defaultEffectsSpec())
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(
+                Icons.Rounded.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.tertiary,
+                modifier = Modifier.size(18.dp)
+            )
+            AnimatedText(
+                text = stringResource(shownWarning),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+// Finer than the rules' 10%, so the default 45% dimmest level sits on a stop.
+private const val SPLIT_BRIGHTNESS_STEP_PERCENT = 5
 
 private const val DISABLED_ALPHA = 0.38f
 

@@ -1,6 +1,7 @@
 package com.mwilky.hilight.plus.core
 
 import com.mwilky.hilight.plus.SplitAnimation
+import com.mwilky.hilight.plus.SplitLook
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -63,7 +64,7 @@ class PatternRendererSplitTest {
 
     @Test
     fun frameUsesEachArcsOwnColourAndLeavesGapsDark() {
-        val frame = renderer.renderSplitFrame(longArrayOf(red, green), brightness = 1f, elapsedTimeMs = 1200L)
+        val frame = renderer.renderSplitFrame(longArrayOf(red, green), look = SplitLook(), elapsedTimeMs = 1200L)
         assertEquals(0, frame[2])
         assertEquals(0, frame[3])
         assertEquals(0, frame[6])
@@ -74,7 +75,7 @@ class PatternRendererSplitTest {
 
     @Test
     fun onlyTheNewestFourColoursAreShown() {
-        val frame = renderer.renderSplitFrame(longArrayOf(red, green, blue, white, amber), brightness = 1f, elapsedTimeMs = 1200L)
+        val frame = renderer.renderSplitFrame(longArrayOf(red, green, blue, white, amber), look = SplitLook(), elapsedTimeMs = 1200L)
         assertTrue(isShadeOf(frame[0], red))
         assertTrue(isShadeOf(frame[2], green))
         assertTrue(isShadeOf(frame[4], blue))
@@ -85,7 +86,7 @@ class PatternRendererSplitTest {
     fun breathingNeverDropsAnArcLowEnoughToReadAsBleed() {
         var minChannel = 255
         for (t in 0L until 2400L step 40L) {
-            val frame = renderer.renderSplitFrame(longArrayOf(white, white), brightness = 1f, elapsedTimeMs = t)
+            val frame = renderer.renderSplitFrame(longArrayOf(white, white), look = SplitLook(), elapsedTimeMs = t)
             minChannel = minOf(minChannel, frame[0] and 0xFF)
         }
         assertTrue("dimmest point was $minChannel/255", minChannel >= (0.45 * 255).toInt() - 1)
@@ -98,7 +99,7 @@ class PatternRendererSplitTest {
                 val colors = LongArray(segments) { white }
                 val litPerFrame = PatternRenderer.splitLayout(segments, 8).count { it >= 0 }
                 for (t in 0L until 10_000L step 50L) {
-                    val frame = renderer.renderSplitFrame(colors, brightness = 1f, elapsedTimeMs = t, animation = animation)
+                    val frame = renderer.renderSplitFrame(colors, look = SplitLook(), elapsedTimeMs = t, animation = animation)
                     assertEquals("$animation arcs $segments t=$t", litPerFrame, frame.count { it != 0 })
                     for (i in frame.indices) {
                         val next = (i + 1) % frame.size
@@ -115,7 +116,7 @@ class PatternRendererSplitTest {
     fun noAnimationDimsAnArcLowEnoughToReadAsBleed() {
         for (animation in SplitAnimation.entries) {
             for (t in 0L until 10_000L step 40L) {
-                val frame = renderer.renderSplitFrame(longArrayOf(white, white, white), brightness = 1f, elapsedTimeMs = t, animation = animation)
+                val frame = renderer.renderSplitFrame(longArrayOf(white, white, white), look = SplitLook(), elapsedTimeMs = t, animation = animation)
                 frame.filter { it != 0 }.forEach {
                     assertTrue("$animation t=$t: ${it and 0xFF}/255", (it and 0xFF) >= (0.45 * 255).toInt() - 1)
                 }
@@ -124,9 +125,54 @@ class PatternRendererSplitTest {
     }
 
     @Test
+    fun breatheAndSpotlightMoveBetweenTheChosenDimmestAndBrightest() {
+        val look = SplitLook(dimmest = 0.3f, brightest = 0.8f)
+        for (animation in listOf(SplitAnimation.BREATHE, SplitAnimation.SPOTLIGHT)) {
+            val levels = (0L until 10_000L step 20L).map {
+                renderer.renderSplitFrame(longArrayOf(white, white), look, it, animation = animation)[0] and 0xFF
+            }
+            assertEquals("$animation dimmest", 0.3 * 255, levels.min().toDouble(), 1.0)
+            assertEquals("$animation brightest", 0.8 * 255, levels.max().toDouble(), 1.0)
+        }
+    }
+
+    @Test
+    fun spotlightStillMovesWithItsBrightestAtFullPower() {
+        val levels = (0L until 10_000L step 20L).map {
+            renderer.renderSplitFrame(longArrayOf(white, white), SplitLook(brightest = 1f), it, animation = SplitAnimation.SPOTLIGHT)[0] and 0xFF
+        }
+        // The newest arc peaks halfway through its 900ms turn.
+        val peak = renderer.renderSplitFrame(longArrayOf(white, white), SplitLook(brightest = 1f), 450L, animation = SplitAnimation.SPOTLIGHT)
+        assertEquals(255, peak[0] and 0xFF)
+        assertTrue("dimmest was ${levels.min()}", levels.min() < 128)
+    }
+
+    @Test
+    fun solidAndRotateHoldTheSteadyLevel() {
+        for (animation in listOf(SplitAnimation.SOLID, SplitAnimation.ROTATE)) {
+            val frame = renderer.renderSplitFrame(longArrayOf(white, white), SplitLook(steady = 1f), 0L, animation = animation)
+            assertEquals(animation.name, 255, frame[0] and 0xFF)
+        }
+    }
+
+    @Test
+    fun fullPowerKeepsTheColourInsteadOfWashingOut() {
+        val googleBlue = 0xFF4285F4L
+        val frame = renderer.renderSplitFrame(longArrayOf(googleBlue, googleBlue), SplitLook(steady = 1f), 0L, animation = SplitAnimation.SOLID)
+        assertEquals(0x4285F4, frame[0] and 0xFFFFFF)
+    }
+
+    @Test
+    fun aDimmestAboveTheBrightestIsTreatedAsOneLevel() {
+        val look = SplitLook(dimmest = 0.9f, brightest = 0.4f).clamped()
+        assertEquals(0.9f, look.dimmest)
+        assertEquals(0.9f, look.brightest)
+    }
+
+    @Test
     fun solidIsSteadyAndBelowFullPower() {
-        val first = renderer.renderSplitFrame(longArrayOf(white, white), 1f, 0L, animation = SplitAnimation.SOLID)
-        val later = renderer.renderSplitFrame(longArrayOf(white, white), 1f, 3_700L, animation = SplitAnimation.SOLID)
+        val first = renderer.renderSplitFrame(longArrayOf(white, white), SplitLook(), 0L, animation = SplitAnimation.SOLID)
+        val later = renderer.renderSplitFrame(longArrayOf(white, white), SplitLook(), 3_700L, animation = SplitAnimation.SOLID)
         assertArrayEquals(first, later)
         assertTrue((first[0] and 0xFF) in 1 until 255)
     }
@@ -134,10 +180,10 @@ class PatternRendererSplitTest {
     @Test
     fun spotlightLightsTheNewestArcFirstThenMovesClockwise() {
         val colors = longArrayOf(white, white, white)
-        val first = renderer.renderSplitFrame(colors, 1f, 450L, animation = SplitAnimation.SPOTLIGHT)
+        val first = renderer.renderSplitFrame(colors, SplitLook(), 450L, animation = SplitAnimation.SPOTLIGHT)
         assertTrue((first[0] and 0xFF) > (first[2] and 0xFF))
         assertTrue((first[0] and 0xFF) > (first[4] and 0xFF))
-        val second = renderer.renderSplitFrame(colors, 1f, 900L + 450L, animation = SplitAnimation.SPOTLIGHT)
+        val second = renderer.renderSplitFrame(colors, SplitLook(), 900L + 450L, animation = SplitAnimation.SPOTLIGHT)
         assertTrue((second[2] and 0xFF) > (second[0] and 0xFF))
         assertTrue((second[2] and 0xFF) > (second[4] and 0xFF))
     }
@@ -145,10 +191,10 @@ class PatternRendererSplitTest {
     @Test
     fun rotateStartsWithTheNewestAtTheTopThenStepsClockwiseOneLedAtATime() {
         val colors = longArrayOf(red, green)
-        val start = renderer.renderSplitFrame(colors, 1f, 0L, animation = SplitAnimation.ROTATE)
+        val start = renderer.renderSplitFrame(colors, SplitLook(), 0L, animation = SplitAnimation.ROTATE)
         assertTrue(isShadeOf(start[0], red))
         assertEquals(0, start[7])
-        val oneStep = renderer.renderSplitFrame(colors, 1f, 800L, animation = SplitAnimation.ROTATE)
+        val oneStep = renderer.renderSplitFrame(colors, SplitLook(), 800L, animation = SplitAnimation.ROTATE)
         assertEquals(0, oneStep[0])
         assertTrue(isShadeOf(oneStep[1], red))
         assertTrue(isShadeOf(oneStep[2], red))

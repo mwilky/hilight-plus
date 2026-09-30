@@ -93,6 +93,34 @@ enum class SplitAnimation(val id: String) {
     }
 }
 
+/**
+ * How bright the split ring's arcs are, as a share of full LED power. Breathe and Spotlight move
+ * between [dimmest] and [brightest]; Solid and Rotate hold [steady].
+ */
+data class SplitLook(
+    val dimmest: Float = SPLIT_READABLE_FLOOR,
+    val brightest: Float = 1f,
+    val steady: Float = SPLIT_SEPARATE_CEILING
+) {
+    /** Every level in range, with [dimmest] never above [brightest]. */
+    fun clamped(): SplitLook {
+        val low = clampBrightness(dimmest)
+        return SplitLook(low, clampBrightness(brightest).coerceAtLeast(low), clampBrightness(steady))
+    }
+
+    companion object {
+        /** Whether [animation] moves between two levels, rather than holding one. */
+        fun usesRange(animation: SplitAnimation) =
+            animation == SplitAnimation.BREATHE || animation == SplitAnimation.SPOTLIGHT
+    }
+}
+
+/** Below this, a dim arc beside a bright one reads as glow spilling from it, not as its own light. */
+const val SPLIT_READABLE_FLOOR = 0.45f
+
+/** Above this, steady arcs bleed into their neighbours and the gaps between them fade. */
+const val SPLIT_SEPARATE_CEILING = 0.5f
+
 enum class DndMode(val id: String) {
     INHERIT("inherit"),
     ALWAYS("always"),
