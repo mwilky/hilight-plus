@@ -520,12 +520,22 @@ class DaemonBridge private constructor(private val app: Application) {
 
     private fun replaceStaleDaemon() {
         scope.launch {
-            if (!DevSettings.isWifiConnected(app) || !DevSettings.isDevOptionsOn(app)) return@launch
+            // Each skip keeps the old daemon in use, so say why: it may not match this build.
+            if (!DevSettings.isWifiConnected(app) || !DevSettings.isDevOptionsOn(app)) {
+                DebugLog.w("HiLightPlus", "Keeping the old daemon: needs Wi-Fi and Developer options to start a current one")
+                return@launch
+            }
             if (DevSettings.isWirelessDebuggingOn(app) == false) {
-                if (!DevSettings.enableWirelessDebugging(app)) return@launch
+                if (!DevSettings.enableWirelessDebugging(app)) {
+                    DebugLog.w("HiLightPlus", "Keeping the old daemon: couldn't turn on Wireless debugging")
+                    return@launch
+                }
                 turnOffWirelessDebugging = true
             }
-            withContext(Dispatchers.IO) { wireless.startDaemon() }
+            val result = withContext(Dispatchers.IO) { wireless.startDaemon() }
+            if (result != WirelessAdb.StartResult.Started) {
+                DebugLog.w("HiLightPlus", "Keeping the old daemon: starting a current one gave $result")
+            }
         }
     }
 

@@ -363,7 +363,7 @@ class LightEngine {
     fun testAlert(pattern: String, color: Long, brightness: Float, speedMs: Long, durationMs: Long) {
         synchronized(lock) {
             val now = SystemClock.elapsedRealtime()
-            testAlert = TestAlert(pattern, color, brightness, speedMs, now, now + durationMs)
+            testAlert = TestAlert(pattern, color, brightness, speedMs, now, now + durationMs.coerceIn(0L, MAX_TEST_MS))
             needsSessionReset = true
             DebugLog.i(TAG, "testAlert: pattern=$pattern, color=$color, durationMs=$durationMs")
             wake()
@@ -1216,3 +1216,7 @@ class LightEngine {
         private const val BATTERY_STATE_STALE_MS = 3 * 60_000L
     }
 }
+
+        // A test always hands the ring back, even if a caller (or a mismatched app build) asks
+        // for a duration that would otherwise leave it lit for good.
+        private const val MAX_TEST_MS = 60_000L
