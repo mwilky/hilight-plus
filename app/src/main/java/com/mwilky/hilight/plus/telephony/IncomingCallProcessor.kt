@@ -161,7 +161,7 @@ internal object IncomingCallProcessor {
         callerName: String
     ) {
         val snapshot = store.snapshot()
-        if (!snapshot.isEnabled || !snapshot.isCallLightsEnabled) {
+        if (!snapshot.isCallLightsEnabled) {
             DebugLog.d(TAG, "Call lights are disabled; keeping session but stopping lights")
             stopCallLights(controller)
             return

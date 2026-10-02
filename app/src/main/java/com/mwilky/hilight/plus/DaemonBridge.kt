@@ -1117,11 +1117,6 @@ class DaemonBridge private constructor(private val app: Application) {
         runRemote("setGeminiConfig") { it.setGeminiConfig(config.first, config.second) }
     }
 
-    fun turnOff() {
-        DebugLog.i("HiLightPlus", "turnOff called")
-        runRemote("turnOff") { it.turnOff() }
-    }
-
     /**
      * Shizuku only pushes its binder into app processes it sees start or come to the foreground,
      * so a process that was already running when Shizuku was started never receives one and

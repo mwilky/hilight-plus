@@ -45,7 +45,6 @@ class LightEngine {
     private var renderThread: Thread? = null
 
     // State
-    private var masterEnabled = true
     private var sessionPriority = 10
     private var deviceFaceDown = false
     private var dndActive = false
@@ -727,11 +726,6 @@ class LightEngine {
     private fun tick() {
         synchronized(lock) {
             if (!running) return
-
-            if (!masterEnabled) {
-                if (lights.isSessionOpen) lights.blank()
-                return
-            }
 
             val now = SystemClock.elapsedRealtime()
             // Gaps only matter while frames drive the ring; an effect keeps playing through them.

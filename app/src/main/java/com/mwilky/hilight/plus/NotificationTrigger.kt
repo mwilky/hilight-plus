@@ -162,7 +162,7 @@ class NotificationTrigger : NotificationListenerService() {
         val store = AppStore.get(applicationContext)
 
         val snapshot = store.snapshot()
-        if (!snapshot.isEnabled || !snapshot.isNotificationsEnabled) return
+        if (!snapshot.isNotificationsEnabled) return
 
         val resolved = resolveAlert(snapshot, event.key, pkg, notification) ?: return
         val isCycle = snapshot.isCycleNotifications
@@ -182,7 +182,7 @@ class NotificationTrigger : NotificationListenerService() {
         val previousCycling = lastKnownCycling
         lastKnownCycling = snapshot.isCycleNotifications
 
-        if (!snapshot.isEnabled || !snapshot.isNotificationsEnabled) {
+        if (!snapshot.isNotificationsEnabled) {
             DebugLog.i(TAG, "Notifications disabled -> stopping queued lights")
             tracker.clear()
             LightController.get(applicationContext).clearAlert()
@@ -236,7 +236,7 @@ class NotificationTrigger : NotificationListenerService() {
     private suspend fun handleDaemonConnected() {
         val snapshot = AppStore.get(applicationContext).snapshot()
         LightController.get(applicationContext).clearAlert()
-        if (!snapshot.isEnabled || !snapshot.isNotificationsEnabled || !snapshot.isCycleNotifications) return
+        if (!snapshot.isNotificationsEnabled || !snapshot.isCycleNotifications) return
         val slots = tracker.slotsInOrder()
         if (slots.isEmpty()) return
         DebugLog.i(TAG, "Lights service connected -> replaying ${slots.size} waiting alert(s)")

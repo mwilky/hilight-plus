@@ -28,7 +28,6 @@ class AppStore private constructor(private val appContext: Context) {
         // Licensing. Trial start is a local copy of the Settings.Global value the daemon owns.
         private val KEY_TRIAL_START_MS = longPreferencesKey("trial_start_ms")
         private val KEY_PURCHASED = booleanPreferencesKey("purchased")
-        private val KEY_ENABLED = booleanPreferencesKey("enabled")
 
         // Smart Condition Settings
         private val KEY_ONLY_WHEN_FACE_DOWN = booleanPreferencesKey("only_when_face_down")
@@ -146,9 +145,6 @@ class AppStore private constructor(private val appContext: Context) {
     val isConnectPromptShown: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_CONNECT_PROMPT_SHOWN] ?: false }
 
-    val isEnabled: Flow<Boolean> = appContext.dataStore.data
-        .map { it[KEY_ENABLED] ?: true }
-
     val trialStartMillis: Flow<Long?> = appContext.dataStore.data
         .map { it[KEY_TRIAL_START_MS] }
 
@@ -211,10 +207,6 @@ class AppStore private constructor(private val appContext: Context) {
 
     suspend fun setConnectPromptShown() {
         appContext.dataStore.edit { it[KEY_CONNECT_PROMPT_SHOWN] = true }
-    }
-
-    suspend fun setEnabled(enabled: Boolean) {
-        appContext.dataStore.edit { it[KEY_ENABLED] = enabled }
     }
 
     suspend fun setTrialStartMillis(millis: Long) {
@@ -546,7 +538,6 @@ class AppStore private constructor(private val appContext: Context) {
     private fun buildSnapshot(prefs: Preferences): SettingsSnapshot {
         val d = DEFAULT_SETTINGS_SNAPSHOT
         return SettingsSnapshot(
-            isEnabled = prefs[KEY_ENABLED] ?: d.isEnabled,
             isOnlyWhenFaceDown = prefs[KEY_ONLY_WHEN_FACE_DOWN] ?: d.isOnlyWhenFaceDown,
             suppressDuringDnd = prefs[KEY_SUPPRESS_DND] ?: d.suppressDuringDnd,
             quietHoursEnabled = prefs[KEY_QUIET_HOURS_ENABLED] ?: d.quietHoursEnabled,
@@ -651,7 +642,6 @@ class AppStore private constructor(private val appContext: Context) {
 }
 
 data class SettingsSnapshot(
-    val isEnabled: Boolean,
     val isOnlyWhenFaceDown: Boolean,
     val suppressDuringDnd: Boolean,
     val quietHoursEnabled: Boolean,
@@ -755,7 +745,6 @@ data class SettingsSnapshot(
  * initial UI state, so the two can't silently drift apart.
  */
 val DEFAULT_SETTINGS_SNAPSHOT = SettingsSnapshot(
-    isEnabled = true,
     isOnlyWhenFaceDown = false,
     suppressDuringDnd = false,
     quietHoursEnabled = false,

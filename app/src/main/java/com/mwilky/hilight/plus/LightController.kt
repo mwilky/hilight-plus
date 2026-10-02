@@ -14,11 +14,8 @@ import com.mwilky.hilight.plus.core.PatternRenderer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -41,9 +38,6 @@ class LightController private constructor(private val app: Application) {
     @Volatile
     private var lastDndActive = false
 
-    val isEnabled: StateFlow<Boolean> = store.isEnabled
-        .stateIn(scope, SharingStarted.Eagerly, true)
-
     private val dndReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action != NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED) return
@@ -60,7 +54,7 @@ class LightController private constructor(private val app: Application) {
     @Volatile
     private var lastBatterySettings = BatterySettings()
     @Volatile
-    private var lastMasterEnabled = true
+    private var lastEntitled = true
     @Volatile
     private var lastBatteryRequiresFaceDown = false
     @Volatile
@@ -128,15 +122,11 @@ class LightController private constructor(private val app: Application) {
             daemon.setDeviceFaceDown(DeviceOrientationDetector.lastKnownFaceDown)
             daemon.setDndActive(lastDndActive)
             NativeHiLightDetector.check(app)
-            syncState()
             scope.launch { pushLiveConditions() }
         }
 
         scope.launch {
             daemon.state.collect { NativeHiLightDetector.check(app) }
-        }
-        scope.launch {
-            store.isEnabled.collect { syncState() }
         }
         scope.launch {
             licensing.isEntitled.collect { daemon.setEntitled(it) }
@@ -189,15 +179,14 @@ class LightController private constructor(private val app: Application) {
         scope.launch {
             combine(
                 store.battery,
-                store.isEnabled,
                 store.isOnlyWhenFaceDown,
                 licensing.isEntitled
-            ) { settings, enabled, globalFaceDown, entitled -> Triple(settings, enabled && entitled, globalFaceDown) }
-                .collect { (settings, enabled, globalFaceDown) -> pushBatteryConfig(settings, enabled, globalFaceDown) }
+            ) { settings, globalFaceDown, entitled -> Triple(settings, entitled, globalFaceDown) }
+                .collect { (settings, entitled, globalFaceDown) -> pushBatteryConfig(settings, entitled, globalFaceDown) }
         }
         scope.launch {
-            combine(store.gemini, store.isEnabled, licensing.isEntitled, store.isOnlyWhenFaceDown) { settings, enabled, entitled, globalFaceDown ->
-                Triple(settings, settings.enabled && enabled && entitled, globalFaceDown)
+            combine(store.gemini, licensing.isEntitled, store.isOnlyWhenFaceDown) { settings, entitled, globalFaceDown ->
+                Triple(settings, settings.enabled && entitled, globalFaceDown)
             }.collect { (settings, enabled, globalFaceDown) ->
                 daemon.setGeminiConfig(settings, enabled, globalFaceDown)
                 syncGeminiOrientationMonitor(settings, enabled, globalFaceDown)
@@ -234,12 +223,6 @@ class LightController private constructor(private val app: Application) {
         lastAutoResetMs = now
         DebugLog.w(TAG, "Ring looks stuck after unlock -> resetting the lights service")
         daemon.resetDaemon()
-    }
-
-    fun setEnabled(enabled: Boolean) {
-        scope.launch {
-            store.setEnabled(enabled)
-        }
     }
 
     // --- Production Alert & Event Controls ---
@@ -413,18 +396,18 @@ class LightController private constructor(private val app: Application) {
         )
         pushBatteryConfig(
             store.battery.first(),
-            store.isEnabled.first() && licensing.isEntitled.value,
+            licensing.isEntitled.value,
             store.isOnlyWhenFaceDown.first()
         )
         daemon.setBatteryState(lastBatteryLevel, lastBatteryCharging, lastBatteryFull)
     }
 
-    private fun pushBatteryConfig(settings: BatterySettings, masterEnabled: Boolean, globalOnlyWhenFaceDown: Boolean) {
+    private fun pushBatteryConfig(settings: BatterySettings, entitled: Boolean, globalOnlyWhenFaceDown: Boolean) {
         lastBatterySettings = settings
-        lastMasterEnabled = masterEnabled
+        lastEntitled = entitled
         lastBatteryRequiresFaceDown = settings.faceDownMode.requiresFaceDown(globalOnlyWhenFaceDown)
         daemon.setBatteryConfig(
-            enabled = masterEnabled && settings.enabled,
+            enabled = entitled && settings.enabled,
             chargingPattern = settings.chargingPattern,
             lowPattern = settings.lowPattern,
             autoColor = settings.autoColor,
@@ -453,7 +436,7 @@ class LightController private constructor(private val app: Application) {
 
     /** Whether the battery layer has anything to show, ignoring where it's allowed to show it. */
     private fun batteryLayerCouldRender(): Boolean {
-        if (!lastMasterEnabled || !lastBatterySettings.enabled) return false
+        if (!lastEntitled || !lastBatterySettings.enabled) return false
         val lowEligible = lastBatterySettings.lowWarningEnabled &&
             !lastBatteryCharging && !lastBatteryFull &&
             lastBatteryLevel <= lastBatterySettings.lowThresholdPercent
@@ -471,7 +454,7 @@ class LightController private constructor(private val app: Application) {
             lastBatteryLevel <= lastBatterySettings.lowThresholdPercent
         val chargingEligible = lastBatterySettings.showCharging && (lastBatteryCharging || lastBatteryFull)
         val wantsToRender = chargingEligible || lowEligible
-        if (lastMasterEnabled && lastBatterySettings.enabled && lastBatteryRequiresFaceDown && wantsToRender) {
+        if (lastEntitled && lastBatterySettings.enabled && lastBatteryRequiresFaceDown && wantsToRender) {
             DeviceOrientationDetector.retainMonitoring(app, DeviceOrientationDetector.TOKEN_BATTERY)
         } else {
             DeviceOrientationDetector.releaseMonitoring(DeviceOrientationDetector.TOKEN_BATTERY)
@@ -505,16 +488,6 @@ class LightController private constructor(private val app: Application) {
      */
     fun clearAlert() {
         daemon.clearAlert()
-        syncState()
-    }
-
-    fun syncState() {
-        scope.launch {
-            val enabled = store.isEnabled.first()
-            if (!enabled) {
-                daemon.turnOff()
-            }
-        }
     }
 
     fun refreshStatus() {
