@@ -59,6 +59,10 @@ import com.mwilky.hilight.plus.Licensing
 import com.mwilky.hilight.plus.MessageContactRule
 import com.mwilky.hilight.plus.MultiAlertMode
 import com.mwilky.hilight.plus.NativeHiLightDetector
+import com.mwilky.hilight.plus.PauseActivity
+import com.mwilky.hilight.plus.PauseFeature
+import com.mwilky.hilight.plus.PauseState
+import com.mwilky.hilight.plus.enabledPauseFeatures
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.R
 import com.mwilky.hilight.plus.RuleSort
@@ -94,6 +98,7 @@ fun HomeScreen(
     val connectionState by controller.daemon.state.collectAsStateWithLifecycle()
     val connectionMethod by controller.daemon.method.collectAsStateWithLifecycle()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val pause by viewModel.pause.collectAsStateWithLifecycle()
     val licenseStatus by controller.licensing.status.collectAsStateWithLifecycle()
     val activity = LocalActivity.current
 
@@ -181,6 +186,9 @@ fun HomeScreen(
         onOpenAppSettings = { openAppSettings() },
         onOpenNotifSettings = { openNotifSettings() },
         state = state,
+        pause = pause,
+        onResumePause = viewModel::endPause,
+        onChangePause = { context.startActivity(PauseActivity.intent(context)) },
         onToggleCallLights = viewModel::setCallLightsEnabled,
         onToggleFavouriteCalls = viewModel::setFavouriteCallsEnabled,
         onEditFavouriteCalls = { isConfiguringFavouriteCalls = true },
@@ -627,6 +635,9 @@ fun HomeContent(
     onOpenAppSettings: () -> Unit,
     onOpenNotifSettings: () -> Unit,
     state: SettingsSnapshot,
+    pause: PauseState? = null,
+    onResumePause: () -> Unit = {},
+    onChangePause: () -> Unit = {},
     // Calls
     onToggleCallLights: (Boolean) -> Unit,
     onToggleFavouriteCalls: (Boolean) -> Unit,
@@ -698,6 +709,15 @@ fun HomeContent(
                 selectedIndex = pagerState.currentPage,
                 onSelect = { page -> scope.launch { pagerState.animateScrollToPage(page) } }
             )
+            if (pause != null) {
+                PauseCard(
+                    pause = pause,
+                    enabledFeatures = state.enabledPauseFeatures(),
+                    onResume = onResumePause,
+                    onChange = onChangePause,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
             if (licenseStatus != null && !licenseStatus.purchased) {
                 LicenseCard(
                     status = licenseStatus,
@@ -1082,6 +1102,18 @@ fun HomeScreenPreviewSplitRing() {
     )
 }
 
+@Preview(name = "Home Screen - Paused", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+fun HomeScreenPreviewPaused() {
+    HomeScreenPreviewContent(
+        hasCallRules = true,
+        pause = PauseState(
+            untilMillis = System.currentTimeMillis() + 2 * 60 * 60_000L,
+            features = setOf(PauseFeature.NOTIFICATIONS)
+        )
+    )
+}
+
 @Preview(name = "Home Screen - Gemini", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 fun HomeScreenPreviewGemini() {
@@ -1098,7 +1130,8 @@ fun HomeScreenPreviewContent(
     multiAlertMode: MultiAlertMode = DEFAULT_SETTINGS_SNAPSHOT.multiAlertMode,
     splitAnimation: SplitAnimation = DEFAULT_SETTINGS_SNAPSHOT.splitAnimation,
     splitLook: SplitLook = DEFAULT_SETTINGS_SNAPSHOT.splitLook,
-    gemini: GeminiSettings = DEFAULT_SETTINGS_SNAPSHOT.gemini
+    gemini: GeminiSettings = DEFAULT_SETTINGS_SNAPSHOT.gemini,
+    pause: PauseState? = null
 ) {
     val mockCallContacts = if (hasCallRules) {
         listOf(
@@ -1151,6 +1184,7 @@ fun HomeScreenPreviewContent(
                 splitLook = splitLook,
                 gemini = gemini
             ),
+            pause = pause,
             onToggleCallLights = {},
             onToggleFavouriteCalls = {},
             onEditFavouriteCalls = {},

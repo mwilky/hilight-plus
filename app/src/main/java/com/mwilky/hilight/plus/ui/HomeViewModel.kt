@@ -13,6 +13,7 @@ import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.FaceDownMode
 import com.mwilky.hilight.plus.MessageContactRule
 import com.mwilky.hilight.plus.MultiAlertMode
+import com.mwilky.hilight.plus.PauseState
 import com.mwilky.hilight.plus.RuleSort
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.QuietHoursMode
@@ -29,6 +30,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     val uiState: StateFlow<SettingsSnapshot> = store.settingsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DEFAULT_SETTINGS_SNAPSHOT)
+
+    /** The pause in force, or null; turns null by itself when it runs out. */
+    val pause: StateFlow<PauseState?> = store.activePause
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    fun endPause() = launch { store.endPause() }
 
     fun setCallLightsEnabled(enabled: Boolean) = launch { store.setCallLightsEnabled(enabled) }
     fun setOtherContactsEnabled(enabled: Boolean) = launch { store.setOtherContactsEnabled(enabled) }

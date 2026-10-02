@@ -6,6 +6,8 @@ import com.mwilky.hilight.plus.DebugLog
 import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.GeminiState
 import com.mwilky.hilight.plus.LowBatteryPattern
+import com.mwilky.hilight.plus.PauseFeature
+import com.mwilky.hilight.plus.PauseState
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.SplitAnimation
 import com.mwilky.hilight.plus.SplitLook
@@ -52,6 +54,10 @@ class LightEngine {
     private var quietHoursEnabled = false
     private var quietHoursStartMinutes = 22 * 60
     private var quietHoursEndMinutes = 7 * 60
+    // A pause from the tile or the app keeps its features dark until it runs out. Whether the
+    // last tick had one in force, so the moment it runs out is handled once.
+    private var pause: PauseState? = null
+    private var pauseInForce = false
 
     // Ambient state: the idle render when nothing else is active and battery isn't showing. Always off.
     private val ambientPattern = "off"
@@ -510,6 +516,30 @@ class LightEngine {
         }
     }
 
+    /** Keeps [features] dark until [untilEpochMs] (wall clock). No features, or a time passed, ends it. */
+    fun setPause(untilEpochMs: Long, features: Set<PauseFeature>) {
+        synchronized(lock) {
+            val next = PauseState(untilEpochMs, features).takeIf { features.isNotEmpty() && untilEpochMs > 0L }
+            if (next == pause) return
+            pause = next
+            pauseInForce = next?.isActive() == true
+            onLiveConditionChanged()
+            DebugLog.i(TAG, "setPause: ${describePause()}")
+        }
+    }
+
+    private fun paused(feature: PauseFeature): Boolean = pause?.pauses(feature) == true
+
+    private fun describePause(): String {
+        val p = pause ?: return "none"
+        val features = p.features.joinToString(",") { it.id }
+        return when {
+            p.untilResumed -> "$features until resumed"
+            p.isActive() -> "$features for ${(p.untilMillis - System.currentTimeMillis()) / 1000}s"
+            else -> "$features, ended"
+        }
+    }
+
     /**
      * Replaces the battery indicator configuration. Takes effect on the next tick.
      */
@@ -731,9 +761,18 @@ class LightEngine {
             // Gaps only matter while frames drive the ring; an effect keeps playing through them.
             if (framesDriving) noteFrameGap(now, SystemClock.uptimeMillis()) else lastTickElapsedMs = 0L
             val nowMinutes = currentMinutesOfDay()
+            val pauseNow = pause?.isActive() == true
+            if (pauseNow != pauseInForce) {
+                pauseInForce = pauseNow
+                // Ran out (or back in force after a clock change): what was held back lights
+                // again from the start of its pattern, or goes dark.
+                DebugLog.i(TAG, if (pauseNow) "Pause back in force" else "Pause ended")
+                cycleStartTimeMs = now
+                needsSessionReset = true
+            }
             syncNotificationTimer(now)
             val call = incomingCallAlert
-            val callVisible = call != null && alertVisible(
+            val callVisible = call != null && !paused(PauseFeature.CALLS) && alertVisible(
                 call.requiresFaceDown,
                 call.dndMode,
                 call.quietHoursMode,
@@ -754,7 +793,7 @@ class LightEngine {
                     geminiState = null
                 }
             }
-            val geminiLook = geminiState?.takeIf { geminiEnabled }
+            val geminiLook = geminiState?.takeIf { geminiEnabled && !paused(PauseFeature.GEMINI) }
                 ?.let { state -> geminiLooks[state]?.let { state to it } }
                 ?.takeIf { (_, look) ->
                     alertVisible(
@@ -1100,6 +1139,7 @@ class LightEngine {
             appendLine("ring=$lastRenderReason, sessionOpen=${lights.isSessionOpen}, unclosedSessions=${lights.unclosedSessionCount}, leds=${lights.ledCount}, running=$running, renderThreadAlive=${renderThread?.isAlive}, lastFrame=${now - lastTickElapsedMs}ms ago")
             appendLine("route=${if (framesDriving) "frames" else "effects"}, effectsSupported=${lights.supportsEffects}, effectsFailed=$effectsFailed, period=${lights.effectPeriodMs}ms, showing=${shownEffectKey?.let { shownEffectInfo }}")
             appendLine("faceDown=$deviceFaceDown, dndActive=$dndActive, dndSuppress=$dndSuppressEnabled, quietHours=$quietHoursEnabled $quietHoursStartMinutes-$quietHoursEndMinutes, splitRing=$splitRing (${splitAnimation.id}, $splitLook, speed $splitSpeed)")
+            appendLine("pause=${describePause()}")
             appendLine("test=${testAlert?.let { "${it.pattern} ${hex(it.color)}, ${it.expiresAtMs - now}ms left" }}")
             appendLine("gemini=${if (geminiEnabled) "on, ${geminiState?.id ?: "idle"}${geminiState?.let { ", for ${(now - geminiStateSinceMs) / 1000}s" } ?: ""}, looks=${geminiLooks.map { "${it.key.id}:${it.value.pattern}" }}" else "off"}")
             appendLine("call=${incomingCallAlert?.let { "${it.pattern} ${hex(it.color)}, ringing ${(now - it.startedAtMs) / 1000}s, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}" }}")
@@ -1119,7 +1159,7 @@ class LightEngine {
     /** Queue order is post order, so the newest alert is last; the split ring shows newest at the top. */
     private fun visibleAlertsNewestFirst(nowMinutes: Int): List<QueuedAlert> =
         activeAlerts.asReversed().filter { alert ->
-            alertVisible(
+            !paused(PauseFeature.NOTIFICATIONS) && alertVisible(
                 alert.requiresFaceDown,
                 alert.dndMode,
                 alert.quietHoursMode,
@@ -1130,7 +1170,7 @@ class LightEngine {
         }
 
     private fun firstEligibleAlertIndex(startIndex: Int): Int? {
-        if (activeAlerts.isEmpty()) return null
+        if (activeAlerts.isEmpty() || paused(PauseFeature.NOTIFICATIONS)) return null
         val nowMinutes = currentMinutesOfDay()
         val start = startIndex.coerceAtLeast(0) % activeAlerts.size
         for (offset in activeAlerts.indices) {
@@ -1169,7 +1209,7 @@ class LightEngine {
         quietStartOverride: Int?,
         quietEndOverride: Int?,
         nowMinutes: Int = currentMinutesOfDay()
-    ): Boolean = AlertRenderPolicy.canShowNotification(
+    ): Boolean = !paused(PauseFeature.NOTIFICATIONS) && AlertRenderPolicy.canShowNotification(
         callActive = incomingCallAlert != null,
         requiresFaceDown = requiresFaceDown,
         deviceFaceDown = deviceFaceDown,
@@ -1208,7 +1248,7 @@ class LightEngine {
     )
 
     private fun batteryVisible(config: BatteryConfig, nowMinutes: Int): Boolean {
-        if (!config.enabled) return false
+        if (!config.enabled || paused(PauseFeature.BATTERY)) return false
         return AlertRenderPolicy.canShowAlert(
             requiresFaceDown = config.requiresFaceDown,
             deviceFaceDown = deviceFaceDown,

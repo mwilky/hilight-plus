@@ -177,6 +177,14 @@ class LightController private constructor(private val app: Application) {
                 }
         }
         scope.launch {
+            store.pause.collect { daemon.setPause(it) }
+        }
+        // Every way of pausing or resuming lands here, as does a pause running out, so the tile
+        // follows all of them.
+        scope.launch {
+            store.activePause.collect { PauseTileService.refresh(app) }
+        }
+        scope.launch {
             combine(
                 store.battery,
                 store.isOnlyWhenFaceDown,
@@ -394,6 +402,7 @@ class LightController private constructor(private val app: Application) {
             store.quietHoursStartMinutes.first(),
             store.quietHoursEndMinutes.first()
         )
+        daemon.setPause(store.pause.first())
         pushBatteryConfig(
             store.battery.first(),
             licensing.isEntitled.value,

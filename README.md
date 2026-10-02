@@ -51,6 +51,12 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 - Quiet hours with a daily window.
 - Every rule can follow these defaults, always light, or opt out, and rules can carry their own quiet-hours window.
 
+**Pause**
+- A Pause lights tile in Quick Settings keeps the ring dark for a while: everything, or just calls, notifications, battery or Gemini.
+- Pause for 1 hour, 2 hours, until morning (when your quiet hours end, or 07:00) or until you resume. The sheet remembers your last choice.
+- While paused, the tile shows what's paused and until when, and a tap on it resumes. Home shows a card with the same details, what still lights, and Resume and Change buttons.
+- Notifications that arrive during a pause still queue, and light once it ends if they haven't been dismissed.
+
 **Extras**
 - Live preview of every pattern on a diffused ring mock-up, and a Test on LEDs button in each rule editor. Changing the pattern, colour, brightness or speed while a test plays restarts it with the new look.
 - Custom rule lists can be sorted from their header: contacts by first or last name, apps by name, A–Z or Z–A, or left in the order they were added. Each list remembers its own choice.

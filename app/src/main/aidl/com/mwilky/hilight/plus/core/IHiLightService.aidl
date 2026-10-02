@@ -44,4 +44,7 @@ interface IHiLightService {
     void setSplitSpeed(float speed);
     // testSplit at a speed. testSplit stays above so its transaction code is never reused.
     void testSplitAtSpeed(in long[] colors, String animation, float dimmest, float brightest, float steady, float speed, long durationMs);
+    // Keeps the ring dark for the comma-separated features (calls, notifications, battery, gemini)
+    // until untilEpochMs, wall clock; Long.MAX_VALUE until resumed, 0 or no features for no pause.
+    void setPause(long untilEpochMs, String features);
 }

@@ -53,3 +53,7 @@ fun formatClockMinutes(context: Context, minutes: Int): String {
     }
     return DateFormat.getTimeFormat(context).format(cal.time)
 }
+
+/** A wall-clock moment as a time of day, in the user's 12 or 24-hour format. */
+fun formatClockMillis(context: Context, millis: Long): String =
+    DateFormat.getTimeFormat(context).format(java.util.Date(millis))

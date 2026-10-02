@@ -5,9 +5,13 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.transformLatest
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "hilight_plus_settings")
 
@@ -28,6 +32,13 @@ class AppStore private constructor(private val appContext: Context) {
         // Licensing. Trial start is a local copy of the Settings.Global value the daemon owns.
         private val KEY_TRIAL_START_MS = longPreferencesKey("trial_start_ms")
         private val KEY_PURCHASED = booleanPreferencesKey("purchased")
+
+        // Pause: the one in force (a wall-clock end and the features it covers), and the sheet's
+        // last choice, which it offers again.
+        private val KEY_PAUSE_UNTIL_MS = longPreferencesKey("pause_until_ms")
+        private val KEY_PAUSE_FEATURES = stringPreferencesKey("pause_features")
+        private val KEY_PAUSE_LAST_FEATURES = stringPreferencesKey("pause_last_features")
+        private val KEY_PAUSE_LAST_DURATION = stringPreferencesKey("pause_last_duration")
 
         // Smart Condition Settings
         private val KEY_ONLY_WHEN_FACE_DOWN = booleanPreferencesKey("only_when_face_down")
@@ -192,6 +203,31 @@ class AppStore private constructor(private val appContext: Context) {
     val gemini: Flow<GeminiSettings> = appContext.dataStore.data
         .map { GeminiSettings.fromJson(it[KEY_GEMINI_JSON]) }
 
+    /** The stored pause, ended or not. The daemon is handed this and ends it on time by itself. */
+    val pause: Flow<PauseState?> = appContext.dataStore.data
+        .map(::readPause)
+        .distinctUntilChanged()
+
+    /** The pause while it's in force, turning null by itself when it runs out. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val activePause: Flow<PauseState?> = pause.transformLatest { state ->
+        val now = System.currentTimeMillis()
+        if (state != null && state.isActive(now)) {
+            emit(state)
+            if (state.untilResumed) return@transformLatest
+            delay(state.untilMillis - now)
+        }
+        emit(null)
+    }.distinctUntilChanged()
+
+    val lastPauseChoice: Flow<PauseChoice> = appContext.dataStore.data.map { prefs ->
+        PauseChoice(
+            features = prefs[KEY_PAUSE_LAST_FEATURES]?.let(PauseFeature::parse)?.takeIf { it.isNotEmpty() }
+                ?: PauseFeature.ALL,
+            duration = PauseDuration.fromId(prefs[KEY_PAUSE_LAST_DURATION])
+        )
+    }
+
     /**
      * Every Home-screen-relevant setting in one snapshot, rebuilt whenever any of them
      * change. Replaces per-field flows for values that only ever change and get read
@@ -200,6 +236,30 @@ class AppStore private constructor(private val appContext: Context) {
     val settingsFlow: Flow<SettingsSnapshot> = appContext.dataStore.data.map(::buildSnapshot)
 
     // --- Preferences Updaters ---
+
+    /** Pauses [features] until [untilMillis], and remembers the choice for next time. */
+    suspend fun startPause(features: Set<PauseFeature>, duration: PauseDuration, untilMillis: Long) {
+        if (features.isEmpty()) return
+        appContext.dataStore.edit {
+            it[KEY_PAUSE_UNTIL_MS] = untilMillis
+            it[KEY_PAUSE_FEATURES] = PauseFeature.encode(features)
+            it[KEY_PAUSE_LAST_FEATURES] = PauseFeature.encode(features)
+            it[KEY_PAUSE_LAST_DURATION] = duration.id
+        }
+    }
+
+    suspend fun endPause() {
+        appContext.dataStore.edit {
+            it.remove(KEY_PAUSE_UNTIL_MS)
+            it.remove(KEY_PAUSE_FEATURES)
+        }
+    }
+
+    private fun readPause(prefs: Preferences): PauseState? {
+        val until = prefs[KEY_PAUSE_UNTIL_MS] ?: return null
+        val features = PauseFeature.parse(prefs[KEY_PAUSE_FEATURES]).takeIf { it.isNotEmpty() } ?: return null
+        return PauseState(until, features)
+    }
 
     suspend fun setOnboardingCompleted(completed: Boolean) {
         appContext.dataStore.edit { it[KEY_ONBOARDING_COMPLETED] = completed }

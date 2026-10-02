@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The pause tile and sheet: the rear light ring with a pause symbol inside. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M12,2.5a9.5,9.5 0,1 1,0 19a9.5,9.5 0,1 1,0 -19zM12,4.75a7.25,7.25 0,1 0,0 14.5a7.25,7.25 0,1 0,0 -14.5z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M9.25,8.5h1.5a0.75,0.75 0,0 1,0.75 0.75v5.5a0.75,0.75 0,0 1,-0.75 0.75h-1.5a0.75,0.75 0,0 1,-0.75 -0.75v-5.5a0.75,0.75 0,0 1,0.75 -0.75zM13.25,8.5h1.5a0.75,0.75 0,0 1,0.75 0.75v5.5a0.75,0.75 0,0 1,-0.75 0.75h-1.5a0.75,0.75 0,0 1,-0.75 -0.75v-5.5a0.75,0.75 0,0 1,0.75 -0.75z" />
+</vector>

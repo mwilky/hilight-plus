@@ -12,6 +12,7 @@ import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.GeminiState
 import com.mwilky.hilight.plus.LowBatteryPattern
 import com.mwilky.hilight.plus.PatternMode
+import com.mwilky.hilight.plus.PauseFeature
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.SplitAnimation
 import com.mwilky.hilight.plus.SplitLook
@@ -167,6 +168,10 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
 
     override fun setQuietHours(enabled: Boolean, startMinutes: Int, endMinutes: Int) {
         engine.setQuietHours(enabled, startMinutes, endMinutes)
+    }
+
+    override fun setPause(untilEpochMs: Long, features: String?) {
+        engine.setPause(untilEpochMs, PauseFeature.parse(features))
     }
 
     override fun setSplitRing(enabled: Boolean) {
