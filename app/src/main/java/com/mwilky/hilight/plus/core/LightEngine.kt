@@ -135,7 +135,7 @@ class LightEngine {
         val split: SplitTest? = null
     )
 
-    private data class SplitTest(val colors: List<Long>, val animation: SplitAnimation, val look: SplitLook)
+    private data class SplitTest(val colors: List<Long>, val animation: SplitAnimation, val look: SplitLook, val speed: Float)
 
     // In-app "test on LEDs" preview. Takes top render priority and ignores face-down/DND/quiet-hours
     // gating, but never touches the notification queue or direct alert state, so it can't disturb them.
@@ -173,6 +173,7 @@ class LightEngine {
     private var splitRing = false
     private var splitAnimation = SplitAnimation.BREATHE
     private var splitLook = SplitLook()
+    private var splitSpeed = 1f
     // The arcs on show and when that set appeared, so a changed set restarts the animation
     // (Spotlight on the newest arc, Rotate with the newest at the top).
     private var splitKeys: List<String>? = null
@@ -381,14 +382,14 @@ class LightEngine {
      * The split ring's version of [testAlert]: [colors] (newest first) as arcs in [animation], on
      * the same test channel, so it expires, cancels and gives the ring back the same way.
      */
-    fun testSplit(colors: LongArray, animation: SplitAnimation, look: SplitLook, durationMs: Long) {
+    fun testSplit(colors: LongArray, animation: SplitAnimation, look: SplitLook, speed: Float, durationMs: Long) {
         if (colors.isEmpty()) return
         synchronized(lock) {
             val now = SystemClock.elapsedRealtime()
-            val split = SplitTest(colors.take(PatternRenderer.MAX_SPLIT_SEGMENTS), animation, look)
+            val split = SplitTest(colors.take(PatternRenderer.MAX_SPLIT_SEGMENTS), animation, look, speed)
             testAlert = TestAlert("split", 0L, 1f, 0L, now, now + durationMs.coerceIn(0L, MAX_TEST_MS), split)
             needsSessionReset = true
-            DebugLog.i(TAG, "testSplit: ${split.colors.size} arcs, ${animation.id}, $look, durationMs=$durationMs")
+            DebugLog.i(TAG, "testSplit: ${split.colors.size} arcs, ${animation.id}, $look, speed=$speed, durationMs=$durationMs")
             wake()
         }
     }
@@ -472,6 +473,15 @@ class LightEngine {
             splitAnimation = animation
             splitKeys = null
             DebugLog.i(TAG, "setSplitAnimation: ${animation.id}")
+            wake()
+        }
+    }
+
+    fun setSplitSpeed(speed: Float) {
+        synchronized(lock) {
+            if (splitSpeed == speed) return
+            splitSpeed = speed
+            DebugLog.i(TAG, "setSplitSpeed: $speed")
             wake()
         }
     }
@@ -799,6 +809,7 @@ class LightEngine {
             var splitColors: LongArray? = null
             var splitAnimationShown = splitAnimation
             var splitLookShown = splitLook
+            var splitSpeedShown = splitSpeed
             // When a split test is on show: when it started, which its animation counts from.
             var splitTestStartMs: Long? = null
             // For the effect route: what identifies the look on show, and how long a timed one has left.
@@ -816,6 +827,7 @@ class LightEngine {
                 splitColors = test.split.colors.toLongArray()
                 splitAnimationShown = test.split.animation
                 splitLookShown = test.split.look
+                splitSpeedShown = test.split.speed
                 splitTestStartMs = test.startedAtMs
                 effectKey = listOf("test", test)
                 effectRemainingMs = test.expiresAtMs - now
@@ -965,13 +977,14 @@ class LightEngine {
                 val colors = splitColors
                 val animation = splitAnimationShown
                 val look = splitLookShown
-                val loopMs = PatternRenderer.splitLoopMs(animation, colors.size, count)
+                val speed = splitSpeedShown
+                val loopMs = PatternRenderer.splitLoopMs(animation, colors.size, count, speed)
                 // A test is timed and has its own key, so the real split ring is re-sent after it.
-                val key = if (splitTestStartMs != null) effectKey else listOf("split", colors.toList(), look, animation)
+                val key = if (splitTestStartMs != null) effectKey else listOf("split", colors.toList(), look, animation, speed)
                 val iterations = effectRemainingMs?.let { loopsFor(it, loopMs) } ?: 0
                 showEffect(key, iterations) {
                     RingEffect.sample(loopMs, period, count) { t ->
-                        renderer.renderSplitFrame(colors, look, t, count, animation)
+                        renderer.renderSplitFrame(colors, look, t, count, animation, speed)
                     }
                 }
                 return
@@ -1023,7 +1036,8 @@ class LightEngine {
                         look = splitLookShown,
                         elapsedTimeMs = now - (splitTestStartMs ?: splitStartedAtMs),
                         ledCount = lights.ledCount,
-                        animation = splitAnimationShown
+                        animation = splitAnimationShown,
+                        speed = splitSpeedShown
                     )
                 )
                 return
@@ -1091,7 +1105,7 @@ class LightEngine {
         buildString {
             appendLine("ring=$lastRenderReason, sessionOpen=${lights.isSessionOpen}, unclosedSessions=${lights.unclosedSessionCount}, leds=${lights.ledCount}, running=$running, renderThreadAlive=${renderThread?.isAlive}, lastFrame=${now - lastTickElapsedMs}ms ago")
             appendLine("route=${if (framesDriving) "frames" else "effects"}, effectsSupported=${lights.supportsEffects}, effectsFailed=$effectsFailed, period=${lights.effectPeriodMs}ms, showing=${shownEffectKey?.let { shownEffectInfo }}")
-            appendLine("faceDown=$deviceFaceDown, dndActive=$dndActive, dndSuppress=$dndSuppressEnabled, quietHours=$quietHoursEnabled $quietHoursStartMinutes-$quietHoursEndMinutes, splitRing=$splitRing (${splitAnimation.id}, $splitLook)")
+            appendLine("faceDown=$deviceFaceDown, dndActive=$dndActive, dndSuppress=$dndSuppressEnabled, quietHours=$quietHoursEnabled $quietHoursStartMinutes-$quietHoursEndMinutes, splitRing=$splitRing (${splitAnimation.id}, $splitLook, speed $splitSpeed)")
             appendLine("test=${testAlert?.let { "${it.pattern} ${hex(it.color)}, ${it.expiresAtMs - now}ms left" }}")
             appendLine("gemini=${if (geminiEnabled) "on, ${geminiState?.id ?: "idle"}${geminiState?.let { ", for ${(now - geminiStateSinceMs) / 1000}s" } ?: ""}, looks=${geminiLooks.map { "${it.key.id}:${it.value.pattern}" }}" else "off"}")
             appendLine("call=${incomingCallAlert?.let { "${it.pattern} ${hex(it.color)}, ringing ${(now - it.startedAtMs) / 1000}s, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}" }}")

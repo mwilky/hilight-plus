@@ -172,6 +172,11 @@ class LightController private constructor(private val app: Application) {
             }
         }
         scope.launch {
+            store.splitSpeed.collect { speed ->
+                daemon.setSplitSpeed(speed)
+            }
+        }
+        scope.launch {
             combine(
                 store.quietHoursEnabled,
                 store.quietHoursStartMinutes,
@@ -334,8 +339,8 @@ class LightController private constructor(private val app: Application) {
      * Previews the split ring on the physical LEDs, like [testPattern]: [colors] newest first,
      * whatever the Multiple alerts mode, and cancelled by [cancelTestPattern].
      */
-    fun testSplit(colors: LongArray, animation: SplitAnimation, look: SplitLook, durationMs: Long) {
-        daemon.testSplit(colors, animation, look, durationMs)
+    fun testSplit(colors: LongArray, animation: SplitAnimation, look: SplitLook, speed: Float, durationMs: Long) {
+        daemon.testSplit(colors, animation, look, speed, durationMs)
     }
 
     /** Diagnostic: lights only LED [index] for [durationMs], via the same test channel as [testPattern]. */
@@ -400,6 +405,7 @@ class LightController private constructor(private val app: Application) {
         daemon.setSplitRing(store.multiAlertMode.first() == MultiAlertMode.SPLIT)
         daemon.setSplitAnimation(store.splitAnimation.first())
         daemon.setSplitLook(store.splitLook.first())
+        daemon.setSplitSpeed(store.splitSpeed.first())
         daemon.setQuietHours(
             store.quietHoursEnabled.first(),
             store.quietHoursStartMinutes.first(),

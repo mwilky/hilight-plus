@@ -100,7 +100,8 @@ fun HomeNotifsPage(
     onChangeMultiAlertMode: (MultiAlertMode) -> Unit,
     onChangeSplitAnimation: (SplitAnimation) -> Unit,
     onChangeSplitLook: (SplitLook) -> Unit,
-    onTestSplit: (colors: LongArray, animation: SplitAnimation, look: SplitLook, durationMs: Long) -> Unit,
+    onChangeSplitSpeed: (Float) -> Unit,
+    onTestSplit: (colors: LongArray, animation: SplitAnimation, look: SplitLook, speed: Float, durationMs: Long) -> Unit,
     onCancelLedTest: () -> Unit,
     renderer: PatternRenderer
 ) {
@@ -332,10 +333,17 @@ fun HomeNotifsPage(
                                             look = state.splitLook,
                                             onLookChange = onChangeSplitLook
                                         )
-                                        SplitRingExample(renderer, state.splitAnimation, state.splitLook)
+                                        // Solid holds still, so it has no speed.
+                                        SpeedSlider(
+                                            speed = state.splitSpeed,
+                                            onSpeedChange = onChangeSplitSpeed,
+                                            enabled = state.splitAnimation != SplitAnimation.SOLID
+                                        )
+                                        SplitRingExample(renderer, state.splitAnimation, state.splitLook, state.splitSpeed)
                                         SplitTestButton(
                                             animation = state.splitAnimation,
                                             look = state.splitLook,
+                                            speed = state.splitSpeed,
                                             enabled = connectionState == DaemonBridge.State.CONNECTED,
                                             onTest = onTestSplit,
                                             onCancel = onCancelLedTest
@@ -357,18 +365,19 @@ fun HomeNotifsPage(
 
 /** Three waiting notifications in the chosen animation, so it's visible before any arrive. */
 @Composable
-private fun SplitRingExample(renderer: PatternRenderer, animation: SplitAnimation, look: SplitLook) {
+private fun SplitRingExample(renderer: PatternRenderer, animation: SplitAnimation, look: SplitLook, speed: Float) {
     var frame by remember { mutableStateOf(IntArray(8)) }
     // Restarts with each choice, as the ring does when its arcs change, so Spotlight starts on
     // the newest arc and Rotate with the newest at the top.
-    LaunchedEffect(renderer, animation, look) {
+    LaunchedEffect(renderer, animation, look, speed) {
         val startMs = System.currentTimeMillis()
         while (isActive) {
             frame = renderer.renderSplitFrame(
                 colors = SPLIT_EXAMPLE_COLORS,
                 look = look,
                 elapsedTimeMs = System.currentTimeMillis() - startMs,
-                animation = animation
+                animation = animation,
+                speed = speed
             )
             delay(33)
         }
@@ -455,22 +464,25 @@ private fun SplitBrightnessControls(
 private const val SPLIT_BRIGHTNESS_STEP_PERCENT = 5
 
 /**
- * Plays the example's three arcs on the physical LEDs. While it plays, a new animation or
- * brightness restarts it with that look, so it can be tuned by eye on the ring itself.
+ * Plays the example's three arcs on the physical LEDs. While it plays, a new animation,
+ * brightness or speed restarts it with that look, so it can be tuned by eye on the ring itself.
  */
 @Composable
 private fun SplitTestButton(
     animation: SplitAnimation,
     look: SplitLook,
+    speed: Float,
     enabled: Boolean,
-    onTest: (colors: LongArray, animation: SplitAnimation, look: SplitLook, durationMs: Long) -> Unit,
+    onTest: (colors: LongArray, animation: SplitAnimation, look: SplitLook, speed: Float, durationMs: Long) -> Unit,
     onCancel: () -> Unit
 ) {
     var isTesting by remember { mutableStateOf(false) }
-    LaunchedEffect(isTesting, animation, look) {
+    LaunchedEffect(isTesting, animation, look, speed) {
         if (!isTesting) return@LaunchedEffect
-        onTest(SPLIT_EXAMPLE_COLORS, animation, look, SPLIT_TEST_DURATION_MS)
-        delay(SPLIT_TEST_DURATION_MS)
+        // Slower than normal stretches it, so Rotate still makes a full turn.
+        val durationMs = maxOf(SPLIT_TEST_DURATION_MS, (SPLIT_TEST_DURATION_MS / speed).toLong())
+        onTest(SPLIT_EXAMPLE_COLORS, animation, look, speed, durationMs)
+        delay(durationMs)
         isTesting = false
     }
     // Leaving the page or switching mode stops a test still playing, as closing the rule editor does.

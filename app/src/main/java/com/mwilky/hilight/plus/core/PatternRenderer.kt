@@ -1,15 +1,18 @@
 package com.mwilky.hilight.plus.core
 
 import com.mwilky.hilight.plus.BatteryPattern
+import com.mwilky.hilight.plus.DEFAULT_SPEED
 import com.mwilky.hilight.plus.LowBatteryPattern
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.SplitAnimation
 import com.mwilky.hilight.plus.SplitLook
+import com.mwilky.hilight.plus.clampSpeed
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 import kotlin.math.sin
 
 /**
@@ -279,7 +282,8 @@ class PatternRenderer {
         look: SplitLook,
         elapsedTimeMs: Long,
         ledCount: Int = 8,
-        animation: SplitAnimation = SplitAnimation.BREATHE
+        animation: SplitAnimation = SplitAnimation.BREATHE,
+        speed: Float = DEFAULT_SPEED
     ): IntArray {
         val count = maxOf(1, ledCount)
         val layout = splitLayout(colors.size, count)
@@ -287,7 +291,8 @@ class PatternRenderer {
         val levels = look.clamped()
         val dimmest = levels.dimmest.toDouble()
         val brightest = levels.brightest.toDouble()
-        val elapsed = maxOf(0L, elapsedTimeMs)
+        // A faster speed runs the whole animation on a faster clock.
+        val elapsed = (maxOf(0L, elapsedTimeMs) * clampSpeed(speed)).roundToLong()
 
         // Rotate moves in whole-LED steps with no crossfade: blending across a gap would merge
         // neighbouring colours, and any frame left frozen by a stalled render is still a clean layout.
@@ -545,11 +550,14 @@ class PatternRenderer {
         }
 
         /** How long [renderSplitFrame] takes to repeat for [colorCount] arcs. */
-        fun splitLoopMs(animation: SplitAnimation, colorCount: Int, ledCount: Int): Long = when (animation) {
-            SplitAnimation.BREATHE -> SPLIT_BREATHE_MS
-            SplitAnimation.SOLID -> STATIC_LOOP_MS
-            SplitAnimation.SPOTLIGHT -> SPLIT_SPOTLIGHT_STEP_MS * (splitLayout(colorCount, ledCount).max() + 1)
-            SplitAnimation.ROTATE -> SPLIT_ROTATE_STEP_MS * maxOf(1, ledCount)
+        fun splitLoopMs(animation: SplitAnimation, colorCount: Int, ledCount: Int, speed: Float = DEFAULT_SPEED): Long {
+            val ownPace = when (animation) {
+                SplitAnimation.BREATHE -> SPLIT_BREATHE_MS
+                SplitAnimation.SOLID -> return STATIC_LOOP_MS
+                SplitAnimation.SPOTLIGHT -> SPLIT_SPOTLIGHT_STEP_MS * (splitLayout(colorCount, ledCount).max() + 1)
+                SplitAnimation.ROTATE -> SPLIT_ROTATE_STEP_MS * maxOf(1, ledCount)
+            }
+            return (ownPace / clampSpeed(speed)).roundToLong()
         }
 
         private const val STATIC_LOOP_MS = 1000L

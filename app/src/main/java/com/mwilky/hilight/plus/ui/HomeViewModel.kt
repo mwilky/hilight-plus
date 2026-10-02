@@ -40,6 +40,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun setMultiAlertMode(mode: MultiAlertMode) = launch { store.setMultiAlertMode(mode) }
     fun setSplitAnimation(animation: SplitAnimation) = launch { store.setSplitAnimation(animation) }
     fun setSplitLook(look: SplitLook) = launch { store.setSplitLook(look) }
+    fun setSplitSpeed(speed: Float) = launch { store.setSplitSpeed(speed) }
     fun setDefaultNotifEnabled(enabled: Boolean) = launch { store.setDefaultNotifEnabled(enabled) }
     fun setFavouriteNotifEnabled(enabled: Boolean) = launch { store.setFavouriteNotifEnabled(enabled) }
     fun setBattery(settings: BatterySettings) = launch { store.setBattery(settings) }

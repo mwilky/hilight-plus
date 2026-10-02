@@ -40,4 +40,8 @@ interface IHiLightService {
     void setSplitLook(float dimmest, float brightest, float steady);
     // Previews the split ring on the test channel: colors newest first, cancelled by cancelTestAlert.
     void testSplit(in long[] colors, String animation, float dimmest, float brightest, float steady, long durationMs);
+    // Split ring speed, 0.5-2.0 times each animation's own pace.
+    void setSplitSpeed(float speed);
+    // testSplit at a speed. testSplit stays above so its transaction code is never reused.
+    void testSplitAtSpeed(in long[] colors, String animation, float dimmest, float brightest, float steady, float speed, long durationMs);
 }

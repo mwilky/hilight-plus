@@ -15,6 +15,8 @@ import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.SplitAnimation
 import com.mwilky.hilight.plus.SplitLook
+import com.mwilky.hilight.plus.DEFAULT_SPEED
+import com.mwilky.hilight.plus.clampSpeed
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -184,10 +186,27 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
     }
 
     override fun testSplit(colors: LongArray?, animation: String?, dimmest: Float, brightest: Float, steady: Float, durationMs: Long) {
+        testSplitAtSpeed(colors, animation, dimmest, brightest, steady, DEFAULT_SPEED, durationMs)
+    }
+
+    override fun setSplitSpeed(speed: Float) {
+        engine.setSplitSpeed(clampSpeed(speed))
+    }
+
+    override fun testSplitAtSpeed(
+        colors: LongArray?,
+        animation: String?,
+        dimmest: Float,
+        brightest: Float,
+        steady: Float,
+        speed: Float,
+        durationMs: Long
+    ) {
         engine.testSplit(
             colors ?: LongArray(0),
             SplitAnimation.fromId(animation),
             SplitLook(dimmest, brightest, steady).clamped(),
+            clampSpeed(speed),
             durationMs
         )
     }

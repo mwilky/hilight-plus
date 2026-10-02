@@ -170,6 +170,22 @@ class RingEffectTest {
     }
 
     @Test
+    fun everySplitAnimationAtEverySpeedFitsTheHardwareBudget() {
+        val palette = longArrayOf(0xFFFF0000L, 0xFF00FF00L, 0xFF0000FFL, 0xFFFFAA00L)
+        for (animation in SplitAnimation.entries) {
+            for (arcs in 2..4) {
+                for (speed in listOf(MIN_SPEED, 0.75f, 1.25f, 1.5f, MAX_SPEED)) {
+                    val loop = PatternRenderer.splitLoopMs(animation, arcs, 8, speed)
+                    val effect = RingEffect.sample(loop, 33L, 8) { t ->
+                        renderer.renderSplitFrame(palette.copyOf(arcs), SplitLook(), t, 8, animation, speed)
+                    }
+                    assertTrue("$animation x$arcs at $speed", effect.leds.all { it.colors.size <= RingEffect.MAX_KEYFRAMES })
+                }
+            }
+        }
+    }
+
+    @Test
     fun everySplitBrightnessChoiceFitsTheHardwareBudget() {
         // The sliders reach any level from 10% to 100%, and over budget the lights HAL aborts.
         val palette = longArrayOf(0xFFFF0000L, 0xFF00FF00L, 0xFF0000FFL, 0xFFFFAA00L)

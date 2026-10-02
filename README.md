@@ -30,7 +30,7 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 - Three ways to handle several notifications at once:
   - *Newest only* lights the latest for a chosen duration.
   - *Take turns* plays each waiting notification's pattern in turn until it is dismissed.
-  - *Split the ring* gives each waiting notification its own arc in its colour, up to four, newest at the top. The arcs can breathe, stay solid, brighten in turn (*Spotlight*) or circle the ring (*Rotate*). Breathe and Spotlight move between a dimmest and brightest level you set; Solid and Rotate hold one steady level. A note appears when a setting may let neighbouring colours blend or a dim arc look like spill from the next. It has its own Test on LEDs button.
+  - *Split the ring* gives each waiting notification its own arc in its colour, up to four, newest at the top. The arcs can breathe, stay solid, brighten in turn (*Spotlight*) or circle the ring (*Rotate*). Breathe and Spotlight move between a dimmest and brightest level you set; Solid and Rotate hold one steady level. A note appears when a setting may let neighbouring colours blend or a dim arc look like spill from the next. Its animation speed can be set from half to twice its own pace. It has its own Test on LEDs button.
 - Lights stop when the notification is dismissed.
 
 **Battery**

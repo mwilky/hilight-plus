@@ -163,6 +163,19 @@ class PatternRendererSplitTest {
     }
 
     @Test
+    fun twiceTheSpeedPlaysTheSameFramesInHalfTheTime() {
+        val colors = longArrayOf(white, red, green)
+        for (animation in SplitAnimation.entries) {
+            for (t in 0L until 6_000L step 100L) {
+                val normal = renderer.renderSplitFrame(colors, SplitLook(), t * 2, animation = animation)
+                val fast = renderer.renderSplitFrame(colors, SplitLook(), t, animation = animation, speed = 2f)
+                assertArrayEquals("$animation t=$t", normal, fast)
+            }
+        }
+        assertEquals(1200L, PatternRenderer.splitLoopMs(SplitAnimation.BREATHE, 3, 8, 2f))
+    }
+
+    @Test
     fun aDimmestAboveTheBrightestIsTreatedAsOneLevel() {
         val look = SplitLook(dimmest = 0.9f, brightest = 0.4f).clamped()
         assertEquals(0.9f, look.dimmest)

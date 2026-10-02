@@ -98,6 +98,7 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_SPLIT_DIMMEST = floatPreferencesKey("split_dimmest")
         private val KEY_SPLIT_BRIGHTEST = floatPreferencesKey("split_brightest")
         private val KEY_SPLIT_STEADY = floatPreferencesKey("split_steady")
+        private val KEY_SPLIT_SPEED = floatPreferencesKey("split_speed")
         private val KEY_DEFAULT_NOTIF_ENABLED = booleanPreferencesKey("default_notif_enabled")
         private val KEY_DEFAULT_NOTIF_COLOR = longPreferencesKey("default_notif_color")
         private val KEY_DEFAULT_NOTIF_PATTERN = stringPreferencesKey("default_notif_pattern")
@@ -185,6 +186,9 @@ class AppStore private constructor(private val appContext: Context) {
 
     val splitLook: Flow<SplitLook> = appContext.dataStore.data
         .map(::readSplitLook)
+
+    val splitSpeed: Flow<Float> = appContext.dataStore.data
+        .map { clampSpeed(it[KEY_SPLIT_SPEED] ?: DEFAULT_SPEED) }
 
     val battery: Flow<BatterySettings> = appContext.dataStore.data
         .map { BatterySettings.fromJson(it[KEY_BATTERY_JSON]) }
@@ -283,6 +287,10 @@ class AppStore private constructor(private val appContext: Context) {
             prefs[KEY_SPLIT_BRIGHTEST] = clamped.brightest
             prefs[KEY_SPLIT_STEADY] = clamped.steady
         }
+    }
+
+    suspend fun setSplitSpeed(speed: Float) {
+        appContext.dataStore.edit { it[KEY_SPLIT_SPEED] = clampSpeed(speed) }
     }
 
     private fun readSplitLook(prefs: Preferences): SplitLook {
@@ -592,6 +600,7 @@ class AppStore private constructor(private val appContext: Context) {
             multiAlertMode = readMultiAlertMode(prefs),
             splitAnimation = SplitAnimation.fromId(prefs[KEY_SPLIT_ANIMATION]),
             splitLook = readSplitLook(prefs),
+            splitSpeed = clampSpeed(prefs[KEY_SPLIT_SPEED] ?: d.splitSpeed),
             isDefaultNotifEnabled = prefs[KEY_DEFAULT_NOTIF_ENABLED] ?: d.isDefaultNotifEnabled,
             defaultNotifColor = prefs[KEY_DEFAULT_NOTIF_COLOR] ?: d.defaultNotifColor,
             defaultNotifPattern = enumOr(prefs[KEY_DEFAULT_NOTIF_PATTERN], d.defaultNotifPattern),
@@ -696,6 +705,7 @@ data class SettingsSnapshot(
     val multiAlertMode: MultiAlertMode,
     val splitAnimation: SplitAnimation,
     val splitLook: SplitLook,
+    val splitSpeed: Float,
     val isDefaultNotifEnabled: Boolean,
     val defaultNotifColor: Long,
     val defaultNotifPattern: PatternMode,
@@ -801,6 +811,7 @@ val DEFAULT_SETTINGS_SNAPSHOT = SettingsSnapshot(
     multiAlertMode = MultiAlertMode.LATEST,
     splitAnimation = SplitAnimation.BREATHE,
     splitLook = SplitLook(),
+    splitSpeed = DEFAULT_SPEED,
     isDefaultNotifEnabled = true,
     defaultNotifColor = 0xFFFFFFFF,
     defaultNotifPattern = PatternMode.PULSE,
