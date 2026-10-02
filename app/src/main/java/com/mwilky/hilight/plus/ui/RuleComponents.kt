@@ -74,6 +74,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
@@ -95,14 +96,18 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.github.skydoves.colorpicker.compose.HsvColorPicker
 import com.github.skydoves.colorpicker.compose.rememberColorPickerController
+import com.mwilky.hilight.plus.DEFAULT_SPEED
 import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.FaceDownMode
+import com.mwilky.hilight.plus.MAX_SPEED
 import com.mwilky.hilight.plus.MIN_BRIGHTNESS
+import com.mwilky.hilight.plus.MIN_SPEED
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.R
 import com.mwilky.hilight.plus.RuleSort
 import com.mwilky.hilight.plus.core.PatternRenderer
+import java.text.DecimalFormat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -192,7 +197,8 @@ fun RuleListItem(
     onEdit: () -> Unit,
     onDelete: (() -> Unit)? = null,
     dndMode: DndMode = DndMode.INHERIT,
-    quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT
+    quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT,
+    speed: Float = DEFAULT_SPEED
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     Box {
@@ -204,7 +210,7 @@ fun RuleListItem(
             colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
             verticalAlignment = Alignment.CenterVertically,
             leadingContent = {
-                AnimatedRingBadge(pattern = pattern, color = color, renderer = renderer, size = 36.dp)
+                AnimatedRingBadge(pattern = pattern, color = color, renderer = renderer, size = 36.dp, speed = speed)
             },
             supportingContent = {
                 // Pattern on its own line; only conditions overridden from the Conditions page get a chip.
@@ -397,18 +403,19 @@ fun AnimatedRingBadge(
     color: Long,
     renderer: PatternRenderer,
     size: Dp,
-    animate: Boolean = true
+    animate: Boolean = true,
+    speed: Float = DEFAULT_SPEED
 ) {
     var miniFrames by remember { mutableStateOf(IntArray(8) { 0x00000000 }) }
     val shouldAnimate = animate && pattern != PatternMode.OFF && pattern != PatternMode.SOLID
 
-    LaunchedEffect(pattern, color, shouldAnimate) {
-        val speed = pattern.speedMs()
+    LaunchedEffect(pattern, color, shouldAnimate, speed) {
+        val loopMs = pattern.speedMs(speed)
         fun frame(elapsed: Long) = renderer.renderFrame(
             pattern = pattern.id,
             colorLong = color,
             brightness = 1.0f,
-            speedMs = speed,
+            speedMs = loopMs,
             elapsedTimeMs = elapsed,
             ledCount = 8
         )
@@ -446,7 +453,8 @@ internal fun BrightnessSlider(
     stepPercent: Int = 10
 ) {
     Column(modifier = modifier) {
-        BrightnessHeader(
+        SliderHeader(
+            title = stringResource(R.string.brightness_title),
             value = stringResource(R.string.brightness_value, (brightness * 100).roundToInt()),
             titleStyle = titleStyle
         )
@@ -471,7 +479,8 @@ internal fun BrightnessRangeSlider(
     stepPercent: Int = 10
 ) {
     Column(modifier = modifier) {
-        BrightnessHeader(
+        SliderHeader(
+            title = stringResource(R.string.brightness_title),
             value = stringResource(
                 R.string.brightness_range_value,
                 (dimmest * 100).roundToInt(),
@@ -491,13 +500,54 @@ internal fun BrightnessRangeSlider(
     }
 }
 
+/**
+ * How fast a pattern plays, from [MIN_SPEED] to [MAX_SPEED] times its own pace in quarter steps.
+ * Faded and locked when not [enabled], for looks that don't move.
+ */
 @Composable
-private fun BrightnessHeader(value: String, titleStyle: TextStyle) {
+internal fun SpeedSlider(
+    speed: Float,
+    onSpeedChange: (Float) -> Unit,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+    titleStyle: TextStyle = LocalTextStyle.current
+) {
+    val alpha by animateFloatAsState(
+        targetValue = if (enabled) 1f else DISABLED_SLIDER_ALPHA,
+        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+        label = "speedAlpha"
+    )
+    Column(modifier = modifier.alpha(alpha)) {
+        SliderHeader(
+            title = stringResource(R.string.speed_title),
+            value = stringResource(R.string.speed_value, SPEED_FORMAT.format(speed.toDouble())),
+            titleStyle = titleStyle
+        )
+        Slider(
+            value = speed,
+            onValueChange = { onSpeedChange((it * SPEED_STOPS_PER_UNIT).roundToInt() / SPEED_STOPS_PER_UNIT) },
+            enabled = enabled,
+            valueRange = MIN_SPEED..MAX_SPEED,
+            steps = ((MAX_SPEED - MIN_SPEED) * SPEED_STOPS_PER_UNIT).roundToInt() - 1,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+// Quarter steps: 0.5x, 0.75x, 1x ... 2x.
+private const val SPEED_STOPS_PER_UNIT = 4f
+private const val DISABLED_SLIDER_ALPHA = 0.38f
+
+// "1x", "1.25x", "0.5x": no trailing zeros, in the user's own decimal separator.
+private val SPEED_FORMAT = DecimalFormat("0.##")
+
+@Composable
+private fun SliderHeader(title: String, value: String, titleStyle: TextStyle) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(text = stringResource(R.string.brightness_title), style = titleStyle)
+        Text(text = title, style = titleStyle)
         Text(
             text = value,
             style = MaterialTheme.typography.labelLarge,

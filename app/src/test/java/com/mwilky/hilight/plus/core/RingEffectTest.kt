@@ -2,6 +2,8 @@ package com.mwilky.hilight.plus.core
 
 import com.mwilky.hilight.plus.BatteryPattern
 import com.mwilky.hilight.plus.LowBatteryPattern
+import com.mwilky.hilight.plus.MAX_SPEED
+import com.mwilky.hilight.plus.MIN_SPEED
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.SplitAnimation
 import com.mwilky.hilight.plus.SplitLook
@@ -150,6 +152,20 @@ class RingEffectTest {
         effect.leds.forEach { led ->
             var t = 0L
             led.delaysMs.forEach { t += it; assertEquals("keyframe at $t", 0L, t % 800L) }
+        }
+    }
+
+    @Test
+    fun everyPatternAtEverySpeedFitsTheHardwareBudget() {
+        // Over budget the lights HAL aborts, and speed changes how much happens per frame.
+        for (pattern in PatternMode.entries.filter { it.moves }) {
+            for (speed in listOf(MIN_SPEED, 0.75f, 1.25f, 1.5f, MAX_SPEED)) {
+                val loop = pattern.speedMs(speed)
+                val effect = RingEffect.sample(loop, 33L, 8) { t ->
+                    renderer.renderFrame(pattern.id, 0xFF4285F4L, 1f, loop, t)
+                }
+                assertTrue("$pattern x$speed", effect.leds.all { it.colors.size <= RingEffect.MAX_KEYFRAMES })
+            }
         }
     }
 

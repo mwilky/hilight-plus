@@ -156,6 +156,16 @@ class NotificationSlotTrackerTest {
     }
 
     @Test
+    fun changingSpeedMarksTheSlotChangedSoItIsResent() {
+        val tracker = NotificationSlotTracker()
+        tracker.add("key", "app_a", PatternMode.PULSE, 1)
+        val faster = tracker.add("key", "app_a", PatternMode.PULSE, 1, speed = 2f)
+
+        assertTrue(faster.changed)
+        assertEquals(2f, faster.slot.speed)
+    }
+
+    @Test
     fun updatingWithoutBecomingLatestKeepsTheCurrentLatest() {
         val tracker = NotificationSlotTracker()
         tracker.add("old", "app_a", PatternMode.PULSE, 1)

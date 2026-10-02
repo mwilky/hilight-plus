@@ -24,7 +24,8 @@ class RuleModelJsonTest {
             quietHoursMode = QuietHoursMode.SKIP,
             quietHoursStartMinutes = 90,
             quietHoursEndMinutes = 300,
-            brightness = 0.4f
+            brightness = 0.4f,
+            speed = 1.75f
         )
         assertEquals(rule, ContactRule.fromJson(rule.toJson()))
     }
@@ -42,7 +43,8 @@ class RuleModelJsonTest {
             quietHoursMode = QuietHoursMode.ALWAYS,
             quietHoursStartMinutes = null,
             quietHoursEndMinutes = null,
-            brightness = 0.1f
+            brightness = 0.1f,
+            speed = 0.5f
         )
         assertEquals(rule, MessageContactRule.fromJson(rule.toJson()))
     }
@@ -61,7 +63,8 @@ class RuleModelJsonTest {
             quietHoursMode = QuietHoursMode.INHERIT,
             quietHoursStartMinutes = 60,
             quietHoursEndMinutes = 420,
-            brightness = 0.7f
+            brightness = 0.7f,
+            speed = 2f
         )
         assertEquals(rule, AppNotificationRule.fromJson(rule.toJson()))
     }
@@ -134,8 +137,9 @@ class RuleModelJsonTest {
         assertEquals(QuietHoursMode.SKIP, parsed.quietHoursMode)
         assertEquals(1320, parsed.quietHoursStartMinutes)
         assertEquals(420, parsed.quietHoursEndMinutes)
-        // Saved before brightness existed, so it keeps lighting at full brightness.
+        // Saved before brightness and speed existed, so it keeps lighting as it always has.
         assertEquals(DEFAULT_BRIGHTNESS, parsed.brightness)
+        assertEquals(DEFAULT_SPEED, parsed.speed)
     }
 
     @Test
@@ -168,6 +172,12 @@ class RuleModelJsonTest {
         assertEquals(MIN_BRIGHTNESS, ContactRule.fromJson(JSONObject().put("brightness", 0.0)).brightness)
         assertEquals(MIN_BRIGHTNESS, ContactRule.fromJson(JSONObject().put("brightness", -3.0)).brightness)
         assertEquals(1f, ContactRule.fromJson(JSONObject().put("brightness", 2.5)).brightness)
+    }
+
+    @Test
+    fun outOfRangeSpeedIsClampedToWhatTheSliderAllows() {
+        assertEquals(MIN_SPEED, ContactRule.fromJson(JSONObject().put("speed", 0.1)).speed)
+        assertEquals(MAX_SPEED, MessageContactRule.fromJson(JSONObject().put("speed", 9.0)).speed)
     }
 
     @Test

@@ -43,6 +43,7 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 [*]13 distinct LED animation patterns: [I]Solid, Breathe, Pulse, Wave, Comet, Orbit, Beacon, Ripple, Sparkle, Rainbow[/I], plus copies of Gemini's own [I]Listening, Thinking[/I] and [I]Replying[/I] effects.
 [*]Eight preset colours or any custom colour from a colour wheel, for every rule, battery and Gemini. Hex codes can be copied and pasted between rules.
 [*]Brightness from 10% to 100% for every rule and each Gemini state.
+[*]Speed from half to twice each pattern's own pace, for every rule and each Gemini state.
 [*]Every pattern, Gemini ones included, runs on the ring's own light controller as a looping effect, the same way stock Gemini lights it: smooth, and without the app redrawing it many times a second.
 [*]Multi-alert ring management:
 [LIST]
@@ -78,7 +79,7 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 
 [B]Extras[/B]
 [LIST]
-[*]Live pattern preview on a ring mock-up, and a Test on LEDs button in every rule editor that restarts with each change of pattern, colour or brightness.
+[*]Live pattern preview on a ring mock-up, and a Test on LEDs button in every rule editor that restarts with each change of pattern, colour, brightness or speed.
 [*]Sort custom rule lists from their header: contacts by first or last name, apps by name, A–Z or Z–A.
 [*]Guided onboarding that detects each setting as you flip it, with a notification that follows you into Settings to take the pairing code.
 [*]Live debug log for the app and daemon, with one-tap share (contact names left out).

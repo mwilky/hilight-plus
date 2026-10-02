@@ -95,6 +95,7 @@ fun HomeGeminiPage(
                             count = GeminiState.entries.size,
                             title = stringResource(state.titleRes),
                             pattern = look.pattern,
+                            speed = look.speed,
                             color = look.color,
                             faceDownMode = look.faceDownMode,
                             renderer = renderer,

@@ -18,7 +18,8 @@ class GeminiSettingsJsonTest {
                 quietHoursMode = QuietHoursMode.SKIP,
                 quietHoursStartMinutes = 23 * 60,
                 quietHoursEndMinutes = 6 * 60,
-                brightness = 0.3f
+                brightness = 0.3f,
+                speed = 1.5f
             ),
             thinking = GeminiLook(isEnabled = false, pattern = PatternMode.GEMINI_THINKING),
             replying = GeminiLook(isEnabled = true, pattern = PatternMode.BREATHE, color = 0xFF34A853)

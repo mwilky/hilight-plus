@@ -60,4 +60,15 @@ class PatternRendererGeminiTest {
         assertEquals(0xFF0000FF.toInt(), f[4])
         assertEquals(0, f[0])
     }
+
+    @Test
+    fun fasterPatternsKeepTheirShapeOnAShorterLoop() {
+        // Replying and Sparkle have timings of their own, so check they shrink with the loop too.
+        for (pattern in listOf(PatternMode.GEMINI_REPLYING, PatternMode.SPARKLE)) {
+            for (t in 0L until pattern.speedMs(2f) step 25L) {
+                val fast = renderer.renderFrame(pattern.id, 0xFFFF0000L, 1f, pattern.speedMs(2f), t)
+                assertArrayEquals("$pattern t=$t", frame(pattern, t * 2), fast)
+            }
+        }
+    }
 }

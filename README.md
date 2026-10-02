@@ -25,6 +25,7 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 - Thirteen patterns: solid, breathe, pulse, wave, comet, orbit, beacon, ripple, sparkle, rainbow, and copies of Gemini's own listening, thinking and replying effects.
 - Eight preset colours or any custom colour from a colour wheel, for every rule, battery's fixed colour and Gemini's states. The custom colour's hex code can be copied and pasted into another rule.
 - A brightness setting, from 10% to 100%, for every rule and each of Gemini's states. Existing rules stay at 100%.
+- A speed setting, from half to twice each pattern's own pace, for every rule and each of Gemini's states. Existing rules keep their normal pace.
 - Every pattern, including the Gemini ones, is handed to the ring's own light controller as a looping effect, the same way stock Gemini lights it. The ring animates by itself instead of the app redrawing it many times a second.
 - Three ways to handle several notifications at once:
   - *Newest only* lights the latest for a chosen duration.
@@ -51,7 +52,7 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 - Every rule can follow these defaults, always light, or opt out, and rules can carry their own quiet-hours window.
 
 **Extras**
-- Live preview of every pattern on a diffused ring mock-up, and a Test on LEDs button in each rule editor. Changing the pattern, colour or brightness while a test plays restarts it with the new look.
+- Live preview of every pattern on a diffused ring mock-up, and a Test on LEDs button in each rule editor. Changing the pattern, colour, brightness or speed while a test plays restarts it with the new look.
 - Custom rule lists can be sorted from their header: contacts by first or last name, apps by name, A–Z or Z–A, or left in the order they were added. Each list remembers its own choice.
 - Onboarding that connects to the ring, checks permissions and the stock HiLight setting that would otherwise fight for the ring, and explains the trial. Connecting is a self-ticking checklist: each switch is detected as you flip it, Settings opens at the right row, and a notification follows you there so you can type the pairing code without coming back to the app.
 - People updating from a Shizuku-only version get a one-time prompt to switch to the built-in connection, which then keeps itself running across restarts.

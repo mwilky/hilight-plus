@@ -2,6 +2,7 @@ package com.mwilky.hilight.plus
 
 import org.json.JSONObject
 import java.text.Collator
+import kotlin.math.roundToLong
 
 enum class PatternMode(val id: String, val titleRes: Int) {
     OFF("off", R.string.pattern_off),
@@ -22,6 +23,14 @@ enum class PatternMode(val id: String, val titleRes: Int) {
     /** Patterns that draw their own fixed colours, so a rule's colour has no effect on them. */
     val hasFixedColors: Boolean
         get() = this == RAINBOW || this == GEMINI_LISTENING || this == GEMINI_THINKING || this == GEMINI_REPLYING
+
+    /** Patterns that change over time, so a speed applies to them. */
+    val moves: Boolean
+        get() = this != OFF && this != SOLID
+
+    /** [speedMs] at [speed] times the pattern's own pace. */
+    fun speedMs(speed: Float, fallback: Long = 1000L): Long =
+        (speedMs(fallback) / clampSpeed(speed)).roundToLong()
 
     fun speedMs(fallback: Long = 1000L): Long = when (this) {
         BREATHE -> 2000L
@@ -203,12 +212,13 @@ data class ContactRule(
     val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT,
     val quietHoursStartMinutes: Int? = null,
     val quietHoursEndMinutes: Int? = null,
-    val brightness: Float = DEFAULT_BRIGHTNESS
+    val brightness: Float = DEFAULT_BRIGHTNESS,
+    val speed: Float = DEFAULT_SPEED
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
         put("name", name)
-        putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes, brightness)
+        putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes, brightness, speed)
     }
 
     companion object {
@@ -225,7 +235,8 @@ data class ContactRule(
                 quietHoursMode = shared.quietHoursMode,
                 quietHoursStartMinutes = shared.quietHoursStartMinutes,
                 quietHoursEndMinutes = shared.quietHoursEndMinutes,
-                brightness = shared.brightness
+                brightness = shared.brightness,
+                speed = shared.speed
             )
         }
     }
@@ -245,12 +256,13 @@ data class MessageContactRule(
     val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT,
     val quietHoursStartMinutes: Int? = null,
     val quietHoursEndMinutes: Int? = null,
-    val brightness: Float = DEFAULT_BRIGHTNESS
+    val brightness: Float = DEFAULT_BRIGHTNESS,
+    val speed: Float = DEFAULT_SPEED
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
         put("name", name)
-        putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes, brightness)
+        putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes, brightness, speed)
     }
 
     companion object {
@@ -267,7 +279,8 @@ data class MessageContactRule(
                 quietHoursMode = shared.quietHoursMode,
                 quietHoursStartMinutes = shared.quietHoursStartMinutes,
                 quietHoursEndMinutes = shared.quietHoursEndMinutes,
-                brightness = shared.brightness
+                brightness = shared.brightness,
+                speed = shared.speed
             )
         }
     }
@@ -288,13 +301,14 @@ data class AppNotificationRule(
     val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT,
     val quietHoursStartMinutes: Int? = null,
     val quietHoursEndMinutes: Int? = null,
-    val brightness: Float = DEFAULT_BRIGHTNESS
+    val brightness: Float = DEFAULT_BRIGHTNESS,
+    val speed: Float = DEFAULT_SPEED
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("packageName", packageName)
         put("appName", appName)
         put("isAutoColor", isAutoColor)
-        putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes, brightness)
+        putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes, brightness, speed)
     }
 
     companion object {
@@ -312,7 +326,8 @@ data class AppNotificationRule(
                 quietHoursMode = shared.quietHoursMode,
                 quietHoursStartMinutes = shared.quietHoursStartMinutes,
                 quietHoursEndMinutes = shared.quietHoursEndMinutes,
-                brightness = shared.brightness
+                brightness = shared.brightness,
+                speed = shared.speed
             )
         }
     }
@@ -329,6 +344,19 @@ const val MIN_BRIGHTNESS = 0.1f
 
 fun clampBrightness(value: Float): Float =
     if (value.isNaN()) DEFAULT_BRIGHTNESS else value.coerceIn(MIN_BRIGHTNESS, 1f)
+
+/** Each pattern's own pace: what every rule used before speed could be set. */
+const val DEFAULT_SPEED = 1f
+
+/**
+ * Half to twice a pattern's own pace. At twice, the quickest patterns (Comet and Gemini thinking,
+ * one LED per 100ms) still step every 50ms, above the ring's 33ms frame.
+ */
+const val MIN_SPEED = 0.5f
+const val MAX_SPEED = 2f
+
+fun clampSpeed(value: Float): Float =
+    if (value.isNaN()) DEFAULT_SPEED else value.coerceIn(MIN_SPEED, MAX_SPEED)
 
 private const val DEFAULT_CONTACT_COLOR = 0xFF4285F4L
 private const val DEFAULT_MESSAGE_COLOR = 0xFF00E5FFL
@@ -485,10 +513,11 @@ data class GeminiLook(
     val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT,
     val quietHoursStartMinutes: Int? = null,
     val quietHoursEndMinutes: Int? = null,
-    val brightness: Float = DEFAULT_BRIGHTNESS
+    val brightness: Float = DEFAULT_BRIGHTNESS,
+    val speed: Float = DEFAULT_SPEED
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
-        putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes, brightness)
+        putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes, brightness, speed)
     }
 
     companion object {
@@ -504,7 +533,8 @@ data class GeminiLook(
                 quietHoursMode = shared.quietHoursMode,
                 quietHoursStartMinutes = shared.quietHoursStartMinutes,
                 quietHoursEndMinutes = shared.quietHoursEndMinutes,
-                brightness = shared.brightness
+                brightness = shared.brightness,
+                speed = shared.speed
             )
         }
     }
@@ -572,7 +602,8 @@ private data class SharedRuleFields(
     val quietHoursMode: QuietHoursMode,
     val quietHoursStartMinutes: Int?,
     val quietHoursEndMinutes: Int?,
-    val brightness: Float
+    val brightness: Float,
+    val speed: Float
 )
 
 private fun JSONObject.readSharedRuleFields(defaultColor: Long): SharedRuleFields = SharedRuleFields(
@@ -585,7 +616,8 @@ private fun JSONObject.readSharedRuleFields(defaultColor: Long): SharedRuleField
     quietHoursStartMinutes = optionalMinutes("quietHoursStartMinutes"),
     quietHoursEndMinutes = optionalMinutes("quietHoursEndMinutes"),
     // Rules saved before brightness existed have no key and stay at full brightness.
-    brightness = clampBrightness(optDouble("brightness", DEFAULT_BRIGHTNESS.toDouble()).toFloat())
+    brightness = clampBrightness(optDouble("brightness", DEFAULT_BRIGHTNESS.toDouble()).toFloat()),
+    speed = clampSpeed(optDouble("speed", DEFAULT_SPEED.toDouble()).toFloat())
 )
 
 private fun JSONObject.putSharedRuleFields(
@@ -597,7 +629,8 @@ private fun JSONObject.putSharedRuleFields(
     quietHoursMode: QuietHoursMode,
     quietHoursStartMinutes: Int?,
     quietHoursEndMinutes: Int?,
-    brightness: Float
+    brightness: Float,
+    speed: Float
 ) {
     put("color", color)
     put("pattern", pattern.name)
@@ -608,6 +641,7 @@ private fun JSONObject.putSharedRuleFields(
     putOptionalMinutes("quietHoursStartMinutes", quietHoursStartMinutes)
     putOptionalMinutes("quietHoursEndMinutes", quietHoursEndMinutes)
     put("brightness", brightness.toDouble())
+    put("speed", speed.toDouble())
 }
 
 private fun JSONObject.optionalMinutes(key: String): Int? =

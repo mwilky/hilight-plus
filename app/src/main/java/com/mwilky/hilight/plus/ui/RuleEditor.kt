@@ -100,6 +100,7 @@ import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mwilky.hilight.plus.DEFAULT_BRIGHTNESS
+import com.mwilky.hilight.plus.DEFAULT_SPEED
 import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.FaceDownMode
 import com.mwilky.hilight.plus.LightController
@@ -122,7 +123,8 @@ data class RuleEditorResult(
     val quietHoursMode: QuietHoursMode,
     val quietHoursStartMinutes: Int,
     val quietHoursEndMinutes: Int,
-    val brightness: Float
+    val brightness: Float,
+    val speed: Float
 )
 
 internal val PALETTE = listOf(
@@ -156,7 +158,8 @@ fun CustomRuleDialog(
     showAutoColorToggle: Boolean = false,
     initialAutoColor: Boolean = true,
     autoExtractedColor: Long? = null,
-    initialBrightness: Float = DEFAULT_BRIGHTNESS
+    initialBrightness: Float = DEFAULT_BRIGHTNESS,
+    initialSpeed: Float = DEFAULT_SPEED
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -187,7 +190,8 @@ fun CustomRuleDialog(
             showAutoColorToggle = showAutoColorToggle,
             initialAutoColor = initialAutoColor,
             autoExtractedColor = autoExtractedColor,
-            initialBrightness = initialBrightness
+            initialBrightness = initialBrightness,
+            initialSpeed = initialSpeed
         )
     }
 }
@@ -209,7 +213,8 @@ private fun RuleEditorContent(
     showAutoColorToggle: Boolean,
     initialAutoColor: Boolean,
     autoExtractedColor: Long?,
-    initialBrightness: Float
+    initialBrightness: Float,
+    initialSpeed: Float
 ) {
     var isAutoColor by remember(initialAutoColor) { mutableStateOf(initialAutoColor) }
     var selectedColor by remember(initialColor) {
@@ -219,6 +224,7 @@ private fun RuleEditorContent(
     }
     var selectedPattern by remember(initialPattern) { mutableStateOf(initialPattern) }
     var selectedBrightness by remember(initialBrightness) { mutableFloatStateOf(initialBrightness) }
+    var selectedSpeed by remember(initialSpeed) { mutableFloatStateOf(initialSpeed) }
     var selectedFaceDown by remember(initialFaceDown) { mutableStateOf(initialFaceDown) }
     var selectedDnd by remember(initialDnd) { mutableStateOf(initialDnd) }
     var selectedQuietHours by remember(initialQuietHours) { mutableStateOf(initialQuietHours) }
@@ -240,11 +246,11 @@ private fun RuleEditorContent(
     // Test-on-LEDs: previews the current pattern/color on the physical lights.
     val connectionState by controller.daemon.state.collectAsStateWithLifecycle()
     var isTesting by remember { mutableStateOf(false) }
-    // A new pattern, colour or brightness while a test plays restarts it with that look, so it
-    // can be judged on the ring itself.
-    LaunchedEffect(isTesting, selectedPattern, selectedColor, selectedBrightness) {
+    // A new pattern, colour, brightness or speed while a test plays restarts it with that look,
+    // so it can be judged on the ring itself.
+    LaunchedEffect(isTesting, selectedPattern, selectedColor, selectedBrightness, selectedSpeed) {
         if (!isTesting) return@LaunchedEffect
-        controller.testPattern(selectedPattern, selectedColor, TEST_DURATION_MS, selectedBrightness)
+        controller.testPattern(selectedPattern, selectedColor, TEST_DURATION_MS, selectedBrightness, selectedSpeed)
         delay(TEST_DURATION_MS)
         isTesting = false
     }
@@ -276,7 +282,8 @@ private fun RuleEditorContent(
                 quietHoursMode = selectedQuietHours,
                 quietHoursStartMinutes = quietStartMinutes,
                 quietHoursEndMinutes = quietEndMinutes,
-                brightness = selectedBrightness
+                brightness = selectedBrightness,
+                speed = selectedSpeed
             )
         )
     }
@@ -310,6 +317,7 @@ private fun RuleEditorContent(
                     pattern = selectedPattern,
                     color = selectedColor,
                     brightness = selectedBrightness,
+                    speed = selectedSpeed,
                     elapsedMs = clockMs,
                     renderer = renderer,
                     isTesting = isTesting,
@@ -399,6 +407,15 @@ private fun RuleEditorContent(
                 BrightnessSlider(
                     brightness = selectedBrightness,
                     onBrightnessChange = { selectedBrightness = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    titleStyle = MaterialTheme.typography.labelLarge
+                )
+                SpeedSlider(
+                    speed = selectedSpeed,
+                    onSpeedChange = { selectedSpeed = it },
+                    enabled = selectedPattern.moves,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
@@ -531,13 +548,14 @@ private fun PatternRing(
     elapsedMs: Long,
     renderer: PatternRenderer,
     size: Dp,
-    brightness: Float = DEFAULT_BRIGHTNESS
+    brightness: Float = DEFAULT_BRIGHTNESS,
+    speed: Float = DEFAULT_SPEED
 ) {
     val frames = renderer.renderFrame(
         pattern = pattern.id,
         colorLong = color,
         brightness = brightness,
-        speedMs = pattern.speedMs(),
+        speedMs = pattern.speedMs(speed),
         elapsedTimeMs = elapsedMs,
         ledCount = 8
     )
@@ -555,6 +573,7 @@ private fun PreviewHeader(
     pattern: PatternMode,
     color: Long,
     brightness: Float,
+    speed: Float,
     elapsedMs: Long,
     renderer: PatternRenderer,
     isTesting: Boolean,
@@ -571,7 +590,7 @@ private fun PreviewHeader(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            PatternRing(pattern = pattern, color = color, elapsedMs = elapsedMs, renderer = renderer, size = 96.dp, brightness = brightness)
+            PatternRing(pattern = pattern, color = color, elapsedMs = elapsedMs, renderer = renderer, size = 96.dp, brightness = brightness, speed = speed)
             Text(
                 text = stringResource(pattern.titleRes),
                 style = MaterialTheme.typography.labelLarge,
@@ -810,7 +829,8 @@ private fun RuleEditorPreview() {
             showAutoColorToggle = true,
             initialAutoColor = false,
             autoExtractedColor = 0xFF25D366,
-            initialBrightness = 0.6f
+            initialBrightness = 0.6f,
+            initialSpeed = 1.5f
         )
     }
 }

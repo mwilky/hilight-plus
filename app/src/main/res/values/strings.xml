@@ -253,6 +253,8 @@
     <string name="brightness_title">Brightness</string>
     <string name="brightness_value">%1$d%%</string>
     <string name="brightness_range_value">%1$d%%–%2$d%%</string>
+    <string name="speed_title">Speed</string>
+    <string name="speed_value">%1$s×</string>
     <string name="dialog_custom_color">Custom colour</string>
     <string name="dialog_custom_color_hex">Hex code</string>
     <string name="dialog_custom_color_copy">Copy colour code</string>

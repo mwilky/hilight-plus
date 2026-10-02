@@ -405,7 +405,8 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
                         pattern = pattern,
                         color = look.optLong("color"),
                         brightness = look.optDouble("brightness", 1.0).toFloat(),
-                        speedMs = PatternMode.entries.find { it.id == pattern }?.speedMs() ?: 1000L,
+                        speedMs = PatternMode.entries.find { it.id == pattern }
+                            ?.speedMs(look.optDouble("speed", 1.0).toFloat()) ?: 1000L,
                         requiresFaceDown = look.optBoolean("requiresFaceDown"),
                         dndMode = DndMode.fromId(look.optString("dndMode")),
                         quietHoursMode = QuietHoursMode.fromId(look.optString("quietHoursMode")),

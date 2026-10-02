@@ -1094,6 +1094,7 @@ class DaemonBridge private constructor(private val app: Application) {
                 put("pattern", look.pattern.id)
                 put("color", look.color)
                 put("brightness", look.brightness.toDouble())
+                put("speed", look.speed.toDouble())
                 put("requiresFaceDown", look.faceDownMode.requiresFaceDown(globalOnlyWhenFaceDown))
                 put("dndMode", look.dndMode.id)
                 put("quietHoursMode", look.quietHoursMode.id)

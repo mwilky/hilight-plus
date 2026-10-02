@@ -246,6 +246,7 @@ class LightController private constructor(private val app: Application) {
         pattern: PatternMode,
         color: Long,
         brightness: Float = 1.0f,
+        speed: Float = DEFAULT_SPEED,
         speedMs: Long = 1000L,
         durationMs: Long = 3000L,
         requiresFaceDown: Boolean = false,
@@ -254,7 +255,7 @@ class LightController private constructor(private val app: Application) {
         quietStartMinutes: Int? = null,
         quietEndMinutes: Int? = null
     ) {
-        val calculatedSpeed = pattern.speedMs(speedMs)
+        val calculatedSpeed = pattern.speedMs(speed, speedMs)
         daemon.triggerAlert(
             pattern = pattern.id,
             color = color,
@@ -277,6 +278,7 @@ class LightController private constructor(private val app: Application) {
         pattern: PatternMode,
         color: Long,
         brightness: Float = 1.0f,
+        speed: Float = DEFAULT_SPEED,
         speedMs: Long = 1000L,
         durationMs: Long = 0L,
         requiresFaceDown: Boolean = false,
@@ -285,7 +287,7 @@ class LightController private constructor(private val app: Application) {
         quietStartMinutes: Int? = null,
         quietEndMinutes: Int? = null
     ) {
-        val calculatedSpeed = pattern.speedMs(speedMs)
+        val calculatedSpeed = pattern.speedMs(speed, speedMs)
         daemon.postAlert(
             key = key,
             pattern = pattern.id,
@@ -312,12 +314,18 @@ class LightController private constructor(private val app: Application) {
      * Previews a pattern/color on the physical LEDs from the rule editor. Ignores face-down,
      * DND and quiet-hours gating, and never disturbs whatever notification is actually active.
      */
-    fun testPattern(pattern: PatternMode, color: Long, durationMs: Long = 3000L, brightness: Float = DEFAULT_BRIGHTNESS) {
+    fun testPattern(
+        pattern: PatternMode,
+        color: Long,
+        durationMs: Long = 3000L,
+        brightness: Float = DEFAULT_BRIGHTNESS,
+        speed: Float = DEFAULT_SPEED
+    ) {
         daemon.testAlert(
             pattern = pattern.id,
             color = color,
             brightness = brightness,
-            speedMs = pattern.speedMs(),
+            speedMs = pattern.speedMs(speed),
             durationMs = durationMs
         )
     }
@@ -355,6 +363,7 @@ class LightController private constructor(private val app: Application) {
         pattern: PatternMode = PatternMode.PULSE,
         color: Long = 0xFF4285F4,
         brightness: Float = 1.0f,
+        speed: Float = DEFAULT_SPEED,
         speedMs: Long = 1000L,
         requiresFaceDown: Boolean = false,
         dndMode: DndMode = DndMode.ALWAYS,
@@ -362,7 +371,7 @@ class LightController private constructor(private val app: Application) {
         quietStartMinutes: Int? = null,
         quietEndMinutes: Int? = null
     ) {
-        val calculatedSpeed = pattern.speedMs(speedMs)
+        val calculatedSpeed = pattern.speedMs(speed, speedMs)
         daemon.startIncomingCall(
             pattern = pattern.id,
             color = color,

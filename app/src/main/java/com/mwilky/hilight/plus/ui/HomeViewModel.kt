@@ -68,7 +68,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         quietHoursMode: QuietHoursMode,
         quietHoursStartMinutes: Int,
         quietHoursEndMinutes: Int,
-        brightness: Float
+        brightness: Float,
+        speed: Float
     ) = launch {
         store.setOtherContactsStyle(
             pattern,
@@ -78,7 +79,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             quietHoursMode,
             quietHoursStartMinutes,
             quietHoursEndMinutes,
-            brightness
+            brightness,
+            speed
         )
     }
 
@@ -90,7 +92,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         quietHoursMode: QuietHoursMode,
         quietHoursStartMinutes: Int,
         quietHoursEndMinutes: Int,
-        brightness: Float
+        brightness: Float,
+        speed: Float
     ) = launch {
         store.setFavouriteCallsStyle(
             pattern,
@@ -100,7 +103,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             quietHoursMode,
             quietHoursStartMinutes,
             quietHoursEndMinutes,
-            brightness
+            brightness,
+            speed
         )
     }
 
@@ -112,7 +116,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         quietHoursMode: QuietHoursMode,
         quietHoursStartMinutes: Int,
         quietHoursEndMinutes: Int,
-        brightness: Float
+        brightness: Float,
+        speed: Float
     ) = launch {
         store.setFavouriteNotifStyle(
             pattern,
@@ -122,7 +127,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             quietHoursMode,
             quietHoursStartMinutes,
             quietHoursEndMinutes,
-            brightness
+            brightness,
+            speed
         )
     }
 
@@ -134,7 +140,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         quietHoursMode: QuietHoursMode,
         quietHoursStartMinutes: Int,
         quietHoursEndMinutes: Int,
-        brightness: Float
+        brightness: Float,
+        speed: Float
     ) = launch {
         store.setMissedCallsStyle(
             pattern,
@@ -144,7 +151,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             quietHoursMode,
             quietHoursStartMinutes,
             quietHoursEndMinutes,
-            brightness
+            brightness,
+            speed
         )
     }
 
@@ -156,7 +164,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         quietHoursMode: QuietHoursMode,
         quietHoursStartMinutes: Int,
         quietHoursEndMinutes: Int,
-        brightness: Float
+        brightness: Float,
+        speed: Float
     ) = launch {
         store.setUnknownNumbersStyle(
             pattern,
@@ -166,7 +175,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             quietHoursMode,
             quietHoursStartMinutes,
             quietHoursEndMinutes,
-            brightness
+            brightness,
+            speed
         )
     }
 
@@ -179,7 +189,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         quietHoursMode: QuietHoursMode,
         quietHoursStartMinutes: Int,
         quietHoursEndMinutes: Int,
-        brightness: Float
+        brightness: Float,
+        speed: Float
     ) = launch {
         store.setDefaultNotifStyle(
             pattern,
@@ -190,7 +201,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             quietHoursMode,
             quietHoursStartMinutes,
             quietHoursEndMinutes,
-            brightness
+            brightness,
+            speed
         )
     }
 

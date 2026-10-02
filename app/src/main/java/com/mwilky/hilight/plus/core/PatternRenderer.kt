@@ -2,6 +2,7 @@ package com.mwilky.hilight.plus.core
 
 import com.mwilky.hilight.plus.BatteryPattern
 import com.mwilky.hilight.plus.LowBatteryPattern
+import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.SplitAnimation
 import com.mwilky.hilight.plus.SplitLook
 import kotlin.math.PI
@@ -155,14 +156,16 @@ class PatternRenderer {
                 // end into the start, so as many are showing at the loop point as anywhere else.
                 val t = elapsedTimeMs % speed
                 val spacing = speed / SPARKLE_ORDER.size.toDouble()
-                val rise = SPARKLE_GLINT_MS * SPARKLE_RISE
+                // Glints keep the same share of the loop at any speed.
+                val glint = SPARKLE_GLINT_MS * paceScale(PatternMode.SPARKLE, speed)
+                val rise = glint * SPARKLE_RISE
                 for (i in 0 until count) {
                     var k = 0.0
                     for (n in SPARKLE_ORDER.indices) {
                         if (SPARKLE_ORDER[n] != i % SPARKLE_LEDS) continue
                         val since = ((t - n * spacing) % speed + speed) % speed
-                        if (since >= SPARKLE_GLINT_MS) continue
-                        val shape = if (since < rise) since / rise else 1.0 - (since - rise) / (SPARKLE_GLINT_MS - rise)
+                        if (since >= glint) continue
+                        val shape = if (since < rise) since / rise else 1.0 - (since - rise) / (glint - rise)
                         k = maxOf(k, shape * SPARKLE_PEAKS[n])
                     }
                     val intensity = k * clampedBrightness
@@ -191,7 +194,8 @@ class PatternRenderer {
             }
 
             "gemini_replying" -> {
-                val t = elapsedTimeMs % speed
+                // The stock key times are for its own pace; stretch them to the loop's.
+                val t = (elapsedTimeMs % speed) / paceScale(PatternMode.GEMINI_REPLYING, speed)
                 for (i in 0 until count) {
                     val (times, color) = GEMINI_REPLYING_KEYS[i % GEMINI_REPLYING_KEYS.size]
                     // Every LED fades to black at the same moment; the shorter ones come back
@@ -433,6 +437,10 @@ class PatternRenderer {
         for (i in 0 until litLeds) frame[i] = c
         return frame
     }
+
+    /** How much longer than [pattern]'s own pace a loop of [speedMs] is. */
+    private fun paceScale(pattern: PatternMode, speedMs: Long): Double =
+        speedMs / pattern.speedMs().toDouble()
 
     private fun scaleColor(color: Int, factor: Double): Int {
         val k = factor.coerceIn(0.0, 1.0)
