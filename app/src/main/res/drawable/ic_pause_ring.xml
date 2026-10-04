@@ -1,15 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The pause tile and sheet: the rear light ring with a pause symbol inside. -->
+<!-- The pause tile, card and sheet: the app icon's ring and plus (as in the themed launcher icon)
+     with a pause badge in the corner. The ring is clipped clear of the badge, and the badge's
+     bars are holes, so it stays one colour for the tile to tint. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
+    <group>
+        <!-- Everything except a disc round the badge: the square runs clockwise and the disc
+             anticlockwise, so the disc is a hole under the default non-zero fill rule. -->
+        <clip-path
+            android:pathData="M0,0H24V24H0Z M12.2,18.6a6.4,6.4 0,1 0,12.8 0a6.4,6.4 0,1 0,-12.8 0Z" />
+        <path
+            android:pathData="M12,3.8a8.2,8.2 0,1 1,0 16.4a8.2,8.2 0,1 1,0 -16.4Z"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="2.7" />
+        <path
+            android:pathData="M9.3,12H14.7M12,9.3V14.7"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="1.8"
+            android:strokeLineCap="round" />
+    </group>
     <path
         android:fillColor="#FFFFFFFF"
         android:fillType="evenOdd"
-        android:pathData="M12,2.5a9.5,9.5 0,1 1,0 19a9.5,9.5 0,1 1,0 -19zM12,4.75a7.25,7.25 0,1 0,0 14.5a7.25,7.25 0,1 0,0 -14.5z" />
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M9.25,8.5h1.5a0.75,0.75 0,0 1,0.75 0.75v5.5a0.75,0.75 0,0 1,-0.75 0.75h-1.5a0.75,0.75 0,0 1,-0.75 -0.75v-5.5a0.75,0.75 0,0 1,0.75 -0.75zM13.25,8.5h1.5a0.75,0.75 0,0 1,0.75 0.75v5.5a0.75,0.75 0,0 1,-0.75 0.75h-1.5a0.75,0.75 0,0 1,-0.75 -0.75v-5.5a0.75,0.75 0,0 1,0.75 -0.75z" />
+        android:pathData="M14,18.6a4.6,4.6 0,1 1,9.2 0a4.6,4.6 0,1 1,-9.2 0Z M16.65,17.45a0.65,0.65 0,0 1,1.3 0v2.3a0.65,0.65 0,0 1,-1.3 0Z M19.25,17.45a0.65,0.65 0,0 1,1.3 0v2.3a0.65,0.65 0,0 1,-1.3 0Z" />
 </vector>
