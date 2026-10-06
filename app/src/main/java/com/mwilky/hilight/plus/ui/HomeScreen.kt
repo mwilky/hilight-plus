@@ -72,6 +72,7 @@ import com.mwilky.hilight.plus.SplitAnimation
 import com.mwilky.hilight.plus.SplitLook
 import com.mwilky.hilight.plus.StockHiLightState
 import com.mwilky.hilight.plus.core.PatternRenderer
+import com.mwilky.hilight.plus.ui.diagnostics.PairingLostCard
 import com.mwilky.hilight.plus.ui.diagnostics.PermissionState
 import com.mwilky.hilight.plus.ui.diagnostics.rememberCallPermissionLauncher
 import com.mwilky.hilight.plus.ui.diagnostics.rememberPermissionState
@@ -97,6 +98,7 @@ fun HomeScreen(
     val stockState by NativeHiLightDetector.state.collectAsStateWithLifecycle()
     val connectionState by controller.daemon.state.collectAsStateWithLifecycle()
     val connectionMethod by controller.daemon.method.collectAsStateWithLifecycle()
+    val pairingLost by controller.daemon.pairingLost.collectAsStateWithLifecycle()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val pause by viewModel.pause.collectAsStateWithLifecycle()
     val licenseStatus by controller.licensing.status.collectAsStateWithLifecycle()
@@ -179,6 +181,7 @@ fun HomeScreen(
         onOpenShizukuApp = { controller.daemon.openShizukuApp(context) },
         onRestartApp = { controller.daemon.restartApp(context) },
         onSetUpConnection = onSetUpConnection,
+        pairingLost = pairingLost,
         stockState = stockState,
         onOpenStockSettings = { NativeHiLightDetector.openHiLightSettings(context) },
         permissionState = permissionState,
@@ -628,6 +631,7 @@ fun HomeContent(
     onOpenShizukuApp: () -> Unit,
     onRestartApp: () -> Unit,
     onSetUpConnection: () -> Unit,
+    pairingLost: Boolean = false,
     stockState: StockHiLightState,
     onOpenStockSettings: () -> Unit,
     permissionState: PermissionState,
@@ -709,6 +713,12 @@ fun HomeContent(
                 selectedIndex = pagerState.currentPage,
                 onSelect = { page -> scope.launch { pagerState.animateScrollToPage(page) } }
             )
+            if (pairingLost) {
+                PairingLostCard(
+                    onPairAgain = onSetUpConnection,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
             if (pause != null) {
                 PauseCard(
                     pause = pause,
@@ -1114,6 +1124,12 @@ fun HomeScreenPreviewPaused() {
     )
 }
 
+@Preview(name = "Home Screen - Pairing Lost", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+fun HomeScreenPreviewPairingLost() {
+    HomeScreenPreviewContent(hasCallRules = true, pairingLost = true)
+}
+
 @Preview(name = "Home Screen - Gemini", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 fun HomeScreenPreviewGemini() {
@@ -1131,7 +1147,8 @@ fun HomeScreenPreviewContent(
     splitAnimation: SplitAnimation = DEFAULT_SETTINGS_SNAPSHOT.splitAnimation,
     splitLook: SplitLook = DEFAULT_SETTINGS_SNAPSHOT.splitLook,
     gemini: GeminiSettings = DEFAULT_SETTINGS_SNAPSHOT.gemini,
-    pause: PauseState? = null
+    pause: PauseState? = null,
+    pairingLost: Boolean = false
 ) {
     val mockCallContacts = if (hasCallRules) {
         listOf(
@@ -1163,6 +1180,7 @@ fun HomeScreenPreviewContent(
             onOpenShizukuApp = {},
             onRestartApp = {},
             onSetUpConnection = {},
+            pairingLost = pairingLost,
             stockState = StockHiLightState(favoriteCallsActive = false),
             onOpenStockSettings = {},
             permissionState = PermissionState(

@@ -104,6 +104,8 @@
     <string name="setup_notif_done_text">HiLight Plus is connected to the rear lights.</string>
     <string name="setup_notif_network_title">Allow Wireless debugging on this Wi-Fi</string>
     <string name="setup_notif_network_text">HiLight Plus needs it for a few seconds to start the lights. Tap here, then choose Always allow on this network when Android asks.</string>
+    <string name="setup_notif_pairing_lost_title">Pair HiLight Plus again</string>
+    <string name="setup_notif_pairing_lost_text">Your phone no longer accepts HiLight Plus\'s Wireless debugging pairing, so the lights can\'t start after a restart or update. Tap to pair again.</string>
 
     <!-- Onboarding Step 4: Permissions -->
     <string name="onboarding_perms_title">Permissions</string>
@@ -177,6 +179,16 @@
     <string name="connect_desc_dev_off">Developer options is off, which stops the lights service. Tap Build number 7 times in About phone to turn it back on, and HiLight Plus reconnects by itself.</string>
     <string name="connect_btn_set_up">Set up</string>
     <string name="connect_btn_wifi">Turn on Wi-Fi</string>
+    <string name="pairing_lost_title">Pair again</string>
+    <string name="pairing_lost_status">Pairing lost</string>
+    <string name="pairing_lost_desc">Your phone no longer accepts HiLight Plus\'s Wireless debugging pairing. The lights work for now, but can\'t start again after a restart or update until you pair again.</string>
+    <string name="pairing_lost_btn">Pair again</string>
+    <string name="adb_timeout_title">Keep the pairing from expiring</string>
+    <string name="adb_timeout_status">Recommended</string>
+    <string name="adb_timeout_status_done">Done</string>
+    <string name="adb_timeout_desc">Android forgets a Wireless debugging pairing that goes unused for 7 days. HiLight Plus only uses it to start the lights after a restart or update, so it can expire and need pairing again. To stop that, turn on Disable adb authorization timeout in Developer options.</string>
+    <string name="adb_timeout_desc_done">Disable adb authorization timeout is on, so the pairing won\'t expire.</string>
+    <string name="adb_timeout_btn">Open Developer options</string>
     <string name="about_switch_builtin_title">Switch to the built-in connection</string>
     <string name="about_switch_builtin_desc">No Shizuku needed, and it reconnects by itself after a restart.</string>
 

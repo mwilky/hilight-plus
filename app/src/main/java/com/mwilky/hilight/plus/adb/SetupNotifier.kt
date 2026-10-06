@@ -177,6 +177,37 @@ class SetupNotifier(private val context: Context) {
         fun cancelNetworkApproval(context: Context) {
             context.getSystemService(NotificationManager::class.java).cancel(NETWORK_NOTIFICATION_ID)
         }
+
+        /**
+         * The phone refused our key: the pairing has to be done again before a daemon can start.
+         * Tapping opens the app's connect screen at the pairing step.
+         */
+        fun showPairingLost(context: Context) {
+            if (context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
+            SetupNotifier(context).ensureChannel()
+            val open = PendingIntent.getActivity(
+                context, REQUEST_PAIR_AGAIN,
+                MainActivity.connectIntent(context),
+                PENDING_FLAGS
+            )
+            val text = context.getString(R.string.setup_notif_pairing_lost_text)
+            val notification = Notification.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_stat_ring)
+                .setContentTitle(context.getString(R.string.setup_notif_pairing_lost_title))
+                .setContentText(text)
+                .setStyle(Notification.BigTextStyle().bigText(text))
+                .setContentIntent(open)
+                .setCategory(Notification.CATEGORY_STATUS)
+                .setAutoCancel(true)
+                .build()
+            context.getSystemService(NotificationManager::class.java).notify(PAIRING_LOST_NOTIFICATION_ID, notification)
+        }
+
+        fun cancelPairingLost(context: Context) {
+            context.getSystemService(NotificationManager::class.java).cancel(PAIRING_LOST_NOTIFICATION_ID)
+        }
+        private const val PAIRING_LOST_NOTIFICATION_ID = 4105
+        private const val REQUEST_PAIR_AGAIN = 5
         private const val REQUEST_SETTINGS = 1
         private const val REQUEST_CODE = 2
         private const val REQUEST_APP = 3

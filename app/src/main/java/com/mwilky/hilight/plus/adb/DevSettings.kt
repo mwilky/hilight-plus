@@ -16,6 +16,13 @@ object DevSettings {
     /** Settings.Global.ADB_WIFI_ENABLED, which is hidden from the SDK. */
     const val ADB_WIFI_ENABLED = "adb_wifi_enabled"
 
+    /**
+     * Settings.Global.ADB_ALLOWED_CONNECTION_TIME, hidden from the SDK: how long the phone keeps
+     * trusting a debugging key that hasn't connected, in milliseconds (7 days unless changed). 0 is
+     * Developer options' "Disable adb authorization timeout".
+     */
+    const val ADB_ALLOWED_CONNECTION_TIME = "adb_allowed_connection_time"
+
     fun isDevOptionsOn(context: Context): Boolean =
         Settings.Global.getInt(context.contentResolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) == 1
 
@@ -39,6 +46,16 @@ object DevSettings {
             cm.getNetworkCapabilities(network)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
         }
     }
+
+    /**
+     * Whether the phone keeps trusting our pairing however long it goes unused, from the raw
+     * value of [ADB_ALLOWED_CONNECTION_TIME] (null when unset, the 7-day default).
+     */
+    fun isAdbAuthTimeoutDisabled(rawValue: String?): Boolean = rawValue?.trim()?.toLongOrNull() == 0L
+
+    /** The raw value, or the reason it can't be read: hidden settings aren't readable everywhere. */
+    fun readAdbAllowedConnectionTime(context: Context): Result<String?> =
+        runCatching { Settings.Global.getString(context.contentResolver, ADB_ALLOWED_CONNECTION_TIME) }
 
     /** Granted by the daemon after its first successful start (see `grantWriteSecureSettings`). */
     fun canWriteSecureSettings(context: Context): Boolean =

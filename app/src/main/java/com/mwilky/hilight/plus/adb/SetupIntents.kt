@@ -21,6 +21,10 @@ object SetupIntents {
     fun developerOptions(context: Context): Intent =
         highlighted(context, Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS, "toggle_adb_wireless")
 
+    /** Developer options at "Disable adb authorization timeout". */
+    fun adbAuthorizationTimeout(context: Context): Intent =
+        highlighted(context, Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS, "adb_authorization_timeout")
+
     fun wifi(context: Context): Intent =
         Intent(Settings.Panel.ACTION_WIFI).addFlags(flags(context))
 

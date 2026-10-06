@@ -41,10 +41,12 @@ import com.mwilky.hilight.plus.DaemonBridge
 import com.mwilky.hilight.plus.LightController
 import com.mwilky.hilight.plus.R
 import com.mwilky.hilight.plus.adb.ConnectSetup
+import com.mwilky.hilight.plus.adb.DevSettings
 import com.mwilky.hilight.plus.adb.PairingPhase
 import com.mwilky.hilight.plus.adb.SetupIntents
 import com.mwilky.hilight.plus.adb.SetupState
 import com.mwilky.hilight.plus.adb.SetupStep
+import com.mwilky.hilight.plus.ui.diagnostics.AdbTimeoutCard
 import com.mwilky.hilight.plus.ui.diagnostics.ButtonLabel
 import com.mwilky.hilight.plus.ui.diagnostics.ConnectionStatusCard
 
@@ -75,6 +77,7 @@ internal fun ConnectStep(controller: LightController, allowShizuku: Boolean) {
     var showShizuku by rememberSaveable { mutableStateOf(false) }
     var notificationsAllowed by remember { mutableStateOf(canNotify(context)) }
     var askedPermissions by rememberSaveable { mutableStateOf(false) }
+    val adbTimeoutDisabled = rememberAdbTimeoutDisabled(controller.daemon)
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -121,6 +124,8 @@ internal fun ConnectStep(controller: LightController, allowShizuku: Boolean) {
         onOpenStep = ::openStep,
         onSubmitCode = setup::submitCode,
         onRetry = setup::retry,
+        adbTimeoutDisabled = adbTimeoutDisabled,
+        onOpenAdbTimeout = { SetupIntents.open(context, SetupIntents.adbAuthorizationTimeout(context)) },
         shizukuActions = ShizukuActions(
             onPause = { controller.daemon.unbind() },
             onResume = { controller.daemon.connectManually() },
@@ -129,6 +134,27 @@ internal fun ConnectStep(controller: LightController, allowShizuku: Boolean) {
             onRestartApp = { controller.daemon.restartApp(context) }
         )
     )
+}
+
+/**
+ * Whether Developer options' "Disable adb authorization timeout" is on, read again each time the
+ * screen comes back (from Developer options, say). Through the daemon when the app can't read it.
+ */
+@Composable
+internal fun rememberAdbTimeoutDisabled(daemon: DaemonBridge): Boolean {
+    val context = LocalContext.current
+    var disabled by remember { mutableStateOf(readAdbTimeoutDisabled(context, daemon)) }
+    LifecycleResumeEffect(Unit) {
+        disabled = readAdbTimeoutDisabled(context, daemon)
+        onPauseOrDispose { }
+    }
+    return disabled
+}
+
+private fun readAdbTimeoutDisabled(context: Context, daemon: DaemonBridge): Boolean {
+    val raw = DevSettings.readAdbAllowedConnectionTime(context)
+        .getOrElse { daemon.getGlobalString(DevSettings.ADB_ALLOWED_CONNECTION_TIME) }
+    return DevSettings.isAdbAuthTimeoutDisabled(raw)
 }
 
 private fun canNotify(context: Context): Boolean =
@@ -159,7 +185,9 @@ internal fun ConnectStepContent(
     onOpenStep: (SetupStep) -> Unit,
     onSubmitCode: (String) -> Unit,
     onRetry: () -> Unit,
-    shizukuActions: ShizukuActions
+    shizukuActions: ShizukuActions,
+    adbTimeoutDisabled: Boolean = true,
+    onOpenAdbTimeout: () -> Unit = {}
 ) {
     val done = if (allowShizuku) connectionState == DaemonBridge.State.CONNECTED else setup.connected
 
@@ -167,30 +195,35 @@ internal fun ConnectStepContent(
         stringResource(R.string.connect_title),
         { StepBody(stringResource(R.string.connect_desc)) },
         {
-            when {
-                done || showShizuku -> ConnectionStatusCard(
-                    // Until the user has Shizuku, the bridge is on the built-in path; show Shizuku as missing.
-                    connectionState = if (done || connectionMethod == DaemonBridge.Method.SHIZUKU) {
-                        connectionState
-                    } else {
-                        DaemonBridge.State.NOT_INSTALLED
-                    },
-                    connectionMethod = if (done) connectionMethod else DaemonBridge.Method.SHIZUKU,
-                    connectionError = connectionError,
-                    onDisconnect = shizukuActions.onPause,
-                    onConnect = shizukuActions.onResume,
-                    onRequestPermission = shizukuActions.onRequestPermission,
-                    onOpenShizukuApp = shizukuActions.onOpenApp,
-                    onRestartApp = shizukuActions.onRestartApp,
-                    onSetUp = onToggleShizuku
-                )
-                else -> ConnectChecklist(
-                    setup = setup,
-                    notificationsAllowed = notificationsAllowed,
-                    onOpenStep = onOpenStep,
-                    onSubmitCode = onSubmitCode,
-                    onRetry = onRetry
-                )
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                when {
+                    done || showShizuku -> ConnectionStatusCard(
+                        // Until the user has Shizuku, the bridge is on the built-in path; show Shizuku as missing.
+                        connectionState = if (done || connectionMethod == DaemonBridge.Method.SHIZUKU) {
+                            connectionState
+                        } else {
+                            DaemonBridge.State.NOT_INSTALLED
+                        },
+                        connectionMethod = if (done) connectionMethod else DaemonBridge.Method.SHIZUKU,
+                        connectionError = connectionError,
+                        onDisconnect = shizukuActions.onPause,
+                        onConnect = shizukuActions.onResume,
+                        onRequestPermission = shizukuActions.onRequestPermission,
+                        onOpenShizukuApp = shizukuActions.onOpenApp,
+                        onRestartApp = shizukuActions.onRestartApp,
+                        onSetUp = onToggleShizuku
+                    )
+                    else -> ConnectChecklist(
+                        setup = setup,
+                        notificationsAllowed = notificationsAllowed,
+                        onOpenStep = onOpenStep,
+                        onSubmitCode = onSubmitCode,
+                        onRetry = onRetry
+                    )
+                }
+                if (done && connectionMethod == DaemonBridge.Method.BUILT_IN) {
+                    AdbTimeoutCard(timeoutDisabled = adbTimeoutDisabled, onOpenSettings = onOpenAdbTimeout)
+                }
             }
         },
         {
@@ -392,11 +425,17 @@ fun ConnectScreen(controller: LightController, onClose: () -> Unit) {
     // The live connection, not the last setup session's result, which may be out of date.
     val connectionState by controller.daemon.state.collectAsStateWithLifecycle()
     val connectionMethod by controller.daemon.method.collectAsStateWithLifecycle()
+    val pairingLost by controller.daemon.pairingLost.collectAsStateWithLifecycle()
     val shizukuInstalled = remember { controller.daemon.isShizukuInstalled() }
 
+    val adbTimeoutDisabled = rememberAdbTimeoutDisabled(controller.daemon)
+
     ConnectScreenContent(
-        done = connectionState == DaemonBridge.State.CONNECTED && connectionMethod == DaemonBridge.Method.BUILT_IN,
+        done = connectionState == DaemonBridge.State.CONNECTED && connectionMethod == DaemonBridge.Method.BUILT_IN &&
+            !pairingLost,
         shizukuInstalled = shizukuInstalled,
+        adbTimeoutDisabled = adbTimeoutDisabled,
+        onOpenAdbTimeout = { SetupIntents.open(context, SetupIntents.adbAuthorizationTimeout(context)) },
         onOpenShizukuInfo = { controller.daemon.openShizukuAppInfo(context) },
         onClose = onClose
     ) {
@@ -410,6 +449,8 @@ internal fun ConnectScreenContent(
     shizukuInstalled: Boolean,
     onOpenShizukuInfo: () -> Unit,
     onClose: () -> Unit,
+    adbTimeoutDisabled: Boolean = true,
+    onOpenAdbTimeout: () -> Unit = {},
     checklist: @Composable () -> Unit
 ) {
     BackHandler(onBack = onClose)
@@ -477,23 +518,26 @@ internal fun ConnectScreenContent(
                         stringResource(R.string.connect_success_title),
                         { StepBody(stringResource(R.string.connect_success_desc)) },
                         {
-                            if (shizukuInstalled) {
-                                StandardDiagnosticCard(
-                                    title = stringResource(R.string.connect_success_shizuku_title),
-                                    subtitle = stringResource(R.string.connect_success_shizuku_desc),
-                                    icon = Icons.Rounded.CheckCircle,
-                                    statusText = stringResource(R.string.connect_success_shizuku_status),
-                                    isOk = true,
-                                    bottomAction = {
-                                        OutlinedButton(
-                                            onClick = onOpenShizukuInfo,
-                                            modifier = Modifier.fillMaxWidth(),
-                                            shapes = ButtonDefaults.shapes()
-                                        ) {
-                                            ButtonLabel(Icons.Rounded.Settings, stringResource(R.string.connect_success_shizuku_btn))
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                AdbTimeoutCard(timeoutDisabled = adbTimeoutDisabled, onOpenSettings = onOpenAdbTimeout)
+                                if (shizukuInstalled) {
+                                    StandardDiagnosticCard(
+                                        title = stringResource(R.string.connect_success_shizuku_title),
+                                        subtitle = stringResource(R.string.connect_success_shizuku_desc),
+                                        icon = Icons.Rounded.CheckCircle,
+                                        statusText = stringResource(R.string.connect_success_shizuku_status),
+                                        isOk = true,
+                                        bottomAction = {
+                                            OutlinedButton(
+                                                onClick = onOpenShizukuInfo,
+                                                modifier = Modifier.fillMaxWidth(),
+                                                shapes = ButtonDefaults.shapes()
+                                            ) {
+                                                ButtonLabel(Icons.Rounded.Settings, stringResource(R.string.connect_success_shizuku_btn))
+                                            }
                                         }
-                                    }
-                                )
+                                    )
+                                }
                             }
                         }
                     )

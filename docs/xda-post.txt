@@ -103,6 +103,7 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 [*][B]Google Pixel 11 Pro / Pro XL[/B] running [B]Android 17 (API 37)[/B].
 [*][B]Developer options and Wireless debugging[/B] for setup. No root or Shizuku needed: HiLight Plus pairs once with the phone's own Wireless debugging to start a small shell-privileged daemon that reaches the lights service, then reconnects by itself, including after a reboot.
 [*][B]To keep working[/B], Developer options must stay on along with at least one of USB debugging or Wireless debugging. Wi-Fi is needed whenever the daemon has to start (setup, reboot, update), as Wireless debugging only runs on Wi-Fi.
+[*][B]Recommended:[/B] turn on [B]Disable adb authorization timeout[/B] in Developer options, or Android forgets the pairing after 7 days unused. The app suggests it but never changes it, and tells you straight away if the pairing is lost.
 [*][B][URL='https://shizuku.rikka.app/']Shizuku[/URL][/B] (optional) is still supported, via Wireless Debugging or Root, for anyone who already uses it.
 [*]Pixel's own [B]Calls from favourites[/B] and [B]Gemini feedback[/B] HiLight options turned off, so the two don't fight over the ring. Onboarding checks this for you.
 [*][B]Stock "Calls from favourites" disabled[/B] in system settings to prevent hardware race conditions. Onboarding verifies this setup automatically.

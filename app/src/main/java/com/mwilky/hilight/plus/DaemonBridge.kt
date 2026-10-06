@@ -35,8 +35,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -102,6 +105,19 @@ class DaemonBridge private constructor(private val app: Application) {
     private var connectTimeoutJob: Job? = null
     private var reconnectJob: Job? = null
     private var builtInJob: Job? = null
+
+    // The connected built-in daemon came from another build or install of the app, so it may
+    // lack calls this build makes. It's replaced when a current one can be started.
+    private var runningStaleDaemon = false
+
+    /**
+     * Connected over the built-in connection, but the phone no longer accepts our pairing: the
+     * daemon still running keeps the lights going, but none can be started again after a reboot
+     * or update until the user pairs again.
+     */
+    val pairingLost: StateFlow<Boolean> = combine(_state, _method, wireless.paired) { state, method, paired ->
+        state == State.CONNECTED && method == Method.BUILT_IN && !paired
+    }.stateIn(scope, SharingStarted.Eagerly, false)
 
     // A built-in daemon that's already running hands its binder to a new app process by itself,
     // so the first attempt in each process waits for that before starting another one. Not after
@@ -319,6 +335,7 @@ class DaemonBridge private constructor(private val app: Application) {
      */
     private fun startBuiltIn() {
         if (!wireless.isPaired()) {
+            DebugLog.i("HiLightPlus", "Not paired with Wireless debugging; setup needed")
             _state.value = State.NEEDS_SETUP
             return
         }
@@ -407,6 +424,7 @@ class DaemonBridge private constructor(private val app: Application) {
             WirelessAdb.StartResult.PairingRequired -> {
                 DebugLog.w("HiLightPlus", "Pairing was removed; setup needed again")
                 _state.value = State.NEEDS_SETUP
+                SetupNotifier.showPairingLost(app)
                 // Falls back to Shizuku here if the user has it.
                 if (isShizukuInstalled()) refresh()
             }
@@ -475,12 +493,20 @@ class DaemonBridge private constructor(private val app: Application) {
                 runCatching { Shizuku.unbindUserService(args, connection, false) }
             }
             _method.value = Method.BUILT_IN
+            val previous = service
             if (!attach(binder, Method.BUILT_IN)) return@launch
             wireless.markRanThisBoot()
             binder?.linkToDeath({ scope.launch { onBuiltInDied(binder) } }, 0)
             // A daemon from before this build reports no path; its version code alone decides.
             val otherInstall = apkPath != null && apkPath != app.applicationInfo.sourceDir
-            if (version != BuildConfig.VERSION_CODE || otherInstall) {
+            runningStaleDaemon = version != BuildConfig.VERSION_CODE || otherInstall
+            if (!runningStaleDaemon && previous != null && previous.asBinder() !== binder) {
+                // A current daemon replacing an out-of-date one: stop the old one, or it keeps
+                // running beside it and hands itself back the next time this process restarts.
+                DebugLog.i("HiLightPlus", "Stopping the replaced daemon")
+                scope.launch(Dispatchers.IO) { runCatching { previous.destroy() } }
+            }
+            if (runningStaleDaemon) {
                 // From before an app update or reinstall: keep using it until a fresh one replaces it.
                 DebugLog.i("HiLightPlus", "Daemon is from version $version at $apkPath; starting a current one")
                 builtInJob?.cancel()
@@ -536,6 +562,9 @@ class DaemonBridge private constructor(private val app: Application) {
             if (result != WirelessAdb.StartResult.Started) {
                 DebugLog.w("HiLightPlus", "Keeping the old daemon: starting a current one gave $result")
             }
+            // The old daemon keeps the lights going for now, so nothing else would show that none
+            // can be started again: say so while it can still be fixed.
+            if (result == WirelessAdb.StartResult.PairingRequired) SetupNotifier.showPairingLost(app)
         }
     }
 
@@ -568,7 +597,8 @@ class DaemonBridge private constructor(private val app: Application) {
             }
         }
         _method.value = Method.BUILT_IN
-        if (_state.value != State.CONNECTED || !isBinderAlive()) {
+        // An out-of-date daemon is replaced here too, as when pairing again after it was lost.
+        if (_state.value != State.CONNECTED || !isBinderAlive() || runningStaleDaemon) {
             builtInJob?.cancel()
             _state.value = State.CONNECTING
             startBuiltIn()
@@ -598,6 +628,7 @@ class DaemonBridge private constructor(private val app: Application) {
             return false
         }
         service = bound
+        if (via == Method.SHIZUKU) runningStaleDaemon = false
         builtInFailures = 0
         builtInJob?.cancel()
         reconnectJob?.cancel()

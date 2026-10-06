@@ -46,6 +46,8 @@ import com.mwilky.hilight.plus.R
 import com.mwilky.hilight.plus.DaemonBridge
 import com.mwilky.hilight.plus.GeminiSettings
 import com.mwilky.hilight.plus.StockHiLightState
+import com.mwilky.hilight.plus.adb.SetupIntents
+import com.mwilky.hilight.plus.ui.diagnostics.AdbTimeoutCard
 import com.mwilky.hilight.plus.ui.diagnostics.ButtonLabel
 import com.mwilky.hilight.plus.ui.diagnostics.CallPermissionsCard
 import com.mwilky.hilight.plus.ui.diagnostics.NotificationAccessCard
@@ -70,6 +72,7 @@ fun AboutScreen(controller: LightController, onSetUpConnection: () -> Unit) {
     val gemini by controller.store.gemini.collectAsStateWithLifecycle(GeminiSettings())
     val connectionState by controller.daemon.state.collectAsStateWithLifecycle()
     val connectionMethod by controller.daemon.method.collectAsStateWithLifecycle()
+    val adbTimeoutDisabled = rememberAdbTimeoutDisabled(controller.daemon)
 
     val permissionState = rememberPermissionState()
     val requestCallPermissions = rememberCallPermissionLauncher(permissionState)
@@ -133,6 +136,10 @@ fun AboutScreen(controller: LightController, onSetUpConnection: () -> Unit) {
         onOpenShizukuApp = { controller.daemon.openShizukuApp(context) },
         onRestartApp = { controller.daemon.restartApp(context) },
         onSetUpConnection = onSetUpConnection,
+        // Only for the built-in connection, the one that relies on the pairing.
+        showAdbTimeout = connectionState == DaemonBridge.State.CONNECTED &&
+            connectionMethod == DaemonBridge.Method.BUILT_IN && !adbTimeoutDisabled,
+        onOpenAdbTimeout = { SetupIntents.open(context, SetupIntents.adbAuthorizationTimeout(context)) },
         stockState = stockState,
         geminiEnabled = gemini.enabled,
         permissionState = permissionState,
@@ -204,6 +211,8 @@ fun AboutContent(
     onOpenShizukuApp: () -> Unit,
     onRestartApp: () -> Unit,
     onSetUpConnection: () -> Unit,
+    showAdbTimeout: Boolean = false,
+    onOpenAdbTimeout: () -> Unit = {},
     stockState: StockHiLightState,
     permissionState: PermissionState,
     onOpenSettings: () -> Unit,
@@ -291,6 +300,10 @@ fun AboutContent(
                 onRestartApp = onRestartApp,
                 onSetUp = onSetUpConnection
             )
+
+            if (showAdbTimeout) {
+                AdbTimeoutCard(timeoutDisabled = false, onOpenSettings = onOpenAdbTimeout)
+            }
 
             if (connectionMethod == DaemonBridge.Method.SHIZUKU) {
                 ListItem(

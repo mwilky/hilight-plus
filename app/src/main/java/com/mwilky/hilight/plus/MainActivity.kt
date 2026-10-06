@@ -2,6 +2,8 @@
 
 package com.mwilky.hilight.plus
 
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -28,9 +30,13 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
+    // Set by the "pair again" notification; the connect screen opens and clears it.
+    private var openConnect by mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        if (savedInstanceState == null) openConnect = intent.getBooleanExtra(EXTRA_OPEN_CONNECT, false)
 
         val controller = LightController.get(this)
         refreshDiagnostics()
@@ -68,12 +74,19 @@ class MainActivity : ComponentActivity() {
 
                     true -> {
                         MainAppNavigation(
-                            controller = controller
+                            controller = controller,
+                            openConnect = openConnect,
+                            onConnectOpened = { openConnect = false }
                         )
                     }
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.getBooleanExtra(EXTRA_OPEN_CONNECT, false)) openConnect = true
     }
 
     override fun onResume() {
@@ -85,6 +98,15 @@ class MainActivity : ComponentActivity() {
         LightController.get(this).refreshStatus()
         NativeHiLightDetector.check(this)
     }
+
+    companion object {
+        private const val EXTRA_OPEN_CONNECT = "open_connect"
+
+        /** Opens the app at the connect screen, to pair again. */
+        fun connectIntent(context: Context): Intent = Intent(context, MainActivity::class.java)
+            .putExtra(EXTRA_OPEN_CONNECT, true)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+    }
 }
 
 private enum class NavTab(val titleRes: Int, val icon: ImageVector) {
@@ -94,9 +116,19 @@ private enum class NavTab(val titleRes: Int, val icon: ImageVector) {
 }
 
 @Composable
-private fun MainAppNavigation(controller: LightController) {
+private fun MainAppNavigation(
+    controller: LightController,
+    openConnect: Boolean = false,
+    onConnectOpened: () -> Unit = {}
+) {
     var selectedTab by rememberSaveable { mutableStateOf(NavTab.HOME) }
     var showConnect by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(openConnect) {
+        if (openConnect) {
+            showConnect = true
+            onConnectOpened()
+        }
+    }
     val scope = rememberCoroutineScope()
     val promptShown by controller.store.isConnectPromptShown.collectAsStateWithLifecycle(initialValue = true)
     val paired = remember(showConnect) { controller.daemon.wireless.isPaired() }

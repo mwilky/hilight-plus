@@ -21,6 +21,8 @@ import androidx.compose.material.icons.rounded.Contacts
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.TimerOff
 import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material.icons.rounded.Wifi
@@ -66,6 +68,65 @@ private fun ErrorButton(onClick: () -> Unit, icon: ImageVector?, text: String, m
     ) {
         ButtonLabel(icon, text)
     }
+}
+
+/**
+ * The daemon still running keeps the lights going, but the phone no longer accepts our pairing,
+ * so none can be started again after a reboot or update until the user pairs again.
+ */
+@Composable
+fun PairingLostCard(onPairAgain: () -> Unit, modifier: Modifier = Modifier) {
+    StandardDiagnosticCard(
+        title = stringResource(R.string.pairing_lost_title),
+        subtitle = stringResource(R.string.pairing_lost_desc),
+        icon = Icons.Rounded.Link,
+        statusText = stringResource(R.string.pairing_lost_status),
+        isOk = false,
+        modifier = modifier,
+        bottomAction = {
+            ErrorButton(
+                onClick = onPairAgain,
+                icon = Icons.Rounded.Link,
+                text = stringResource(R.string.pairing_lost_btn),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    )
+}
+
+/**
+ * Recommends Developer options' "Disable adb authorization timeout": the pairing is only used to
+ * start the daemon, so it can go unused for over a week and silently expire. A recommendation
+ * rather than a fault, so neutral colours, and the app never changes it itself. Ticks itself off.
+ */
+@Composable
+fun AdbTimeoutCard(timeoutDisabled: Boolean, onOpenSettings: () -> Unit, modifier: Modifier = Modifier) {
+    if (timeoutDisabled) {
+        StandardDiagnosticCard(
+            title = stringResource(R.string.adb_timeout_title),
+            subtitle = stringResource(R.string.adb_timeout_desc_done),
+            icon = Icons.Rounded.TimerOff,
+            statusText = stringResource(R.string.adb_timeout_status_done),
+            isOk = true,
+            modifier = modifier
+        )
+        return
+    }
+    ExpressiveStatusCard(
+        title = stringResource(R.string.adb_timeout_title),
+        subtitle = stringResource(R.string.adb_timeout_desc),
+        icon = Icons.Rounded.Timer,
+        statusText = stringResource(R.string.adb_timeout_status),
+        accentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier,
+        bottomAction = {
+            OutlinedButton(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) {
+                ButtonLabel(Icons.Rounded.Settings, stringResource(R.string.adb_timeout_btn))
+            }
+        }
+    )
 }
 
 /**

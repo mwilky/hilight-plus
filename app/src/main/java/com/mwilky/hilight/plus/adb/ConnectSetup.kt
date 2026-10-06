@@ -96,7 +96,7 @@ class ConnectSetup private constructor(private val app: Application) {
             )
         }
         bridgeJob = scope.launch {
-            combine(bridge.state, bridge.method) { _, _ -> }.collect { update() }
+            combine(bridge.state, bridge.method, wireless.paired) { _, _, _ -> }.collect { update() }
         }
         wasConnected = isBuiltInConnected()
         autoEnabledWirelessDebugging = false
@@ -251,8 +251,10 @@ class ConnectSetup private constructor(private val app: Application) {
         update()
     }
 
+    /** Connected, and still paired: a daemon left running after the pairing was lost doesn't count. */
     private fun isBuiltInConnected(): Boolean =
-        bridge.state.value == DaemonBridge.State.CONNECTED && bridge.method.value == DaemonBridge.Method.BUILT_IN
+        bridge.state.value == DaemonBridge.State.CONNECTED && bridge.method.value == DaemonBridge.Method.BUILT_IN &&
+            wireless.isPaired()
 
     private fun startDiscovery() {
         if (discovery != null) return

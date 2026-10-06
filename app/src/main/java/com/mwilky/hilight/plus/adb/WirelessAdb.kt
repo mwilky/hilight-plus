@@ -35,6 +35,9 @@ import java.security.cert.CertificateFactory
 import java.security.spec.PKCS8EncodedKeySpec
 import java.util.Date
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Talks to the phone's own `adbd` over Wireless debugging: pairs once with the six-digit code, then
@@ -64,10 +67,15 @@ class WirelessAdb private constructor(private val app: Application) {
     private val bootMarker = File(dir, "daemon_boot")
     private val lock = Any()
 
+    private val _paired = MutableStateFlow(pairedMarker.exists())
+    /** Whether the phone is thought to trust our key, following [pair] and [forgetPairing]. */
+    val paired: StateFlow<Boolean> = _paired.asStateFlow()
+
     fun isPaired(): Boolean = pairedMarker.exists()
 
     fun forgetPairing() {
         pairedMarker.delete()
+        _paired.value = false
     }
 
     /** Whether a daemon was running at some point since the phone last booted. */
@@ -90,6 +98,8 @@ class WirelessAdb private constructor(private val app: Application) {
         }
         dir.mkdirs()
         pairedMarker.createNewFile()
+        _paired.value = true
+        SetupNotifier.cancelPairingLost(app)
         DebugLog.i(TAG, "Paired with Wireless debugging")
     }
 
