@@ -47,4 +47,6 @@ interface IHiLightService {
     // Keeps the ring dark for the comma-separated features (calls, notifications, battery, gemini)
     // until untilEpochMs, wall clock; Long.MAX_VALUE until resumed, 0 or no features for no pause.
     void setPause(long untilEpochMs, String features);
+    // Whether any app has a rear camera open; the ring stays dark while one is.
+    void setRearCameraActive(boolean active);
 }

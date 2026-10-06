@@ -1,6 +1,6 @@
 # Privacy Policy for HiLight Plus
 
-**Last updated:** September 28, 2026
+**Last updated:** October 6, 2026
 
 **HiLight Plus** ("we", "our", or "the app") is developed by **mwilky**. We are committed to protecting your privacy. This Privacy Policy outlines how your information is handled when you use HiLight Plus.
 
@@ -41,6 +41,10 @@ HiLight Plus requests sensitive Android permissions solely to deliver real-time 
 ### F. Gemini's App Log (no extra permission)
 - **Purpose:** To light the ring for Gemini's listening, thinking and replying states, which Gemini doesn't announce to other apps. While Gemini lights are on, the helper process reads the log output of the Gemini app only and looks for the lines that mark each change of state.
 - **Data Handling:** Each line is checked in memory and discarded straight away; nothing Gemini logs is stored or sent. Only the resulting state change (for example "listening") is noted in the debug log described in section 3. Turning Gemini lights off stops the reading.
+
+### G. Whether a Rear Camera Is in Use (no extra permission)
+- **Purpose:** The LED ring surrounds the rear cameras, so it stays dark while any app is using one, rather than tint your photos or video. Android tells every app when each camera opens and closes, without a permission.
+- **Data Handling:** HiLight Plus never opens a camera and never sees any image. It only notes whether a rear camera is open, in memory; the debug log records when that changes.
 
 ---
 

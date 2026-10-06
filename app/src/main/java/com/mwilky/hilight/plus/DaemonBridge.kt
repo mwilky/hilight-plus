@@ -913,6 +913,10 @@ class DaemonBridge private constructor(private val app: Application) {
         runRemote("setQuietHours") { it.setQuietHours(enabled, startMinutes, endMinutes) }
     }
 
+    fun setRearCameraActive(active: Boolean) {
+        runRemote("setRearCameraActive") { it.setRearCameraActive(active) }
+    }
+
     /** Null, or a pause that has run out, clears it. The daemon ends a running one on time itself. */
     fun setPause(pause: PauseState?) {
         runRemote("setPause") { it.setPause(pause?.untilMillis ?: 0L, pause?.features?.let(PauseFeature::encode).orEmpty()) }

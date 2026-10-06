@@ -7,6 +7,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
+import android.os.Handler
+import android.os.Looper
 import android.os.Process
 import android.os.SystemClock
 import com.mwilky.hilight.plus.core.DeviceOrientationDetector
@@ -37,6 +39,7 @@ class LightController private constructor(private val app: Application) {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     @Volatile
     private var lastDndActive = false
+    private val rearCamera = RearCameraWatcher(app) { daemon.setRearCameraActive(it) }
 
     private val dndReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -114,6 +117,8 @@ class LightController private constructor(private val app: Application) {
             Context.RECEIVER_NOT_EXPORTED
         )?.let { batteryReceiver.onReceive(app, it) }
 
+        rearCamera.start(Handler(Looper.getMainLooper()))
+
         DeviceOrientationDetector.onOrientationChanged = { faceDown ->
             daemon.setDeviceFaceDown(faceDown)
         }
@@ -121,6 +126,7 @@ class LightController private constructor(private val app: Application) {
         daemon.onAvailabilityChanged = {
             daemon.setDeviceFaceDown(DeviceOrientationDetector.lastKnownFaceDown)
             daemon.setDndActive(lastDndActive)
+            daemon.setRearCameraActive(rearCamera.inUse)
             NativeHiLightDetector.check(app)
             scope.launch { pushLiveConditions() }
         }

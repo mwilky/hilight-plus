@@ -174,6 +174,10 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
         engine.setPause(untilEpochMs, PauseFeature.parse(features))
     }
 
+    override fun setRearCameraActive(active: Boolean) {
+        engine.setRearCameraActive(active)
+    }
+
     override fun setSplitRing(enabled: Boolean) {
         engine.setSplitRing(enabled)
     }

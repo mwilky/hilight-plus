@@ -56,6 +56,7 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 - Pause for 1 hour, 2 hours, until morning (when your quiet hours end, or 07:00) or until you resume. The sheet remembers your last choice.
 - While paused, the tile shows what's paused and until when, and a tap on it resumes. Home shows a card with the same details, what still lights, and Resume and Change buttons.
 - Notifications that arrive during a pause still queue, and light once it ends if they haven't been dismissed.
+- The ring also stays dark by itself while any app has a rear camera open, so it can't tint photos or video. Alerts held back light once the camera closes.
 
 **Extras**
 - Live preview of every pattern on a diffused ring mock-up, and a Test on LEDs button in each rule editor. Changing the pattern, colour, brightness or speed while a test plays restarts it with the new look.
@@ -89,7 +90,7 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 | Write secure settings | Granted by the daemon itself after the first connection, so the app can switch Wireless debugging on for a start (after a reboot, say), and off again straight after when USB debugging is on |
 | Shizuku (optional) | Talk to the lights daemon over local Binder IPC, for people who start it through Shizuku |
 
-No phone-state or call-log permission is used: incoming calls, cellular or app, are recognised from the dialer's own call notification. Contacts and notification content never leave the device. The only network activity off the phone is Google Play Billing for the purchase; the Wireless debugging connection is to the phone itself. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for the full policy.
+No camera permission is used either: Android tells every app when a camera opens and closes, which is all the app needs to keep the ring dark while a rear camera is in use. No phone-state or call-log permission is used: incoming calls, cellular or app, are recognised from the dialer's own call notification. Contacts and notification content never leave the device. The only network activity off the phone is Google Play Billing for the purchase; the Wireless debugging connection is to the phone itself. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for the full policy.
 
 ## How it works
 

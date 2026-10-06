@@ -58,6 +58,9 @@ class LightEngine {
     // last tick had one in force, so the moment it runs out is handled once.
     private var pause: PauseState? = null
     private var pauseInForce = false
+    // The ring sits round the rear lenses, so while any app has a rear camera open it stays
+    // dark, as if everything were paused, rather than tint photos or video.
+    private var rearCameraActive = false
 
     // Ambient state: the idle render when nothing else is active and battery isn't showing. Always off.
     private val ambientPattern = "off"
@@ -528,7 +531,16 @@ class LightEngine {
         }
     }
 
-    private fun paused(feature: PauseFeature): Boolean = pause?.pauses(feature) == true
+    fun setRearCameraActive(active: Boolean) {
+        synchronized(lock) {
+            if (rearCameraActive == active) return
+            rearCameraActive = active
+            onLiveConditionChanged()
+            DebugLog.i(TAG, "setRearCameraActive: $active")
+        }
+    }
+
+    private fun paused(feature: PauseFeature): Boolean = rearCameraActive || pause?.pauses(feature) == true
 
     private fun describePause(): String {
         val p = pause ?: return "none"
@@ -1139,7 +1151,7 @@ class LightEngine {
             appendLine("ring=$lastRenderReason, sessionOpen=${lights.isSessionOpen}, unclosedSessions=${lights.unclosedSessionCount}, leds=${lights.ledCount}, running=$running, renderThreadAlive=${renderThread?.isAlive}, lastFrame=${now - lastTickElapsedMs}ms ago")
             appendLine("route=${if (framesDriving) "frames" else "effects"}, effectsSupported=${lights.supportsEffects}, effectsFailed=$effectsFailed, period=${lights.effectPeriodMs}ms, showing=${shownEffectKey?.let { shownEffectInfo }}")
             appendLine("faceDown=$deviceFaceDown, dndActive=$dndActive, dndSuppress=$dndSuppressEnabled, quietHours=$quietHoursEnabled $quietHoursStartMinutes-$quietHoursEndMinutes, splitRing=$splitRing (${splitAnimation.id}, $splitLook, speed $splitSpeed)")
-            appendLine("pause=${describePause()}")
+            appendLine("pause=${describePause()}, rearCamera=$rearCameraActive")
             appendLine("test=${testAlert?.let { "${it.pattern} ${hex(it.color)}, ${it.expiresAtMs - now}ms left" }}")
             appendLine("gemini=${if (geminiEnabled) "on, ${geminiState?.id ?: "idle"}${geminiState?.let { ", for ${(now - geminiStateSinceMs) / 1000}s" } ?: ""}, looks=${geminiLooks.map { "${it.key.id}:${it.value.pattern}" }}" else "off"}")
             appendLine("call=${incomingCallAlert?.let { "${it.pattern} ${hex(it.color)}, ringing ${(now - it.startedAtMs) / 1000}s, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}" }}")

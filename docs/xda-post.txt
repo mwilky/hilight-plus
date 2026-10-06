@@ -83,6 +83,7 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 [*]For 1 hour, 2 hours, until morning (when quiet hours end, or 07:00) or until you resume. Your last choice is remembered.
 [*]The tile shows what's paused and until when, and a tap resumes. A card on Home shows the same, plus what still lights.
 [*]Notifications that arrive during a pause still queue, and light once it ends if they're still waiting.
+[*]The ring also stays dark by itself while a rear camera is in use, so it can't tint photos or video.
 [/LIST]
 
 [B]Extras[/B]
