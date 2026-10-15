@@ -456,4 +456,17 @@
     <string name="about_debug_log_reset_desc">Ring stuck on and not responding? Reset restarts the lights service, which releases the ring without restarting your phone. Once it reconnects, alerts that stay lit until dismissed are sent to it again. Timed alerts aren\'t, but new notifications light as normal.</string>
     <string name="about_debug_log_reset_started">Restarting the lights service</string>
     <string name="about_debug_log_share_failed">Couldn\'t prepare the log</string>
+    <string name="about_backup_header">Backup</string>
+    <string name="about_backup_title">Settings backup</string>
+    <string name="about_backup_status">Rules &amp; settings</string>
+    <string name="about_backup_desc">Save your rules and settings to a file, then restore them after reinstalling, or on a test build. Your purchase isn\'t included: Google Play restores it with your account. After a reinstall, the connection to the ring needs setting up again.</string>
+    <string name="about_backup_save">Back up</string>
+    <string name="about_backup_restore">Restore</string>
+    <string name="about_backup_saved">Settings backed up</string>
+    <string name="about_backup_save_failed">Couldn\'t save the backup</string>
+    <string name="about_backup_restored">Settings restored</string>
+    <string name="about_backup_restore_failed">That file isn\'t a HiLight Plus backup</string>
+    <string name="about_backup_restore_confirm_title">Restore settings?</string>
+    <string name="about_backup_restore_confirm_text">Your current rules and settings are replaced with the ones in the backup you choose.</string>
+    <string name="about_backup_restore_confirm">Choose backup</string>
 </resources>

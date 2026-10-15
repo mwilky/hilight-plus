@@ -1,6 +1,6 @@
 # Privacy Policy for HiLight Plus
 
-**Last updated:** October 6, 2026
+**Last updated:** October 15, 2026
 
 **HiLight Plus** ("we", "our", or "the app") is developed by **mwilky**. We are committed to protecting your privacy. This Privacy Policy outlines how your information is handled when you use HiLight Plus.
 
@@ -50,6 +50,9 @@ HiLight Plus requests sensitive Android permissions solely to deliver real-time 
 
 ## 3. Data Storage & Preferences
 All your custom configurations (color choices, animation speeds, per-contact rules, and per-app settings) are stored locally on your device using Android's encrypted **DataStore / SharedPreferences**. You can completely wipe this data at any time by clearing the app data in Android Settings or using the "Reset Onboarding & Rules" button within the app.
+
+### Settings Backup
+**Back up** on the About page saves your settings and rules to a file at a location you pick with Android's file picker; nothing is saved or sent anywhere else. The file holds your choices, including the names of the contacts and apps you've made rules for, but not your purchase or your trial. **Restore** reads back only a file you pick. Where the file goes from there, and who you share it with, is up to you.
 
 ### Debug Log
 To help diagnose problems, the app keeps a small debug log on your device (at most about 512 KB, with the oldest entries dropped first). It records what the lights were doing and why: app package names, which rule matched, notification categories, and connection and permission events. It does **not** record contact names, phone numbers, or notification contents.

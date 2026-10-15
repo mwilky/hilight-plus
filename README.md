@@ -64,6 +64,7 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 - Onboarding that connects to the ring, checks permissions and the stock HiLight setting that would otherwise fight for the ring, and explains the trial. Connecting is a self-ticking checklist: each switch is detected as you flip it, Settings opens at the right row, and a notification follows you there so you can type the pairing code without coming back to the app.
 - People updating from a Shizuku-only version get a one-time prompt to switch to the built-in connection, which then keeps itself running across restarts.
 - A live debug log on the About page, covering the app and the daemon, with one-tap clear and share. A shared report adds device and permission status, what the daemon is holding and every setting and rule, with contact names left out.
+- Settings backup on the About page: save every rule and setting to a file you choose, and restore it after a reinstall. The purchase isn't in the file (Google Play restores it), and the connection to the ring is set up again after reinstalling.
 - A Reset lights button that restarts the daemon, freeing a ring stuck on a stale light session without restarting the phone. Waiting notifications and a ringing call light again once it reconnects. The app also checks the ring on unlock and resets automatically if the LEDs don't show what the daemon last sent.
 
 ## Requirements

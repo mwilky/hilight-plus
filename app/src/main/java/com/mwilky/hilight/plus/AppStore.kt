@@ -595,6 +595,39 @@ class AppStore private constructor(private val appContext: Context) {
 
     suspend fun snapshot(): SettingsSnapshot = buildSnapshot(appContext.dataStore.data.first())
 
+    /** Every setting, as a backup file's contents (see [SettingsBackup] for what's left out). */
+    suspend fun exportBackup(): String = SettingsBackup.encode(
+        appContext.dataStore.data.first().asMap().mapKeys { it.key.name },
+        BuildConfig.VERSION_CODE
+    )
+
+    /**
+     * Replaces the settings with a backup's, keeping what [SettingsBackup] leaves out. Everything
+     * watching the store (the lights, the screens) picks the change up by itself. False, with
+     * nothing changed, when [raw] isn't a backup.
+     */
+    suspend fun restoreBackup(raw: String): Boolean {
+        val values = SettingsBackup.decode(raw)
+            .onFailure { DebugLog.w("AppStore", "Not restoring: ${it.message}") }
+            .getOrNull() ?: return false
+        appContext.dataStore.edit { prefs ->
+            prefs.asMap().keys.filter { it.name !in SettingsBackup.EXCLUDED }.forEach { prefs.remove(it) }
+            values.forEach { (name, value) ->
+                when (value) {
+                    is Boolean -> prefs[booleanPreferencesKey(name)] = value
+                    is Int -> prefs[intPreferencesKey(name)] = value
+                    is Long -> prefs[longPreferencesKey(name)] = value
+                    is Float -> prefs[floatPreferencesKey(name)] = value
+                    is Double -> prefs[doublePreferencesKey(name)] = value
+                    is String -> prefs[stringPreferencesKey(name)] = value
+                    is Set<*> -> prefs[stringSetPreferencesKey(name)] = value.filterIsInstance<String>().toSet()
+                }
+            }
+        }
+        DebugLog.i("AppStore", "Restored ${values.size} settings from a backup")
+        return true
+    }
+
     private fun buildSnapshot(prefs: Preferences): SettingsSnapshot {
         val d = DEFAULT_SETTINGS_SNAPSHOT
         return SettingsSnapshot(

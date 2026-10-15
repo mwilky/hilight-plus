@@ -8,6 +8,8 @@ import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,11 +19,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.RestartAlt
+import androidx.compose.material.icons.rounded.Restore
+import androidx.compose.material.icons.rounded.SettingsBackupRestore
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -57,9 +62,13 @@ import com.mwilky.hilight.plus.ui.diagnostics.GeminiStockCard
 import com.mwilky.hilight.plus.ui.diagnostics.StockConflictCard
 import com.mwilky.hilight.plus.ui.diagnostics.rememberCallPermissionLauncher
 import com.mwilky.hilight.plus.ui.diagnostics.rememberPermissionState
+import androidx.compose.runtime.saveable.rememberSaveable
+import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * About & Diagnostics Screen:
@@ -117,6 +126,33 @@ fun AboutScreen(controller: LightController, onSetUpConnection: () -> Unit) {
     val scope = rememberCoroutineScope()
     var isSharingLog by remember { mutableStateOf(false) }
 
+    val backupLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument(BACKUP_MIME_TYPE)
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val saved = runCatching {
+                val backup = controller.store.exportBackup()
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openOutputStream(uri, "wt")!!.bufferedWriter().use { it.write(backup) }
+                }
+            }.onFailure { DebugLog.e(TAG, "Couldn't save the backup", it) }.isSuccess
+            Toast.makeText(context, if (saved) R.string.about_backup_saved else R.string.about_backup_save_failed, Toast.LENGTH_SHORT).show()
+        }
+    }
+    val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val restored = runCatching {
+                val backup = withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)!!.bufferedReader().use { it.readText() }
+                }
+                controller.store.restoreBackup(backup)
+            }.onFailure { DebugLog.e(TAG, "Couldn't read the backup", it) }.getOrDefault(false)
+            Toast.makeText(context, if (restored) R.string.about_backup_restored else R.string.about_backup_restore_failed, Toast.LENGTH_SHORT).show()
+        }
+    }
+
     AboutContent(
         onTitleCardTap = {
             val now = System.currentTimeMillis()
@@ -168,11 +204,15 @@ fun AboutScreen(controller: LightController, onSetUpConnection: () -> Unit) {
         onResetLights = {
             scope.launch { controller.daemon.resetDaemon() }
             Toast.makeText(context, R.string.about_debug_log_reset_started, Toast.LENGTH_SHORT).show()
-        }
+        },
+        onBackUp = { backupLauncher.launch("hilight-plus-settings-${LocalDate.now()}.json") },
+        // Not only JSON: some file pickers don't tag a .json file as JSON.
+        onRestore = { restoreLauncher.launch(arrayOf(BACKUP_MIME_TYPE, "application/octet-stream", "text/plain")) }
     )
 }
 
 private const val TAG = "AboutScreen"
+private const val BACKUP_MIME_TYPE = "application/json"
 
 @Composable
 private fun LedWalkDialog(index: Int) {
@@ -224,9 +264,33 @@ fun AboutContent(
     isSharingLog: Boolean,
     onShareLog: () -> Unit,
     onClearLog: () -> Unit,
-    onResetLights: () -> Unit
+    onResetLights: () -> Unit,
+    onBackUp: () -> Unit,
+    onRestore: () -> Unit
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    var confirmRestore by rememberSaveable { mutableStateOf(false) }
+
+    if (confirmRestore) {
+        AlertDialog(
+            onDismissRequest = { confirmRestore = false },
+            title = { Text(stringResource(R.string.about_backup_restore_confirm_title)) },
+            text = { Text(stringResource(R.string.about_backup_restore_confirm_text)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmRestore = false
+                    onRestore()
+                }) {
+                    Text(stringResource(R.string.about_backup_restore_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmRestore = false }) {
+                    Text(stringResource(R.string.dialog_btn_cancel))
+                }
+            }
+        )
+    }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -359,6 +423,10 @@ fun AboutContent(
                 onOpenNotifSettings = onOpenNotifSettings
             )
 
+            RuleGroupHeader(stringResource(R.string.about_backup_header))
+
+            BackupCard(onBackUp = onBackUp, onRestore = { confirmRestore = true })
+
             RuleGroupHeader(stringResource(R.string.about_debug_log_header))
 
             DebugLogCard(
@@ -469,6 +537,29 @@ private fun DebugLogCard(
     }
 }
 
+/** Saves the settings to a file and restores them, in the same card and button style as the log. */
+@Composable
+private fun BackupCard(onBackUp: () -> Unit, onRestore: () -> Unit) {
+    ExpressiveStatusCard(
+        title = stringResource(R.string.about_backup_title),
+        subtitle = stringResource(R.string.about_backup_desc),
+        icon = Icons.Rounded.SettingsBackupRestore,
+        statusText = stringResource(R.string.about_backup_status),
+        accentColor = MaterialTheme.colorScheme.primary,
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        contentColor = MaterialTheme.colorScheme.onSurface
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onRestore, modifier = Modifier.weight(1f), shapes = ButtonDefaults.shapes()) {
+                ButtonLabel(Icons.Rounded.Restore, stringResource(R.string.about_backup_restore))
+            }
+            Button(onClick = onBackUp, modifier = Modifier.weight(1f), shapes = ButtonDefaults.shapes()) {
+                ButtonLabel(Icons.Rounded.Backup, stringResource(R.string.about_backup_save))
+            }
+        }
+    }
+}
+
 /** One log entry: time, process and tag on a small header line, the message underneath. */
 @Composable
 private fun DebugLogEntry(text: String) {
@@ -555,7 +646,9 @@ fun AboutScreenPreview() {
             isSharingLog = false,
             onShareLog = {},
             onClearLog = {},
-            onResetLights = {}
+            onResetLights = {},
+            onBackUp = {},
+            onRestore = {}
         )
     }
 }
