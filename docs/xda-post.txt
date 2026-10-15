@@ -124,14 +124,6 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 [HR][/HR]
 
 
-[SIZE=2][B]XDA : DevDB Information
-HiLight Plus, App for the Google Pixel 11 Pro
-
-Contributors:[/B] mwilky
-[B]Community:[/B] [URL='https://t.me/+XW1xL8tZE2w0ZDc0']Telegram Group[/URL]
+[SIZE=2][B]Community:[/B] [URL='https://t.me/+XW1xL8tZE2w0ZDc0']Telegram Group[/URL]
 [B]Source Code:[/B] [URL]https://github.com/mwilky/hilight-plus[/URL]
-[B]License:[/B] GNU General Public License v3.0 (GPL-3.0)
-
-[B]Version Information
-Status:[/B] Stable
-[B]Target OS:[/B] Android 17 (API 37)[/SIZE]
+[B]License:[/B] GNU General Public License v3.0 (GPL-3.0)[/SIZE]
