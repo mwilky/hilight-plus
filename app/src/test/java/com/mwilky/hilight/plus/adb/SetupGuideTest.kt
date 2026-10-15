@@ -30,6 +30,33 @@ class SetupGuideTest {
     }
 
     @Test
+    fun hiddenDeveloperOptionsDoesNotHoldUpTheNextSteps() {
+        // Android 17 QPR1 won't tell apps; Wireless debugging coming on is the proof.
+        assertEquals(SetupStep.WIFI, SetupState(devOptionsOn = null).step)
+        assertEquals(SetupStep.WIRELESS_DEBUGGING, SetupState(devOptionsOn = null, wifiConnected = true).step)
+    }
+
+    @Test
+    fun developerOptionsReadsOnWhenReportedOrProvedByWirelessDebugging() {
+        assertEquals(true, DevSettings.devOptionsState(reportsOn = true, wirelessDebuggingOn = false, foundOff = false))
+        assertEquals(true, DevSettings.devOptionsState(reportsOn = false, wirelessDebuggingOn = true, foundOff = false))
+    }
+
+    @Test
+    fun aZeroFromThePhoneIsNeverTrustedAsOff() {
+        // Android 17 QPR1 on gives apps 0 whatever the switch says.
+        assertNull(DevSettings.devOptionsState(reportsOn = false, wirelessDebuggingOn = false, foundOff = false))
+        assertNull(DevSettings.devOptionsState(reportsOn = false, wirelessDebuggingOn = null, foundOff = false))
+    }
+
+    @Test
+    fun developerOptionsOffOnceTheDaemonFoundItOff() {
+        assertEquals(false, DevSettings.devOptionsState(reportsOn = false, wirelessDebuggingOn = false, foundOff = true))
+        // Wireless debugging on proves it came back on since.
+        assertEquals(true, DevSettings.devOptionsState(reportsOn = false, wirelessDebuggingOn = true, foundOff = true))
+    }
+
+    @Test
     fun connectedIsDoneWhateverElseSays() {
         assertEquals(SetupStep.DONE, SetupState(connected = true).step)
         assertEquals(GuideNotice.DONE, SetupState(connected = true).guideNotice())

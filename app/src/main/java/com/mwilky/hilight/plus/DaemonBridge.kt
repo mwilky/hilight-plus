@@ -134,6 +134,15 @@ class DaemonBridge private constructor(private val app: Application) {
     // Set when the user has just been asked to allow this network, so the next start waits longer.
     private var askedToAllowNetwork = false
 
+    // Set by "Connect anyway" on the Developer options off card, for the next daemon only: if the
+    // daemon couldn't see the real value either, it's the user's only way back.
+    private var skipDevOptionsCheck = false
+
+    // Set when this process starts a daemon, so only that one is checked for Developer options. One
+    // already running hands itself over whenever the app restarts, and Developer options going off
+    // would have stopped it.
+    private var startedDaemon = false
+
     private val args = Shizuku.UserServiceArgs(
         ComponentName(BuildConfig.APPLICATION_ID, HiLightDaemonService::class.java.name)
     )
@@ -215,9 +224,11 @@ class DaemonBridge private constructor(private val app: Application) {
     }
 
     // Developer options coming back on is all a paired user needs to do to get the lights back.
+    // Where the phone won't say which way it went, any change is worth a try.
     private val devOptionsObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean) {
-            if (!DevSettings.isDevOptionsOn(app) || _method.value != Method.BUILT_IN) return
+            DevSettings.forgetFoundOff(app)
+            if (DevSettings.isDevOptionsOn(app) == false || _method.value != Method.BUILT_IN) return
             if (_state.value == State.DEV_OPTIONS_OFF || _state.value == State.FAILED) {
                 DebugLog.i("HiLightPlus", "Developer options back on -> starting the daemon")
                 builtInFailures = 0
@@ -227,12 +238,13 @@ class DaemonBridge private constructor(private val app: Application) {
     }
 
     // Wireless debugging coming on while waiting for the network to be allowed means the user has
-    // just allowed it (it only stays on when the network is allowed).
+    // just allowed it (it only stays on when the network is allowed). While Developer options is
+    // off, it means that's back on: where the phone won't say, the only sign that may come.
     private val wirelessDebuggingObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean) {
-            if (_state.value != State.NETWORK_NOT_ALLOWED) return
+            if (_state.value != State.NETWORK_NOT_ALLOWED && _state.value != State.DEV_OPTIONS_OFF) return
             if (DevSettings.isWirelessDebuggingOn(app) != true) return
-            DebugLog.i("HiLightPlus", "Wireless debugging allowed on this network -> starting the daemon")
+            DebugLog.i("HiLightPlus", "Wireless debugging on (${_state.value}) -> starting the daemon")
             builtInFailures = 0
             refresh()
         }
@@ -284,6 +296,15 @@ class DaemonBridge private constructor(private val app: Application) {
         wireless.isPaired() -> Method.BUILT_IN
         isShizukuInstalled() -> Method.SHIZUKU
         else -> Method.BUILT_IN
+    }
+
+    /**
+     * [refresh] for the app being opened, a boot or an update: worth checking Developer options
+     * again even if the daemon found it off, in case the phone didn't say it came back on.
+     */
+    fun recheck() {
+        if (_state.value == State.DEV_OPTIONS_OFF) DevSettings.forgetFoundOff(app)
+        refresh()
     }
 
     fun refresh() {
@@ -358,7 +379,8 @@ class DaemonBridge private constructor(private val app: Application) {
     }
 
     private suspend fun startBuiltInNow() {
-        if (!DevSettings.isDevOptionsOn(app)) {
+        // Only when the phone says so: from Android 17 QPR1 it won't, so carry on and try.
+        if (DevSettings.isDevOptionsOn(app) == false) {
             DebugLog.w("HiLightPlus", "Developer options is off; can't start the daemon")
             lastError = null
             _state.value = State.DEV_OPTIONS_OFF
@@ -371,7 +393,7 @@ class DaemonBridge private constructor(private val app: Application) {
         }
         if (DevSettings.isWirelessDebuggingOn(app) == false) {
             _state.value = State.TURNING_ON_WIRELESS_DEBUGGING
-            if (!DevSettings.enableWirelessDebugging(app)) {
+            if (!DevSettings.enableWirelessDebugging(app, whenUnsure = true)) {
                 DebugLog.w("HiLightPlus", "Wireless debugging is off and the app can't turn it on")
                 _state.value = State.NEEDS_SETUP
                 return
@@ -389,7 +411,7 @@ class DaemonBridge private constructor(private val app: Application) {
         val window = if (asking) ALLOW_NETWORK_WINDOW_MS else QUICK_RETRY_WINDOW_MS
         askedToAllowNetwork = false
         _state.value = if (asking) State.ASKING_TO_ALLOW_NETWORK else State.CONNECTING
-        var result = withContext(Dispatchers.IO) { wireless.startDaemon() }
+        var result = startDaemon()
         var unreachable = if (result is WirelessAdb.StartResult.NotReachable) 1 else 0
         val deadline = SystemClock.elapsedRealtime() + window
         while (result.isRetryable() && SystemClock.elapsedRealtime() < deadline) {
@@ -408,7 +430,7 @@ class DaemonBridge private constructor(private val app: Application) {
             if (!asking) {
                 _state.value = if (unreachable > 0) State.WAITING_FOR_WIRELESS_DEBUGGING else State.CONNECTING
             }
-            result = withContext(Dispatchers.IO) { wireless.startDaemon() }
+            result = startDaemon()
             unreachable = if (result is WirelessAdb.StartResult.NotReachable) unreachable + 1 else 0
         }
         if (result is WirelessAdb.StartResult.Started) _state.value = State.CONNECTING
@@ -423,6 +445,12 @@ class DaemonBridge private constructor(private val app: Application) {
             }
             WirelessAdb.StartResult.PairingRequired -> {
                 DebugLog.w("HiLightPlus", "Pairing was removed; setup needed again")
+                // Turning Developer options off removes it, so that's the likely cause: don't leave
+                // Wireless debugging on that only this start wanted.
+                if (turnOffWirelessDebugging && DevSettings.disableWirelessDebugging(app)) {
+                    DebugLog.i("HiLightPlus", "Turned Wireless debugging off again")
+                }
+                turnOffWirelessDebugging = false
                 _state.value = State.NEEDS_SETUP
                 SetupNotifier.showPairingLost(app)
                 // Falls back to Shizuku here if the user has it.
@@ -444,6 +472,12 @@ class DaemonBridge private constructor(private val app: Application) {
         }
     }
 
+    /** Starts one over Wireless debugging; its binder is then checked for Developer options. */
+    private suspend fun startDaemon(): WirelessAdb.StartResult {
+        startedDaemon = true
+        return withContext(Dispatchers.IO) { wireless.startDaemon() }
+    }
+
     private fun WirelessAdb.StartResult.isRetryable(): Boolean =
         this is WirelessAdb.StartResult.Failed || this is WirelessAdb.StartResult.NotReachable
 
@@ -456,7 +490,7 @@ class DaemonBridge private constructor(private val app: Application) {
         DebugLog.i("HiLightPlus", "Switching Wireless debugging off and on so Android asks about this network again")
         turnOffWirelessDebugging = true
         delay(WIRELESS_DEBUGGING_TOGGLE_MS)
-        return DevSettings.enableWirelessDebugging(app)
+        return DevSettings.enableWirelessDebugging(app, whenUnsure = true)
     }
 
     /** From the card's "Ask again" or the notification: ask again and give the user time to answer. */
@@ -489,6 +523,7 @@ class DaemonBridge private constructor(private val app: Application) {
                 binder?.let { runCatching { IHiLightService.Stub.asInterface(it).destroy() } }
                 return@launch
             }
+            if (daemonFindsDevOptionsOff(binder)) return@launch
             if (_method.value == Method.SHIZUKU) {
                 runCatching { Shizuku.unbindUserService(args, connection, false) }
             }
@@ -514,6 +549,44 @@ class DaemonBridge private constructor(private val app: Application) {
                 replaceStaleDaemon()
             }
         }
+    }
+
+    /**
+     * Where the app can't see Developer options (Android 17 QPR1 on), a start goes ahead anyway;
+     * the daemon still sees the real value, so it has the last word. Found off, the daemon is
+     * stopped (which clears the ring), Wireless debugging goes back off if it was switched on for
+     * this start, and no start is tried again until something suggests it's back on.
+     */
+    private suspend fun daemonFindsDevOptionsOff(binder: IBinder?): Boolean {
+        val startedHere = startedDaemon
+        startedDaemon = false
+        // Not isDevOptionsOn: Wireless debugging, which counts there, may have been switched on for this start.
+        if (binder == null || !startedHere || DevSettings.reportsDevOptionsOn(app)) return false
+        if (skipDevOptionsCheck) {
+            skipDevOptionsCheck = false
+            DebugLog.i("HiLightPlus", "Connect anyway: not asking the daemon about Developer options")
+            return false
+        }
+        val daemon = IHiLightService.Stub.asInterface(binder)
+        val value = withContext(Dispatchers.IO) {
+            runCatching { daemon.getGlobalString(Settings.Global.DEVELOPMENT_SETTINGS_ENABLED) }.getOrNull()
+        }
+        DebugLog.i("HiLightPlus", "Developer options hidden from the app; the daemon reads $value")
+        // Only a definite 0: a daemon that can't answer is no reason to stop the lights.
+        if (value?.trim() != "0") return false
+        DebugLog.w("HiLightPlus", "Developer options is off; stopping the lights service until it's back on")
+        DevSettings.markFoundOff(app)
+        withContext(Dispatchers.IO) { runCatching { daemon.destroy() } }
+        if (turnOffWirelessDebugging && DevSettings.disableWirelessDebugging(app)) {
+            DebugLog.i("HiLightPlus", "Turned Wireless debugging off again")
+        }
+        turnOffWirelessDebugging = false
+        builtInJob?.cancel()
+        if (service?.asBinder() === binder) service = null
+        lastError = null
+        _state.value = State.DEV_OPTIONS_OFF
+        onAvailabilityChanged?.invoke()
+        return true
     }
 
     /**
@@ -547,24 +620,28 @@ class DaemonBridge private constructor(private val app: Application) {
     private fun replaceStaleDaemon() {
         scope.launch {
             // Each skip keeps the old daemon in use, so say why: it may not match this build.
-            if (!DevSettings.isWifiConnected(app) || !DevSettings.isDevOptionsOn(app)) {
+            if (!DevSettings.isWifiConnected(app) || DevSettings.isDevOptionsOn(app) == false) {
                 DebugLog.w("HiLightPlus", "Keeping the old daemon: needs Wi-Fi and Developer options to start a current one")
                 return@launch
             }
             if (DevSettings.isWirelessDebuggingOn(app) == false) {
-                if (!DevSettings.enableWirelessDebugging(app)) {
+                if (!DevSettings.enableWirelessDebugging(app, whenUnsure = true)) {
                     DebugLog.w("HiLightPlus", "Keeping the old daemon: couldn't turn on Wireless debugging")
                     return@launch
                 }
                 turnOffWirelessDebugging = true
             }
-            val result = withContext(Dispatchers.IO) { wireless.startDaemon() }
+            val result = startDaemon()
             if (result != WirelessAdb.StartResult.Started) {
                 DebugLog.w("HiLightPlus", "Keeping the old daemon: starting a current one gave $result")
             }
             // The old daemon keeps the lights going for now, so nothing else would show that none
             // can be started again: say so while it can still be fixed.
-            if (result == WirelessAdb.StartResult.PairingRequired) SetupNotifier.showPairingLost(app)
+            if (result == WirelessAdb.StartResult.PairingRequired) {
+                SetupNotifier.showPairingLost(app)
+                if (turnOffWirelessDebugging) DevSettings.disableWirelessDebugging(app)
+                turnOffWirelessDebugging = false
+            }
         }
     }
 
@@ -664,7 +741,14 @@ class DaemonBridge private constructor(private val app: Application) {
                     .getOrDefault(false)
             }
             if (!turnOff || !canWrite) return@launch
-            if (!DevSettings.isUsbDebuggingOn(app)) {
+            // Where the phone won't tell the app, the daemon may be able to see it.
+            val usbDebugging = DevSettings.isUsbDebuggingOn(app) ?: withContext(Dispatchers.IO) {
+                val usb = runCatching { bound.getGlobalString(Settings.Global.ADB_ENABLED) }.getOrNull()
+                val devOptions = runCatching { bound.getGlobalString(Settings.Global.DEVELOPMENT_SETTINGS_ENABLED) }.getOrNull()
+                DebugLog.i("HiLightPlus", "Hidden from the app; the daemon reads adb_enabled=$usb, development_settings_enabled=$devOptions")
+                usb?.trim() == "1"
+            }
+            if (!usbDebugging) {
                 // Nothing else would keep the debugging service running, and the daemon with it.
                 DebugLog.i("HiLightPlus", "Leaving Wireless debugging on: USB debugging is off, so turning it off would stop the daemon")
                 return@launch
@@ -692,6 +776,9 @@ class DaemonBridge private constructor(private val app: Application) {
         DebugLog.i("HiLightPlus", "=== connectManually() called ===")
         manuallyDisconnected = false
         builtInFailures = 0
+        // "Connect anyway": the user says Developer options is on, so the daemon isn't asked.
+        if (_state.value == State.DEV_OPTIONS_OFF) skipDevOptionsCheck = true
+        DevSettings.forgetFoundOff(app)
         if (_state.value == State.NETWORK_NOT_ALLOWED && _method.value == Method.BUILT_IN) {
             askToAllowNetwork()
             return

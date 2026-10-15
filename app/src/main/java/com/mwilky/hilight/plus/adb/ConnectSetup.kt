@@ -62,7 +62,11 @@ class ConnectSetup private constructor(private val app: Application) {
     private var discoveryAllowed = true
 
     private val settingsObserver = object : ContentObserver(handler) {
-        override fun onChange(selfChange: Boolean) = update()
+        override fun onChange(selfChange: Boolean) {
+            // Developer options may have come back on since the daemon found it off.
+            DevSettings.forgetFoundOff(app)
+            update()
+        }
     }
 
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {

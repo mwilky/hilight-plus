@@ -22,7 +22,8 @@ enum class PairingPhase {
 }
 
 data class SetupState(
-    val devOptionsOn: Boolean = false,
+    /** Null when the phone won't say (Android 17 QPR1 on); Wireless debugging coming on proves it. */
+    val devOptionsOn: Boolean? = false,
     val wifiConnected: Boolean = false,
     val wirelessDebuggingOn: Boolean = false,
     val pairing: PairingPhase = PairingPhase.SEARCHING,
@@ -33,7 +34,7 @@ data class SetupState(
     val step: SetupStep
         get() = when {
             connected -> SetupStep.DONE
-            !devOptionsOn -> SetupStep.DEV_OPTIONS
+            devOptionsOn == false -> SetupStep.DEV_OPTIONS
             !wifiConnected -> SetupStep.WIFI
             !wirelessDebuggingOn -> SetupStep.WIRELESS_DEBUGGING
             else -> SetupStep.PAIR

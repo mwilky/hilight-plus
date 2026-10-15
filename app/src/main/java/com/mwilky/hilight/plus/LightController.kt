@@ -506,7 +506,7 @@ class LightController private constructor(private val app: Application) {
     }
 
     fun refreshStatus() {
-        daemon.refresh()
+        daemon.recheck()
         licensing.refreshPurchases()
     }
 

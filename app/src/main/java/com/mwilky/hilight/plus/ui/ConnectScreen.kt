@@ -249,7 +249,7 @@ private fun ConnectChecklist(
     onRetry: () -> Unit
 ) {
     val step = setup.step
-    val networkReady = setup.devOptionsOn && setup.wifiConnected && setup.wirelessDebuggingOn
+    val networkReady = setup.devOptionsOn == true && setup.wifiConnected && setup.wirelessDebuggingOn
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -260,14 +260,15 @@ private fun ConnectChecklist(
             ChecklistRow(
                 number = 1,
                 status = when {
-                    setup.devOptionsOn -> RowStatus.DONE
+                    setup.devOptionsOn == true -> RowStatus.DONE
                     else -> RowStatus.CURRENT
                 },
                 title = stringResource(R.string.connect_step_dev_title),
-                description = if (setup.devOptionsOn) {
-                    stringResource(R.string.connect_step_dev_done)
-                } else {
-                    stringResource(R.string.connect_step_dev_desc)
+                description = when (setup.devOptionsOn) {
+                    true -> stringResource(R.string.connect_step_dev_done)
+                    false -> stringResource(R.string.connect_step_dev_desc)
+                    // Can't tick itself off until Wireless debugging is on, so don't hold up the next step.
+                    null -> stringResource(R.string.connect_step_dev_unknown)
                 }
             ) {
                 StepButton(stringResource(R.string.connect_step_dev_btn)) { onOpenStep(SetupStep.DEV_OPTIONS) }
@@ -611,6 +612,29 @@ fun ConnectScreenPreview() {
                 ),
                 connectionState = DaemonBridge.State.CONNECTED,
                 connectionMethod = DaemonBridge.Method.SHIZUKU,
+                connectionError = null,
+                notificationsAllowed = true,
+                allowShizuku = false,
+                showShizuku = false,
+                onToggleShizuku = {},
+                onOpenStep = {},
+                onSubmitCode = {},
+                onRetry = {},
+                shizukuActions = ShizukuActions()
+            )
+        }
+    }
+}
+
+@Preview(name = "Connect - Developer options hidden", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+fun ConnectScreenDevOptionsHiddenPreview() {
+    HiLightPlusTheme {
+        ConnectScreenContent(done = false, shizukuInstalled = false, onOpenShizukuInfo = {}, onClose = {}) {
+            ConnectStepContent(
+                setup = SetupState(devOptionsOn = null, wifiConnected = true),
+                connectionState = DaemonBridge.State.NEEDS_SETUP,
+                connectionMethod = DaemonBridge.Method.BUILT_IN,
                 connectionError = null,
                 notificationsAllowed = true,
                 allowShizuku = false,
