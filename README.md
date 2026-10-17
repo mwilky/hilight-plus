@@ -44,7 +44,7 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 - Replaces Pixel's own Gemini feedback with a pattern and colour for each of Gemini's listening, thinking and replying states, defaulting to copies of the stock animations. On by default.
 - Each state can be switched off, and follows the conditions below or its own, like any rule.
 - Gemini shows above notifications and battery, and below calls.
-- Gemini broadcasts none of this, so the daemon follows Gemini's own app log, on the phone only. A Gemini update that changes what it logs can stop the ring following until HiLight Plus is updated.
+- Gemini broadcasts none of this, so the daemon follows Gemini's own app log, on the phone only.
 
 **Conditions**
 - Only light when the phone is face down.

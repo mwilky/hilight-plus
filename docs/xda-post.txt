@@ -68,7 +68,7 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 [LIST]
 [*]Replaces Pixel's own Gemini feedback: a pattern and colour for each of Gemini's listening, thinking and replying states, defaulting to copies of the stock animations.
 [*]Each state can be switched off, and follows the gating conditions or its own, like any rule.
-[*]Followed from Gemini's own app log, on the phone only. A Gemini update that changes what it logs can stop the ring following until HiLight Plus is updated.
+[*]Followed from Gemini's own app log, on the phone only.
 [/LIST]
 
 [B]Gating & Environment Conditions[/B]
