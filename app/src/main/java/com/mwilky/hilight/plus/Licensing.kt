@@ -16,7 +16,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -86,6 +88,10 @@ class Licensing(
 
     val isEntitled: StateFlow<Boolean> = status.map { it.entitled }
         .stateIn(scope, SharingStarted.Eagerly, true)
+
+    // Fires when the purchase sheet completes a purchase, not when an earlier one is restored.
+    private val _purchaseCompleted = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val purchaseCompleted: SharedFlow<Unit> = _purchaseCompleted
 
     private val billing: BillingClient = BillingClient.newBuilder(app)
         .setListener { result, purchases -> onPurchasesUpdated(result, purchases) }
@@ -217,6 +223,7 @@ class Licensing(
             owned = true
             if (!purchase.isAcknowledged) acknowledge(purchase)
         }
+        if (owned && fromFlow && !status.value.purchased) _purchaseCompleted.tryEmit(Unit)
         if (owned || !fromFlow) {
             scope.launch { store.setPurchased(owned) }
         }

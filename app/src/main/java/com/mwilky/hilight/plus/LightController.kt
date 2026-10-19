@@ -77,6 +77,10 @@ class LightController private constructor(private val app: Application) {
     }
     private var lastAutoResetMs = 0L
 
+    // Once the review prompt's threshold is reached there's nothing more to count, so stop writing.
+    @Volatile
+    private var litAlertsCapped = false
+
     private val batteryReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action != Intent.ACTION_BATTERY_CHANGED) return
@@ -239,6 +243,14 @@ class LightController private constructor(private val app: Application) {
         daemon.resetDaemon()
     }
 
+    /** Counts an alert sent to the ring, for the review prompt. */
+    private fun noteAlertLit() {
+        if (litAlertsCapped) return
+        scope.launch {
+            if (store.noteAlertLit(ReviewPrompt.MIN_LIT_ALERTS) >= ReviewPrompt.MIN_LIT_ALERTS) litAlertsCapped = true
+        }
+    }
+
     // --- Production Alert & Event Controls ---
 
     /**
@@ -258,6 +270,7 @@ class LightController private constructor(private val app: Application) {
         quietEndMinutes: Int? = null
     ) {
         val calculatedSpeed = pattern.speedMs(speed, speedMs)
+        noteAlertLit()
         daemon.triggerAlert(
             pattern = pattern.id,
             color = color,
@@ -290,6 +303,7 @@ class LightController private constructor(private val app: Application) {
         quietEndMinutes: Int? = null
     ) {
         val calculatedSpeed = pattern.speedMs(speed, speedMs)
+        noteAlertLit()
         daemon.postAlert(
             key = key,
             pattern = pattern.id,
@@ -374,6 +388,7 @@ class LightController private constructor(private val app: Application) {
         quietEndMinutes: Int? = null
     ) {
         val calculatedSpeed = pattern.speedMs(speed, speedMs)
+        noteAlertLit()
         daemon.startIncomingCall(
             pattern = pattern.id,
             color = color,

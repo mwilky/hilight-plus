@@ -1,6 +1,6 @@
 # Privacy Policy for HiLight Plus
 
-**Last updated:** October 15, 2026
+**Last updated:** October 16, 2026
 
 **HiLight Plus** ("we", "our", or "the app") is developed by **mwilky**. We are committed to protecting your privacy. This Privacy Policy outlines how your information is handled when you use HiLight Plus.
 
@@ -9,7 +9,7 @@
 ## 1. Summary: 100% On-Device Processing
 HiLight Plus operates **entirely on your device**. 
 - We do **not** collect, store, transmit, sell, or share any personal information. A debug log stays on your device and is only sent if you choose to share it (see section 3).
-- The app does **not** connect to external servers or cloud services. The only network activity off your phone is Google Play Billing, used to process the one-off purchase; Google's handling of that transaction is covered by Google's own privacy policy. The app's other network use is a connection to your phone's own Wireless debugging, which never leaves the device (see section 2C).
+- The app does **not** connect to external servers or cloud services. The only network activity off your phone is Google Play: Google Play Billing, used to process the one-off purchase, and Google Play's in-app review sheet, which may occasionally ask you to rate the app. The app sends nothing to the review sheet beyond asking it to appear, never learns whether or how you rated, and only counts locally how often the ring has lit so it knows when to ask. Google's handling of the purchase and of any rating is covered by Google's own privacy policy. The app's other network use is a connection to your phone's own Wireless debugging, which never leaves the device (see section 2C).
 - The app does **not** include third-party tracking, analytics, or advertising SDKs.
 
 ---

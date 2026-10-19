@@ -32,6 +32,9 @@ class AppStore private constructor(private val appContext: Context) {
         // Licensing. Trial start is a local copy of the Settings.Global value the daemon owns.
         private val KEY_TRIAL_START_MS = longPreferencesKey("trial_start_ms")
         private val KEY_PURCHASED = booleanPreferencesKey("purchased")
+        // In-app review: alerts sent to the ring (counted up to a cap), and when Play was last asked.
+        private val KEY_LIT_ALERT_COUNT = intPreferencesKey("lit_alert_count")
+        private val KEY_REVIEW_REQUESTED_MS = longPreferencesKey("review_requested_ms")
 
         // Pause: the one in force (a wall-clock end and the features it covers), and the sheet's
         // last choice, which it offers again.
@@ -162,6 +165,12 @@ class AppStore private constructor(private val appContext: Context) {
     val isPurchased: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_PURCHASED] ?: false }
 
+    val litAlertCount: Flow<Int> = appContext.dataStore.data
+        .map { it[KEY_LIT_ALERT_COUNT] ?: 0 }
+
+    val reviewRequestedMillis: Flow<Long?> = appContext.dataStore.data
+        .map { it[KEY_REVIEW_REQUESTED_MS] }
+
     val isOnlyWhenFaceDown: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_ONLY_WHEN_FACE_DOWN] ?: false }
 
@@ -275,6 +284,20 @@ class AppStore private constructor(private val appContext: Context) {
 
     suspend fun setPurchased(purchased: Boolean) {
         appContext.dataStore.edit { it[KEY_PURCHASED] = purchased }
+    }
+
+    /** Counts one more alert sent to the ring, stopping at [cap]. Returns the count after. */
+    suspend fun noteAlertLit(cap: Int): Int {
+        var count = 0
+        appContext.dataStore.edit { prefs ->
+            count = ((prefs[KEY_LIT_ALERT_COUNT] ?: 0) + 1).coerceAtMost(cap)
+            prefs[KEY_LIT_ALERT_COUNT] = count
+        }
+        return count
+    }
+
+    suspend fun setReviewRequestedMillis(millis: Long) {
+        appContext.dataStore.edit { it[KEY_REVIEW_REQUESTED_MS] = millis }
     }
 
     suspend fun setOnlyWhenFaceDown(enabled: Boolean) {

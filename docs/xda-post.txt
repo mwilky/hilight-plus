@@ -95,6 +95,7 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 [*]Live debug log for the app and daemon, with one-tap share (contact names left out).
 [*]Back up your rules and settings to a file, and restore them after a reinstall.
 [*]Reset lights button that frees a stuck ring without a reboot, plus an automatic check on unlock.
+[*]Rate on Google Play from the About page. Play's rating sheet may also appear once the app has been working for a few days, at most every 90 days.
 [/LIST]
 
 [HR][/HR]

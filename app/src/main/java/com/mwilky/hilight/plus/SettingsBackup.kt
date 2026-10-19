@@ -15,9 +15,13 @@ internal object SettingsBackup {
 
     /**
      * Left out both ways. The purchase is the Play Store's to say, and a file must not unlock the
-     * app; the trial's real start lives with the phone. A pause in force belongs to the moment.
+     * app; the trial's real start lives with the phone. A pause in force belongs to the moment,
+     * and the review prompt's bookkeeping to this install.
      */
-    val EXCLUDED = setOf("purchased", "trial_start_ms", "pause_until_ms", "pause_features")
+    val EXCLUDED = setOf(
+        "purchased", "trial_start_ms", "pause_until_ms", "pause_features",
+        "lit_alert_count", "review_requested_ms"
+    )
 
     fun encode(values: Map<String, Any>, appVersionCode: Int): String {
         val settings = JSONObject()

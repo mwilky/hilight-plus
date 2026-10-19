@@ -2,7 +2,7 @@
 
 Custom rear LED lighting for the Google Pixel 11 Pro.
 
-Pixel's built-in HiLight lights the rear ring for two things: calls from favourites, and Gemini's listening, thinking and replying states. HiLight Plus replaces both. It takes over the eight-LED ring behind the camera bar and lets you decide what it shows: a colour and pattern per contact or app, your own looks for Gemini's states, a charging gauge, a low-battery warning, and rules for when it should stay dark. Everything runs on-device with no accounts and no analytics; the only network use is the Google Play purchase.
+Pixel's built-in HiLight lights the rear ring for two things: calls from favourites, and Gemini's listening, thinking and replying states. HiLight Plus replaces both. It takes over the eight-LED ring behind the camera bar and lets you decide what it shows: a colour and pattern per contact or app, your own looks for Gemini's states, a charging gauge, a low-battery warning, and rules for when it should stay dark. Everything runs on-device with no accounts and no analytics; the only network use is Google Play, for the purchase and the occasional rating prompt.
 
 <p align="center">
   <img src="docs/screenshots/calls.png" width="19%" alt="Calls page with per-contact rules" />
@@ -66,6 +66,7 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 - People updating from a Shizuku-only version get a one-time prompt to switch to the built-in connection, which then keeps itself running across restarts.
 - A live debug log on the About page, covering the app and the daemon, with one-tap clear and share. A shared report adds device and permission status, what the daemon is holding and every setting and rule, with contact names left out.
 - Settings backup on the About page: save every rule and setting to a file you choose, and restore it after a reinstall. The purchase isn't in the file (Google Play restores it), and the connection to the ring is set up again after reinstalling.
+- Google Play's own rating sheet, shown at most once every 90 days and only once the app has proved itself: installed for three days, a custom rule saved, the ring lit ten times, and working. Also offered right after the purchase. Play decides whether it actually appears. A Rate on Google Play row on the About page opens the listing any time.
 - A Reset lights button that restarts the daemon, freeing a ring stuck on a stale light session without restarting the phone. Waiting notifications and a ringing call light again once it reconnects. The app also checks the ring on unlock and resets automatically if the LEDs don't show what the daemon last sent.
 
 ## Requirements
@@ -93,7 +94,7 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 | Write secure settings | Granted by the daemon itself after the first connection, so the app can switch Wireless debugging on for a start (after a reboot, say), and off again straight after when USB debugging is on |
 | Shizuku (optional) | Talk to the lights daemon over local Binder IPC, for people who start it through Shizuku |
 
-No camera permission is used either: Android tells every app when a camera opens and closes, which is all the app needs to keep the ring dark while a rear camera is in use. No phone-state or call-log permission is used: incoming calls, cellular or app, are recognised from the dialer's own call notification. Contacts and notification content never leave the device. The only network activity off the phone is Google Play Billing for the purchase; the Wireless debugging connection is to the phone itself. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for the full policy.
+No camera permission is used either: Android tells every app when a camera opens and closes, which is all the app needs to keep the ring dark while a rear camera is in use. No phone-state or call-log permission is used: incoming calls, cellular or app, are recognised from the dialer's own call notification. Contacts and notification content never leave the device. The only network activity off the phone is Google Play, for the purchase and the in-app rating sheet; the Wireless debugging connection is to the phone itself. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for the full policy.
 
 ## How it works
 

@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
@@ -18,7 +19,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.mwilky.hilight.plus.ui.AboutScreen
 import com.mwilky.hilight.plus.ui.ConditionsScreen
 import com.mwilky.hilight.plus.ui.ConnectMigrationSheet
@@ -26,6 +30,7 @@ import com.mwilky.hilight.plus.ui.ConnectScreen
 import com.mwilky.hilight.plus.ui.HiLightPlusTheme
 import com.mwilky.hilight.plus.ui.HomeScreen
 import com.mwilky.hilight.plus.ui.OnboardingScreen
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -109,6 +114,10 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+// Lets the screen settle after opening, and the purchase sheet close, before Play's sheet appears.
+private const val REVIEW_SETTLE_DELAY_MS = 2_000L
+private const val REVIEW_AFTER_PURCHASE_DELAY_MS = 1_500L
+
 private enum class NavTab(val titleRes: Int, val icon: ImageVector) {
     HOME(R.string.nav_home, Icons.Rounded.Home),
     CONDITIONS(R.string.nav_conditions, Icons.Rounded.Tune),
@@ -138,8 +147,27 @@ private fun MainAppNavigation(
         return
     }
 
+    // Play's review sheet, once it's due. Below the connect screen's early return so it can't
+    // cover that, and held back while the migration sheet is up.
+    val activity = LocalActivity.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val migrationSheetShowing = !promptShown && !paired
+    LaunchedEffect(lifecycleOwner, migrationSheetShowing) {
+        if (activity == null || migrationSheetShowing) return@LaunchedEffect
+        launch {
+            controller.licensing.purchaseCompleted.collect {
+                delay(REVIEW_AFTER_PURCHASE_DELAY_MS)
+                ReviewPrompt.maybeAsk(activity, controller, afterPurchase = true)
+            }
+        }
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            delay(REVIEW_SETTLE_DELAY_MS)
+            ReviewPrompt.maybeAsk(activity, controller)
+        }
+    }
+
     // People updating from a Shizuku-only version hear about the built-in connection once.
-    if (!promptShown && !paired) {
+    if (migrationSheetShowing) {
         ConnectMigrationSheet(
             onSwitch = {
                 scope.launch { controller.store.setConnectPromptShown() }

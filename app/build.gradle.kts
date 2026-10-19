@@ -11,8 +11,8 @@ android {
         applicationId = "com.mwilky.hilight.plus"
         minSdk = 37
         targetSdk = 37
-        versionCode = 19
-        versionName = "1.2.5"
+        versionCode = 20
+        versionName = "1.2.6"
 
         // Only the Pixel 11 series is supported, and it's arm64 only; skips the other ABIs'
         // copies of Conscrypt's native library.
@@ -78,6 +78,7 @@ dependencies {
     implementation(libs.api)
     implementation(libs.provider)
     implementation(libs.billing.ktx)
+    implementation(libs.play.review)
     // Pairs with and connects to the phone's own Wireless debugging, to start the daemon without
     // Shizuku. Conscrypt supplies the TLS 1.3 key export the pairing protocol needs.
     implementation(libs.libadb.android)

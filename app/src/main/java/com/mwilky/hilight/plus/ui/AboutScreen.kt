@@ -28,6 +28,7 @@ import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.SettingsBackupRestore
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -48,6 +49,7 @@ import com.mwilky.hilight.plus.DebugReport
 import com.mwilky.hilight.plus.LightController
 import com.mwilky.hilight.plus.NativeHiLightDetector
 import com.mwilky.hilight.plus.R
+import com.mwilky.hilight.plus.ReviewPrompt
 import com.mwilky.hilight.plus.DaemonBridge
 import com.mwilky.hilight.plus.GeminiSettings
 import com.mwilky.hilight.plus.StockHiLightState
@@ -205,6 +207,7 @@ fun AboutScreen(controller: LightController, onSetUpConnection: () -> Unit) {
             scope.launch { controller.daemon.resetDaemon() }
             Toast.makeText(context, R.string.about_debug_log_reset_started, Toast.LENGTH_SHORT).show()
         },
+        onRate = { ReviewPrompt.openListing(context) },
         onBackUp = { backupLauncher.launch("hilight-plus-settings-${LocalDate.now()}.json") },
         // Not only JSON: some file pickers don't tag a .json file as JSON.
         onRestore = { restoreLauncher.launch(arrayOf(BACKUP_MIME_TYPE, "application/octet-stream", "text/plain")) }
@@ -265,6 +268,7 @@ fun AboutContent(
     onShareLog: () -> Unit,
     onClearLog: () -> Unit,
     onResetLights: () -> Unit,
+    onRate: () -> Unit = {},
     onBackUp: () -> Unit,
     onRestore: () -> Unit
 ) {
@@ -349,6 +353,36 @@ fun AboutContent(
                 shapes = ListItemDefaults.shapes(shape = MaterialTheme.shapes.extraLarge)
             ) {
                 Text(stringResource(R.string.main_title), style = MaterialTheme.typography.titleLarge)
+            }
+
+            ListItem(
+                modifier = Modifier
+                    .clip(MaterialTheme.shapes.extraLarge)
+                    .clickable(onClick = onRate),
+                leadingContent = {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(MaterialShapes.Cookie9Sided.toShape())
+                            .background(MaterialTheme.colorScheme.tertiaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Rounded.Star,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    }
+                },
+                supportingContent = { Text(stringResource(R.string.about_rate_desc)) },
+                trailingContent = {
+                    Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null)
+                },
+                verticalAlignment = Alignment.CenterVertically,
+                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                shapes = ListItemDefaults.shapes(shape = MaterialTheme.shapes.extraLarge)
+            ) {
+                Text(stringResource(R.string.about_rate_title))
             }
 
             RuleGroupHeader(stringResource(R.string.about_status_section_header))
