@@ -85,6 +85,7 @@ internal object DebugReport {
             }
             appendLine("Battery: ${snapshot.battery}")
             appendLine("Gemini: ${snapshot.gemini}")
+            appendLine("DND indicator: ${snapshot.dndIndicator}")
             appendLine()
             appendLine("== Log ==")
         }

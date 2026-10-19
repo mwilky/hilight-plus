@@ -9,6 +9,7 @@ import com.mwilky.hilight.plus.BatterySettings
 import com.mwilky.hilight.plus.GeminiSettings
 import com.mwilky.hilight.plus.ContactRule
 import com.mwilky.hilight.plus.DEFAULT_SETTINGS_SNAPSHOT
+import com.mwilky.hilight.plus.DndIndicatorSettings
 import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.FaceDownMode
 import com.mwilky.hilight.plus.MessageContactRule
@@ -52,6 +53,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun setFavouriteNotifEnabled(enabled: Boolean) = launch { store.setFavouriteNotifEnabled(enabled) }
     fun setBattery(settings: BatterySettings) = launch { store.setBattery(settings) }
     fun setGemini(settings: GeminiSettings) = launch { store.setGemini(settings) }
+    fun setDndIndicator(settings: DndIndicatorSettings) = launch { store.setDndIndicator(settings) }
 
     fun setOnlyWhenFaceDown(enabled: Boolean) = launch { store.setOnlyWhenFaceDown(enabled) }
     fun setSuppressDuringDnd(enabled: Boolean) = launch { store.setSuppressDuringDnd(enabled) }

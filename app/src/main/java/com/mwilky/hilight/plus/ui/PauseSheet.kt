@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.DoNotDisturbOn
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -307,6 +308,7 @@ private fun pauseFeatureIcon(feature: PauseFeature?): ImageVector = when (featur
     PauseFeature.NOTIFICATIONS -> Icons.Rounded.Notifications
     PauseFeature.BATTERY -> Icons.Rounded.BatteryChargingFull
     PauseFeature.GEMINI -> Icons.Rounded.AutoAwesome
+    PauseFeature.DND -> Icons.Rounded.DoNotDisturbOn
 }
 
 private val PauseDuration.titleRes: Int

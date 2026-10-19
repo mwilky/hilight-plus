@@ -299,6 +299,7 @@
     <string name="home_tab_notifications">Notifications</string>
     <string name="home_tab_battery">Battery</string>
     <string name="home_tab_gemini">Gemini</string>
+    <string name="home_tab_dnd">DND</string>
     <string name="pause_tile_label">Pause lights</string>
     <string name="pause_tile_subtitle">%1$s · %2$s</string>
     <string name="pause_everything">Everything</string>
@@ -327,6 +328,9 @@
     <string name="hero_notifs_title">Notification lights</string>
     <string name="hero_battery_title">Battery lights</string>
     <string name="hero_gemini_title">Gemini lights</string>
+    <string name="hero_dnd_title">DND lights</string>
+    <string name="hero_status_dnd_flash_only">flash only</string>
+    <string name="hero_status_dnd_nothing">nothing set to light</string>
     <string name="hero_status_on">On · %1$s</string>
     <string name="hero_status_battery_on">On</string>
     <string name="hero_status_off">Off</string>
@@ -369,6 +373,13 @@
     <string name="pattern_group_simple">Simple</string>
     <string name="pattern_group_motion">Motion</string>
     <string name="pattern_group_gemini">Gemini</string>
+    <string name="pattern_group_dnd">DND</string>
+    <string name="pattern_dnd_minus">DND sign</string>
+    <string name="pattern_dnd_crescent">Crescent</string>
+    <string name="pattern_dnd_sleep">Sleep</string>
+    <string name="pattern_dnd_snooze">Snooze</string>
+    <string name="pattern_dnd_glance">Glance</string>
+    <string name="pattern_dnd_drift">Drift</string>
     <string name="gemini_states_header">While Gemini is</string>
     <string name="gemini_state_listening">Listening</string>
     <string name="gemini_state_thinking">Thinking</string>
@@ -432,6 +443,22 @@
     <string name="battery_section_full_timeout_desc">How long the full-battery display stays on once charging finishes.</string>
     <string name="battery_section_overrides_notifications">Prioritise over notifications</string>
     <string name="battery_section_overrides_notifications_desc">When on, notification lights won\'t interrupt the battery display. Incoming calls always interrupt it.</string>
+
+    <!-- Do Not Disturb Screen -->
+    <string name="dnd_group_indicator">While Do Not Disturb is on</string>
+    <string name="dnd_indicator_title">Indicator</string>
+    <string name="dnd_editor_title">DND indicator</string>
+    <string name="dnd_group_options">Options</string>
+    <string name="dnd_show_for_title">Show for</string>
+    <string name="dnd_show_for_desc">How long the indicator stays on after Do Not Disturb turns on.</string>
+    <string name="dnd_show_for_while_on">While on</string>
+    <string name="dnd_show_for_10s">10 sec</string>
+    <string name="dnd_show_for_1m">1 min</string>
+    <string name="dnd_show_for_5m">5 min</string>
+    <string name="dnd_flash_title">Announce on and off</string>
+    <string name="dnd_flash_desc">A quick sweep round the ring in the indicator\'s colour whenever Do Not Disturb is switched on or off.</string>
+    <string name="dnd_overrides_battery_title">Prioritise over battery</string>
+    <string name="dnd_overrides_battery_desc">When on, the indicator shows instead of the battery display. Notifications and calls always go over it.</string>
 
     <!-- About Screen -->
     <string name="about_title">About &amp; Diagnostics</string>

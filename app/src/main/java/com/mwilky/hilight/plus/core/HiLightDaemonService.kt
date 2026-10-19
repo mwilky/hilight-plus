@@ -44,6 +44,9 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
     private var geminiEnabled = false
     private var geminiLooks: Map<GeminiState, LightEngine.GeminiLookSpec> = emptyMap()
 
+    // Likewise the last DND indicator config.
+    private var dndIndicator: LightEngine.DndIndicatorSpec? = null
+
     @Volatile
     private var entitled = true
 
@@ -414,6 +417,39 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
             engine.clearAlert()
         }
         applyGemini()
+        applyDndIndicator()
+    }
+
+    override fun setDndIndicatorConfig(enabled: Boolean, configJson: String?) {
+        val config = runCatching { JSONObject(configJson ?: "{}") }.getOrElse {
+            DebugLog.w(TAG, "Bad DND indicator config: ${it.message}")
+            null
+        }
+        val pattern = config?.optString("pattern").orEmpty()
+        dndIndicator = if (!enabled || config == null || pattern.isEmpty()) {
+            null
+        } else {
+            LightEngine.DndIndicatorSpec(
+                showIndicator = config.optBoolean("showIndicator", true),
+                pattern = pattern,
+                color = config.optLong("color"),
+                brightness = config.optDouble("brightness", 1.0).toFloat(),
+                speedMs = PatternMode.entries.find { it.id == pattern }
+                    ?.speedMs(config.optDouble("speed", 1.0).toFloat()) ?: 1000L,
+                showForMs = config.optInt("showForSeconds", -1).takeIf { it > 0 }?.let { it * 1000L },
+                flashOnChange = config.optBoolean("flashOnChange"),
+                overridesBattery = config.optBoolean("overridesBattery"),
+                requiresFaceDown = config.optBoolean("requiresFaceDown"),
+                quietHoursMode = QuietHoursMode.fromId(config.optString("quietHoursMode")),
+                quietStartOverride = config.optInt("quietStart", -1).takeIf { it >= 0 },
+                quietEndOverride = config.optInt("quietEnd", -1).takeIf { it >= 0 }
+            )
+        }
+        applyDndIndicator()
+    }
+
+    private fun applyDndIndicator() {
+        engine.setDndIndicatorConfig(dndIndicator?.takeIf { entitled })
     }
 
     override fun setGeminiConfig(enabled: Boolean, statesJson: String?) {

@@ -8,7 +8,8 @@ enum class PauseFeature(val id: String, val titleRes: Int) {
     CALLS("calls", R.string.home_tab_calls),
     NOTIFICATIONS("notifications", R.string.home_tab_notifications),
     BATTERY("battery", R.string.home_tab_battery),
-    GEMINI("gemini", R.string.home_tab_gemini);
+    GEMINI("gemini", R.string.home_tab_gemini),
+    DND("dnd", R.string.home_tab_dnd);
 
     companion object {
         val ALL: Set<PauseFeature> = entries.toSet()
@@ -73,6 +74,7 @@ internal fun SettingsSnapshot.enabledPauseFeatures(): List<PauseFeature> = Pause
         PauseFeature.NOTIFICATIONS -> isNotificationsEnabled
         PauseFeature.BATTERY -> battery.enabled
         PauseFeature.GEMINI -> gemini.enabled
+        PauseFeature.DND -> dndIndicator.enabled
     }
 }
 

@@ -128,9 +128,14 @@ data class RuleEditorResult(
 )
 
 /**
- * The editor's pattern picker, a short row per group, so it never becomes one long row.
+ * The editor's pattern picker, a short row per group, so it never becomes one long row. The DND
+ * looks are only offered to the DND indicator, which shows them first.
  */
 enum class PatternGroup(val titleRes: Int, val patterns: List<PatternMode>) {
+    DND(
+        R.string.pattern_group_dnd,
+        listOf(PatternMode.DND_MINUS, PatternMode.DND_CRESCENT, PatternMode.DND_SLEEP, PatternMode.DND_SNOOZE, PatternMode.DND_GLANCE, PatternMode.DND_DRIFT)
+    ),
     SIMPLE(R.string.pattern_group_simple, listOf(PatternMode.SOLID, PatternMode.BREATHE, PatternMode.PULSE, PatternMode.BEACON)),
     MOTION(
         R.string.pattern_group_motion,
@@ -140,6 +145,7 @@ enum class PatternGroup(val titleRes: Int, val patterns: List<PatternMode>) {
 
     companion object {
         val RULES = listOf(SIMPLE, MOTION, GEMINI)
+        val DND_INDICATOR = listOf(DND, SIMPLE, MOTION, GEMINI)
     }
 }
 
@@ -176,6 +182,7 @@ fun CustomRuleDialog(
     autoExtractedColor: Long? = null,
     initialBrightness: Float = DEFAULT_BRIGHTNESS,
     initialSpeed: Float = DEFAULT_SPEED,
+    showDndChoice: Boolean = true,
     patternGroups: List<PatternGroup> = PatternGroup.RULES
 ) {
     Dialog(
@@ -209,6 +216,7 @@ fun CustomRuleDialog(
             autoExtractedColor = autoExtractedColor,
             initialBrightness = initialBrightness,
             initialSpeed = initialSpeed,
+            showDndChoice = showDndChoice,
             patternGroups = patternGroups
         )
     }
@@ -233,6 +241,8 @@ private fun RuleEditorContent(
     autoExtractedColor: Long?,
     initialBrightness: Float,
     initialSpeed: Float,
+    // Off for the DND indicator, which only ever shows during Do Not Disturb.
+    showDndChoice: Boolean = true,
     patternGroups: List<PatternGroup> = PatternGroup.RULES
 ) {
     var isAutoColor by remember(initialAutoColor) { mutableStateOf(initialAutoColor) }
@@ -479,23 +489,25 @@ private fun RuleEditorContent(
                     selected = selectedFaceDown,
                     onSelect = { selectedFaceDown = it }
                 )
-                ChoiceGroup(
-                    title = stringResource(R.string.dialog_dnd_title),
-                    description = when (selectedDnd) {
-                        DndMode.INHERIT -> stringResource(R.string.dialog_dnd_desc_default)
-                        DndMode.ALWAYS -> stringResource(R.string.dialog_dnd_desc_always)
-                        DndMode.SKIP -> stringResource(R.string.dialog_dnd_desc_skip)
-                    },
-                    options = DndMode.entries.map { mode ->
-                        mode to when (mode) {
-                            DndMode.INHERIT -> stringResource(R.string.dialog_mode_default)
-                            DndMode.ALWAYS -> stringResource(R.string.dialog_mode_always)
-                            DndMode.SKIP -> stringResource(R.string.dialog_mode_skip)
-                        }
-                    },
-                    selected = selectedDnd,
-                    onSelect = { selectedDnd = it }
-                )
+                if (showDndChoice) {
+                    ChoiceGroup(
+                        title = stringResource(R.string.dialog_dnd_title),
+                        description = when (selectedDnd) {
+                            DndMode.INHERIT -> stringResource(R.string.dialog_dnd_desc_default)
+                            DndMode.ALWAYS -> stringResource(R.string.dialog_dnd_desc_always)
+                            DndMode.SKIP -> stringResource(R.string.dialog_dnd_desc_skip)
+                        },
+                        options = DndMode.entries.map { mode ->
+                            mode to when (mode) {
+                                DndMode.INHERIT -> stringResource(R.string.dialog_mode_default)
+                                DndMode.ALWAYS -> stringResource(R.string.dialog_mode_always)
+                                DndMode.SKIP -> stringResource(R.string.dialog_mode_skip)
+                            }
+                        },
+                        selected = selectedDnd,
+                        onSelect = { selectedDnd = it }
+                    )
+                }
                 ChoiceGroup(
                     title = stringResource(R.string.dialog_quiet_hours_title),
                     description = when (selectedQuietHours) {

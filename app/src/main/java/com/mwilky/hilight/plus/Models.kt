@@ -18,7 +18,14 @@ enum class PatternMode(val id: String, val titleRes: Int) {
     RAINBOW("rainbow", R.string.pattern_rainbow),
     GEMINI_LISTENING("gemini_listening", R.string.pattern_gemini_listening),
     GEMINI_THINKING("gemini_thinking", R.string.pattern_gemini_thinking),
-    GEMINI_REPLYING("gemini_replying", R.string.pattern_gemini_replying);
+    GEMINI_REPLYING("gemini_replying", R.string.pattern_gemini_replying),
+    // Calm looks made for the Do Not Disturb indicator; the editor only offers them there.
+    DND_MINUS("dnd_minus", R.string.pattern_dnd_minus),
+    DND_CRESCENT("dnd_crescent", R.string.pattern_dnd_crescent),
+    DND_SLEEP("dnd_sleep", R.string.pattern_dnd_sleep),
+    DND_SNOOZE("dnd_snooze", R.string.pattern_dnd_snooze),
+    DND_GLANCE("dnd_glance", R.string.pattern_dnd_glance),
+    DND_DRIFT("dnd_drift", R.string.pattern_dnd_drift);
 
     /** Patterns that draw their own fixed colours, so a rule's colour has no effect on them. */
     val hasFixedColors: Boolean
@@ -26,7 +33,7 @@ enum class PatternMode(val id: String, val titleRes: Int) {
 
     /** Patterns that change over time, so a speed applies to them. */
     val moves: Boolean
-        get() = this != OFF && this != SOLID
+        get() = this != OFF && this != SOLID && this != DND_MINUS && this != DND_CRESCENT
 
     /** [speedMs] at [speed] times the pattern's own pace. */
     fun speedMs(speed: Float, fallback: Long = 1000L): Long =
@@ -45,6 +52,11 @@ enum class PatternMode(val id: String, val titleRes: Int) {
         GEMINI_LISTENING -> 3200L
         GEMINI_THINKING -> 800L
         GEMINI_REPLYING -> 1300L
+        // Slow on purpose: these sit on the ring for hours, so they should barely draw the eye.
+        DND_SLEEP -> 6000L
+        DND_SNOOZE -> 6000L
+        DND_GLANCE -> 10_000L
+        DND_DRIFT -> 16_000L
         else -> fallback
     }
 }
@@ -588,6 +600,81 @@ data class GeminiSettings(
 }
 
 private const val DEFAULT_GEMINI_COLOR = 0xFF4285F4L
+
+/** How long the Do Not Disturb indicator stays on after Do Not Disturb turns on; null is for as long as it's on. */
+enum class DndIndicatorDuration(val id: String, val seconds: Int?, val titleRes: Int) {
+    WHILE_ON("while_on", null, R.string.dnd_show_for_while_on),
+    TEN_SECONDS("ten_seconds", 10, R.string.dnd_show_for_10s),
+    ONE_MINUTE("one_minute", 60, R.string.dnd_show_for_1m),
+    FIVE_MINUTES("five_minutes", 5 * 60, R.string.dnd_show_for_5m);
+
+    companion object {
+        fun fromId(id: String?) = entries.find { it.id == id } ?: WHILE_ON
+    }
+}
+
+/**
+ * Lighting the ring to show that Do Not Disturb is on: a look while it's on, and a short flash as
+ * it turns on and off. The look is edited in the usual rule editor, with the usual brightness and
+ * speed and the same face-down and quiet-hours conditions; a Do Not Disturb condition would mean
+ * nothing here, so it has none. A single global config, like [BatterySettings].
+ */
+data class DndIndicatorSettings(
+    val enabled: Boolean = false,
+    val indicatorEnabled: Boolean = true,
+    val pattern: PatternMode = PatternMode.DND_MINUS,
+    val color: Long = DEFAULT_DND_COLOR,
+    val brightness: Float = DEFAULT_BRIGHTNESS,
+    val speed: Float = DEFAULT_SPEED,
+    val faceDownMode: FaceDownMode = FaceDownMode.INHERIT,
+    val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT,
+    val quietHoursStartMinutes: Int? = null,
+    val quietHoursEndMinutes: Int? = null,
+    val showFor: DndIndicatorDuration = DndIndicatorDuration.WHILE_ON,
+    val flashOnChange: Boolean = true,
+    val overridesBattery: Boolean = false
+) {
+    fun toJson(): JSONObject = JSONObject().apply {
+        put("enabled", enabled)
+        putSharedRuleFields(
+            color, pattern, indicatorEnabled, faceDownMode, DndMode.ALWAYS, quietHoursMode,
+            quietHoursStartMinutes, quietHoursEndMinutes, brightness, speed
+        )
+        put("showFor", showFor.id)
+        put("flashOnChange", flashOnChange)
+        put("overridesBattery", overridesBattery)
+    }
+
+    companion object {
+        fun fromJson(raw: String?): DndIndicatorSettings {
+            if (raw.isNullOrBlank()) return DndIndicatorSettings()
+            return try {
+                val json = JSONObject(raw)
+                val d = DndIndicatorSettings()
+                val shared = json.readSharedRuleFields(d.color)
+                DndIndicatorSettings(
+                    enabled = json.optBoolean("enabled", d.enabled),
+                    indicatorEnabled = shared.isEnabled,
+                    pattern = if (json.has("pattern")) shared.pattern else d.pattern,
+                    color = shared.color,
+                    brightness = shared.brightness,
+                    speed = shared.speed,
+                    faceDownMode = shared.faceDownMode,
+                    quietHoursMode = shared.quietHoursMode,
+                    quietHoursStartMinutes = shared.quietHoursStartMinutes,
+                    quietHoursEndMinutes = shared.quietHoursEndMinutes,
+                    showFor = DndIndicatorDuration.fromId(json.optString("showFor", d.showFor.id)),
+                    flashOnChange = json.optBoolean("flashOnChange", d.flashOnChange),
+                    overridesBattery = json.optBoolean("overridesBattery", d.overridesBattery)
+                )
+            } catch (_: Exception) {
+                DndIndicatorSettings()
+            }
+        }
+    }
+}
+
+private const val DEFAULT_DND_COLOR = 0xFF8A2BE2L
 
 /**
  * The pattern/color/enable/condition fields every rule type shares, read and written

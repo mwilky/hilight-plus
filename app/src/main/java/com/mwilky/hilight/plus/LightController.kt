@@ -67,6 +67,13 @@ class LightController private constructor(private val app: Application) {
     @Volatile
     private var lastBatteryFull = false
 
+    // The DND indicator as last pushed (already folding in the licence), for its heartbeat and
+    // orientation monitor.
+    @Volatile
+    private var lastDndIndicatorOn = false
+    @Volatile
+    private var lastDndIndicatorRequiresFaceDown = false
+
     // A ring left on one of our old sessions (the render loop can't reach it any more) is only
     // noticed by the user when they pick the phone up, so that's when to check for it.
     private val unlockReceiver = object : BroadcastReceiver() {
@@ -210,6 +217,19 @@ class LightController private constructor(private val app: Application) {
                 syncGeminiOrientationMonitor(settings, enabled, globalFaceDown)
             }
         }
+        scope.launch {
+            combine(store.dndIndicator, licensing.isEntitled, store.isOnlyWhenFaceDown) { settings, entitled, globalFaceDown ->
+                Triple(settings, settings.enabled && entitled, globalFaceDown)
+            }.collect { (settings, enabled, globalFaceDown) ->
+                lastDndIndicatorOn = enabled
+                lastDndIndicatorRequiresFaceDown = settings.faceDownMode.requiresFaceDown(globalFaceDown)
+                daemon.setDndIndicatorConfig(settings, enabled, globalFaceDown)
+                // The daemon only trusts a recent DND reading, and none is sent while the
+                // indicator is off, so give it a fresh one now.
+                daemon.setDndActive(lastDndActive)
+                syncDndOrientationMonitor()
+            }
+        }
         // Heartbeat: the daemon renders the battery layer indefinitely from its own cached
         // reading, so it treats silence as "the app is gone" and goes dark. Keep telling it we're
         // here while the layer could be showing something.
@@ -218,6 +238,10 @@ class LightController private constructor(private val app: Application) {
                 delay(BATTERY_HEARTBEAT_MS)
                 if (batteryLayerCouldRender()) {
                     daemon.setBatteryState(lastBatteryLevel, lastBatteryCharging, lastBatteryFull)
+                }
+                // Same for the DND indicator, which also stays on for as long as DND does.
+                if (lastDndIndicatorOn && lastDndActive) {
+                    daemon.setDndActive(lastDndActive)
                 }
             }
         }
@@ -409,6 +433,7 @@ class LightController private constructor(private val app: Application) {
     fun setDndActive(dndActive: Boolean) {
         lastDndActive = dndActive
         daemon.setDndActive(dndActive)
+        syncDndOrientationMonitor()
     }
 
     private suspend fun pushLiveConditions() {
@@ -503,6 +528,18 @@ class LightController private constructor(private val app: Application) {
             DeviceOrientationDetector.retainMonitoring(app, DeviceOrientationDetector.TOKEN_GEMINI)
         } else {
             DeviceOrientationDetector.releaseMonitoring(DeviceOrientationDetector.TOKEN_GEMINI)
+        }
+    }
+
+    /**
+     * The DND indicator only shows while DND is on, so that's the only time it needs to know
+     * which way up the phone is. Its flash as DND turns off uses the last reading from then.
+     */
+    private fun syncDndOrientationMonitor() {
+        if (lastDndIndicatorOn && lastDndIndicatorRequiresFaceDown && lastDndActive) {
+            DeviceOrientationDetector.retainMonitoring(app, DeviceOrientationDetector.TOKEN_DND)
+        } else {
+            DeviceOrientationDetector.releaseMonitoring(DeviceOrientationDetector.TOKEN_DND)
         }
     }
 

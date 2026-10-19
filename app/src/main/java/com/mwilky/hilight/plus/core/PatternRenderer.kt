@@ -213,6 +213,96 @@ class PatternRenderer {
                 }
             }
 
+            "dnd_minus" -> {
+                // The Do Not Disturb sign drawn on the ring: the ring is the circle, and the 3 and 9
+                // o'clock LEDs are the two ends of its bar.
+                val c = scaleColor(baseColor, clampedBrightness.toDouble())
+                for (i in minusLeds(count)) frame[i] = c
+            }
+
+            "dnd_crescent" -> {
+                // A moon on the left: full at 9 o'clock, thinning towards the top and bottom.
+                val middle = 3 * count / 4
+                for (i in 0 until count) {
+                    val k = CRESCENT_PROFILE.getOrElse(ringDistance(i, middle, count)) { 0.0 }
+                    frame[i] = if (k > 0.0) scaleColor(baseColor, k * clampedBrightness) else 0x00000000
+                }
+            }
+
+            "dnd_sleep" -> {
+                // A sleeping light: a long, slow breath that spends most of its time near dark.
+                val phase = (elapsedTimeMs % speed) / speed.toDouble()
+                val k = (1.0 - cos(phase * 2.0 * PI)) / 2.0
+                val intensity = (SLEEP_FLOOR + (1.0 - SLEEP_FLOOR) * k * k) * clampedBrightness
+                frame.fill(scaleColor(baseColor, intensity))
+            }
+
+            "dnd_snooze" -> {
+                // Three soft blinks, each fainter than the last, like a "z z z", then a long rest.
+                // Straight ramps, so each blink is exactly three keyframes on the hardware.
+                val phase = (elapsedTimeMs % speed) / speed.toDouble()
+                val blink = (phase / SNOOZE_BLINK).toInt()
+                val k = if (blink < SNOOZE_PEAKS.size) {
+                    val t = phase / SNOOZE_BLINK - blink
+                    SNOOZE_PEAKS[blink] * (1.0 - abs(2.0 * t - 1.0))
+                } else 0.0
+                frame.fill(if (k > 0.001) scaleColor(baseColor, k * clampedBrightness) else 0x00000000)
+            }
+
+            "dnd_glance" -> {
+                // Dark, with the Do Not Disturb sign's two LEDs glowing once a loop.
+                val phase = (elapsedTimeMs % speed) / speed.toDouble()
+                val k = when {
+                    phase < GLANCE_RISE -> (1.0 - cos(phase / GLANCE_RISE * PI)) / 2.0
+                    phase < GLANCE_END -> (1.0 + cos((phase - GLANCE_RISE) / (GLANCE_END - GLANCE_RISE) * PI)) / 2.0
+                    else -> 0.0
+                }
+                if (k > 0.001) {
+                    val c = scaleColor(baseColor, k * clampedBrightness)
+                    for (i in minusLeds(count)) frame[i] = c
+                }
+            }
+
+            "dnd_drift" -> {
+                // One light creeping round the ring, handing over to the next LED as it goes.
+                val position = ((elapsedTimeMs % speed) / speed.toDouble()) * count
+                for (i in 0 until count) {
+                    var diff = abs(position - i)
+                    if (diff > count / 2.0) diff = count - diff
+                    val k = (1.0 - diff).coerceAtLeast(0.0)
+                    frame[i] = if (k > 0.01) scaleColor(baseColor, k * clampedBrightness) else 0x00000000
+                }
+            }
+
+            DND_FLASH_ON, DND_FLASH_OFF -> {
+                // Do Not Disturb turning on fills the ring clockwise from the top, then fades;
+                // turning off lights the whole ring, then empties it the other way. Played once.
+                val t = elapsedTimeMs.coerceIn(0L, speed) / speed.toDouble()
+                val turningOn = pattern.lowercase() == DND_FLASH_ON
+                val step = FLASH_SWEEP / count
+                for (i in 0 until count) {
+                    val k = if (turningOn) {
+                        val start = step * i
+                        when {
+                            t < start -> 0.0
+                            t < start + step -> (t - start) / step
+                            t < FLASH_ON_HOLD_END -> 1.0
+                            else -> (1.0 - (t - FLASH_ON_HOLD_END) / (1.0 - FLASH_ON_HOLD_END)).coerceAtLeast(0.0)
+                        }
+                    } else {
+                        // Top LED first, then round anticlockwise: the on sweep played backwards.
+                        val start = FLASH_OFF_DRAIN_START + step * Math.floorMod(-i, count)
+                        when {
+                            t < FLASH_OFF_FILL -> t / FLASH_OFF_FILL
+                            t < start -> 1.0
+                            t < start + step -> 1.0 - (t - start) / step
+                            else -> 0.0
+                        }
+                    }
+                    frame[i] = if (k > 0.001) scaleColor(baseColor, k * clampedBrightness) else 0x00000000
+                }
+            }
+
             else -> {
                 // Diagnostic: "led:N" lights only LED N, so the index order the lights service
                 // reports can be checked against where each LED physically sits on the ring.
@@ -443,6 +533,15 @@ class PatternRenderer {
         return frame
     }
 
+    /** The two LEDs of the Do Not Disturb sign's bar, at 3 and 9 o'clock. */
+    private fun minusLeds(count: Int): IntArray = intArrayOf(count / 4, 3 * count / 4)
+
+    /** Steps between LEDs [a] and [b] the short way round a ring of [count]. */
+    private fun ringDistance(a: Int, b: Int, count: Int): Int {
+        val diff = abs(a - b) % count
+        return minOf(diff, count - diff)
+    }
+
     /** How much longer than [pattern]'s own pace a loop of [speedMs] is. */
     private fun paceScale(pattern: PatternMode, speedMs: Long): Double =
         speedMs / pattern.speedMs().toDouble()
@@ -514,6 +613,32 @@ class PatternRenderer {
 
     companion object {
         const val SINGLE_LED_PREFIX = "led:"
+
+        /**
+         * Played once as Do Not Disturb turns on or off, lasting [DND_FLASH_MS]. Not rule patterns,
+         * so they're not in [PatternMode].
+         */
+        const val DND_FLASH_ON = "dnd_flash_on"
+        const val DND_FLASH_OFF = "dnd_flash_off"
+        const val DND_FLASH_MS = 1200L
+
+        // Shares of the flash: the sweep round the ring, then the on flash holds before fading;
+        // the off flash fades in, holds, then sweeps out.
+        private const val FLASH_SWEEP = 0.5
+        private const val FLASH_ON_HOLD_END = 0.7
+        private const val FLASH_OFF_FILL = 0.2
+        private const val FLASH_OFF_DRAIN_START = 0.3
+
+        // Crescent brightness by steps from its middle LED; anything further is dark.
+        private val CRESCENT_PROFILE = doubleArrayOf(1.0, 0.5, 0.15)
+        // Sleep never quite goes out, so the ring still reads as on between breaths.
+        private const val SLEEP_FLOOR = 0.03
+        // Snooze: each blink's share of the loop, and how bright each of the three gets.
+        private const val SNOOZE_BLINK = 0.1
+        private val SNOOZE_PEAKS = doubleArrayOf(1.0, 0.6, 0.3)
+        // Glance: shares of the loop to its brightest, and back to dark.
+        private const val GLANCE_RISE = 0.06
+        private const val GLANCE_END = 0.15
 
         private const val COMET_LEAD = 0.5
         private const val COMET_TAIL = 2.0

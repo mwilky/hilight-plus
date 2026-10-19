@@ -170,6 +170,39 @@ class LightEngine {
     private var geminiState: GeminiState? = null
     private var geminiStateSinceMs = 0L
 
+    /** The Do Not Disturb indicator: its look while DND is on, and when it may show. */
+    data class DndIndicatorSpec(
+        val showIndicator: Boolean,
+        val pattern: String,
+        val color: Long,
+        val brightness: Float,
+        val speedMs: Long,
+        // How long after DND turns on the look stays; null for as long as it's on.
+        val showForMs: Long?,
+        val flashOnChange: Boolean,
+        val overridesBattery: Boolean,
+        val requiresFaceDown: Boolean,
+        val quietHoursMode: QuietHoursMode,
+        val quietStartOverride: Int?,
+        val quietEndOverride: Int?
+    )
+
+    // Do Not Disturb indicator layer: its look shares the idle slot with the battery layer, beneath
+    // calls, Gemini and notifications; its brief on/off flash goes over all but calls. Null when
+    // the feature is off.
+    private var dndIndicator: DndIndicatorSpec? = null
+    // Whether the app has reported DND since this process started: the first report only catches
+    // up with how things already were, so it never flashes.
+    private var dndKnown = false
+    private var dndActiveSinceMs = 0L
+    // Like the battery layer, the indicator can stay on for hours, so it goes dark by itself once
+    // the app stops confirming DND is still on: nothing else could turn it off if the app died.
+    private var dndStateUpdatedAtMs = 0L
+
+    private data class DndFlash(val turningOn: Boolean, val startedAtMs: Long)
+
+    private var dndFlash: DndFlash? = null
+
     // Multi-Notification Cyclic Queue
     private val activeAlerts = mutableListOf<QueuedAlert>()
     private var currentAlertIndex = 0
@@ -450,10 +483,28 @@ class LightEngine {
 
     fun setDndActive(active: Boolean) {
         synchronized(lock) {
+            val now = SystemClock.elapsedRealtime()
+            // Refreshed even when nothing changed: the app repeats it as the indicator's heartbeat.
+            dndStateUpdatedAtMs = now
+            val known = dndKnown
+            dndKnown = true
             if (dndActive == active) return
             dndActive = active
+            if (active) dndActiveSinceMs = now
+            dndFlash = if (known && dndIndicator?.flashOnChange == true) DndFlash(active, now) else null
             onLiveConditionChanged()
-            DebugLog.i(TAG, "setDndActive: $active")
+            DebugLog.i(TAG, "setDndActive: $active${if (dndFlash != null) " (flash)" else ""}")
+        }
+    }
+
+    /** Replaces the Do Not Disturb indicator; null turns it off. */
+    fun setDndIndicatorConfig(spec: DndIndicatorSpec?) {
+        synchronized(lock) {
+            if (dndIndicator == spec) return
+            dndIndicator = spec
+            if (spec?.flashOnChange != true) dndFlash = null
+            onLiveConditionChanged()
+            DebugLog.i(TAG, "setDndIndicatorConfig: ${spec?.let { "${it.pattern}, indicator=${it.showIndicator}, showFor=${it.showForMs}, flash=${it.flashOnChange}, overBattery=${it.overridesBattery}" } ?: "off"}")
         }
     }
 
@@ -624,7 +675,7 @@ class LightEngine {
                 }
                 DebugLog.i(TAG, "removeAlert [key=$key] (remaining queue=${activeAlerts.size})")
                 wake()
-                if (incomingCallAlert == null && activeAlerts.isEmpty() && directAlert == null && !batteryActiveNow()) {
+                if (incomingCallAlert == null && activeAlerts.isEmpty() && directAlert == null && !idleLayerActiveNow()) {
                     lights.blank()
                 }
             }
@@ -642,7 +693,7 @@ class LightEngine {
             directAlertTimer.clear()
             activeAlerts.clear()
             currentAlertIndex = 0
-            if (incomingCallAlert == null && !batteryActiveNow()) {
+            if (incomingCallAlert == null && !idleLayerActiveNow()) {
                 lights.blank()
             }
         }
@@ -665,6 +716,9 @@ class LightEngine {
             batteryCharging = false
             batteryFull = false
             batteryFullSinceMs = null
+            // Same for the DND indicator: dark until the app reports DND again.
+            dndStateUpdatedAtMs = 0L
+            dndFlash = null
             lights.blank()
         }
     }
@@ -713,6 +767,12 @@ class LightEngine {
         activeAlerts.forEach { if (it.expiresAtMs != Long.MAX_VALUE) due = minOf(due, it.expiresAtMs) }
         nextTurnAtMs?.let { due = minOf(due, it) }
         geminiState?.let { due = minOf(due, geminiStateSinceMs + GeminiLogParser.maxDurationMs(it)) }
+        // Only deadlines still ahead: one already passed would keep waking the loop every frame.
+        dndFlash?.let { due = minOf(due, maxOf(now, it.startedAtMs + PatternRenderer.DND_FLASH_MS)) }
+        dndIndicator?.showForMs?.let { showFor ->
+            val end = dndActiveSinceMs + showFor
+            if (dndActive && end > now) due = minOf(due, end)
+        }
         return (due - now).coerceIn(FRAME_MS, IDLE_TICK_MS)
     }
 
@@ -845,12 +905,16 @@ class LightEngine {
             // just the gaps between alerts, so it isn't flickered on and off as alerts cycle.
             val batterySuppressesNotifications = batteryEligible && battery!!.overridesNotifications
 
+            if (dndFlash?.let { now - it.startedAtMs >= PatternRenderer.DND_FLASH_MS } == true) dndFlash = null
+            val dndShow = dndLayerNow(now, nowMinutes)
+
             var currentPattern = ambientPattern
             var currentColor = ambientColor
             var currentBrightness = ambientBrightness
             var currentSpeed = ambientSpeedMs
             var elapsedMs = now
             var renderBattery = false
+            var renderDnd: DndShow? = null
             var splitColors: LongArray? = null
             var splitAnimationShown = splitAnimation
             var splitLookShown = splitLook
@@ -862,8 +926,15 @@ class LightEngine {
             var effectRemainingMs: Long? = null
             nextTurnAtMs = null
 
-            fun useBatteryIfEligible() {
-                if (batteryEligible) renderBattery = true
+            // The idle slot: the DND layer or the battery layer. The battery wins unless the DND
+            // indicator is set to go over it; a flash always does (it only gets here beneath a
+            // call hidden by its conditions).
+            fun useIdleLayer() {
+                if (dndShow != null && (dndShow is DndShow.Flash || dndShow.spec.overridesBattery || !batteryEligible)) {
+                    renderDnd = dndShow
+                } else if (batteryEligible) {
+                    renderBattery = true
+                }
             }
 
             var reason: String
@@ -896,8 +967,14 @@ class LightEngine {
                     effectKey = listOf("call", call)
                 } else {
                     reason = "off (call hidden by conditions)"
-                    useBatteryIfEligible()
+                    useIdleLayer()
                 }
+            } else if (dndShow is DndShow.Flash) {
+                // The on/off flash is the answer to the user switching DND, and only lasts a
+                // moment, so it goes over Gemini, notifications and battery; whatever it covered
+                // carries on once it's done. Calls still beat it.
+                reason = "dnd flash"
+                renderDnd = dndShow
             } else if (geminiLook != null) {
                 val (state, look) = geminiLook
                 reason = "gemini ${state.id} ${look.pattern}"
@@ -925,7 +1002,7 @@ class LightEngine {
                 val splitAlerts = if (splitRing && eligibleStart != null) visibleAlertsNewestFirst(nowMinutes) else emptyList()
                 if (eligibleStart == null) {
                     reason = "off (${activeAlerts.size} queued, hidden by conditions)"
-                    useBatteryIfEligible()
+                    useIdleLayer()
                 } else if (splitAlerts.size >= 2) {
                     val keys = splitAlerts.take(PatternRenderer.MAX_SPLIT_SEGMENTS).map { it.key }
                     if (keys != splitKeys) {
@@ -977,7 +1054,7 @@ class LightEngine {
                         if (batterySuppressesNotifications) "off (notifications under battery)" else "off (latest-only alert hidden by conditions)"
                     else -> "off"
                 }
-                useBatteryIfEligible()
+                useIdleLayer()
             }
             if (splitColors == null) splitKeys = null
 
@@ -986,6 +1063,31 @@ class LightEngine {
                     batteryCharging -> "battery charging"
                     batteryFull -> "battery full"
                     else -> "battery low"
+                }
+            }
+            // The DND layer is drawn as an ordinary pattern, so it takes the pattern route below,
+            // effect or frames, timed so the hardware stops by itself.
+            renderDnd?.let { show ->
+                val spec = show.spec
+                currentColor = spec.color
+                currentBrightness = spec.brightness
+                when (show) {
+                    is DndShow.Flash -> {
+                        reason = "dnd flash ${if (show.flash.turningOn) "on" else "off"}"
+                        currentPattern = if (show.flash.turningOn) PatternRenderer.DND_FLASH_ON else PatternRenderer.DND_FLASH_OFF
+                        currentSpeed = PatternRenderer.DND_FLASH_MS
+                        elapsedMs = now - show.flash.startedAtMs
+                        effectKey = listOf("dndFlash", show.flash, spec)
+                        effectRemainingMs = PatternRenderer.DND_FLASH_MS - elapsedMs
+                    }
+                    is DndShow.Look -> {
+                        reason = "dnd ${spec.pattern}"
+                        currentPattern = spec.pattern
+                        currentSpeed = spec.speedMs
+                        elapsedMs = now - dndActiveSinceMs
+                        effectKey = listOf("dnd", spec, dndActiveSinceMs)
+                        effectRemainingMs = spec.showForMs?.let { dndActiveSinceMs + it - now }
+                    }
                 }
             }
             noteRender(reason)
@@ -1154,6 +1256,8 @@ class LightEngine {
             appendLine("pause=${describePause()}, rearCamera=$rearCameraActive")
             appendLine("test=${testAlert?.let { "${it.pattern} ${hex(it.color)}, ${it.expiresAtMs - now}ms left" }}")
             appendLine("gemini=${if (geminiEnabled) "on, ${geminiState?.id ?: "idle"}${geminiState?.let { ", for ${(now - geminiStateSinceMs) / 1000}s" } ?: ""}, looks=${geminiLooks.map { "${it.key.id}:${it.value.pattern}" }}" else "off"}")
+            val dndAge = if (dndStateUpdatedAtMs == 0L) "never" else "${(now - dndStateUpdatedAtMs) / 1000}s ago"
+            appendLine("dndIndicator=${dndIndicator?.let { "${it.pattern} ${hex(it.color)}, indicator=${it.showIndicator}, showFor=${it.showForMs}, flash=${it.flashOnChange}, overBattery=${it.overridesBattery}, faceDown=${it.requiresFaceDown}, quiet=${it.quietHoursMode}" } ?: "off"}, dnd on for ${if (dndActive) "${(now - dndActiveSinceMs) / 1000}s" else "-"}, updated $dndAge, flash=${dndFlash?.let { if (it.turningOn) "on" else "off" }}")
             appendLine("call=${incomingCallAlert?.let { "${it.pattern} ${hex(it.color)}, ringing ${(now - it.startedAtMs) / 1000}s, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}" }}")
             appendLine("latestOnly=${directAlert?.let { "${it.pattern} ${hex(it.color)}, ${directAlertTimer.remainingMs(now)}ms left, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}" }}")
             appendLine("queue (${activeAlerts.size}):")
@@ -1298,6 +1402,50 @@ class LightEngine {
         val config = batteryConfig ?: return false
         return batteryVisible(config, currentMinutesOfDay()) &&
             batteryLayerWantsToRender(config, SystemClock.elapsedRealtime())
+    }
+
+    /** Whether a layer that fills the idle slot (battery or DND) has something to show, so the ring shouldn't be blanked. */
+    private fun idleLayerActiveNow(): Boolean =
+        batteryActiveNow() || dndLayerNow(SystemClock.elapsedRealtime(), currentMinutesOfDay()) != null
+
+    private sealed interface DndShow {
+        val spec: DndIndicatorSpec
+
+        data class Flash(override val spec: DndIndicatorSpec, val flash: DndFlash) : DndShow
+        data class Look(override val spec: DndIndicatorSpec) : DndShow
+    }
+
+    /** What the DND layer would show now, before the idle slot decides between it and the battery. */
+    private fun dndLayerNow(now: Long, nowMinutes: Int): DndShow? {
+        val spec = dndIndicator ?: return null
+        val visible = !paused(PauseFeature.DND) && AlertRenderPolicy.canShowAlert(
+            requiresFaceDown = spec.requiresFaceDown,
+            deviceFaceDown = deviceFaceDown,
+            quietHoursMode = spec.quietHoursMode,
+            quietHoursEnabled = quietHoursEnabled,
+            quietHoursStartMinutes = quietHoursStartMinutes,
+            quietHoursEndMinutes = quietHoursEndMinutes,
+            quietStartOverride = spec.quietStartOverride,
+            quietEndOverride = spec.quietEndOverride,
+            nowMinutes = nowMinutes
+        )
+        val flash = dndFlash
+        return when (
+            AlertRenderPolicy.dndLayer(
+                visible = visible,
+                stateUpdatedAtMs = dndStateUpdatedAtMs,
+                dndActive = dndActive,
+                dndActiveSinceMs = dndActiveSinceMs,
+                flashStartedAtMs = flash?.startedAtMs,
+                showIndicator = spec.showIndicator,
+                showForMs = spec.showForMs,
+                nowMs = now
+            )
+        ) {
+            AlertRenderPolicy.DndLayer.NONE -> null
+            AlertRenderPolicy.DndLayer.FLASH -> DndShow.Flash(spec, flash!!)
+            AlertRenderPolicy.DndLayer.LOOK -> DndShow.Look(spec)
+        }
     }
 
     private fun syncNotificationTimer(now: Long) {

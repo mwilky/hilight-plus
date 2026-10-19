@@ -457,7 +457,7 @@ private fun WhenGroup(
  * three-line list item, which top-aligns the trailing slot instead of centring it.
  */
 @Composable
-private fun SwitchRow(
+internal fun SwitchRow(
     index: Int,
     count: Int,
     title: String,
@@ -502,7 +502,7 @@ private fun SwitchRow(
  * quiet-hours window when "stay dark" is chosen).
  */
 @Composable
-private fun <T> OptionsRow(
+internal fun <T> OptionsRow(
     index: Int,
     count: Int,
     title: String,

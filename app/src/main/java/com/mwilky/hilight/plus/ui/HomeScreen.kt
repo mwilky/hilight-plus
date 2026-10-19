@@ -54,6 +54,7 @@ import com.mwilky.hilight.plus.GeminiSettings
 import com.mwilky.hilight.plus.GeminiState
 import com.mwilky.hilight.plus.ContactRule
 import com.mwilky.hilight.plus.DEFAULT_SETTINGS_SNAPSHOT
+import com.mwilky.hilight.plus.DndIndicatorSettings
 import com.mwilky.hilight.plus.LightController
 import com.mwilky.hilight.plus.Licensing
 import com.mwilky.hilight.plus.MessageContactRule
@@ -119,6 +120,7 @@ fun HomeScreen(
     var isConfiguringDefaultNotif by remember { mutableStateOf(false) }
     var isConfiguringFavouriteNotif by remember { mutableStateOf(false) }
     var geminiStateBeingEdited by remember { mutableStateOf<GeminiState?>(null) }
+    var isConfiguringDndIndicator by remember { mutableStateOf(false) }
 
     // Pick Contact for Call
     val callContactPickerLauncher = rememberLauncherForActivityResult(
@@ -237,8 +239,45 @@ fun HomeScreen(
         onBatteryChange = viewModel::setBattery,
         renderer = renderer,
         onGeminiChange = viewModel::setGemini,
-        onEditGeminiState = { geminiStateBeingEdited = it }
+        onEditGeminiState = { geminiStateBeingEdited = it },
+        onDndChange = viewModel::setDndIndicator,
+        onEditDndIndicator = { isConfiguringDndIndicator = true }
     )
+
+    if (isConfiguringDndIndicator) {
+        val dnd = state.dndIndicator
+        CustomRuleDialog(
+            title = stringResource(R.string.dialog_configure_title, stringResource(R.string.dnd_editor_title)),
+            initialColor = dnd.color,
+            initialPattern = dnd.pattern,
+            initialFaceDown = dnd.faceDownMode,
+            initialQuietHours = dnd.quietHoursMode,
+            initialQuietStart = dnd.quietHoursStartMinutes ?: state.quietHoursStartMinutes,
+            initialQuietEnd = dnd.quietHoursEndMinutes ?: state.quietHoursEndMinutes,
+            initialBrightness = dnd.brightness,
+            initialSpeed = dnd.speed,
+            showDndChoice = false,
+            patternGroups = PatternGroup.DND_INDICATOR,
+            renderer = renderer,
+            controller = controller,
+            onDismiss = { isConfiguringDndIndicator = false },
+            onSave = { result ->
+                viewModel.setDndIndicator(
+                    dnd.copy(
+                        pattern = result.pattern,
+                        color = result.color,
+                        faceDownMode = result.faceDown,
+                        quietHoursMode = result.quietHoursMode,
+                        quietHoursStartMinutes = result.quietHoursStartMinutes,
+                        quietHoursEndMinutes = result.quietHoursEndMinutes,
+                        brightness = result.brightness,
+                        speed = result.speed
+                    )
+                )
+                isConfiguringDndIndicator = false
+            }
+        )
+    }
 
     geminiStateBeingEdited?.let { geminiState ->
         val look = state.gemini.look(geminiState)
@@ -686,12 +725,15 @@ fun HomeContent(
     // Gemini
     onGeminiChange: (GeminiSettings) -> Unit = {},
     onEditGeminiState: (GeminiState) -> Unit = {},
+    // Do Not Disturb
+    onDndChange: (DndIndicatorSettings) -> Unit = {},
+    onEditDndIndicator: () -> Unit = {},
     licenseStatus: Licensing.Status? = null,
     onBuy: () -> Unit = {},
     initialPage: Int = 0
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
-    val pagerState = rememberPagerState(initialPage) { 4 }
+    val pagerState = rememberPagerState(initialPage) { 5 }
     val scope = rememberCoroutineScope()
 
     Scaffold(
@@ -826,7 +868,7 @@ fun HomeContent(
                         onBatteryChange = onBatteryChange,
                         renderer = renderer
                     )
-                    else -> HomeGeminiPage(
+                    3 -> HomeGeminiPage(
                         connectionState = connectionState,
                         connectionMethod = connectionMethod,
                         connectionError = connectionError,
@@ -841,6 +883,21 @@ fun HomeContent(
                         onOpenStockSettings = onOpenStockSettings,
                         onGeminiChange = onGeminiChange,
                         onEditState = onEditGeminiState,
+                        renderer = renderer
+                    )
+                    else -> HomeDndPage(
+                        connectionState = connectionState,
+                        connectionMethod = connectionMethod,
+                        connectionError = connectionError,
+                        onPauseConnection = onPauseConnection,
+                        onResumeConnection = onResumeConnection,
+                        onRequestShizukuPermission = onRequestShizukuPermission,
+                        onOpenShizukuApp = onOpenShizukuApp,
+                        onRestartApp = onRestartApp,
+                        onSetUpConnection = onSetUpConnection,
+                        dnd = state.dndIndicator,
+                        onDndChange = onDndChange,
+                        onEditIndicator = onEditDndIndicator,
                         renderer = renderer
                     )
                 }
@@ -864,7 +921,8 @@ private fun HomePageToggle(
         Icons.Rounded.Call to R.string.home_tab_calls,
         Icons.Rounded.Notifications to R.string.home_tab_notifications,
         Icons.Rounded.BatteryChargingFull to R.string.home_tab_battery,
-        Icons.Rounded.AutoAwesome to R.string.home_tab_gemini
+        Icons.Rounded.AutoAwesome to R.string.home_tab_gemini,
+        Icons.Rounded.DoNotDisturbOn to R.string.home_tab_dnd
     )
     val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
@@ -900,7 +958,10 @@ private fun HomePageToggle(
                 // 24dp icon plus 12dp either side makes an exact circle at this height. No width
                 // is set, so a selected tab is only as wide as its own label needs.
                 contentPadding = PaddingValues(horizontal = 12.dp),
+                // The selected tab is measured last, into whatever width the icons leave, so on a
+                // narrow screen its label ellipsizes instead of squeezing the icons out of shape.
                 modifier = Modifier
+                    .then(if (selected) Modifier.weight(1f, fill = false) else Modifier)
                     .height(TabHeight)
                     .semantics { role = Role.RadioButton }
             ) {
@@ -1136,6 +1197,12 @@ fun HomeScreenPreviewGemini() {
     HomeScreenPreviewContent(initialPage = 3, gemini = GeminiSettings(enabled = true))
 }
 
+@Preview(name = "Home Screen - Do Not Disturb", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+fun HomeScreenPreviewDnd() {
+    HomeScreenPreviewContent(initialPage = 4, dndIndicator = DndIndicatorSettings(enabled = true))
+}
+
 @Composable
 fun HomeScreenPreviewContent(
     hasCallRules: Boolean = false,
@@ -1147,6 +1214,7 @@ fun HomeScreenPreviewContent(
     splitAnimation: SplitAnimation = DEFAULT_SETTINGS_SNAPSHOT.splitAnimation,
     splitLook: SplitLook = DEFAULT_SETTINGS_SNAPSHOT.splitLook,
     gemini: GeminiSettings = DEFAULT_SETTINGS_SNAPSHOT.gemini,
+    dndIndicator: DndIndicatorSettings = DEFAULT_SETTINGS_SNAPSHOT.dndIndicator,
     pause: PauseState? = null,
     pairingLost: Boolean = false
 ) {
@@ -1200,7 +1268,8 @@ fun HomeScreenPreviewContent(
                 multiAlertMode = multiAlertMode,
                 splitAnimation = splitAnimation,
                 splitLook = splitLook,
-                gemini = gemini
+                gemini = gemini,
+                dndIndicator = dndIndicator
             ),
             pause = pause,
             onToggleCallLights = {},

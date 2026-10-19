@@ -10,6 +10,7 @@
 [TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/split-ring.png?v=2[/IMG][/TD]
 [TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/battery.png?v=2[/IMG][/TD]
 [TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/gemini.png?v=2[/IMG][/TD]
+[TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/dnd.png?v=2[/IMG][/TD]
 [/TR]
 [/TABLE]
 
@@ -71,6 +72,16 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 [*]Followed from Gemini's own app log, on the phone only.
 [/LIST]
 
+[B]Do Not Disturb Indicator[/B]
+[LIST]
+[*]Lights the ring while Do Not Disturb is on, in any pattern, colour, brightness and speed, edited like any rule.
+[*]Six calm patterns of its own: [I]DND sign[/I] (the 3 and 9 o'clock LEDs, the default), [I]Crescent, Sleep, Snooze, Glance[/I] and [I]Drift[/I].
+[*]Shows for as long as DND is on, or just the first 10 seconds, 1 minute or 5 minutes.
+[*]Optional flash as DND turns on and off, played over everything except a call.
+[*]Follows face-down and quiet hours like any rule; the indicator sits below calls, Gemini and notifications, and below battery unless set to take priority.
+[*]Goes dark by itself if the app stops confirming DND is still on, so it can't be left lit.
+[/LIST]
+
 [B]Gating & Environment Conditions[/B]
 [LIST]
 [*]Face-down only mode (accelerometer engages only when alerts are pending).
@@ -80,7 +91,7 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 
 [B]Pause[/B]
 [LIST]
-[*]Pause lights Quick Settings tile: keep the ring dark for everything, or just calls, notifications, battery or Gemini.
+[*]Pause lights Quick Settings tile: keep the ring dark for everything, or just calls, notifications, battery, Gemini or Do Not Disturb.
 [*]For 1 hour, 2 hours, until morning (when quiet hours end, or 07:00) or until you resume. Your last choice is remembered.
 [*]The tile shows what's paused and until when, and a tap resumes. A card on Home shows the same, plus what still lights.
 [*]Notifications that arrive during a pause still queue, and light once it ends if they're still waiting.

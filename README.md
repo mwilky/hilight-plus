@@ -5,11 +5,12 @@ Custom rear LED lighting for the Google Pixel 11 Pro.
 Pixel's built-in HiLight lights the rear ring for two things: calls from favourites, and Gemini's listening, thinking and replying states. HiLight Plus replaces both. It takes over the eight-LED ring behind the camera bar and lets you decide what it shows: a colour and pattern per contact or app, your own looks for Gemini's states, a charging gauge, a low-battery warning, and rules for when it should stay dark. Everything runs on-device with no accounts and no analytics; the only network use is Google Play, for the purchase and the occasional rating prompt.
 
 <p align="center">
-  <img src="docs/screenshots/calls.png" width="19%" alt="Calls page with per-contact rules" />
-  <img src="docs/screenshots/rule-editor.png" width="19%" alt="Rule editor with pattern and colour pickers" />
-  <img src="docs/screenshots/split-ring.png" width="19%" alt="Multiple alerts set to split the ring" />
-  <img src="docs/screenshots/battery.png" width="19%" alt="Battery page with charging gauge preview" />
-  <img src="docs/screenshots/gemini.png" width="19%" alt="Gemini page with listening, thinking and replying states" />
+  <img src="docs/screenshots/calls.png" width="16%" alt="Calls page with per-contact rules" />
+  <img src="docs/screenshots/rule-editor.png" width="16%" alt="Rule editor with pattern and colour pickers" />
+  <img src="docs/screenshots/split-ring.png" width="16%" alt="Multiple alerts set to split the ring" />
+  <img src="docs/screenshots/battery.png" width="16%" alt="Battery page with charging gauge preview" />
+  <img src="docs/screenshots/gemini.png" width="16%" alt="Gemini page with listening, thinking and replying states" />
+  <img src="docs/screenshots/dnd.png" width="16%" alt="Do Not Disturb page with its indicator and options" />
 </p>
 
 ## Features
@@ -46,6 +47,14 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 - Gemini shows above notifications and battery, and below calls.
 - Gemini broadcasts none of this, so the daemon follows Gemini's own app log, on the phone only.
 
+**Do Not Disturb**
+- Lights the ring to show Do Not Disturb is on, in any pattern, colour, brightness and speed, edited like any rule.
+- Six calm patterns of its own: DND sign (the 3 and 9 o'clock LEDs, the bar across the ring's circle, and the default), crescent, sleep, snooze, glance and drift.
+- Shows for as long as Do Not Disturb is on, or only for the first 10 seconds, 1 minute or 5 minutes.
+- An optional flash as Do Not Disturb turns on (a sweep round the ring) and off (the same sweep backwards). It plays over everything except a call, and whatever it covered carries on after it.
+- Follows the face-down and quiet-hours conditions, or its own. The indicator sits underneath calls, Gemini and notifications, and underneath battery unless set to take priority over it.
+- Goes dark by itself if the app stops confirming Do Not Disturb is still on, so it can't be left lit.
+
 **Conditions**
 - Only light when the phone is face down.
 - Skip during Do Not Disturb.
@@ -53,7 +62,7 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 - Every rule can follow these defaults, always light, or opt out, and rules can carry their own quiet-hours window.
 
 **Pause**
-- A Pause lights tile in Quick Settings keeps the ring dark for a while: everything, or just calls, notifications, battery or Gemini.
+- A Pause lights tile in Quick Settings keeps the ring dark for a while: everything, or just calls, notifications, battery, Gemini or Do Not Disturb.
 - Pause for 1 hour, 2 hours, until morning (when your quiet hours end, or 07:00) or until you resume. The sheet remembers your last choice.
 - While paused, the tile shows what's paused and until when, and a tap on it resumes. Home shows a card with the same details, what still lights, and Resume and Change buttons.
 - Notifications that arrive during a pause still queue, and light once it ends if they haven't been dismissed.

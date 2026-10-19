@@ -138,7 +138,7 @@ class DaemonBridge private constructor(private val app: Application) {
         .daemon(false)
         .processNameSuffix(HiLightDaemonService.PROCESS_SUFFIX)
         .debuggable(BuildConfig.DEBUG)
-        .version(20)
+        .version(21)
 
     // Receives the daemon's log lines so they land in the same shareable log as the app's.
     private val logSink = object : ILogSink.Stub() {
@@ -659,6 +659,7 @@ class DaemonBridge private constructor(private val app: Application) {
         lastBatteryState?.let { sendBatteryState(it) }
         lastEntitled?.let { sendEntitled(it) }
         lastGeminiConfig?.let { sendGeminiConfig(it) }
+        lastDndIndicatorConfig?.let { sendDndIndicatorConfig(it) }
         onAvailabilityChanged?.invoke()
         _connections.tryEmit(Unit)
         afterConnect(bound, via)
@@ -1178,6 +1179,37 @@ class DaemonBridge private constructor(private val app: Application) {
 
     private fun sendGeminiConfig(config: Pair<Boolean, String>) {
         runRemote("setGeminiConfig") { it.setGeminiConfig(config.first, config.second) }
+    }
+
+    /** Cached and replayed on (re)connect, like the Gemini config. */
+    private var lastDndIndicatorConfig: Pair<Boolean, String>? = null
+
+    /**
+     * Sends the Do Not Disturb indicator config. [enabled] already folds in the master switch and
+     * licence; face-down is resolved against [globalOnlyWhenFaceDown] here, as for Gemini.
+     */
+    fun setDndIndicatorConfig(settings: DndIndicatorSettings, enabled: Boolean, globalOnlyWhenFaceDown: Boolean) {
+        val json = JSONObject().apply {
+            put("showIndicator", settings.indicatorEnabled)
+            put("pattern", settings.pattern.id)
+            put("color", settings.color)
+            put("brightness", settings.brightness.toDouble())
+            put("speed", settings.speed.toDouble())
+            put("showForSeconds", settings.showFor.seconds ?: -1)
+            put("flashOnChange", settings.flashOnChange)
+            put("overridesBattery", settings.overridesBattery)
+            put("requiresFaceDown", settings.faceDownMode.requiresFaceDown(globalOnlyWhenFaceDown))
+            put("quietHoursMode", settings.quietHoursMode.id)
+            put("quietStart", settings.quietHoursStartMinutes ?: -1)
+            put("quietEnd", settings.quietHoursEndMinutes ?: -1)
+        }
+        val config = enabled to json.toString()
+        lastDndIndicatorConfig = config
+        sendDndIndicatorConfig(config)
+    }
+
+    private fun sendDndIndicatorConfig(config: Pair<Boolean, String>) {
+        runRemote("setDndIndicatorConfig") { it.setDndIndicatorConfig(config.first, config.second) }
     }
 
     /**
