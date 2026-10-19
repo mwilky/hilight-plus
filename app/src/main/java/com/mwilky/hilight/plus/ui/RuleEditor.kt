@@ -127,6 +127,22 @@ data class RuleEditorResult(
     val speed: Float
 )
 
+/**
+ * The editor's pattern picker, a short row per group, so it never becomes one long row.
+ */
+enum class PatternGroup(val titleRes: Int, val patterns: List<PatternMode>) {
+    SIMPLE(R.string.pattern_group_simple, listOf(PatternMode.SOLID, PatternMode.BREATHE, PatternMode.PULSE, PatternMode.BEACON)),
+    MOTION(
+        R.string.pattern_group_motion,
+        listOf(PatternMode.WAVE, PatternMode.COMET, PatternMode.ORBIT, PatternMode.RIPPLE, PatternMode.SPARKLE, PatternMode.RAINBOW)
+    ),
+    GEMINI(R.string.pattern_group_gemini, listOf(PatternMode.GEMINI_LISTENING, PatternMode.GEMINI_THINKING, PatternMode.GEMINI_REPLYING));
+
+    companion object {
+        val RULES = listOf(SIMPLE, MOTION, GEMINI)
+    }
+}
+
 internal val PALETTE = listOf(
     0xFF4285F4, // Google Blue
     0xFFEA4335, // Google Red
@@ -159,7 +175,8 @@ fun CustomRuleDialog(
     initialAutoColor: Boolean = true,
     autoExtractedColor: Long? = null,
     initialBrightness: Float = DEFAULT_BRIGHTNESS,
-    initialSpeed: Float = DEFAULT_SPEED
+    initialSpeed: Float = DEFAULT_SPEED,
+    patternGroups: List<PatternGroup> = PatternGroup.RULES
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -191,7 +208,8 @@ fun CustomRuleDialog(
             initialAutoColor = initialAutoColor,
             autoExtractedColor = autoExtractedColor,
             initialBrightness = initialBrightness,
-            initialSpeed = initialSpeed
+            initialSpeed = initialSpeed,
+            patternGroups = patternGroups
         )
     }
 }
@@ -214,7 +232,8 @@ private fun RuleEditorContent(
     initialAutoColor: Boolean,
     autoExtractedColor: Long?,
     initialBrightness: Float,
-    initialSpeed: Float
+    initialSpeed: Float,
+    patternGroups: List<PatternGroup> = PatternGroup.RULES
 ) {
     var isAutoColor by remember(initialAutoColor) { mutableStateOf(initialAutoColor) }
     var selectedColor by remember(initialColor) {
@@ -262,7 +281,6 @@ private fun RuleEditorContent(
         isTesting = !isTesting
     }
 
-    val patterns = remember { PatternMode.entries.filter { it != PatternMode.OFF } }
     val isColorEnabled = !selectedPattern.hasFixedColors
     val canPickManualColor = isColorEnabled && (!showAutoColorToggle || !isAutoColor)
     val manualColorAlpha by animateFloatAsState(
@@ -341,23 +359,39 @@ private fun RuleEditorContent(
                     style = MaterialTheme.typography.labelLarge,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
-                val listState = rememberLazyListState(
-                    initialFirstVisibleItemIndex = (patterns.indexOf(selectedPattern) - 1).coerceAtLeast(0)
-                )
-                LazyRow(
-                    state = listState,
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(patterns, key = { it.id }) { p ->
-                        PatternCard(
-                            pattern = p,
-                            color = selectedColor,
-                            selected = selectedPattern == p,
-                            elapsedMs = clockMs,
-                            renderer = renderer,
-                            onClick = { selectedPattern = p }
+                // One short row per group under its own heading, rather than one long row.
+                patternGroups.forEach { group ->
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = stringResource(group.titleRes),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp)
                         )
+                        // Rows all start at the same edge; one only opens scrolled when the
+                        // rule's pattern would otherwise be out of view.
+                        val listState = rememberLazyListState(
+                            initialFirstVisibleItemIndex = (group.patterns.indexOf(initialPattern) - (PATTERN_CARDS_IN_VIEW - 1)).coerceAtLeast(0)
+                        )
+                        // Inset rather than padded inside, so cards scrolling past are cut off at
+                        // the section's margin, in line with everything else in it.
+                        LazyRow(
+                            state = listState,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(group.patterns, key = { it.id }) { p ->
+                                PatternCard(
+                                    pattern = p,
+                                    title = stringResource(p.cardTitleRes),
+                                    color = selectedColor,
+                                    selected = selectedPattern == p,
+                                    elapsedMs = clockMs,
+                                    renderer = renderer,
+                                    onClick = { selectedPattern = p }
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -673,9 +707,22 @@ private fun EditorSection(
     }
 }
 
+/** How many pattern cards a row shows before it has to scroll, on the narrowest screen. */
+private const val PATTERN_CARDS_IN_VIEW = 4
+
+/** A card's name: under the Gemini heading, "Gemini" in each name would only repeat it. */
+private val PatternMode.cardTitleRes: Int
+    get() = when (this) {
+        PatternMode.GEMINI_LISTENING -> R.string.gemini_state_listening
+        PatternMode.GEMINI_THINKING -> R.string.gemini_state_thinking
+        PatternMode.GEMINI_REPLYING -> R.string.gemini_state_replying
+        else -> titleRes
+    }
+
 @Composable
 private fun PatternCard(
     pattern: PatternMode,
+    title: String,
     color: Long,
     selected: Boolean,
     elapsedMs: Long,
@@ -697,21 +744,21 @@ private fun PatternCard(
         onClick = onClick,
         shape = RoundedCornerShape(corner),
         color = container,
-        modifier = Modifier.width(88.dp)
+        modifier = Modifier.width(76.dp)
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            PatternRing(pattern = pattern, color = color, elapsedMs = elapsedMs, renderer = renderer, size = 48.dp)
-            // Two lines for every card, so longer names wrap and all cards stay the same height.
+            PatternRing(pattern = pattern, color = color, elapsedMs = elapsedMs, renderer = renderer, size = 40.dp)
+            // One line: every name fits once the group heading carries the rest, so the cards
+            // stay compact and all the same height.
             Text(
-                text = stringResource(pattern.titleRes),
+                text = title,
                 style = MaterialTheme.typography.labelMedium,
                 textAlign = TextAlign.Center,
-                minLines = 2,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }

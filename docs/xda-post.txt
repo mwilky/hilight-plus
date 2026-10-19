@@ -6,7 +6,7 @@
 [TABLE]
 [TR]
 [TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/calls.png?v=2[/IMG][/TD]
-[TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/rule-editor.png?v=2[/IMG][/TD]
+[TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/rule-editor.png?v=3[/IMG][/TD]
 [TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/split-ring.png?v=2[/IMG][/TD]
 [TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/battery.png?v=2[/IMG][/TD]
 [TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/gemini.png?v=2[/IMG][/TD]
@@ -41,7 +41,7 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 [LIST]
 [*]Per-sender and per-app rules with dynamic colour extraction from app icons.
 [*]Starred contacts can share a favourites style, sitting between a sender's own rule and the app rule.
-[*]13 distinct LED animation patterns: [I]Solid, Breathe, Pulse, Wave, Comet, Orbit, Beacon, Ripple, Sparkle, Rainbow[/I], plus copies of Gemini's own [I]Listening, Thinking[/I] and [I]Replying[/I] effects.
+[*]13 distinct LED animation patterns, picked by group: [I]Solid, Breathe, Pulse, Beacon, Wave, Comet, Orbit, Ripple, Sparkle, Rainbow[/I], plus copies of Gemini's own [I]Listening, Thinking[/I] and [I]Replying[/I] effects.
 [*]Eight preset colours or any custom colour from a colour wheel, for every rule, battery and Gemini. Hex codes can be copied and pasted between rules.
 [*]Brightness from 10% to 100% for every rule and each Gemini state.
 [*]Speed from half to twice each pattern's own pace, for every rule and each Gemini state.

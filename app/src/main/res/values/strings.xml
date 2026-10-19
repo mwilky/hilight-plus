@@ -366,6 +366,9 @@
     <string name="pattern_gemini_listening">Gemini listening</string>
     <string name="pattern_gemini_thinking">Gemini thinking</string>
     <string name="pattern_gemini_replying">Gemini replying</string>
+    <string name="pattern_group_simple">Simple</string>
+    <string name="pattern_group_motion">Motion</string>
+    <string name="pattern_group_gemini">Gemini</string>
     <string name="gemini_states_header">While Gemini is</string>
     <string name="gemini_state_listening">Listening</string>
     <string name="gemini_state_thinking">Thinking</string>
