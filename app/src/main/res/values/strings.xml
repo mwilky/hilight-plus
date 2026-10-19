@@ -459,6 +459,7 @@
     <string name="about_debug_log_reset">Reset lights</string>
     <string name="about_debug_log_reset_desc">Ring stuck on and not responding? Reset restarts the lights service, which releases the ring without restarting your phone. Once it reconnects, alerts that stay lit until dismissed are sent to it again. Timed alerts aren\'t, but new notifications light as normal.</string>
     <string name="about_debug_log_reset_started">Restarting the lights service</string>
+    <string name="about_disclaimer">HiLight Plus is provided as is, without warranty of any kind. You use it at your own risk: the developer isn\'t responsible for any damage to your phone, its LEDs or anything else.</string>
     <string name="about_debug_log_share_failed">Couldn\'t prepare the log</string>
     <string name="about_backup_header">Backup</string>
     <string name="about_backup_title">Settings backup</string>

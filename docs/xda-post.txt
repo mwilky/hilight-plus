@@ -125,6 +125,12 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 
 [HR][/HR]
 
+[SIZE=5][B]Disclaimer[/B][/SIZE]
+
+HiLight Plus is provided as is, without warranty of any kind. You use it at your own risk: the developer isn't responsible for any damage to your phone, its LEDs or anything else.
+
+[HR][/HR]
+
 
 [SIZE=2][B]Community:[/B] [URL='https://t.me/+XW1xL8tZE2w0ZDc0']Telegram Group[/URL]
 [B]Source Code:[/B] [URL]https://github.com/mwilky/hilight-plus[/URL]

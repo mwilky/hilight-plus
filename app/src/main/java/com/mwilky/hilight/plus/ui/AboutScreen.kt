@@ -471,6 +471,13 @@ fun AboutContent(
                 onClear = onClearLog,
                 onResetLights = onResetLights
             )
+
+            Text(
+                text = stringResource(R.string.about_disclaimer),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
         }
     }
 }

@@ -127,6 +127,10 @@ The [Google Play](https://play.google.com/store/apps/details?id=com.mwilky.hilig
 
 The source is GPL-3.0 and you are welcome to build and install it yourself. A self-built APK is signed with your own key, so it cannot be updated from Play and does not include the purchase. Buying the Play version is the way to support development.
 
+## Disclaimer
+
+HiLight Plus is provided as is, without warranty of any kind. You use it at your own risk: the developer isn't responsible for any damage to your phone, its LEDs or anything else.
+
 ## Licence
 
 GPL-3.0. See [LICENSE](LICENSE).
