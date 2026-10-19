@@ -38,22 +38,15 @@ class SetupGuideTest {
 
     @Test
     fun developerOptionsReadsOnWhenReportedOrProvedByWirelessDebugging() {
-        assertEquals(true, DevSettings.devOptionsState(reportsOn = true, wirelessDebuggingOn = false, foundOff = false))
-        assertEquals(true, DevSettings.devOptionsState(reportsOn = false, wirelessDebuggingOn = true, foundOff = false))
+        assertEquals(true, DevSettings.devOptionsState(reportsOn = true, wirelessDebuggingOn = false))
+        assertEquals(true, DevSettings.devOptionsState(reportsOn = false, wirelessDebuggingOn = true))
     }
 
     @Test
     fun aZeroFromThePhoneIsNeverTrustedAsOff() {
         // Android 17 QPR1 on gives apps 0 whatever the switch says.
-        assertNull(DevSettings.devOptionsState(reportsOn = false, wirelessDebuggingOn = false, foundOff = false))
-        assertNull(DevSettings.devOptionsState(reportsOn = false, wirelessDebuggingOn = null, foundOff = false))
-    }
-
-    @Test
-    fun developerOptionsOffOnceTheDaemonFoundItOff() {
-        assertEquals(false, DevSettings.devOptionsState(reportsOn = false, wirelessDebuggingOn = false, foundOff = true))
-        // Wireless debugging on proves it came back on since.
-        assertEquals(true, DevSettings.devOptionsState(reportsOn = false, wirelessDebuggingOn = true, foundOff = true))
+        assertNull(DevSettings.devOptionsState(reportsOn = false, wirelessDebuggingOn = false))
+        assertNull(DevSettings.devOptionsState(reportsOn = false, wirelessDebuggingOn = null))
     }
 
     @Test

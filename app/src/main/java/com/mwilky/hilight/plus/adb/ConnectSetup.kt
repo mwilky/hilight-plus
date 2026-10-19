@@ -63,8 +63,6 @@ class ConnectSetup private constructor(private val app: Application) {
 
     private val settingsObserver = object : ContentObserver(handler) {
         override fun onChange(selfChange: Boolean) {
-            // Developer options may have come back on since the daemon found it off.
-            DevSettings.forgetFoundOff(app)
             update()
         }
     }

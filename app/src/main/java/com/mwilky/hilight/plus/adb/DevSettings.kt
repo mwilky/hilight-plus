@@ -7,7 +7,6 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.provider.Settings
 import com.mwilky.hilight.plus.DebugLog
-import java.io.File
 
 /** The system switches the built-in connection depends on. */
 object DevSettings {
@@ -24,52 +23,19 @@ object DevSettings {
      */
     const val ADB_ALLOWED_CONNECTION_TIME = "adb_allowed_connection_time"
 
-    // The boot on which the daemon, which still sees the real value, found Developer options off.
-    private const val FOUND_OFF_FILE = "dev_options_found_off_boot"
-
     /**
-     * Whether Developer options is on, or null when the phone won't say. From Android 17 QPR1,
-     * apps usually read 0 for it whatever the switch says (though not always, so no build can be
-     * trusted to tell the truth), so a 0 only counts as off once the daemon has found it off
-     * ([markFoundOff]). Wireless debugging being on proves it's on.
+     * Whether Developer options is on, or null when the phone won't say. Never false: from Android
+     * 17 QPR1, apps usually read 0 for it whatever the switch says (though not always, so no build
+     * can be trusted to tell the truth). Wireless debugging being on proves it's on.
      */
-    fun isDevOptionsOn(context: Context): Boolean? {
-        val state = devOptionsState(
-            reportsOn = readsOn(context, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED),
-            wirelessDebuggingOn = isWirelessDebuggingOn(context),
-            foundOff = wasFoundOff(context)
-        )
-        if (state == true) forgetFoundOff(context)
-        return state
-    }
+    fun isDevOptionsOn(context: Context): Boolean? = devOptionsState(
+        reportsOn = readsOn(context, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED),
+        wirelessDebuggingOn = isWirelessDebuggingOn(context)
+    )
 
     /** [isDevOptionsOn] from what can be read; pure, for tests. */
-    internal fun devOptionsState(reportsOn: Boolean, wirelessDebuggingOn: Boolean?, foundOff: Boolean): Boolean? = when {
-        reportsOn || wirelessDebuggingOn == true -> true
-        foundOff -> false
-        else -> null
-    }
-
-    /**
-     * The daemon found Developer options off where the app couldn't see it. Counts as off until
-     * [forgetFoundOff] (it may have changed) or the next boot, so starts don't keep trying.
-     */
-    fun markFoundOff(context: Context) {
-        runCatching { foundOffFile(context).writeText(bootCount(context).toString()) }
-            .onFailure { DebugLog.w(TAG, "Couldn't remember Developer options is off: ${it.message}") }
-    }
-
-    fun forgetFoundOff(context: Context) {
-        foundOffFile(context).delete()
-    }
-
-    private fun wasFoundOff(context: Context): Boolean =
-        runCatching { foundOffFile(context).readText().trim().toInt() == bootCount(context) }.getOrDefault(false)
-
-    private fun foundOffFile(context: Context) = File(context.noBackupFilesDir, FOUND_OFF_FILE)
-
-    private fun bootCount(context: Context): Int =
-        Settings.Global.getInt(context.contentResolver, Settings.Global.BOOT_COUNT, -1)
+    internal fun devOptionsState(reportsOn: Boolean, wirelessDebuggingOn: Boolean?): Boolean? =
+        if (reportsOn || wirelessDebuggingOn == true) true else null
 
     /** Null when the setting can't be read, so callers can carry on rather than get stuck. */
     fun isWirelessDebuggingOn(context: Context): Boolean? =
@@ -117,14 +83,13 @@ object DevSettings {
         context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
 
     /**
-     * Turns Wireless debugging on, if the app has been allowed to. Never while Developer options
-     * is off: the app doesn't switch debugging back on behind the user's back. When the phone
-     * won't say ([isDevOptionsOn] is null), only with [whenUnsure]: for a paired user's start, who
-     * had it on to pair, or the lights could never come back by themselves after a restart.
+     * Turns Wireless debugging on, if the app has been allowed to. When the phone won't say whether
+     * Developer options is on ([isDevOptionsOn] is null), only with [whenUnsure]: for a paired
+     * user's start, who had it on to pair, or the lights could never come back by themselves after
+     * a restart. The lights service runs with Developer options off, as long as this stays on.
      */
     fun enableWirelessDebugging(context: Context, whenUnsure: Boolean = false): Boolean {
-        val devOptions = isDevOptionsOn(context)
-        if (devOptions == false || (devOptions == null && !whenUnsure)) return false
+        if (isDevOptionsOn(context) == null && !whenUnsure) return false
         return setWirelessDebugging(context, true)
     }
 

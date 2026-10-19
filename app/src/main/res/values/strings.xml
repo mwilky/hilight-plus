@@ -173,12 +173,9 @@
     <string name="connect_status_asking_network">Needs your answer</string>
     <string name="connect_status_needs_setup">Set-up needed</string>
     <string name="connect_status_waiting_wifi">Waiting for Wi-Fi</string>
-    <string name="connect_status_dev_off">Developer options off</string>
     <string name="connect_status_network_not_allowed">Allow this Wi-Fi</string>
     <string name="connect_desc_network_not_allowed">Wireless debugging hasn\'t been allowed on this Wi-Fi network yet, so HiLight Plus can\'t start the lights. Tap Ask again, then choose Always allow on this network when Android asks. If you turned Developer options off, turn it back on first.</string>
     <string name="connect_btn_ask_again">Ask again</string>
-    <string name="connect_desc_dev_off">Developer options is off, which stops the lights service. Tap Build number 7 times in About phone to turn it back on, and HiLight Plus reconnects by itself. If it\'s already on, tap Connect anyway.</string>
-    <string name="connect_btn_connect_anyway">Connect anyway</string>
     <string name="connect_btn_set_up">Set up</string>
     <string name="connect_btn_wifi">Turn on Wi-Fi</string>
     <string name="pairing_lost_title">Pair again</string>

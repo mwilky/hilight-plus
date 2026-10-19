@@ -3,7 +3,6 @@
 package com.mwilky.hilight.plus.ui.diagnostics
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -166,7 +165,6 @@ fun ConnectionStatusCard(
                 if (builtIn) stringResource(R.string.connect_desc_connected) else stringResource(R.string.shizuku_desc_connected)
             DaemonBridge.State.DISCONNECTED -> stringResource(R.string.shizuku_desc_disconnected)
             DaemonBridge.State.NEEDS_SETUP -> stringResource(R.string.connect_desc_needs_setup)
-            DaemonBridge.State.DEV_OPTIONS_OFF -> stringResource(R.string.connect_desc_dev_off)
             DaemonBridge.State.NETWORK_NOT_ALLOWED -> stringResource(R.string.connect_desc_network_not_allowed)
             DaemonBridge.State.WAITING_FOR_WIFI -> stringResource(R.string.connect_desc_waiting_wifi)
             DaemonBridge.State.NEEDS_PERMISSION -> stringResource(R.string.shizuku_desc_needs_permission)
@@ -188,7 +186,6 @@ fun ConnectionStatusCard(
             DaemonBridge.State.WAITING_FOR_WIRELESS_DEBUGGING -> stringResource(R.string.shizuku_status_connecting)
             DaemonBridge.State.ASKING_TO_ALLOW_NETWORK -> stringResource(R.string.connect_status_asking_network)
             DaemonBridge.State.NEEDS_SETUP -> stringResource(R.string.connect_status_needs_setup)
-            DaemonBridge.State.DEV_OPTIONS_OFF -> stringResource(R.string.connect_status_dev_off)
             DaemonBridge.State.NETWORK_NOT_ALLOWED -> stringResource(R.string.connect_status_network_not_allowed)
             DaemonBridge.State.WAITING_FOR_WIFI -> stringResource(R.string.connect_status_waiting_wifi)
             DaemonBridge.State.NEEDS_PERMISSION -> stringResource(R.string.shizuku_status_needs_permission)
@@ -240,26 +237,6 @@ fun ConnectionStatusCard(
                 DaemonBridge.State.NETWORK_NOT_ALLOWED -> {
                     Button(onClick = onConnect, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) {
                         ButtonLabel(Icons.Rounded.Refresh, stringResource(R.string.connect_btn_ask_again))
-                    }
-                }
-                DaemonBridge.State.DEV_OPTIONS_OFF -> {
-                    // Developer options is hidden while it's off; Build number brings it back. Where
-                    // Android won't tell the app, the user may know better: let them start anyway.
-                    // Stacked: side by side, the labels wrap on narrow screens like the Fold's cover.
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = { SetupIntents.open(context, SetupIntents.aboutPhone(context)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            shapes = ButtonDefaults.shapes()
-                        ) {
-                            ButtonLabel(Icons.Rounded.Settings, stringResource(R.string.connect_step_dev_btn))
-                        }
-                        OutlinedButton(onClick = onConnect, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) {
-                            ButtonLabel(Icons.Rounded.PowerSettingsNew, stringResource(R.string.connect_btn_connect_anyway))
-                        }
                     }
                 }
                 DaemonBridge.State.WAITING_FOR_WIFI -> {
