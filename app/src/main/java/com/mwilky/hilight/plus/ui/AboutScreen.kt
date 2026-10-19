@@ -476,7 +476,7 @@ fun AboutContent(
                 text = stringResource(R.string.about_disclaimer),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 4.dp)
+                modifier = Modifier.padding(start = 4.dp, top = 16.dp, end = 4.dp)
             )
         }
     }

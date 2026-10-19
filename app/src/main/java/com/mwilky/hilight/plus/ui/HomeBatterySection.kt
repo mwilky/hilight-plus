@@ -257,31 +257,35 @@ private fun LowBatteryGroup(
         checked = battery.lowWarningEnabled,
         onCheckedChange = { onBatteryChange(battery.copy(lowWarningEnabled = it)) }
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = stringResource(R.string.battery_threshold_title),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = stringResource(R.string.battery_threshold_value, battery.lowThresholdPercent),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
+        // The threshold and its slider are one block, headed like every other slider, so the
+        // pattern cards below start a block of their own.
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = stringResource(R.string.battery_threshold_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = stringResource(R.string.battery_threshold_value, battery.lowThresholdPercent),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            Slider(
+                value = battery.lowThresholdPercent.toFloat(),
+                onValueChange = { value ->
+                    val rounded = (value / 5f).roundToInt() * 5
+                    onBatteryChange(battery.copy(lowThresholdPercent = rounded.coerceIn(5, 50)))
+                },
+                valueRange = 5f..50f,
+                steps = 8,
+                modifier = Modifier.fillMaxWidth()
             )
         }
-        Slider(
-            value = battery.lowThresholdPercent.toFloat(),
-            onValueChange = { value ->
-                val rounded = (value / 5f).roundToInt() * 5
-                onBatteryChange(battery.copy(lowThresholdPercent = rounded.coerceIn(5, 50)))
-            },
-            valueRange = 5f..50f,
-            steps = 8,
-            modifier = Modifier.fillMaxWidth()
-        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -602,9 +606,10 @@ private fun ExpandingContent(
         enter = fadeIn(effects) + expandVertically(spatial),
         exit = fadeOut(effects) + shrinkVertically(spatial)
     ) {
+        // Blocks inside a row get the same room between them as the split ring's settings.
         Column(
             modifier = Modifier.padding(top = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
             content = content
         )
     }

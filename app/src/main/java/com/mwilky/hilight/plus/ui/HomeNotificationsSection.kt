@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import com.mwilky.hilight.plus.AppNotificationRule
 import com.mwilky.hilight.plus.SPLIT_READABLE_FLOOR
@@ -316,38 +317,51 @@ fun HomeNotifsPage(
                                     exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
                                         fadeOut(MaterialTheme.motionScheme.defaultEffectsSpec())
                                 ) {
-                                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                        Text(stringResource(R.string.settings_split_animation_title))
-                                        ConnectedChoice(
-                                            options = listOf(
-                                                SplitAnimation.BREATHE to stringResource(R.string.settings_split_animation_breathe),
-                                                SplitAnimation.SOLID to stringResource(R.string.settings_split_animation_solid),
-                                                SplitAnimation.SPOTLIGHT to stringResource(R.string.settings_split_animation_spotlight),
-                                                SplitAnimation.ROTATE to stringResource(R.string.settings_split_animation_rotate)
-                                            ),
-                                            selected = state.splitAnimation,
-                                            onSelect = onChangeSplitAnimation
-                                        )
+                                    // Each setting is a block under a heading in the editor's label
+                                    // style, with room between blocks, so they don't run together
+                                    // with the description above or with each other.
+                                    val headerStyle = MaterialTheme.typography.labelLarge.copy(color = MaterialTheme.colorScheme.onSurface)
+                                    Column(
+                                        modifier = Modifier.padding(top = 12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(24.dp)
+                                    ) {
+                                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                            Text(stringResource(R.string.settings_split_animation_title), style = headerStyle)
+                                            ConnectedChoice(
+                                                options = listOf(
+                                                    SplitAnimation.BREATHE to stringResource(R.string.settings_split_animation_breathe),
+                                                    SplitAnimation.SOLID to stringResource(R.string.settings_split_animation_solid),
+                                                    SplitAnimation.SPOTLIGHT to stringResource(R.string.settings_split_animation_spotlight),
+                                                    SplitAnimation.ROTATE to stringResource(R.string.settings_split_animation_rotate)
+                                                ),
+                                                selected = state.splitAnimation,
+                                                onSelect = onChangeSplitAnimation
+                                            )
+                                        }
                                         SplitBrightnessControls(
                                             animation = state.splitAnimation,
                                             look = state.splitLook,
-                                            onLookChange = onChangeSplitLook
+                                            onLookChange = onChangeSplitLook,
+                                            titleStyle = headerStyle
                                         )
                                         // Solid holds still, so it has no speed.
                                         SpeedSlider(
                                             speed = state.splitSpeed,
                                             onSpeedChange = onChangeSplitSpeed,
-                                            enabled = state.splitAnimation != SplitAnimation.SOLID
+                                            enabled = state.splitAnimation != SplitAnimation.SOLID,
+                                            titleStyle = headerStyle
                                         )
-                                        SplitRingExample(renderer, state.splitAnimation, state.splitLook, state.splitSpeed)
-                                        SplitTestButton(
-                                            animation = state.splitAnimation,
-                                            look = state.splitLook,
-                                            speed = state.splitSpeed,
-                                            enabled = connectionState == DaemonBridge.State.CONNECTED,
-                                            onTest = onTestSplit,
-                                            onCancel = onCancelLedTest
-                                        )
+                                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                            SplitRingExample(renderer, state.splitAnimation, state.splitLook, state.splitSpeed)
+                                            SplitTestButton(
+                                                animation = state.splitAnimation,
+                                                look = state.splitLook,
+                                                speed = state.splitSpeed,
+                                                enabled = connectionState == DaemonBridge.State.CONNECTED,
+                                                onTest = onTestSplit,
+                                                onCancel = onCancelLedTest
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -412,7 +426,8 @@ private fun SplitRingExample(renderer: PatternRenderer, animation: SplitAnimatio
 private fun SplitBrightnessControls(
     animation: SplitAnimation,
     look: SplitLook,
-    onLookChange: (SplitLook) -> Unit
+    onLookChange: (SplitLook) -> Unit,
+    titleStyle: TextStyle
 ) {
     val usesRange = SplitLook.usesRange(animation)
     if (usesRange) {
@@ -420,12 +435,14 @@ private fun SplitBrightnessControls(
             dimmest = look.dimmest,
             brightest = look.brightest,
             onRangeChange = { dimmest, brightest -> onLookChange(look.copy(dimmest = dimmest, brightest = brightest)) },
+            titleStyle = titleStyle,
             stepPercent = SPLIT_BRIGHTNESS_STEP_PERCENT
         )
     } else {
         BrightnessSlider(
             brightness = look.steady,
             onBrightnessChange = { onLookChange(look.copy(steady = it)) },
+            titleStyle = titleStyle,
             stepPercent = SPLIT_BRIGHTNESS_STEP_PERCENT
         )
     }
