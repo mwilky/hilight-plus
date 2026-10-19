@@ -184,6 +184,11 @@ class LightController private constructor(private val app: Application) {
             }
         }
         scope.launch {
+            store.splitAnnounceNew.collect { enabled ->
+                daemon.setSplitAnnounceNew(enabled)
+            }
+        }
+        scope.launch {
             combine(
                 store.quietHoursEnabled,
                 store.quietHoursStartMinutes,
@@ -443,6 +448,7 @@ class LightController private constructor(private val app: Application) {
         daemon.setSplitAnimation(store.splitAnimation.first())
         daemon.setSplitLook(store.splitLook.first())
         daemon.setSplitSpeed(store.splitSpeed.first())
+        daemon.setSplitAnnounceNew(store.splitAnnounceNew.first())
         daemon.setQuietHours(
             store.quietHoursEnabled.first(),
             store.quietHoursStartMinutes.first(),

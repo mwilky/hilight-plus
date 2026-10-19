@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -33,6 +34,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -47,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import com.mwilky.hilight.plus.AppNotificationRule
@@ -102,6 +105,7 @@ fun HomeNotifsPage(
     onChangeSplitAnimation: (SplitAnimation) -> Unit,
     onChangeSplitLook: (SplitLook) -> Unit,
     onChangeSplitSpeed: (Float) -> Unit,
+    onChangeSplitAnnounceNew: (Boolean) -> Unit,
     onTestSplit: (colors: LongArray, animation: SplitAnimation, look: SplitLook, speed: Float, durationMs: Long) -> Unit,
     onCancelLedTest: () -> Unit,
     renderer: PatternRenderer
@@ -351,6 +355,31 @@ fun HomeNotifsPage(
                                             enabled = state.splitAnimation != SplitAnimation.SOLID,
                                             titleStyle = headerStyle
                                         )
+                                        // Laid out like the Battery page's switch rows, inside this one.
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .toggleable(
+                                                    value = state.splitAnnounceNew,
+                                                    role = Role.Switch,
+                                                    onValueChange = onChangeSplitAnnounceNew
+                                                ),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                        ) {
+                                            Column(
+                                                modifier = Modifier.weight(1f),
+                                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                                            ) {
+                                                Text(stringResource(R.string.settings_split_announce_title), style = headerStyle)
+                                                Text(
+                                                    text = stringResource(R.string.settings_split_announce_desc),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                            Switch(checked = state.splitAnnounceNew, onCheckedChange = null)
+                                        }
                                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                             SplitRingExample(renderer, state.splitAnimation, state.splitLook, state.splitSpeed)
                                             SplitTestButton(

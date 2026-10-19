@@ -205,6 +205,10 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
         engine.setSplitSpeed(clampSpeed(speed))
     }
 
+    override fun setSplitAnnounceNew(enabled: Boolean) {
+        engine.setSplitAnnounceNew(enabled)
+    }
+
     override fun testSplitAtSpeed(
         colors: LongArray?,
         animation: String?,

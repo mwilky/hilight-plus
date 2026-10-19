@@ -219,6 +219,11 @@ class LightEngine {
     // (Spotlight on the newest arc, Rotate with the newest at the top).
     private var splitKeys: List<String>? = null
     private var splitStartedAtMs = 0L
+    // Announcing a new arrival: while the split ring is up, a newly posted notification plays one
+    // loop of its own pattern before the arcs come back. Which one, and when it was posted.
+    private var splitAnnounceNew = false
+    private data class SplitIntro(val key: String, val startedAtMs: Long)
+    private var splitIntro: SplitIntro? = null
 
     // Hardware effects: what the open session is showing, so an effect is only sent when that
     // changes, and whether the render loop is pushing frames (fallback) and so needs to tick fast.
@@ -398,6 +403,9 @@ class LightEngine {
             }
             if (notificationVisible(requiresFaceDown, dndMode, quietHoursMode, quietStartOverride, quietEndOverride)) {
                 needsSessionReset = true
+                // Only matters once there are arcs to come back to; a lone alert plays its own
+                // pattern anyway. Checked as the ring is drawn, since the others may yet go.
+                if (splitRing && splitAnnounceNew) splitIntro = SplitIntro(key, now)
             }
             DebugLog.i(TAG, "postAlert [key=$key]: pattern=$pattern, color=$color, speedMs=$speedMs (queue size=${activeAlerts.size}, requiresFaceDown=$requiresFaceDown, dndMode=$dndMode, quietHoursMode=$quietHoursMode)")
             wake()
@@ -521,6 +529,7 @@ class LightEngine {
         synchronized(lock) {
             if (splitRing == enabled) return
             splitRing = enabled
+            splitIntro = null
             DebugLog.i(TAG, "setSplitRing: $enabled")
             wake()
         }
@@ -541,6 +550,16 @@ class LightEngine {
             if (splitSpeed == speed) return
             splitSpeed = speed
             DebugLog.i(TAG, "setSplitSpeed: $speed")
+            wake()
+        }
+    }
+
+    fun setSplitAnnounceNew(enabled: Boolean) {
+        synchronized(lock) {
+            if (splitAnnounceNew == enabled) return
+            splitAnnounceNew = enabled
+            if (!enabled) splitIntro = null
+            DebugLog.i(TAG, "setSplitAnnounceNew: $enabled")
             wake()
         }
     }
@@ -668,6 +687,7 @@ class LightEngine {
     fun removeAlert(key: String) {
         synchronized(lock) {
             val removed = activeAlerts.removeAll { it.key == key }
+            if (splitIntro?.key == key) splitIntro = null
             if (removed) {
                 if (currentAlertIndex >= activeAlerts.size) {
                     currentAlertIndex = 0
@@ -693,6 +713,7 @@ class LightEngine {
             directAlertTimer.clear()
             activeAlerts.clear()
             currentAlertIndex = 0
+            splitIntro = null
             if (incomingCallAlert == null && !idleLayerActiveNow()) {
                 lights.blank()
             }
@@ -708,6 +729,7 @@ class LightEngine {
             directAlertTimer.clear()
             activeAlerts.clear()
             currentAlertIndex = 0
+            splitIntro = null
             testAlert = null
             geminiState = null
             // Also drop the battery reading, so the layer can't simply light back up on the next
@@ -767,6 +789,9 @@ class LightEngine {
         activeAlerts.forEach { if (it.expiresAtMs != Long.MAX_VALUE) due = minOf(due, it.expiresAtMs) }
         nextTurnAtMs?.let { due = minOf(due, it) }
         geminiState?.let { due = minOf(due, geminiStateSinceMs + GeminiLogParser.maxDurationMs(it)) }
+        splitIntro?.let { intro ->
+            activeAlerts.firstOrNull { it.key == intro.key }?.let { due = minOf(due, maxOf(now, intro.startedAtMs + splitIntroMs(it))) }
+        }
         // Only deadlines still ahead: one already passed would keep waking the loop every frame.
         dndFlash?.let { due = minOf(due, maxOf(now, it.startedAtMs + PatternRenderer.DND_FLASH_MS)) }
         dndIndicator?.showForMs?.let { showFor ->
@@ -906,6 +931,12 @@ class LightEngine {
             val batterySuppressesNotifications = batteryEligible && battery!!.overridesNotifications
 
             if (dndFlash?.let { now - it.startedAtMs >= PatternRenderer.DND_FLASH_MS } == true) dndFlash = null
+            // Dropped here too, not only where the split ring is drawn: with a single alert
+            // waiting that code never runs, and a stale announcement would keep the loop awake.
+            splitIntro?.let { intro ->
+                val alert = activeAlerts.firstOrNull { it.key == intro.key }
+                if (alert == null || now - intro.startedAtMs >= splitIntroMs(alert)) splitIntro = null
+            }
             val dndShow = dndLayerNow(now, nowMinutes)
 
             var currentPattern = ambientPattern
@@ -1003,6 +1034,19 @@ class LightEngine {
                 if (eligibleStart == null) {
                     reason = "off (${activeAlerts.size} queued, hidden by conditions)"
                     useIdleLayer()
+                } else if (splitAlerts.size >= 2 && splitIntroAlert(splitAlerts, now) != null) {
+                    // A new arrival announces itself with one loop of its own pattern, timed so
+                    // the hardware stops by itself; the arcs come back on the next tick after.
+                    val intro = splitIntro!!
+                    val alert = splitIntroAlert(splitAlerts, now)!!
+                    reason = "split intro ${alert.key} ${alert.pattern}"
+                    currentPattern = alert.pattern
+                    currentColor = alert.color
+                    currentBrightness = alert.brightness
+                    currentSpeed = alert.speedMs
+                    elapsedMs = now - intro.startedAtMs
+                    effectKey = listOf("splitIntro", intro, alert)
+                    effectRemainingMs = splitIntroMs(alert) - elapsedMs
                 } else if (splitAlerts.size >= 2) {
                     val keys = splitAlerts.take(PatternRenderer.MAX_SPLIT_SEGMENTS).map { it.key }
                     if (keys != splitKeys) {
@@ -1252,7 +1296,7 @@ class LightEngine {
         buildString {
             appendLine("ring=$lastRenderReason, sessionOpen=${lights.isSessionOpen}, unclosedSessions=${lights.unclosedSessionCount}, leds=${lights.ledCount}, running=$running, renderThreadAlive=${renderThread?.isAlive}, lastFrame=${now - lastTickElapsedMs}ms ago")
             appendLine("route=${if (framesDriving) "frames" else "effects"}, effectsSupported=${lights.supportsEffects}, effectsFailed=$effectsFailed, period=${lights.effectPeriodMs}ms, showing=${shownEffectKey?.let { shownEffectInfo }}")
-            appendLine("faceDown=$deviceFaceDown, dndActive=$dndActive, dndSuppress=$dndSuppressEnabled, quietHours=$quietHoursEnabled $quietHoursStartMinutes-$quietHoursEndMinutes, splitRing=$splitRing (${splitAnimation.id}, $splitLook, speed $splitSpeed)")
+            appendLine("faceDown=$deviceFaceDown, dndActive=$dndActive, dndSuppress=$dndSuppressEnabled, quietHours=$quietHoursEnabled $quietHoursStartMinutes-$quietHoursEndMinutes, splitRing=$splitRing (${splitAnimation.id}, $splitLook, speed $splitSpeed, announceNew=$splitAnnounceNew${splitIntro?.let { ", announcing ${it.key}" } ?: ""})")
             appendLine("pause=${describePause()}, rearCamera=$rearCameraActive")
             appendLine("test=${testAlert?.let { "${it.pattern} ${hex(it.color)}, ${it.expiresAtMs - now}ms left" }}")
             appendLine("gemini=${if (geminiEnabled) "on, ${geminiState?.id ?: "idle"}${geminiState?.let { ", for ${(now - geminiStateSinceMs) / 1000}s" } ?: ""}, looks=${geminiLooks.map { "${it.key.id}:${it.value.pattern}" }}" else "off"}")
@@ -1271,6 +1315,23 @@ class LightEngine {
     }
 
     private fun hex(color: Long): String = "#%08X".format(color and 0xFFFFFFFFL)
+
+    /** One loop of [alert]'s pattern, the same length as its turn when alerts take turns. */
+    private fun splitIntroMs(alert: QueuedAlert): Long = alert.speedMs.coerceAtLeast(300L)
+
+    /**
+     * The alert announcing itself before the split ring, if one is: still waiting and visible,
+     * and with its one loop not yet played out. An announcement that's over is dropped.
+     */
+    private fun splitIntroAlert(visible: List<QueuedAlert>, now: Long): QueuedAlert? {
+        val intro = splitIntro ?: return null
+        val alert = visible.firstOrNull { it.key == intro.key }
+        if (alert == null || now - intro.startedAtMs >= splitIntroMs(alert)) {
+            splitIntro = null
+            return null
+        }
+        return alert
+    }
 
     /** Queue order is post order, so the newest alert is last; the split ring shows newest at the top. */
     private fun visibleAlertsNewestFirst(nowMinutes: Int): List<QueuedAlert> =

@@ -216,6 +216,7 @@ fun HomeScreen(
         onChangeSplitAnimation = viewModel::setSplitAnimation,
         onChangeSplitLook = viewModel::setSplitLook,
         onChangeSplitSpeed = viewModel::setSplitSpeed,
+        onChangeSplitAnnounceNew = viewModel::setSplitAnnounceNew,
         onTestSplit = controller::testSplit,
         onCancelLedTest = controller::cancelTestPattern,
         onToggleFavouriteNotif = viewModel::setFavouriteNotifEnabled,
@@ -703,6 +704,7 @@ fun HomeContent(
     onChangeSplitAnimation: (SplitAnimation) -> Unit = {},
     onChangeSplitLook: (SplitLook) -> Unit = {},
     onChangeSplitSpeed: (Float) -> Unit = {},
+    onChangeSplitAnnounceNew: (Boolean) -> Unit = {},
     onTestSplit: (colors: LongArray, animation: SplitAnimation, look: SplitLook, speed: Float, durationMs: Long) -> Unit = { _, _, _, _, _ -> },
     onCancelLedTest: () -> Unit = {},
     onToggleFavouriteNotif: (Boolean) -> Unit,
@@ -848,6 +850,7 @@ fun HomeContent(
                         onChangeSplitAnimation = onChangeSplitAnimation,
                         onChangeSplitLook = onChangeSplitLook,
                         onChangeSplitSpeed = onChangeSplitSpeed,
+                        onChangeSplitAnnounceNew = onChangeSplitAnnounceNew,
                         onTestSplit = onTestSplit,
                         onCancelLedTest = onCancelLedTest,
                         renderer = renderer

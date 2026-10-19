@@ -53,4 +53,6 @@ interface IHiLightService {
     // showForSeconds (-1 while on), flashOnChange, overridesBattery, requiresFaceDown,
     // quietHoursMode, quietStart, quietEnd (-1 for none). The app repeats setDndActive as its heartbeat.
     void setDndIndicatorConfig(boolean enabled, String configJson);
+    // With the split ring on, a newly posted notification first plays one loop of its own pattern.
+    void setSplitAnnounceNew(boolean enabled);
 }

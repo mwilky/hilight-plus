@@ -138,7 +138,7 @@ class DaemonBridge private constructor(private val app: Application) {
         .daemon(false)
         .processNameSuffix(HiLightDaemonService.PROCESS_SUFFIX)
         .debuggable(BuildConfig.DEBUG)
-        .version(21)
+        .version(22)
 
     // Receives the daemon's log lines so they land in the same shareable log as the app's.
     private val logSink = object : ILogSink.Stub() {
@@ -1001,6 +1001,10 @@ class DaemonBridge private constructor(private val app: Application) {
 
     fun setSplitSpeed(speed: Float) {
         runRemote("setSplitSpeed") { it.setSplitSpeed(speed) }
+    }
+
+    fun setSplitAnnounceNew(enabled: Boolean) {
+        runRemote("setSplitAnnounceNew") { it.setSplitAnnounceNew(enabled) }
     }
 
     fun testSplit(colors: LongArray, animation: SplitAnimation, look: SplitLook, speed: Float, durationMs: Long) {

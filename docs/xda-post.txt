@@ -7,7 +7,7 @@
 [TR]
 [TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/calls.png?v=2[/IMG][/TD]
 [TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/rule-editor.png?v=3[/IMG][/TD]
-[TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/split-ring.png?v=2[/IMG][/TD]
+[TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/split-ring.png?v=3[/IMG][/TD]
 [TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/battery.png?v=2[/IMG][/TD]
 [TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/gemini.png?v=2[/IMG][/TD]
 [TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/dnd.png?v=2[/IMG][/TD]
@@ -51,7 +51,7 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 [LIST]
 [*][B]Newest only:[/B] Displays the most recent notification for a set duration.
 [*][B]Take turns:[/B] Sequentially cycles through active notifications until dismissed.
-[*][B]Split the ring:[/B] Partitions the 8-LED ring into distinct coloured arcs (up to 4 notifications concurrently). Arcs can breathe, stay solid, brighten in turn (Spotlight) or circle the ring (Rotate), with their own brightness range (Breathe, Spotlight) or steady level (Solid, Rotate), a speed setting and a Test on LEDs button.
+[*][B]Split the ring:[/B] Partitions the 8-LED ring into distinct coloured arcs (up to 4 notifications concurrently). Arcs can breathe, stay solid, brighten in turn (Spotlight) or circle the ring (Rotate), with their own brightness range (Breathe, Spotlight) or steady level (Solid, Rotate), a speed setting and a Test on LEDs button. Optionally, each new notification first plays its own rule's pattern once, then the arcs come back.
 [/LIST]
 [*]Instant cleanup: lights turn off the moment the notification is cleared from the shade.
 [/LIST]

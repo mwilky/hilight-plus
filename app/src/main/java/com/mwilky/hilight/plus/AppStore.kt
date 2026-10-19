@@ -112,6 +112,7 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_SPLIT_BRIGHTEST = floatPreferencesKey("split_brightest")
         private val KEY_SPLIT_STEADY = floatPreferencesKey("split_steady")
         private val KEY_SPLIT_SPEED = floatPreferencesKey("split_speed")
+        private val KEY_SPLIT_ANNOUNCE_NEW = booleanPreferencesKey("split_announce_new")
         private val KEY_DEFAULT_NOTIF_ENABLED = booleanPreferencesKey("default_notif_enabled")
         private val KEY_DEFAULT_NOTIF_COLOR = longPreferencesKey("default_notif_color")
         private val KEY_DEFAULT_NOTIF_PATTERN = stringPreferencesKey("default_notif_pattern")
@@ -206,6 +207,9 @@ class AppStore private constructor(private val appContext: Context) {
 
     val splitSpeed: Flow<Float> = appContext.dataStore.data
         .map { clampSpeed(it[KEY_SPLIT_SPEED] ?: DEFAULT_SPEED) }
+
+    val splitAnnounceNew: Flow<Boolean> = appContext.dataStore.data
+        .map { it[KEY_SPLIT_ANNOUNCE_NEW] ?: false }
 
     val battery: Flow<BatterySettings> = appContext.dataStore.data
         .map { BatterySettings.fromJson(it[KEY_BATTERY_JSON]) }
@@ -370,6 +374,10 @@ class AppStore private constructor(private val appContext: Context) {
 
     suspend fun setSplitSpeed(speed: Float) {
         appContext.dataStore.edit { it[KEY_SPLIT_SPEED] = clampSpeed(speed) }
+    }
+
+    suspend fun setSplitAnnounceNew(enabled: Boolean) {
+        appContext.dataStore.edit { it[KEY_SPLIT_ANNOUNCE_NEW] = enabled }
     }
 
     private fun readSplitLook(prefs: Preferences): SplitLook {
@@ -716,6 +724,7 @@ class AppStore private constructor(private val appContext: Context) {
             splitAnimation = SplitAnimation.fromId(prefs[KEY_SPLIT_ANIMATION]),
             splitLook = readSplitLook(prefs),
             splitSpeed = clampSpeed(prefs[KEY_SPLIT_SPEED] ?: d.splitSpeed),
+            splitAnnounceNew = prefs[KEY_SPLIT_ANNOUNCE_NEW] ?: d.splitAnnounceNew,
             isDefaultNotifEnabled = prefs[KEY_DEFAULT_NOTIF_ENABLED] ?: d.isDefaultNotifEnabled,
             defaultNotifColor = prefs[KEY_DEFAULT_NOTIF_COLOR] ?: d.defaultNotifColor,
             defaultNotifPattern = enumOr(prefs[KEY_DEFAULT_NOTIF_PATTERN], d.defaultNotifPattern),
@@ -821,6 +830,8 @@ data class SettingsSnapshot(
     val splitAnimation: SplitAnimation,
     val splitLook: SplitLook,
     val splitSpeed: Float,
+    // Off by default, so the split ring keeps going straight to its arcs until opted in.
+    val splitAnnounceNew: Boolean = false,
     val isDefaultNotifEnabled: Boolean,
     val defaultNotifColor: Long,
     val defaultNotifPattern: PatternMode,

@@ -254,6 +254,8 @@
     <string name="settings_split_example_solid">Three waiting, held dim so each keeps its own colour: newest at the top, then clockwise</string>
     <string name="settings_split_example_spotlight">Three waiting, each brightening in turn: newest at the top first, then clockwise</string>
     <string name="settings_split_example_rotate">Three waiting, circling the ring: they start with the newest at the top, then keep moving</string>
+    <string name="settings_split_announce_title">Announce new notifications</string>
+    <string name="settings_split_announce_desc">Each new notification plays its own rule\'s pattern once, then the ring goes back to the arcs.</string>
 
     <!-- Dialogs & Customization -->
     <string name="dialog_section_look">Look</string>
