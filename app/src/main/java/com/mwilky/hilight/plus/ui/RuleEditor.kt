@@ -388,7 +388,7 @@ private fun RuleEditorContent(
                         LazyRow(
                             state = listState,
                             modifier = Modifier.padding(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(PATTERN_CARD_GAP)
                         ) {
                             items(group.patterns, key = { it.id }) { p ->
                                 PatternCard(
@@ -741,13 +741,42 @@ private fun PatternCard(
     renderer: PatternRenderer,
     onClick: () -> Unit
 ) {
+    PatternChoiceCard(
+        title = title,
+        selected = selected,
+        onClick = onClick,
+        unselectedColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    ) {
+        PatternRing(pattern = pattern, color = color, elapsedMs = elapsedMs, renderer = renderer, size = PATTERN_CARD_RING)
+    }
+}
+
+/** Ring size inside a [PatternChoiceCard]. */
+internal val PATTERN_CARD_RING = 40.dp
+
+/** Gap between [PatternChoiceCard]s in a row. */
+internal val PATTERN_CARD_GAP = 8.dp
+
+/**
+ * A selectable pattern card: a live ring over a one-line name. Shared by the rule editor and the
+ * Battery page so every pattern picker is the same size and spacing. [unselectedColor] is a step
+ * up from whatever the cards sit on.
+ */
+@Composable
+internal fun PatternChoiceCard(
+    title: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    unselectedColor: Color,
+    ring: @Composable () -> Unit
+) {
     val corner by animateDpAsState(
         targetValue = if (selected) 28.dp else 16.dp,
         animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
         label = "patternCorner"
     )
     val container by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+        targetValue = if (selected) MaterialTheme.colorScheme.primaryContainer else unselectedColor,
         animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
         label = "patternContainer"
     )
@@ -763,9 +792,8 @@ private fun PatternCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            PatternRing(pattern = pattern, color = color, elapsedMs = elapsedMs, renderer = renderer, size = 40.dp)
-            // One line: every name fits once the group heading carries the rest, so the cards
-            // stay compact and all the same height.
+            ring()
+            // One line, so the cards stay compact and all the same height.
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelMedium,

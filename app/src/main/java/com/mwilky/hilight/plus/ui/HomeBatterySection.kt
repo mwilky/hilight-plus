@@ -3,12 +3,10 @@
 package com.mwilky.hilight.plus.ui
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -25,7 +23,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Schedule
@@ -213,7 +210,7 @@ private fun ChargingGroup(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
+                horizontalArrangement = Arrangement.spacedBy(PATTERN_CARD_GAP)
             ) {
                 BatteryPattern.entries.forEach { pattern ->
                     BatteryPatternCard(
@@ -290,7 +287,7 @@ private fun LowBatteryGroup(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
+            horizontalArrangement = Arrangement.spacedBy(PATTERN_CARD_GAP)
         ) {
             LowBatteryPattern.entries.forEach { pattern ->
                 LowPatternCard(
@@ -788,42 +785,19 @@ private fun PatternPreviewCard(
         }
     }
 
-    val corner by animateDpAsState(
-        targetValue = if (selected) 28.dp else 16.dp,
-        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
-        label = "patternCardCorner"
-    )
-    val container by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
-        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-        label = "patternCardContainer"
-    )
-
-    Surface(
+    // The rule editor's card, one step up from the surfaceContainer row it sits on.
+    PatternChoiceCard(
+        title = title,
         selected = selected,
         onClick = onClick,
-        shape = RoundedCornerShape(corner),
-        color = container,
-        modifier = Modifier.width(96.dp)
+        unselectedColor = MaterialTheme.colorScheme.surfaceContainerHighest
     ) {
-        Column(
-            modifier = Modifier.padding(vertical = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            DiffusedRingPreview(
-                frames = frames,
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape),
-                size = 48.dp
-            )
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+        DiffusedRingPreview(
+            frames = frames,
+            modifier = Modifier
+                .size(PATTERN_CARD_RING)
+                .clip(CircleShape),
+            size = PATTERN_CARD_RING
+        )
     }
 }
