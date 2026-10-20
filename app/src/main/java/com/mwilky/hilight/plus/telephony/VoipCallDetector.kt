@@ -36,7 +36,10 @@ internal object VoipCallDetector {
         hasFullScreenIntent: Boolean,
         showsChronometer: Boolean
     ): CallState {
-        if (category != Notification.CATEGORY_CALL) return CallState.NOT_A_CALL
+        // The Google dialer, with the screen off, swaps its ringing notification for one on its
+        // ongoing-call channel with no category but still a CallStyle "incoming" type.
+        val isCallStyleWithoutCategory = category == null && callType != null
+        if (category != Notification.CATEGORY_CALL && !isCallStyleWithoutCategory) return CallState.NOT_A_CALL
         if (callType != null) {
             return if (callType == Notification.CallStyle.CALL_TYPE_INCOMING) CallState.RINGING else CallState.IN_PROGRESS
         }

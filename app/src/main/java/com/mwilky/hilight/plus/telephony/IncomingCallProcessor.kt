@@ -46,6 +46,9 @@ internal object IncomingCallProcessor {
     private var ringingKey: String? = null
     private var ringingCallerName: String = ""
     private var ringTimeout: Job? = null
+    // A removal of the ringing key that may yet be undone by a re-post; bumped to drop stale expiries.
+    private var removalGrace: Job? = null
+    private var removalGeneration = 0
 
     init {
         scope.launch {
@@ -65,9 +68,18 @@ internal object IncomingCallProcessor {
         events.trySend(CallEvent.Ringing(appContext, key, callerName))
     }
 
-    /** The notification under [key] was removed or is no longer a ringing call. */
+    /** The notification under [key] is no longer a ringing call. */
     fun submitVoipEnded(appContext: Context, key: String) {
         events.trySend(CallEvent.Ended(appContext, key))
+    }
+
+    /**
+     * The notification under [key] was removed. The dialer swaps its ringing notification out
+     * this way (remove, then re-post the same key ~0.3s later) when the screen is off, so a
+     * ringing call only ends if no re-post follows within [REMOVAL_GRACE_MS].
+     */
+    fun submitVoipRemoved(appContext: Context, key: String) {
+        events.trySend(CallEvent.Removed(appContext, key))
     }
 
     /** A (re)started daemon is dark, so a call still ringing needs lighting again. */
@@ -104,6 +116,7 @@ internal object IncomingCallProcessor {
         val store = AppStore.get(event.appContext)
         when (event) {
             is CallEvent.Ringing -> {
+                cancelRemovalGrace()
                 if (event.key != ringingKey) {
                     DebugLog.i(TAG, "Call ringing (${DebugLog.redactKey(event.key)})")
                     startRingTimeout(event.appContext, event.key)
@@ -113,6 +126,10 @@ internal object IncomingCallProcessor {
                 startResolvedCall(event.appContext, store, controller, event.callerName)
             }
             is CallEvent.Ended -> if (event.key == ringingKey) endCall(controller, "ended or answered")
+            is CallEvent.Removed -> if (event.key == ringingKey) startRemovalGrace(event.appContext, event.key)
+            is CallEvent.RemovalExpired -> if (event.key == ringingKey && event.generation == removalGeneration) {
+                endCall(controller, "removed with no re-post")
+            }
             is CallEvent.ShadeSync -> {
                 val key = ringingKey
                 if (key != null && key !in event.shadeKeys) endCall(controller, "gone after listener reconnect")
@@ -141,10 +158,27 @@ internal object IncomingCallProcessor {
         }
     }
 
+    private fun startRemovalGrace(appContext: Context, key: String) {
+        DebugLog.d(TAG, "Ringing call notification removed, waiting ${REMOVAL_GRACE_MS}ms for a re-post")
+        removalGrace?.cancel()
+        val generation = ++removalGeneration
+        removalGrace = scope.launch {
+            delay(REMOVAL_GRACE_MS)
+            events.trySend(CallEvent.RemovalExpired(appContext, key, generation))
+        }
+    }
+
+    private fun cancelRemovalGrace() {
+        removalGrace?.cancel()
+        removalGrace = null
+        removalGeneration++
+    }
+
     private fun endCall(controller: LightController, reason: String) {
         DebugLog.i(TAG, "Call $reason, stopping call lights")
         ringTimeout?.cancel()
         ringTimeout = null
+        cancelRemovalGrace()
         ringingKey = null
         ringingCallerName = ""
         stopCallLights(controller)
@@ -350,6 +384,8 @@ internal object IncomingCallProcessor {
 
         data class Ringing(override val appContext: Context, val key: String, val callerName: String) : CallEvent
         data class Ended(override val appContext: Context, val key: String) : CallEvent
+        data class Removed(override val appContext: Context, val key: String) : CallEvent
+        data class RemovalExpired(override val appContext: Context, val key: String, val generation: Int) : CallEvent
         data class ShadeSync(override val appContext: Context, val shadeKeys: Set<String>) : CallEvent
         data class TimedOut(override val appContext: Context, val key: String) : CallEvent
         data class ListenerGone(override val appContext: Context) : CallEvent
@@ -358,4 +394,5 @@ internal object IncomingCallProcessor {
 
     private const val TAG = "IncomingCallProcessor"
     private const val MAX_RING_MS = 3 * 60_000L
+    private const val REMOVAL_GRACE_MS = 1_000L
 }

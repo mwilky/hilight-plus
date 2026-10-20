@@ -87,7 +87,7 @@ class NotificationTrigger : NotificationListenerService() {
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         if (sbn == null) return
         DebugLog.d(TAG, "Removed pkg=${sbn.packageName} key=${DebugLog.redactKey(sbn.key)}")
-        IncomingCallProcessor.submitVoipEnded(applicationContext, sbn.key)
+        IncomingCallProcessor.submitVoipRemoved(applicationContext, sbn.key)
         enqueue(ListenerEvent.Removed(sbn.key))
     }
 
@@ -106,8 +106,9 @@ class NotificationTrigger : NotificationListenerService() {
                 "fullScreen=${posted?.fullScreenIntent != null} ongoing=${sbn.isOngoing} " +
                 "chrono=${posted?.extras?.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER)} silent=${isSilent(sbn.key)}"
         )
-        if (posted?.category == Notification.CATEGORY_CALL) {
-            when (VoipCallDetector.callState(posted)) {
+        val callState = posted?.let(VoipCallDetector::callState) ?: VoipCallDetector.CallState.NOT_A_CALL
+        if (callState != VoipCallDetector.CallState.NOT_A_CALL) {
+            when (callState) {
                 VoipCallDetector.CallState.RINGING ->
                     IncomingCallProcessor.submitVoipRinging(applicationContext, sbn.key, extractSenderName(posted))
                 VoipCallDetector.CallState.IN_PROGRESS ->

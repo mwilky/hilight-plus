@@ -38,6 +38,13 @@ class VoipCallDetectorTest {
     }
 
     @Test
+    fun dialerScreenOffRepostWithoutCategoryIsStillRinging() {
+        // The Google dialer re-posts its ringing call like this when the screen is off.
+        assertEquals(CallState.RINGING, state(null, Notification.CallStyle.CALL_TYPE_INCOMING))
+        assertEquals(CallState.IN_PROGRESS, state(null, Notification.CallStyle.CALL_TYPE_ONGOING))
+    }
+
+    @Test
     fun otherCategoriesAreNeverCalls() {
         assertEquals(CallState.NOT_A_CALL, state(Notification.CATEGORY_MESSAGE, Notification.CallStyle.CALL_TYPE_INCOMING, fullScreen = true))
         assertEquals(CallState.NOT_A_CALL, state(null, null, fullScreen = true))
