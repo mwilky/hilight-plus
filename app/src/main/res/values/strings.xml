@@ -422,6 +422,8 @@
     <string name="conditions_quiet_hours_desc">Stay dark between the times below. Overnight windows are fine.</string>
     <string name="conditions_quiet_hours_start">Starts</string>
     <string name="conditions_quiet_hours_end">Ends</string>
+    <string name="conditions_pocket_title">Pocket mode</string>
+    <string name="conditions_pocket_desc">Stay dark in a pocket or bag and light once the phone is out. Lying face down never counts as a pocket. Applies to everything; rules can\'t override it.</string>
 
     <!-- Battery Screen -->
     <string name="battery_preview_level_format">Preview: %1$d%%</string>

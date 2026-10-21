@@ -60,6 +60,7 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 - Skip during Do Not Disturb.
 - Quiet hours with a daily window.
 - Every rule can follow these defaults, always light, or opt out, and rules can carry their own quiet-hours window.
+- Pocket mode, on by default: the ring stays dark in a pocket or bag and lights once the phone is out. Lying face down never counts as a pocket, so face-down rules keep working. It applies to everything and can be turned off on the Conditions page.
 
 **Pause**
 - A Pause lights tile in Quick Settings keeps the ring dark for a while: everything, or just calls, notifications, battery, Gemini or Do Not Disturb.
@@ -113,6 +114,8 @@ The app has two halves:
 - **The daemon** (`HiLightDaemonService`) runs with shell UID. The app starts it itself over Wireless debugging (`WirelessAdb` pairs once, then launches `DaemonMain` through `app_process`, and the daemon hands its binder back through a content provider), or Shizuku starts it as a UserService. Only the app's UID may call it. It talks to `ILightsManager` through reflection and applies live gating for face-down, Do Not Disturb and quiet hours so lights already playing react to changes. Whenever what the ring should show changes, it sends one Android 17 light effect (`setLightEffect`): `RingEffect` samples the pattern over a loop and reduces each LED to at most nine keyframes, since the Pixel lights HAL crashes on larger effects, and turning patterns are built from one LED shifted round the ring. The ring's controller then plays it with no further calls. If the lights service refuses effects, the daemon falls back to pushing frames at roughly 30 per second. While Gemini lights are on, `GeminiWatcher` follows Gemini's log (a `logcat` limited to Gemini's UID, matched on message text since Gemini's tags are obfuscated) and `GeminiLogParser` turns it into listening, thinking, replying or idle, with a time limit on each state so the ring can't be left lit. The app and daemon talk over an AIDL interface.
 
 Face-down detection reads the gravity sensor only while something is waiting to light, so there is no idle sensor cost. Gravity doesn't wake a sleeping phone, so it is paired with the wake-up tilt detector, which fires in the sensor hub when the phone turns and wakes the app to check.
+
+Pocket mode reads the wake-up proximity sensor, also only while something is waiting to light. Covered for a second while not lying flat face down counts as a pocket, and the daemon keeps the ring dark as it does for a rear camera; alerts stay queued. Orientation is only watched while the sensor is covered, so a phone taken from a pocket and put face down lights again.
 
 ## Building
 

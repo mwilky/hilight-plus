@@ -13,6 +13,7 @@ import android.os.Process
 import android.os.SystemClock
 import com.mwilky.hilight.plus.core.DeviceOrientationDetector
 import com.mwilky.hilight.plus.core.PatternRenderer
+import com.mwilky.hilight.plus.core.PocketDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -132,10 +133,15 @@ class LightController private constructor(private val app: Application) {
 
         DeviceOrientationDetector.onOrientationChanged = { faceDown ->
             daemon.setDeviceFaceDown(faceDown)
+            PocketDetector.onFaceDownChanged()
+        }
+        PocketDetector.onPocketChanged = { inPocket ->
+            daemon.setInPocket(inPocket)
         }
 
         daemon.onAvailabilityChanged = {
             daemon.setDeviceFaceDown(DeviceOrientationDetector.lastKnownFaceDown)
+            daemon.setInPocket(PocketDetector.inPocket)
             daemon.setDndActive(lastDndActive)
             daemon.setRearCameraActive(rearCamera.inUse)
             NativeHiLightDetector.check(app)
@@ -161,6 +167,11 @@ class LightController private constructor(private val app: Application) {
         scope.launch {
             store.suppressDuringDnd.collect { enabled ->
                 daemon.setDndSuppressEnabled(enabled)
+            }
+        }
+        scope.launch {
+            store.pocketMode.collect { enabled ->
+                PocketDetector.setEnabled(app, enabled)
             }
         }
         scope.launch {
@@ -507,7 +518,8 @@ class LightController private constructor(private val app: Application) {
 
     /**
      * Only runs the orientation sensor for the battery layer while its face-down mode currently
-     * requires it and it actually has something to show (charging, freshly full, or low).
+     * requires it and it actually has something to show (charging, freshly full, or low). The
+     * pocket sensor runs whenever it has something to show.
      */
     private fun syncBatteryOrientationMonitor() {
         val lowEligible = lastBatterySettings.lowWarningEnabled &&
@@ -519,6 +531,11 @@ class LightController private constructor(private val app: Application) {
             DeviceOrientationDetector.retainMonitoring(app, DeviceOrientationDetector.TOKEN_BATTERY)
         } else {
             DeviceOrientationDetector.releaseMonitoring(DeviceOrientationDetector.TOKEN_BATTERY)
+        }
+        if (batteryLayerCouldRender()) {
+            PocketDetector.retain(app, PocketDetector.TOKEN_BATTERY)
+        } else {
+            PocketDetector.release(PocketDetector.TOKEN_BATTERY)
         }
     }
 
@@ -546,6 +563,11 @@ class LightController private constructor(private val app: Application) {
             DeviceOrientationDetector.retainMonitoring(app, DeviceOrientationDetector.TOKEN_DND)
         } else {
             DeviceOrientationDetector.releaseMonitoring(DeviceOrientationDetector.TOKEN_DND)
+        }
+        if (lastDndIndicatorOn && lastDndActive) {
+            PocketDetector.retain(app, PocketDetector.TOKEN_DND)
+        } else {
+            PocketDetector.release(PocketDetector.TOKEN_DND)
         }
     }
 

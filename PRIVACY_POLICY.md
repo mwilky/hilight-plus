@@ -1,6 +1,6 @@
 # Privacy Policy for HiLight Plus
 
-**Last updated:** October 16, 2026
+**Last updated:** October 21, 2026
 
 **HiLight Plus** ("we", "our", or "the app") is developed by **mwilky**. We are committed to protecting your privacy. This Privacy Policy outlines how your information is handled when you use HiLight Plus.
 
@@ -45,6 +45,10 @@ HiLight Plus requests sensitive Android permissions solely to deliver real-time 
 ### G. Whether a Rear Camera Is in Use (no extra permission)
 - **Purpose:** The LED ring surrounds the rear cameras, so it stays dark while any app is using one, rather than tint your photos or video. Android tells every app when each camera opens and closes, without a permission.
 - **Data Handling:** HiLight Plus never opens a camera and never sees any image. It only notes whether a rear camera is open, in memory; the debug log records when that changes.
+
+### H. Motion and Proximity Sensors (no extra permission)
+- **Purpose:** The gravity sensor tells whether the phone is lying face down, for the face-down condition. With pocket mode on, the proximity sensor tells whether the phone is in a pocket or bag, so the ring stays dark there. Both only run while something is waiting to light.
+- **Data Handling:** Readings are checked in memory and discarded; only whether the phone is face down or in a pocket is kept, and the debug log records when that changes. Nothing is stored or sent.
 
 ---
 

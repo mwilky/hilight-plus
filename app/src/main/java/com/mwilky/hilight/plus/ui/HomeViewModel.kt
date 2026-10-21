@@ -58,6 +58,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setOnlyWhenFaceDown(enabled: Boolean) = launch { store.setOnlyWhenFaceDown(enabled) }
     fun setSuppressDuringDnd(enabled: Boolean) = launch { store.setSuppressDuringDnd(enabled) }
+    fun setPocketMode(enabled: Boolean) = launch { store.setPocketMode(enabled) }
     fun setQuietHoursEnabled(enabled: Boolean) = launch { store.setQuietHoursEnabled(enabled) }
     fun setQuietHoursWindow(startMinutes: Int, endMinutes: Int) = launch { store.setQuietHoursWindow(startMinutes, endMinutes) }
 

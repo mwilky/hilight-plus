@@ -11,6 +11,7 @@ import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.SettingsSnapshot
 import com.mwilky.hilight.plus.core.DeviceOrientationDetector
+import com.mwilky.hilight.plus.core.PocketDetector
 import com.mwilky.hilight.plus.dataStore
 import com.mwilky.hilight.plus.isFavouriteContactName
 import kotlinx.coroutines.CoroutineScope
@@ -270,6 +271,7 @@ internal object IncomingCallProcessor {
 
     private fun stopCallLights(controller: LightController) {
         DeviceOrientationDetector.releaseMonitoring(DeviceOrientationDetector.TOKEN_CALL)
+        PocketDetector.release(PocketDetector.TOKEN_CALL)
         controller.stopIncomingCallAlert()
     }
 
@@ -296,6 +298,7 @@ internal object IncomingCallProcessor {
         } else {
             DeviceOrientationDetector.releaseMonitoring(DeviceOrientationDetector.TOKEN_CALL)
         }
+        PocketDetector.retain(context, PocketDetector.TOKEN_CALL)
         controller.startIncomingCallAlert(
             pattern = pattern,
             color = color,

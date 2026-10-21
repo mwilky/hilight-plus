@@ -181,6 +181,10 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
         engine.setRearCameraActive(active)
     }
 
+    override fun setInPocket(inPocket: Boolean) {
+        engine.setInPocket(inPocket)
+    }
+
     override fun setSplitRing(enabled: Boolean) {
         engine.setSplitRing(enabled)
     }

@@ -55,4 +55,6 @@ interface IHiLightService {
     void setDndIndicatorConfig(boolean enabled, String configJson);
     // With the split ring on, a newly posted notification first plays one loop of its own pattern.
     void setSplitAnnounceNew(boolean enabled);
+    // Whether the phone is in a pocket or bag; the ring stays dark while it is.
+    void setInPocket(boolean inPocket);
 }

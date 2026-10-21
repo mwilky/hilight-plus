@@ -87,6 +87,7 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 [*]Face-down only mode (accelerometer engages only when alerts are pending).
 [*]Automatic Do Not Disturb (DND) suppression.
 [*]Global quiet hours scheduler with per-rule override options.
+[*]Pocket mode (on by default): the ring stays dark in a pocket or bag and lights once the phone is out. Face down never counts as a pocket, so face-down rules are unaffected. Proximity sensor engages only when alerts are pending.
 [/LIST]
 
 [B]Pause[/B]

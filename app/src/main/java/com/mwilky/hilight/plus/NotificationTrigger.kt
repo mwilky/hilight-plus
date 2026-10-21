@@ -8,6 +8,7 @@ import android.service.notification.StatusBarNotification
 import com.mwilky.hilight.plus.core.AppIconColorExtractor
 import com.mwilky.hilight.plus.core.DeviceOrientationDetector
 import com.mwilky.hilight.plus.core.NotificationSlotTracker
+import com.mwilky.hilight.plus.core.PocketDetector
 import com.mwilky.hilight.plus.telephony.IncomingCallProcessor
 import com.mwilky.hilight.plus.telephony.VoipCallDetector
 import kotlinx.coroutines.CoroutineScope
@@ -76,6 +77,7 @@ class NotificationTrigger : NotificationListenerService() {
         isListenerConnected = false
         job.cancel()
         DeviceOrientationDetector.stopMonitoring()
+        PocketDetector.release(PocketDetector.TOKEN_NOTIFICATIONS)
         // The tracker dies with this instance, so nothing could ever remove the alerts it posted,
         // and no removal will arrive to end a ringing call: e.g. notification access was revoked
         // mid-alert. Clear both rather than leave the ring lit.
@@ -544,6 +546,11 @@ class NotificationTrigger : NotificationListenerService() {
             DeviceOrientationDetector.retainMonitoring(applicationContext, DeviceOrientationDetector.TOKEN_NOTIFICATIONS)
         } else {
             DeviceOrientationDetector.releaseMonitoring(DeviceOrientationDetector.TOKEN_NOTIFICATIONS)
+        }
+        if (tracker.sourceCount > 0) {
+            PocketDetector.retain(applicationContext, PocketDetector.TOKEN_NOTIFICATIONS)
+        } else {
+            PocketDetector.release(PocketDetector.TOKEN_NOTIFICATIONS)
         }
     }
 

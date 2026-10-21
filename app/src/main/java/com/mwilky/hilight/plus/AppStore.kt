@@ -46,6 +46,7 @@ class AppStore private constructor(private val appContext: Context) {
         // Smart Condition Settings
         private val KEY_ONLY_WHEN_FACE_DOWN = booleanPreferencesKey("only_when_face_down")
         private val KEY_SUPPRESS_DND = booleanPreferencesKey("suppress_during_dnd")
+        private val KEY_POCKET_MODE = booleanPreferencesKey("pocket_mode")
         private val KEY_QUIET_HOURS_ENABLED = booleanPreferencesKey("quiet_hours_enabled")
         private val KEY_QUIET_HOURS_START = intPreferencesKey("quiet_hours_start_min")
         private val KEY_QUIET_HOURS_END = intPreferencesKey("quiet_hours_end_min")
@@ -178,6 +179,9 @@ class AppStore private constructor(private val appContext: Context) {
 
     val suppressDuringDnd: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_SUPPRESS_DND] ?: false }
+
+    val pocketMode: Flow<Boolean> = appContext.dataStore.data
+        .map { it[KEY_POCKET_MODE] ?: DEFAULT_SETTINGS_SNAPSHOT.pocketMode }
 
     val quietHoursEnabled: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_QUIET_HOURS_ENABLED] ?: false }
@@ -314,6 +318,10 @@ class AppStore private constructor(private val appContext: Context) {
 
     suspend fun setSuppressDuringDnd(enabled: Boolean) {
         appContext.dataStore.edit { it[KEY_SUPPRESS_DND] = enabled }
+    }
+
+    suspend fun setPocketMode(enabled: Boolean) {
+        appContext.dataStore.edit { it[KEY_POCKET_MODE] = enabled }
     }
 
     suspend fun setQuietHoursEnabled(enabled: Boolean) {
@@ -672,6 +680,7 @@ class AppStore private constructor(private val appContext: Context) {
         return SettingsSnapshot(
             isOnlyWhenFaceDown = prefs[KEY_ONLY_WHEN_FACE_DOWN] ?: d.isOnlyWhenFaceDown,
             suppressDuringDnd = prefs[KEY_SUPPRESS_DND] ?: d.suppressDuringDnd,
+            pocketMode = prefs[KEY_POCKET_MODE] ?: d.pocketMode,
             quietHoursEnabled = prefs[KEY_QUIET_HOURS_ENABLED] ?: d.quietHoursEnabled,
             quietHoursStartMinutes = prefs[KEY_QUIET_HOURS_START] ?: d.quietHoursStartMinutes,
             quietHoursEndMinutes = prefs[KEY_QUIET_HOURS_END] ?: d.quietHoursEndMinutes,
@@ -778,6 +787,7 @@ class AppStore private constructor(private val appContext: Context) {
 data class SettingsSnapshot(
     val isOnlyWhenFaceDown: Boolean,
     val suppressDuringDnd: Boolean,
+    val pocketMode: Boolean,
     val quietHoursEnabled: Boolean,
     val quietHoursStartMinutes: Int,
     val quietHoursEndMinutes: Int,
@@ -884,6 +894,7 @@ data class SettingsSnapshot(
 val DEFAULT_SETTINGS_SNAPSHOT = SettingsSnapshot(
     isOnlyWhenFaceDown = false,
     suppressDuringDnd = false,
+    pocketMode = true,
     quietHoursEnabled = false,
     quietHoursStartMinutes = 22 * 60,
     quietHoursEndMinutes = 7 * 60,

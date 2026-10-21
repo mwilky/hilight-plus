@@ -19,6 +19,7 @@ import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.ScreenRotation
+import androidx.compose.material.icons.rounded.Sensors
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -47,6 +48,8 @@ fun ConditionsScreen(viewModel: HomeViewModel = viewModel()) {
         onToggleFaceDown = viewModel::setOnlyWhenFaceDown,
         suppressDuringDnd = state.suppressDuringDnd,
         onToggleDnd = viewModel::setSuppressDuringDnd,
+        pocketMode = state.pocketMode,
+        onTogglePocketMode = viewModel::setPocketMode,
         quietHoursEnabled = state.quietHoursEnabled,
         onToggleQuietHours = viewModel::setQuietHoursEnabled,
         quietHoursStartMinutes = state.quietHoursStartMinutes,
@@ -61,6 +64,8 @@ fun ConditionsContent(
     onToggleFaceDown: (Boolean) -> Unit,
     suppressDuringDnd: Boolean,
     onToggleDnd: (Boolean) -> Unit,
+    pocketMode: Boolean,
+    onTogglePocketMode: (Boolean) -> Unit,
     quietHoursEnabled: Boolean,
     onToggleQuietHours: (Boolean) -> Unit,
     quietHoursStartMinutes: Int,
@@ -171,6 +176,17 @@ fun ConditionsContent(
                     }
                 }
             }
+
+            // Not a rule default like the ones above, so it sits apart from them.
+            ConditionRow(
+                index = 0,
+                count = 1,
+                title = stringResource(R.string.conditions_pocket_title),
+                subtitle = stringResource(R.string.conditions_pocket_desc),
+                icon = Icons.Rounded.Sensors,
+                checked = pocketMode,
+                onCheckedChange = onTogglePocketMode
+            )
         }
     }
 
@@ -249,6 +265,8 @@ fun ConditionsScreenPreview() {
             onToggleFaceDown = {},
             suppressDuringDnd = false,
             onToggleDnd = {},
+            pocketMode = true,
+            onTogglePocketMode = {},
             quietHoursEnabled = true,
             onToggleQuietHours = {},
             quietHoursStartMinutes = 22 * 60,
