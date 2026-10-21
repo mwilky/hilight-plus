@@ -37,11 +37,16 @@ object DevSettings {
     internal fun devOptionsState(reportsOn: Boolean, wirelessDebuggingOn: Boolean?): Boolean? =
         if (reportsOn || wirelessDebuggingOn == true) true else null
 
-    /** Null when the setting can't be read, so callers can carry on rather than get stuck. */
-    fun isWirelessDebuggingOn(context: Context): Boolean? =
-        runCatching { Settings.Global.getInt(context.contentResolver, ADB_WIFI_ENABLED, 0) == 1 }
+    /**
+     * Whether Wireless debugging is on, or null when the phone won't say. Never false: from Android
+     * 17 QPR3 Beta 2, apps read 0 for it whatever the switch says, as for [isDevOptionsOn].
+     */
+    fun isWirelessDebuggingOn(context: Context): Boolean? {
+        val on = runCatching { readsOn(context, ADB_WIFI_ENABLED) }
             .onFailure { DebugLog.w(TAG, "Can't read $ADB_WIFI_ENABLED: ${it.message}") }
-            .getOrNull()
+            .getOrDefault(false)
+        return if (on) true else null
+    }
 
     /**
      * USB debugging keeps the phone's debugging service (adbd) running on its own. With it off,

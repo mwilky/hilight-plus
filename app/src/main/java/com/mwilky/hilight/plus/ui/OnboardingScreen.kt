@@ -126,6 +126,11 @@ fun OnboardingScreen(
 
     val stockState by NativeHiLightDetector.state.collectAsStateWithLifecycle()
     val connectionState by controller.daemon.state.collectAsStateWithLifecycle()
+    val connectionMethod by controller.daemon.method.collectAsStateWithLifecycle()
+    val paired by controller.daemon.wireless.paired.collectAsStateWithLifecycle()
+    // A built-in daemon only counts once paired, as on the connect step itself.
+    val connected = connectionState == DaemonBridge.State.CONNECTED &&
+        (connectionMethod == DaemonBridge.Method.SHIZUKU || paired)
     val licenseStatus by controller.licensing.status.collectAsStateWithLifecycle()
     val activity = LocalActivity.current
 
@@ -171,7 +176,7 @@ fun OnboardingScreen(
         onNext = {
             when {
                 currentStep == OnboardingStep.TRIAL -> onComplete()
-                currentStep == OnboardingStep.CONNECT && connectionState != DaemonBridge.State.CONNECTED ->
+                currentStep == OnboardingStep.CONNECT && !connected ->
                     showConnectSkipDialog = true
                 else -> advance()
             }

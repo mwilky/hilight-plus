@@ -367,18 +367,18 @@ class DaemonBridge private constructor(private val app: Application) {
             _state.value = State.WAITING_FOR_WIFI
             return
         }
-        if (DevSettings.isWirelessDebuggingOn(app) == false) {
+        // Not reading on may still be on (Android 17 QPR3 Beta 2 hides it), and switching it on again
+        // does no harm. Without permission to, try anyway: a start that can't reach it says so.
+        if (DevSettings.isWirelessDebuggingOn(app) != true) {
             _state.value = State.TURNING_ON_WIRELESS_DEBUGGING
-            if (!DevSettings.enableWirelessDebugging(app, whenUnsure = true)) {
-                DebugLog.w("HiLightPlus", "Wireless debugging is off and the app can't turn it on")
-                _state.value = State.NEEDS_SETUP
-                return
+            if (DevSettings.enableWirelessDebugging(app, whenUnsure = true)) {
+                turnOffWirelessDebugging = true
+                DebugLog.i("HiLightPlus", "Turned Wireless debugging on")
+                // Give it time to come up, or the connection can reach a stale port and close.
+                delay(WIRELESS_DEBUGGING_SETTLE_MS)
+            } else {
+                DebugLog.i("HiLightPlus", "Can't tell whether Wireless debugging is on, nor turn it on; trying anyway")
             }
-            turnOffWirelessDebugging = true
-            DebugLog.i("HiLightPlus", "Turned Wireless debugging on")
-            // Give it time to come up, or the connection can reach a stale port and close.
-            delay(WIRELESS_DEBUGGING_SETTLE_MS)
-            if (switchedBackOff()) return
         }
         // Wireless debugging can read as on (after a boot, or just switched on) a little before it
         // takes connections; keep trying quietly for a while rather than reporting each failure.
@@ -393,8 +393,6 @@ class DaemonBridge private constructor(private val app: Application) {
         while (result.isRetryable() && SystemClock.elapsedRealtime() < deadline) {
             delay(QUICK_RETRY_DELAY_MS)
             if (_state.value == State.CONNECTED || manuallyDisconnected) return
-            // Android's "Allow on this network?" may have been on screen until now, then declined.
-            if (switchedBackOff()) return
             // Switched on but never running: declining that question can leave it like this, and
             // only switching it off and on again makes Android ask again.
             if (unreachable == UNREACHABLE_BEFORE_ASKING && !asking && askAgainToAllowNetwork()) {
@@ -509,6 +507,12 @@ class DaemonBridge private constructor(private val app: Application) {
             if (!attach(binder, Method.BUILT_IN)) return@launch
             wireless.markRanThisBoot()
             binder?.linkToDeath({ scope.launch { onBuiltInDied(binder) } }, 0)
+            if (!wireless.isPaired()) {
+                // Left running from before the app's data was cleared: the lights work for now, but
+                // nothing can start them again after a restart, and nothing else would say so.
+                DebugLog.w("HiLightPlus", "A daemon connected but the app isn't paired; asking to pair again")
+                SetupNotifier.showPairingLost(app)
+            }
             // A daemon from before this build reports no path; its version code alone decides.
             val otherInstall = apkPath != null && apkPath != app.applicationInfo.sourceDir
             runningStaleDaemon = version != BuildConfig.VERSION_CODE || otherInstall
@@ -526,19 +530,6 @@ class DaemonBridge private constructor(private val app: Application) {
                 replaceStaleDaemon()
             }
         }
-    }
-
-    /**
-     * Android switches Wireless debugging back off on a network nobody has allowed yet: straight
-     * away, or once its "Allow on this network?" question is declined or dismissed. Only counts when
-     * the app switched it on for this start. Then there's no point retrying, so wait for the user.
-     */
-    private fun switchedBackOff(): Boolean {
-        if (!turnOffWirelessDebugging || DevSettings.isWirelessDebuggingOn(app) != false) return false
-        DebugLog.w("HiLightPlus", "Wireless debugging was switched back off: this Wi-Fi isn't allowed yet")
-        _state.value = State.NETWORK_NOT_ALLOWED
-        SetupNotifier.showNetworkApproval(app)
-        return true
     }
 
     /** Retries a failed start after 2, 4, 8, 16 then 30 seconds; after that, only when asked. */
@@ -563,11 +554,8 @@ class DaemonBridge private constructor(private val app: Application) {
                 DebugLog.w("HiLightPlus", "Keeping the old daemon: needs Wi-Fi to start a current one")
                 return@launch
             }
-            if (DevSettings.isWirelessDebuggingOn(app) == false) {
-                if (!DevSettings.enableWirelessDebugging(app, whenUnsure = true)) {
-                    DebugLog.w("HiLightPlus", "Keeping the old daemon: couldn't turn on Wireless debugging")
-                    return@launch
-                }
+            // As for a start: it may be on without saying so, so try either way.
+            if (DevSettings.isWirelessDebuggingOn(app) != true && DevSettings.enableWirelessDebugging(app, whenUnsure = true)) {
                 turnOffWirelessDebugging = true
             }
             val result = startDaemon()
@@ -618,6 +606,9 @@ class DaemonBridge private constructor(private val app: Application) {
             builtInJob?.cancel()
             _state.value = State.CONNECTING
             startBuiltIn()
+        } else {
+            // Kept the daemon that was already running: tidy up as a fresh connection would.
+            service?.let { afterConnect(it, Method.BUILT_IN) }
         }
         return withTimeoutOrNull(SWITCH_TIMEOUT_MS) { state.first { it == State.CONNECTED } } != null &&
             _method.value == Method.BUILT_IN

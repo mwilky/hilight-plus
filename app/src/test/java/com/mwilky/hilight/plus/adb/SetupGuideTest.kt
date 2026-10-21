@@ -37,6 +37,15 @@ class SetupGuideTest {
     }
 
     @Test
+    fun hiddenWirelessDebuggingGoesStraightToPairing() {
+        // Android 17 QPR3 Beta 2 won't tell apps either; finding the pairing dialog is the proof.
+        val hidden = SetupState(devOptionsOn = null, wifiConnected = true, wirelessDebuggingOn = null)
+        assertEquals(SetupStep.PAIR, hidden.step)
+        assertEquals(GuideNotice.TAP_PAIR, hidden.guideNotice())
+        assertTrue(hidden.copy(pairing = PairingPhase.CODE_NEEDED, codeEntryAvailable = true).acceptsCode())
+    }
+
+    @Test
     fun developerOptionsReadsOnWhenReportedOrProvedByWirelessDebugging() {
         assertEquals(true, DevSettings.devOptionsState(reportsOn = true, wirelessDebuggingOn = false))
         assertEquals(true, DevSettings.devOptionsState(reportsOn = false, wirelessDebuggingOn = true))

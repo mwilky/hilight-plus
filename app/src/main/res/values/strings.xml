@@ -33,10 +33,11 @@
     <string name="connect_step_dev_title">Turn on Developer options</string>
     <string name="connect_step_dev_desc">Tap Build number 7 times. HiLight Plus opens the right screen for you.</string>
     <string name="connect_step_dev_done">Developer options is on.</string>
-    <string name="connect_step_dev_unknown">If you haven\'t yet, tap Build number 7 times. Android doesn\'t tell apps about this one, so it ticks off once Wireless debugging is on.</string>
+    <string name="connect_step_dev_unknown">If you haven\'t yet, tap Build number 7 times. Android doesn\'t tell apps about this one, so it ticks off once HiLight Plus can see Wireless debugging is on.</string>
     <string name="connect_step_dev_btn">Open About phone</string>
     <string name="connect_step_wireless_title">Turn on Wireless debugging</string>
     <string name="connect_step_wireless_desc">Switch on Wireless debugging. If you\'re asked, allow it on this network.</string>
+    <string name="connect_step_wireless_unknown">Switch on Wireless debugging. If you\'re asked, allow it on this network. Android doesn\'t tell apps about this one either, so it ticks off once you open Pair device with pairing code.</string>
     <string name="connect_step_wireless_done">Wireless debugging is on.</string>
     <string name="connect_step_wireless_btn">Open Developer options</string>
     <string name="connect_step_wifi_desc">Connect to Wi-Fi first. Wireless debugging only works on Wi-Fi, not mobile data.</string>
@@ -89,7 +90,7 @@
     <string name="setup_notif_wireless_title">Now turn on Wireless debugging</string>
     <string name="setup_notif_wireless_text">It\'s in Developer options. Tap here to go straight there.</string>
     <string name="setup_notif_pair_title">Tap Pair device with pairing code</string>
-    <string name="setup_notif_pair_text">Tap Wireless debugging, then Pair device with pairing code.</string>
+    <string name="setup_notif_pair_text">Turn on Wireless debugging if it isn\'t already, tap it, then tap Pair device with pairing code.</string>
     <string name="setup_notif_code_title">Type the 6-digit code</string>
     <string name="setup_notif_code_text">Tap Enter code and type the code shown on screen.</string>
     <string name="setup_notif_code_action">Enter code</string>

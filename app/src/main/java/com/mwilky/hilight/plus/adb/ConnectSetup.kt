@@ -57,6 +57,10 @@ class ConnectSetup private constructor(private val app: Application) {
     // Once per session: on a network that isn't allowed yet, each attempt makes Android ask again.
     private var autoEnabledWirelessDebugging = false
 
+    // The pairing dialog is inside Wireless debugging, so finding it proves that and Developer
+    // options are on, where the phone won't say. Kept for the session: the dialog closes on pairing.
+    private var pairingDialogSeen = false
+
     // Off while the screen is asking for permissions: scanning first makes Android show its own
     // device picker instead of letting the app look for the pairing dialog.
     private var discoveryAllowed = true
@@ -102,6 +106,7 @@ class ConnectSetup private constructor(private val app: Application) {
         }
         wasConnected = isBuiltInConnected()
         autoEnabledWirelessDebugging = false
+        pairingDialogSeen = false
         _state.value = _state.value.copy(pairing = PairingPhase.SEARCHING, error = null)
         update()
     }
@@ -121,11 +126,12 @@ class ConnectSetup private constructor(private val app: Application) {
     /** Re-reads everything, e.g. when the app comes back to the foreground. */
     fun update() {
         val current = _state.value
+        // Unknown (null) doesn't hold up pairing: the pairing step carries the instructions.
+        val wirelessDebuggingOn = if (pairingDialogSeen) true else DevSettings.isWirelessDebuggingOn(app)
         val next = current.copy(
-            devOptionsOn = DevSettings.isDevOptionsOn(app),
+            devOptionsOn = if (wirelessDebuggingOn == true) true else DevSettings.isDevOptionsOn(app),
             wifiConnected = DevSettings.isWifiConnected(app),
-            // Unreadable: assume on and let the pairing step carry the instructions.
-            wirelessDebuggingOn = DevSettings.isWirelessDebuggingOn(app) ?: true,
+            wirelessDebuggingOn = wirelessDebuggingOn,
             codeEntryAvailable = pairingPort.value > 0,
             connected = isBuiltInConnected()
         )
@@ -139,14 +145,11 @@ class ConnectSetup private constructor(private val app: Application) {
 
         when (next.step) {
             SetupStep.WIRELESS_DEBUGGING -> {
-                // Shizuku users already granted the app this, so it can flip the switch for them.
-                if (!autoEnabledWirelessDebugging && DevSettings.enableWirelessDebugging(app)) {
-                    autoEnabledWirelessDebugging = true
-                    DebugLog.i(TAG, "Turned Wireless debugging on")
-                }
+                enableWirelessDebuggingOnce()
                 stopDiscovery()
             }
             SetupStep.PAIR -> {
+                if (next.wirelessDebuggingOn == null) enableWirelessDebuggingOnce()
                 if (wireless.isPaired()) {
                     startBuiltInOnce()
                 } else if (discoveryAllowed) {
@@ -156,6 +159,14 @@ class ConnectSetup private constructor(private val app: Application) {
             else -> stopDiscovery()
         }
         notifier.show(next)
+    }
+
+    /** Shizuku users already granted the app this, so it can flip the switch for them. */
+    private fun enableWirelessDebuggingOnce() {
+        if (!autoEnabledWirelessDebugging && DevSettings.enableWirelessDebugging(app)) {
+            autoEnabledWirelessDebugging = true
+            DebugLog.i(TAG, "Turned Wireless debugging on")
+        }
     }
 
     /** A code typed into the notification or the app. */
@@ -264,6 +275,7 @@ class ConnectSetup private constructor(private val app: Application) {
             handler.post {
                 DebugLog.d(TAG, "Pairing service ${if (port > 0) "found" else "gone"}")
                 pairingPort.value = port
+                if (port > 0) pairingDialogSeen = true
                 val phase = _state.value.pairing
                 if (port > 0 && (phase == PairingPhase.SEARCHING || phase == PairingPhase.FAILED)) {
                     setPairing(PairingPhase.CODE_NEEDED)
