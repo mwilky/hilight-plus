@@ -21,6 +21,7 @@ import com.mwilky.hilight.plus.clampSpeed
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.system.exitProcess
 
@@ -52,6 +53,13 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
 
     private var logSink: DebugLog.Sink? = null
 
+    // The app process kept out of the freezer, 0 until the app connects.
+    @Volatile
+    private var appPid = 0
+    private val freezerWatch = Executors.newSingleThreadScheduledExecutor { task ->
+        Thread(task, "app-freezer").apply { isDaemon = true }
+    }
+
     init {
         DebugLog.source = "daemon"
         killStaleDaemons()
@@ -62,6 +70,9 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
         } catch (t: Throwable) {
             DebugLog.e(TAG, "Failed to start HiLightDaemonService: ${t.message}", t)
         }
+        freezerWatch.scheduleWithFixedDelay(
+            ::checkAppUnfrozen, FREEZER_CHECK_MINUTES, FREEZER_CHECK_MINUTES, TimeUnit.MINUTES
+        )
     }
 
     override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
@@ -506,6 +517,11 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
         logSink?.let { DebugLog.detach(it) }
         logSink = null
         if (sink == null) return
+        // Every connect sends a sink, so this follows the app across process restarts.
+        if (Binder.getCallingUid() == appUid) {
+            val pid = Binder.getCallingPid()
+            freezerWatch.execute { keepAppUnfrozen(pid) }
+        }
         val forwarder = object : DebugLog.Sink {
             override fun write(line: String) {
                 try {
@@ -519,8 +535,40 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
         DebugLog.attach(forwarder)
     }
 
+    /**
+     * From Android 17 QPR3 (`allow_freezing_idle_nls`) the system freezes an idle notification
+     * listener's process. Frozen, the app gets no sensor events or timers, so a face-down flip or
+     * a pocket goes unseen until something thaws it. A sticky unfreeze lasts for the process's
+     * lifetime, so it's repeated whenever the app connects.
+     */
+    private fun keepAppUnfrozen(pid: Int) {
+        appPid = pid
+        val before = isAppFrozen(pid)
+        val result = runCommand("cmd", "activity", "unfreeze", "--sticky", pid.toString())
+        val after = isAppFrozen(pid)
+        if (result == null || after != false) {
+            DebugLog.w(TAG, "Couldn't keep app process $pid out of the freezer (frozen before=$before, after=$after): $result")
+        } else {
+            DebugLog.i(TAG, "Kept app process $pid out of the freezer (frozen before=$before)")
+        }
+    }
+
+    /** Catches anything that freezes the app again despite the sticky unfreeze, and undoes it. */
+    private fun checkAppUnfrozen() {
+        val pid = appPid
+        if (pid == 0 || isAppFrozen(pid) != true) return
+        DebugLog.w(TAG, "App process $pid was frozen again; unfreezing it")
+        keepAppUnfrozen(pid)
+    }
+
+    /** True or false from the system, or null when it can't tell (e.g. the process is gone). */
+    private fun isAppFrozen(pid: Int): Boolean? =
+        runCommand("cmd", "activity", "isfrozen", pid.toString())?.trim()?.toBooleanStrictOrNull()
+
     override fun dumpState(): String =
-        "pid=${Process.myPid()} uid=${Process.myUid()} entitled=$entitled\n" + engine.describeState() +
+        "pid=${Process.myPid()} uid=${Process.myUid()} entitled=$entitled\n" +
+            "appPid=$appPid appFrozen=${if (appPid == 0) null else isAppFrozen(appPid)}\n" +
+            engine.describeState() +
             "\n\n-- dumpsys lights --\n" + lightsDump()
 
     override fun isRingStuck(): Boolean {
@@ -551,6 +599,7 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
 
     companion object {
         private const val TAG = "HiLightDaemonService"
+        private const val FREEZER_CHECK_MINUTES = 5L
 
         /** The process is named `<applicationId>:<suffix>`, by Shizuku or by [DaemonMain]. */
         const val PROCESS_SUFFIX = "hilight_daemon"
