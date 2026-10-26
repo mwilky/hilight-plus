@@ -6,20 +6,33 @@ import org.junit.Test
 
 class PocketDetectorTest {
 
+    private val grace = PocketDetector.TABLE_GRACE_MS
+
     @Test
     fun coveredSensorUprightIsPocket() {
-        assertTrue(PocketDetector.isPocketed(covered = true, faceDown = false))
+        assertTrue(PocketDetector.isPocketed(covered = true, faceDown = false, wasPocketed = false, coveredForMs = 1_000))
     }
 
     @Test
-    fun faceDownNeverCountsAsPocket() {
-        assertFalse(PocketDetector.isPocketed(covered = true, faceDown = true))
+    fun faceDownAsItCoversIsATable() {
+        assertFalse(PocketDetector.isPocketed(covered = true, faceDown = true, wasPocketed = false, coveredForMs = 1_000))
+        assertFalse(PocketDetector.isPocketed(covered = true, faceDown = true, wasPocketed = false, coveredForMs = grace * 10))
+    }
+
+    @Test
+    fun faceDownSoonAfterCoveringStillCountsAsATable() {
+        assertFalse(PocketDetector.isPocketed(covered = true, faceDown = true, wasPocketed = true, coveredForMs = grace - 1))
+    }
+
+    @Test
+    fun tippingFaceDownInAPocketStaysAPocket() {
+        assertTrue(PocketDetector.isPocketed(covered = true, faceDown = true, wasPocketed = true, coveredForMs = grace))
     }
 
     @Test
     fun uncoveredSensorIsNeverPocket() {
-        assertFalse(PocketDetector.isPocketed(covered = false, faceDown = false))
-        assertFalse(PocketDetector.isPocketed(covered = false, faceDown = true))
+        assertFalse(PocketDetector.isPocketed(covered = false, faceDown = false, wasPocketed = true, coveredForMs = grace))
+        assertFalse(PocketDetector.isPocketed(covered = false, faceDown = true, wasPocketed = true, coveredForMs = grace))
     }
 
     @Test

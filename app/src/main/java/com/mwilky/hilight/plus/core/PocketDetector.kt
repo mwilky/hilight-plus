@@ -8,12 +8,14 @@ import android.hardware.SensorManager
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.os.SystemClock
 import com.mwilky.hilight.plus.DebugLog
 
 /**
  * Pocket detector: the phone is in a pocket or bag when its proximity sensor is covered and it
- * isn't lying flat face down. A phone face down on a table covers the sensor too, so face down
- * always wins and never counts as a pocket; "face down only" alerts keep working there.
+ * isn't lying flat face down. A phone face down on a table covers the sensor too, so going face
+ * down as it's covered never counts as a pocket; "face down only" alerts keep working there.
+ * Once in a pocket, only uncovering takes it out, however it tips in there.
  *
  * Ref-counted like [DeviceOrientationDetector]: the sensor only runs while something could light.
  * Orientation is only watched while the sensor is covered, through [DeviceOrientationDetector].
@@ -32,6 +34,11 @@ object PocketDetector {
     // moment the phone goes face down, doesn't blink the ring. Uncovering counts at once.
     private const val SETTLE_MS = 1_000L
 
+    // How long after the sensor covers going face down still means "put down on a table". After
+    // that, a phone already in a pocket stays there until the sensor uncovers: in a pocket it often
+    // tips screen-down, which would otherwise light the ring for as long as it stays that way.
+    const val TABLE_GRACE_MS = 3_000L
+
     private val handler by lazy { Handler(Looper.getMainLooper()) }
     private val tokens = mutableSetOf<String>()
     private var enabled = false
@@ -40,6 +47,7 @@ object PocketDetector {
     private var listener: SensorEventListener? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private var covered = false
+    private var coveredAtMs = 0L
     private var settled = false
 
     @Volatile
@@ -51,7 +59,12 @@ object PocketDetector {
     /** Binary proximity sensors report either 0 or their maximum range. */
     fun isCovered(distance: Float, maximumRange: Float): Boolean = distance < maximumRange
 
-    fun isPocketed(covered: Boolean, faceDown: Boolean): Boolean = covered && !faceDown
+    /**
+     * Covered and not face down is a pocket. Face down only takes it out of one within
+     * [TABLE_GRACE_MS] of covering; after that only uncovering does.
+     */
+    fun isPocketed(covered: Boolean, faceDown: Boolean, wasPocketed: Boolean, coveredForMs: Long): Boolean =
+        covered && (!faceDown || (wasPocketed && coveredForMs >= TABLE_GRACE_MS))
 
     private val settle = Runnable {
         synchronized(this) {
@@ -91,7 +104,12 @@ object PocketDetector {
 
     private fun evaluate() {
         val pocketed = synchronized(this) {
-            settled && isPocketed(covered, DeviceOrientationDetector.lastKnownFaceDown)
+            settled && isPocketed(
+                covered,
+                DeviceOrientationDetector.lastKnownFaceDown,
+                wasPocketed = inPocket,
+                coveredForMs = SystemClock.elapsedRealtime() - coveredAtMs
+            )
         }
         report(pocketed)
     }
@@ -136,6 +154,7 @@ object PocketDetector {
         synchronized(this) {
             if (listener == null || covered == nowCovered) return
             covered = nowCovered
+            coveredAtMs = SystemClock.elapsedRealtime()
             settled = false
             handler.removeCallbacks(settle)
             if (nowCovered) {
