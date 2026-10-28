@@ -106,7 +106,8 @@ class NotificationTrigger : NotificationListenerService() {
             "Posted pkg=$pkg category=${posted?.category} channel=${posted?.channelId} key=${DebugLog.redactKey(sbn.key)} " +
                 "callType=${posted?.extras?.takeIf { it.containsKey(Notification.EXTRA_CALL_TYPE) }?.getInt(Notification.EXTRA_CALL_TYPE)} " +
                 "fullScreen=${posted?.fullScreenIntent != null} ongoing=${sbn.isOngoing} " +
-                "chrono=${posted?.extras?.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER)} silent=${isSilent(sbn.key)}"
+                "chrono=${posted?.extras?.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER)} silent=${isSilent(sbn.key)} " +
+                "bubbleOnly=${isBubbleOnly(sbn)}"
         )
         val callState = posted?.let(VoipCallDetector::callState) ?: VoipCallDetector.CallState.NOT_A_CALL
         if (callState != VoipCallDetector.CallState.NOT_A_CALL) {
@@ -123,6 +124,14 @@ class NotificationTrigger : NotificationListenerService() {
         // A ringing call's key re-posted as anything but a call (WhatsApp can turn it into its
         // missed-call notification in place) means it is no longer ringing. No-op for other keys.
         IncomingCallProcessor.submitVoipEnded(applicationContext, sbn.key)
+
+        // Swiping away a bubbled conversation (Google Messages) doesn't remove it: it is re-posted
+        // with its shade entry suppressed and only the bubble left. To the user it is dismissed.
+        if (isBubbleOnly(sbn)) {
+            DebugLog.d(TAG, "Bubble-only notification from $pkg -> treating as dismissed")
+            enqueue(ListenerEvent.Removed(sbn.key))
+            return
+        }
 
         if (!isEligiblePostedNotification(sbn)) return
 
@@ -201,7 +210,7 @@ class NotificationTrigger : NotificationListenerService() {
         if (!isListenerConnected || tracker.sourceCount == 0) return
 
         val shade = try {
-            activeNotifications?.associateBy { it.key }
+            activeNotifications?.filterNot(::isBubbleOnly)?.associateBy { it.key }
         } catch (_: Throwable) {
             return
         } ?: return
@@ -267,6 +276,12 @@ class NotificationTrigger : NotificationListenerService() {
             return false
         }
         return true
+    }
+
+    private fun isBubbleOnly(sbn: StatusBarNotification): Boolean {
+        val notification = sbn.notification ?: return false
+        return (notification.flags and Notification.FLAG_BUBBLE) != 0 &&
+            notification.bubbleMetadata?.isNotificationSuppressed == true
     }
 
     private fun isSilent(key: String): Boolean {
@@ -556,7 +571,7 @@ class NotificationTrigger : NotificationListenerService() {
 
     private fun currentShadeKeys(): Set<String>? {
         return try {
-            activeNotifications?.map { it.key }?.toSet()
+            activeNotifications?.filterNot(::isBubbleOnly)?.map { it.key }?.toSet()
         } catch (_: Throwable) {
             null
         }
