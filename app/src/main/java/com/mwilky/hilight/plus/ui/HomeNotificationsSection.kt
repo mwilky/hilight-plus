@@ -279,14 +279,16 @@ fun HomeNotifsPage(
                                     else stringResource(R.string.settings_duration_desc)
                                 )
                                 Slider(
-                                    value = state.notificationDurationSeconds.toFloat(),
+                                    state = rememberHeldSliderState(
+                                        state.notificationDurationSeconds.toFloat(),
+                                        30f..300f,
+                                        steps = 8
+                                    ),
                                     enabled = !isCycle,
                                     onValueChange = { value ->
                                         val rounded = (value / 30f).roundToInt() * 30
                                         onChangeDuration(rounded.coerceIn(30, 300))
                                     },
-                                    valueRange = 30f..300f,
-                                    steps = 8,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }

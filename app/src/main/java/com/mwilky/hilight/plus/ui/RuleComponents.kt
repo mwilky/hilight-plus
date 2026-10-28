@@ -55,8 +55,10 @@ import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RangeSlider
+import androidx.compose.material3.RangeSliderState
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -460,10 +462,8 @@ internal fun BrightnessSlider(
             titleStyle = titleStyle
         )
         Slider(
-            value = brightness,
+            state = rememberHeldSliderState(brightness, MIN_BRIGHTNESS..1f, brightnessSteps(stepPercent)),
             onValueChange = { onBrightnessChange(snapBrightness(it, stepPercent)) },
-            valueRange = MIN_BRIGHTNESS..1f,
-            steps = brightnessSteps(stepPercent),
             modifier = Modifier.fillMaxWidth()
         )
     }
@@ -489,13 +489,16 @@ internal fun BrightnessRangeSlider(
             ),
             titleStyle = titleStyle
         )
+        val steps = brightnessSteps(stepPercent)
+        // Held like [rememberHeldSliderState]: drags go up through onRangeChange and come back down.
+        val rangeState = remember(steps) { RangeSliderState(dimmest, brightest, steps, MIN_BRIGHTNESS..1f) }
+        rangeState.startValue = dimmest
+        rangeState.endValue = brightest
         RangeSlider(
-            value = dimmest..brightest,
+            state = rangeState,
             onValueChange = { range ->
                 onRangeChange(snapBrightness(range.start, stepPercent), snapBrightness(range.endInclusive, stepPercent))
             },
-            valueRange = MIN_BRIGHTNESS..1f,
-            steps = brightnessSteps(stepPercent),
             modifier = Modifier.fillMaxWidth()
         )
     }
@@ -525,14 +528,31 @@ internal fun SpeedSlider(
             titleStyle = titleStyle
         )
         Slider(
-            value = speed,
+            state = rememberHeldSliderState(
+                value = speed,
+                valueRange = MIN_SPEED..MAX_SPEED,
+                steps = ((MAX_SPEED - MIN_SPEED) * SPEED_STOPS_PER_UNIT).roundToInt() - 1
+            ),
             onValueChange = { onSpeedChange((it * SPEED_STOPS_PER_UNIT).roundToInt() / SPEED_STOPS_PER_UNIT) },
             enabled = enabled,
-            valueRange = MIN_SPEED..MAX_SPEED,
-            steps = ((MAX_SPEED - MIN_SPEED) * SPEED_STOPS_PER_UNIT).roundToInt() - 1,
             modifier = Modifier.fillMaxWidth()
         )
     }
+}
+
+/**
+ * A [SliderState] that shows [value] and nothing else. Drags go to the slider's onValueChange and
+ * only move the thumb once they come back as a new [value], so the setting stays the one source.
+ */
+@Composable
+internal fun rememberHeldSliderState(
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    steps: Int = 0
+): SliderState {
+    val state = remember(steps, valueRange) { SliderState(value, steps, valueRange) }
+    state.value = value
+    return state
 }
 
 // Quarter steps: 0.5x, 0.75x, 1x ... 2x.

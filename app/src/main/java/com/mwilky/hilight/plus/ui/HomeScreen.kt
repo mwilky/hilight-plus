@@ -1113,12 +1113,13 @@ fun AppPickerDialog(
                                         )
                                     }
                                 },
-                                headlineContent = { Text(app.appName, fontWeight = FontWeight.SemiBold) },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
                                     .clickable { onAppSelected(app.packageName, app.appName) }
-                            )
+                            ) {
+                                Text(app.appName, fontWeight = FontWeight.SemiBold)
+                            }
                         }
                     }
                 }

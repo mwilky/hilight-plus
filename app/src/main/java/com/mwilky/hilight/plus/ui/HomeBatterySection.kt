@@ -273,13 +273,11 @@ private fun LowBatteryGroup(
                 )
             }
             Slider(
-                value = battery.lowThresholdPercent.toFloat(),
+                state = rememberHeldSliderState(battery.lowThresholdPercent.toFloat(), 5f..50f, steps = 8),
                 onValueChange = { value ->
                     val rounded = (value / 5f).roundToInt() * 5
                     onBatteryChange(battery.copy(lowThresholdPercent = rounded.coerceIn(5, 50)))
                 },
-                valueRange = 5f..50f,
-                steps = 8,
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -689,9 +687,8 @@ private fun BatteryPreviewCard(battery: BatterySettings, renderer: PatternRender
                 }
             )
             Slider(
-                value = previewLevel,
+                state = rememberHeldSliderState(previewLevel, 0f..100f),
                 onValueChange = { previewLevel = it },
-                valueRange = 0f..100f,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
