@@ -1,5 +1,6 @@
 package com.mwilky.hilight.plus.core
 
+import android.annotation.SuppressLint
 import android.os.SystemClock
 import com.mwilky.hilight.plus.BatteryPattern
 import com.mwilky.hilight.plus.DebugLog
@@ -238,6 +239,8 @@ class LightEngine {
     private var wakePending = false
     // When the queue's next turn is due, so the loop wakes to send it.
     private var nextTurnAtMs: Long? = null
+    // A hidden API, fine here: the engine runs in the shell daemon, outside the app restrictions.
+    @SuppressLint("PrivateApi")
     private val forceFramesProperty = runCatching {
         Class.forName("android.os.SystemProperties")
             .getMethod("getBoolean", String::class.java, Boolean::class.javaPrimitiveType)

@@ -1,5 +1,6 @@
 package com.mwilky.hilight.plus.core
 
+import android.annotation.SuppressLint
 import android.content.AttributionSource
 import android.os.Binder
 import android.os.Bundle
@@ -106,6 +107,7 @@ object DaemonMain {
      * Returns the token the app replied with, whose death means the app process is gone.
      * Hidden APIs are fine here: an `app_process` process isn't subject to the app restrictions.
      */
+    @SuppressLint("PrivateApi")
     private fun deliver(): IBinder? {
         val authority = DaemonBinderContract.AUTHORITY
         val activityManager = Class.forName("android.app.ActivityManager").getMethod("getService").invoke(null)

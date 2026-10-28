@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- Only the Pixel 11 series is supported, and it's arm64 only. -->
+    <issue id="ChromeOsAbiSupport" severity="ignore" />
+
+    <!-- libadb-android's ADB-over-TLS trust managers. Wireless debugging uses self-signed
+         certificates that pairing vouches for, not a CA chain. -->
+    <issue id="TrustAllX509TrustManager">
+        <ignore regexp="libadb-android" />
+    </issue>
+</lint>

@@ -57,6 +57,7 @@
             android:name=".DaemonBinderProvider"
             android:authorities="${applicationId}.daemon"
             android:exported="true"
+            tools:ignore="ExportedContentProvider"
             android:multiprocess="false" />
 
         <!-- Hands the debug report to whichever app the user shares it with. -->

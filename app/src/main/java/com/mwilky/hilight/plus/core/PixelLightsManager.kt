@@ -1,5 +1,6 @@
 package com.mwilky.hilight.plus.core
 
+import android.annotation.SuppressLint
 import android.hardware.lights.ColorSequence
 import android.hardware.lights.Light
 import android.hardware.lights.LightState
@@ -55,6 +56,8 @@ class PixelLightsManager {
     private var lastFrame: IntArray = intArrayOf()
     private var lastEffect: RingEffect? = null
 
+    // Hidden APIs are fine here: this runs in the shell daemon, outside the app restrictions.
+    @SuppressLint("PrivateApi")
     fun connect(): Boolean {
         try {
             val serviceManagerClass = Class.forName("android.os.ServiceManager")
