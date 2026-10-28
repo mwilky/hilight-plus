@@ -104,8 +104,8 @@ fun AboutScreen(controller: LightController, onSetUpConnection: () -> Unit) {
     }
 
     // Hidden LED index walk: ten quick taps on the title card light LEDs 0..7 in turn.
-    var titleTaps by remember { mutableStateOf(0) }
-    var lastTapMs by remember { mutableStateOf(0L) }
+    var titleTaps by remember { mutableIntStateOf(0) }
+    var lastTapMs by remember { mutableLongStateOf(0L) }
     var walkingLed by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(walkingLed == null) {

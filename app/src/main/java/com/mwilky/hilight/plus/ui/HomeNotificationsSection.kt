@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -481,7 +482,7 @@ private fun SplitBrightnessControls(
         else -> null
     }
     // Keeps the last note on screen while it animates away.
-    var shownWarning by remember { mutableStateOf(warning ?: R.string.settings_split_dim_warning) }
+    var shownWarning by remember { mutableIntStateOf(warning ?: R.string.settings_split_dim_warning) }
     if (warning != null) shownWarning = warning
     AnimatedVisibility(
         visible = warning != null,

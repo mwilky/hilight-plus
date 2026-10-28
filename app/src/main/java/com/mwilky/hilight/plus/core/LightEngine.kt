@@ -940,7 +940,7 @@ class LightEngine {
                 batteryLayerWantsToRender(battery, now)
             // When on, the battery layer takes the whole notification-priority slot rather than
             // just the gaps between alerts, so it isn't flickered on and off as alerts cycle.
-            val batterySuppressesNotifications = batteryEligible && battery!!.overridesNotifications
+            val batterySuppressesNotifications = batteryEligible && battery.overridesNotifications
 
             if (dndFlash?.let { now - it.startedAtMs >= PatternRenderer.DND_FLASH_MS } == true) dndFlash = null
             // Dropped here too, not only where the split ring is drawn: with a single alert

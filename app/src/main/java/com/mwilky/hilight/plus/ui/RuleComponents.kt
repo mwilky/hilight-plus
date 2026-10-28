@@ -83,8 +83,9 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.ClipEntry
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
@@ -406,7 +407,7 @@ fun AnimatedRingBadge(
     animate: Boolean = true,
     speed: Float = DEFAULT_SPEED
 ) {
-    var miniFrames by remember { mutableStateOf(IntArray(8) { 0x00000000 }) }
+    var miniFrames by remember { mutableStateOf(IntArray(8)) }
     val shouldAnimate = animate && pattern != PatternMode.OFF && pattern != PatternMode.SOLID
 
     LaunchedEffect(pattern, color, shouldAnimate, speed) {
@@ -695,7 +696,8 @@ private fun ColorPickerDialog(
     val scope = rememberCoroutineScope()
     val copyLabel = stringResource(R.string.dialog_custom_color)
     // A square wheel as wide as the dialog allows, but short enough for landscape and the cover screen.
-    val wheelSize = (LocalConfiguration.current.screenHeightDp.dp * 0.45f).coerceAtMost(280.dp)
+    val windowHeight = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp() }
+    val wheelSize = (windowHeight * 0.45f).coerceAtMost(280.dp)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.dialog_custom_color)) },

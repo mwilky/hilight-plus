@@ -130,7 +130,10 @@
     <!-- Navigation Buttons -->
     <!-- Onboarding Step 5: Trial -->
     <string name="onboarding_trial_title">Try it free</string>
-    <string name="onboarding_trial_desc">Everything in HiLight Plus is free for %1$d days. After that, a one-off purchase keeps it working for good. No subscription, no ads.</string>
+    <plurals name="onboarding_trial_desc">
+        <item quantity="one">Everything in HiLight Plus is free for %1$d day. After that, a one-off purchase keeps it working for good. No subscription, no ads.</item>
+        <item quantity="other">Everything in HiLight Plus is free for %1$d days. After that, a one-off purchase keeps it working for good. No subscription, no ads.</item>
+    </plurals>
 
     <!-- Licensing card -->
     <string name="license_title_trial">Free trial</string>
@@ -245,8 +248,8 @@
     <string name="settings_multi_cycle_desc">Each waiting notification plays its own pattern in turn, until it is dismissed.</string>
     <string name="settings_multi_split_desc">Each waiting notification gets its own arc of the ring in its colour, with a dark gap between arcs, until it is dismissed. Up to four are shown around the ring, using the animation and brightness below instead of each rule\'s own. A single notification still plays its own pattern.</string>
     <string name="settings_split_animation_title">Animation</string>
-    <string name="settings_split_dim_warning">Below 45%, a dim arc next to a bright one may look like glow spilling over from its neighbour rather than a notification of its own.</string>
-    <string name="settings_split_steady_warning">Above 50%, neighbouring colours may blend into each other and the dark gaps between arcs get harder to see.</string>
+    <string name="settings_split_dim_warning" formatted="false">Below 45%, a dim arc next to a bright one may look like glow spilling over from its neighbour rather than a notification of its own.</string>
+    <string name="settings_split_steady_warning" formatted="false">Above 50%, neighbouring colours may blend into each other and the dark gaps between arcs get harder to see.</string>
     <string name="settings_split_animation_breathe">Breathe</string>
     <string name="settings_split_animation_solid">Solid</string>
     <string name="settings_split_animation_spotlight">Spotlight</string>
@@ -346,7 +349,6 @@
         <item quantity="other">%d states</item>
     </plurals>
     <string name="section_off_hint">Turned off. Your rules are kept and apply again when you switch back on.</string>
-    <string name="rule_edit_cd">Edit rule</string>
     <string name="rule_delete_cd">Delete rule</string>
     <string name="rule_sort_added">Date added</string>
     <string name="rule_sort_name_asc">Name A–Z</string>
@@ -436,7 +438,6 @@
     <string name="battery_show_charging_desc">Light the ring while plugged in, using the pattern below. Turn off to keep only the low battery warning.</string>
     <string name="battery_section_auto_color">Auto colour</string>
     <string name="battery_section_auto_color_desc">Red to green as the battery charges. Turn off to pick a fixed colour.</string>
-    <string name="battery_fixed_color_title">Fixed colour</string>
     <string name="battery_threshold_title">Warn below</string>
     <string name="battery_threshold_value">%1$d%%</string>
     <string name="battery_section_low_title">Low battery warning</string>

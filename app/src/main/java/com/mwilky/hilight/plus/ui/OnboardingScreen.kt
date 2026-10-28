@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -552,7 +553,7 @@ private fun TrialStepContent(
 ) {
     StepColumn(
         stringResource(R.string.onboarding_trial_title),
-        { StepBody(stringResource(R.string.onboarding_trial_desc, Licensing.TRIAL_DAYS)) },
+        { StepBody(pluralStringResource(R.plurals.onboarding_trial_desc, Licensing.TRIAL_DAYS, Licensing.TRIAL_DAYS)) },
         { LicenseCard(status = status, onBuy = onBuy) }
     )
 }

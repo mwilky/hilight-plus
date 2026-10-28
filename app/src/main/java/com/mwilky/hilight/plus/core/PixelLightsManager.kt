@@ -290,7 +290,7 @@ class PixelLightsManager {
         if (!isSessionOpen && !openSession()) {
             return
         }
-        val off = IntArray(ledIds.size) { 0x00000000 }
+        val off = IntArray(ledIds.size)
         pushFrame(off)
         try {
             Thread.sleep(BLANK_FRAME_GAP_MS)

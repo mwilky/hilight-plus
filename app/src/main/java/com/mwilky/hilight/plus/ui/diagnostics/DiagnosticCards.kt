@@ -274,7 +274,7 @@ fun ConnectionStatusCard(
                 DaemonBridge.State.CONNECTING,
                 DaemonBridge.State.TURNING_ON_WIRELESS_DEBUGGING,
                 DaemonBridge.State.WAITING_FOR_WIRELESS_DEBUGGING,
-                DaemonBridge.State.ASKING_TO_ALLOW_NETWORK -> null
+                DaemonBridge.State.ASKING_TO_ALLOW_NETWORK -> {}
                 else -> {
                     Button(onClick = onConnect, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) {
                         ButtonLabel(Icons.Rounded.Refresh, stringResource(R.string.shizuku_btn_retry))

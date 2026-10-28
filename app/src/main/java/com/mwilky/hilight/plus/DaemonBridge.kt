@@ -18,6 +18,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
 import android.os.IBinder
+import androidx.core.net.toUri
 import com.mwilky.hilight.plus.adb.ConnectionService
 import com.mwilky.hilight.plus.adb.DevSettings
 import com.mwilky.hilight.plus.adb.SetupNotifier
@@ -1230,7 +1231,7 @@ class DaemonBridge private constructor(private val app: Application) {
             launch.flags = Intent.FLAG_ACTIVITY_NEW_TASK
             context.startActivity(launch)
         } else {
-            val uri = Uri.parse("https://shizuku.rikka.app/")
+            val uri = "https://shizuku.rikka.app/".toUri()
             val browser = Intent(Intent.ACTION_VIEW, uri).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }

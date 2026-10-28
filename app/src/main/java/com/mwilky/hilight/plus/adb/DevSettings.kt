@@ -66,6 +66,9 @@ object DevSettings {
     private fun readsOn(context: Context, key: String): Boolean =
         Settings.Global.getInt(context.contentResolver, key, 0) == 1
 
+    // Any network, not just the default: Wireless debugging works over Wi-Fi with no internet,
+    // which Android won't make the default while mobile data is up, so activeNetwork misses it.
+    @Suppress("DEPRECATION")
     fun isWifiConnected(context: Context): Boolean {
         val cm = context.getSystemService(ConnectivityManager::class.java) ?: return false
         return cm.allNetworks.any { network ->
