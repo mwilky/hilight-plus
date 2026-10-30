@@ -211,6 +211,7 @@ class DaemonBridge private constructor(private val app: Application) {
     private val wifiCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
             scope.launch {
+                DebugLog.i("HiLightPlus", "Wi-Fi available ${SystemClock.elapsedRealtime() / 1000}s after boot (${_state.value})")
                 // A different network may be one that's already allowed.
                 if (_state.value == State.WAITING_FOR_WIFI || _state.value == State.NETWORK_NOT_ALLOWED) {
                     DebugLog.i("HiLightPlus", "Wi-Fi available -> starting the daemon")
@@ -237,6 +238,10 @@ class DaemonBridge private constructor(private val app: Application) {
     // just allowed it (it only stays on when the network is allowed).
     private val wirelessDebuggingObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean) {
+            // Every change gets a line: the app may read 0 either way, but who flipped it, and
+            // when, is what a boot that lost Wireless debugging needs explaining.
+            val reads = if (DevSettings.isWirelessDebuggingOn(app) == true) "on" else "off or hidden"
+            DebugLog.i("HiLightPlus", "Wireless debugging setting changed ${SystemClock.elapsedRealtime() / 1000}s after boot (app reads $reads, ${_state.value})")
             when (_state.value) {
                 // The user switching it on; the app may read 0 whichever way it went, so try anyway.
                 State.WIRELESS_DEBUGGING_OFF -> Unit
@@ -281,6 +286,7 @@ class DaemonBridge private constructor(private val app: Application) {
             DebugLog.i("HiLightPlus", "Last shutdown: $it")
             shutdownNote.delete()
         }
+        DebugLog.i("HiLightPlus", "Started ${SystemClock.elapsedRealtime() / 1000}s after boot; Wi-Fi connected: ${DevSettings.isWifiConnected(app)}")
         app.contentResolver.registerContentObserver(
             Settings.Global.getUriFor(Settings.Global.DEVELOPMENT_SETTINGS_ENABLED), false, devOptionsObserver
         )

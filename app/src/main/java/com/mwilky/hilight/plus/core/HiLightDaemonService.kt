@@ -64,6 +64,7 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
         DebugLog.source = "daemon"
         killStaleDaemons()
         DebugLog.d(TAG, "System lights before start:\n${lightsDump()}")
+        DebugLog.i(TAG, "Android's recent Wireless debugging decisions:\n${adbSystemLog()}")
         try {
             engine.start()
             DebugLog.i(TAG, "HiLightDaemonService started (PID ${Process.myPid()}, UID ${Process.myUid()}, ${engine.ledCount} LEDs)")
@@ -407,6 +408,25 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
 
     /** The system lights service's own view, including every open session on the ring. */
     private fun lightsDump(): String = runCommand("dumpsys", "lights") ?: "unavailable"
+
+    /**
+     * What Android's debugging manager has logged lately, for working out who switched Wireless
+     * debugging off and when: the shell user may read the system log, the app may not. A boot's
+     * lines are often gone by the time a daemon runs, so this is best effort. Network names and
+     * keys are left out: the log is meant to be shared.
+     */
+    private fun adbSystemLog(): String {
+        val lines = runCommand(
+            "logcat", "-d", "-b", "main", "-b", "system", "-v", "time",
+            "AdbDebuggingManager:*", "AdbService:*", "AdbWifiNetworkMonitor:*", "*:S"
+        ) ?: return "unavailable"
+        val network = Regex("""(bssid|ssid)=[^,}]*""")
+        return lines.lines()
+            .filterNot { it.contains("packet") || it.contains("key message") }
+            .takeLast(40)
+            .joinToString("\n") { network.replace(it, "\$1=…") }
+            .ifBlank { "none kept" }
+    }
 
     /**
      * An older copy of this process (one Shizuku lost track of, one from before an app update, or
