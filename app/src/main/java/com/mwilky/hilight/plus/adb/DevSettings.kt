@@ -5,8 +5,10 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.os.Build
 import android.provider.Settings
 import com.mwilky.hilight.plus.DebugLog
+import java.io.File
 
 /** The system switches the built-in connection depends on. */
 object DevSettings {
@@ -105,19 +107,31 @@ object DevSettings {
     fun disableWirelessDebugging(context: Context): Boolean = setWirelessDebugging(context, false)
 
     /**
-     * Set once Android refuses to let the app switch Wireless debugging, even with secure settings
-     * granted: Android 17 QPR3 Beta 3 asks for MANAGE_DEBUGGING, which apps can't hold. From then
-     * on only a running daemon (shell holds it) or the user can switch it.
+     * Whether Android refuses to let the app switch Wireless debugging on this OS build, even with
+     * secure settings granted: Android 17 QPR3 Beta 3 asks for MANAGE_DEBUGGING, which apps can't
+     * hold. From then on only a running daemon (shell holds it) or the user can switch it.
+     * Remembered per build, so an update that allows it again gets a chance.
      */
+    fun switchRefused(context: Context): Boolean =
+        refusedOnThisBuild
+            ?: (runCatching { refusedFile(context).readText() }.getOrNull() == Build.FINGERPRINT).also { refusedOnThisBuild = it }
+
     @Volatile
-    var switchRefused = false
-        private set
+    private var refusedOnThisBuild: Boolean? = null
+
+    private fun refusedFile(context: Context) = File(File(context.noBackupFilesDir, "adb"), "switch_refused")
+
+    private fun rememberSwitchRefused(context: Context) {
+        refusedOnThisBuild = true
+        runCatching { refusedFile(context).apply { parentFile?.mkdirs() }.writeText(Build.FINGERPRINT) }
+            .onFailure { DebugLog.w(TAG, "Couldn't remember that Wireless debugging can't be switched: ${it.message}") }
+    }
 
     private fun setWirelessDebugging(context: Context, on: Boolean): Boolean {
         if (!canWriteSecureSettings(context)) return false
         return runCatching { Settings.Global.putInt(context.contentResolver, ADB_WIFI_ENABLED, if (on) 1 else 0) }
             .onFailure {
-                if (it is SecurityException) switchRefused = true
+                if (it is SecurityException) rememberSwitchRefused(context)
                 DebugLog.w(TAG, "Couldn't turn Wireless debugging ${if (on) "on" else "off"}: ${it.message}")
             }
             .getOrDefault(false)

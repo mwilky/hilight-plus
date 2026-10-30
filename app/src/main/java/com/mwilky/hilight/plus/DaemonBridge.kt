@@ -446,7 +446,7 @@ class DaemonBridge private constructor(private val app: Application) {
                 _state.value = State.FAILED
                 retryBuiltInLater()
             }
-            WirelessAdb.StartResult.NotReachable -> if (DevSettings.switchRefused) {
+            WirelessAdb.StartResult.NotReachable -> if (DevSettings.switchRefused(app)) {
                 // The app couldn't switch it on, so it's simply off (or Android switched it
                 // straight back off on a network not allowed yet, which turning it on also asks).
                 DebugLog.w("HiLightPlus", "Wireless debugging isn't reachable and the app can't switch it on; waiting for the user")
@@ -573,7 +573,7 @@ class DaemonBridge private constructor(private val app: Application) {
             // As for a start: it may be on without saying so, so try either way.
             if (DevSettings.isWirelessDebuggingOn(app) != true && DevSettings.enableWirelessDebugging(app, whenUnsure = true)) {
                 turnOffWirelessDebugging = true
-            } else if (DevSettings.switchRefused) {
+            } else if (DevSettings.switchRefused(app)) {
                 // The old daemon still may, as shell. Left on: the app couldn't switch it on again.
                 val switched = withContext(Dispatchers.IO) {
                     runCatching { service?.putGlobalString(DevSettings.ADB_WIFI_ENABLED, "1") }.getOrNull()
@@ -725,6 +725,36 @@ class DaemonBridge private constructor(private val app: Application) {
             bind()
         } else {
             Shizuku.requestPermission(PERMISSION_REQUEST)
+        }
+    }
+
+    /**
+     * Android is shutting down or rebooting. Where the app can't switch Wireless debugging on
+     * itself, the daemon still can (as shell), so it switches it on now and the phone boots with
+     * it on: the lights then start by themselves. Android keeps it on only on a Wi-Fi network
+     * already allowed; elsewhere the next boot lands on the card. Builds that let the app switch
+     * it are left alone: the app switches it on at boot, as before.
+     */
+    fun prepareForReboot(done: () -> Unit) {
+        scope.launch {
+            try {
+                if (!DevSettings.switchRefused(app) || _method.value != Method.BUILT_IN) return@launch
+                val bound = service
+                if (bound == null) {
+                    DebugLog.i("HiLightPlus", "Shutting down with no daemon connected; Wireless debugging is left as it is")
+                    return@launch
+                }
+                val on = withContext(Dispatchers.IO) {
+                    runCatching { bound.putGlobalString(DevSettings.ADB_WIFI_ENABLED, "1") }.getOrDefault(false)
+                }
+                DebugLog.i(
+                    "HiLightPlus",
+                    if (on) "Shutting down: had the daemon turn Wireless debugging on for the next boot"
+                    else "Shutting down: the daemon couldn't turn Wireless debugging on"
+                )
+            } finally {
+                done()
+            }
         }
     }
 
