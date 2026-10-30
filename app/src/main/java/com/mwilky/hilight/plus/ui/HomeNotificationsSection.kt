@@ -64,10 +64,12 @@ import com.mwilky.hilight.plus.SettingsSnapshot
 import com.mwilky.hilight.plus.DaemonBridge
 import com.mwilky.hilight.plus.SplitAnimation
 import com.mwilky.hilight.plus.SplitLook
+import com.mwilky.hilight.plus.StockHiLightState
 import com.mwilky.hilight.plus.core.PatternRenderer
 import com.mwilky.hilight.plus.ui.diagnostics.NotificationAccessCard
 import com.mwilky.hilight.plus.ui.diagnostics.PermissionState
 import com.mwilky.hilight.plus.ui.diagnostics.ConnectionStatusCard
+import com.mwilky.hilight.plus.ui.diagnostics.FavouriteMessagesStockCard
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlin.math.roundToInt
@@ -83,6 +85,8 @@ fun HomeNotifsPage(
     onOpenShizukuApp: () -> Unit,
     onRestartApp: () -> Unit,
     onSetUpConnection: () -> Unit,
+    stockState: StockHiLightState,
+    onOpenStockSettings: () -> Unit,
     permissionState: PermissionState,
     onOpenNotifSettings: () -> Unit,
     state: SettingsSnapshot,
@@ -136,6 +140,9 @@ fun HomeNotifsPage(
                 onRestartApp = onRestartApp,
                 onSetUp = onSetUpConnection
             )
+        }
+        if (stockState.favoriteMessagesKnown && stockState.favoriteMessagesActive) {
+            FavouriteMessagesStockCard(stockState = stockState, onOpenSettings = onOpenStockSettings)
         }
         if (!permissionState.hasNotifAccess) {
             NotificationAccessCard(state = permissionState, onOpenNotifSettings = onOpenNotifSettings)

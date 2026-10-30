@@ -827,6 +827,8 @@ fun HomeContent(
                         onOpenShizukuApp = onOpenShizukuApp,
                         onRestartApp = onRestartApp,
                         onSetUpConnection = onSetUpConnection,
+                        stockState = stockState,
+                        onOpenStockSettings = onOpenStockSettings,
                         permissionState = permissionState,
                         onOpenNotifSettings = onOpenNotifSettings,
                         state = state,

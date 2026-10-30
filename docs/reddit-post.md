@@ -1,4 +1,4 @@
-I've been working on an app for the Pixel 11 Pro's rear LED ring and it's now on Google Play. Out of the box the ring only does two things: calls from favourites and Gemini's listening/thinking/replying lights. HiLight Plus takes it over so you can decide what it shows.
+I've been working on an app for the Pixel 11 Pro's rear LED ring and it's now on Google Play. Out of the box the ring only does a few things: calls from favourites, Gemini's listening/thinking/replying lights, and on Android 17 QPR2 and later, messages from favourites. HiLight Plus takes it over so you can decide what it shows.
 
 The short version: a colour and pattern for each contact or app, a charging gauge, a low battery warning, a Do Not Disturb indicator, and rules for when it should stay dark. It can also redo Gemini's lights in whatever look you want.
 
@@ -76,6 +76,6 @@ And best of all, Shizuku isn't required!
 * On Android 17 QPR3 Beta 3 and later, Google stopped apps switching Wireless debugging on. The helper still can, so it switches it on as the phone shuts down, and the lights come back by themselves after a reboot as long as you're on a Wi-Fi network you've allowed it on. If you had it off, it goes back off once the lights are running. After a crash or a reboot elsewhere, the app tells you and starts the lights as soon as you turn it on. Leaving it on avoids that altogether.
 * I'd recommend turning on "Disable adb authorization timeout" in Developer options, otherwise Android forgets the pairing after 7 days unused. The app suggests it but won't change it for you, and tells you if the pairing is lost.
 * [Shizuku](https://shizuku.rikka.app/) still works too if you already use it.
-* Turn off the stock "Calls from favourites" and "Gemini feedback" HiLight options so the two don't fight over the ring. Onboarding checks this.
+* Turn off the stock "Calls from favourites", "Gemini feedback" and (on QPR2 and later) "Messages from favourites" HiLight options so they don't fight over the ring. Onboarding checks this.
 
 It's open source under GPL-3.0: [github.com/mwilky/hilight-plus](https://github.com/mwilky/hilight-plus). Happy to answer questions or take suggestions, and if something doesn't work on your phone the debug log share in About is the quickest way to get it to me.

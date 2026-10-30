@@ -343,6 +343,25 @@ fun GeminiStockCard(
     )
 }
 
+/**
+ * Pixel's native "Messages from favourites" lighting (Android 17 QPR2 and later), which clashes
+ * with HiLight Plus's notification lights. Only show it when [StockHiLightState.favoriteMessagesAvailable].
+ */
+@Composable
+fun FavouriteMessagesStockCard(
+    stockState: StockHiLightState,
+    onOpenSettings: () -> Unit
+) {
+    StockSettingCard(
+        title = stringResource(R.string.stock_messages_card_title),
+        active = stockState.favoriteMessagesActive,
+        known = stockState.favoriteMessagesKnown,
+        conflictDesc = stringResource(R.string.onboarding_stock_conflict_active_desc),
+        okDesc = stringResource(R.string.about_stock_messages_ok_desc),
+        onOpenSettings = onOpenSettings
+    )
+}
+
 /** One stock HiLight setting that would clash with HiLight Plus while it's on. */
 @Composable
 private fun StockSettingCard(

@@ -2,7 +2,7 @@
 
 Custom rear LED lighting for the Google Pixel 11 Pro.
 
-Pixel's built-in HiLight lights the rear ring for two things: calls from favourites, and Gemini's listening, thinking and replying states. HiLight Plus replaces both. It takes over the eight-LED ring behind the camera bar and lets you decide what it shows: a colour and pattern per contact or app, your own looks for Gemini's states, a charging gauge, a low-battery warning, and rules for when it should stay dark. Everything runs on-device with no accounts and no analytics; the only network use is Google Play, for the purchase and the occasional rating prompt.
+Pixel's built-in HiLight lights the rear ring for calls from favourites and Gemini's listening, thinking and replying states, and from Android 17 QPR2 for messages from favourites too. HiLight Plus replaces all of them. It takes over the eight-LED ring behind the camera bar and lets you decide what it shows: a colour and pattern per contact or app, your own looks for Gemini's states, a charging gauge, a low-battery warning, and rules for when it should stay dark. Everything runs on-device with no accounts and no analytics; the only network use is Google Play, for the purchase and the occasional rating prompt.
 
 <p align="center">
   <img src="docs/screenshots/calls.png" width="16%" alt="Calls page with per-contact rules" />
@@ -72,7 +72,7 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 **Extras**
 - Live preview of every pattern on a diffused ring mock-up, and a Test on LEDs button in each rule editor. Changing the pattern, colour, brightness or speed while a test plays restarts it with the new look.
 - Custom rule lists can be sorted from their header: contacts by first or last name, apps by name, A–Z or Z–A, or left in the order they were added. Each list remembers its own choice.
-- Onboarding that connects to the ring, checks permissions and the stock HiLight setting that would otherwise fight for the ring, and explains the trial. Connecting is a self-ticking checklist: each switch is detected as you flip it, Settings opens at the right row, and a notification follows you there so you can type the pairing code without coming back to the app.
+- Onboarding that connects to the ring, checks permissions and the stock HiLight settings that would otherwise fight for the ring, and explains the trial. Connecting is a self-ticking checklist: each switch is detected as you flip it, Settings opens at the right row, and a notification follows you there so you can type the pairing code without coming back to the app.
 - People updating from a Shizuku-only version get a one-time prompt to switch to the built-in connection, which then keeps itself running across restarts.
 - A live debug log on the About page, covering the app and the daemon, with one-tap clear and share. A shared report adds device and permission status, what the daemon is holding and every setting and rule, with contact names left out.
 - Settings backup on the About page: save every rule and setting to a file you choose, and restore it after a reinstall. The purchase isn't in the file (Google Play restores it), and the connection to the ring is set up again after reinstalling.
@@ -90,7 +90,7 @@ Pixel's built-in HiLight lights the rear ring for two things: calls from favouri
 - **Recommended:** turn on **Disable adb authorization timeout** in Developer options. Android otherwise forgets a pairing that goes unused for 7 days, and the app only uses it to start the daemon, so it can expire unnoticed. The app suggests this after connecting and on the About page, but never changes it itself. If the pairing is lost anyway, a notification and a card on Home say so straight away, while the running daemon keeps the lights going, and lead back to pairing.
 - Wi-Fi whenever the daemon needs starting (setup, a reboot, an update), because Wireless debugging only runs on Wi-Fi. Once running, it needs no network. On a Wi-Fi network where Wireless debugging has never been allowed, Android asks first; the app says what to do and carries on once you allow it.
 - Or, instead, [Shizuku](https://shizuku.rikka.app/) running, over wireless debugging or root. It is still supported for anyone who already uses it.
-- The stock "Calls from favourites" and Gemini feedback HiLight options turned off, otherwise both will try to drive the ring at once. Onboarding checks this for you.
+- The stock "Calls from favourites", Gemini feedback and (from Android 17 QPR2) "Messages from favourites" HiLight options turned off, otherwise they and HiLight Plus will try to drive the ring at once. Onboarding checks this for you, and the Notifications page warns if "Messages from favourites" is switched back on.
 
 ## Permissions
 

@@ -57,6 +57,7 @@ internal object DebugReport {
             appendLine("Contacts permission: ${context.checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED}")
             appendLine("Stock favourite-calls HiLight: ${if (stock.known) stock.favoriteCallsActive else "unknown"}")
             appendLine("Stock Gemini feedback: ${if (stock.geminiKnown) stock.geminiFeedbackActive else "unknown"}")
+            appendLine("Stock favourite-messages HiLight: ${if (!stock.favoriteMessagesAvailable) "not on this build" else if (stock.favoriteMessagesKnown) stock.favoriteMessagesActive else "unknown"}")
             appendLine("Licence: purchased=${licence.purchased}, trial started=${licence.trialStartMillis?.let { Date(it) }}, expired=${licence.trialExpired}, entitled=${licence.entitled}")
             appendLine()
 

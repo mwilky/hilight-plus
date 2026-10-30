@@ -61,6 +61,7 @@ import com.mwilky.hilight.plus.ui.diagnostics.NotificationAccessCard
 import com.mwilky.hilight.plus.ui.diagnostics.PermissionState
 import com.mwilky.hilight.plus.ui.diagnostics.ConnectionStatusCard
 import com.mwilky.hilight.plus.ui.diagnostics.GeminiStockCard
+import com.mwilky.hilight.plus.ui.diagnostics.FavouriteMessagesStockCard
 import com.mwilky.hilight.plus.ui.diagnostics.StockConflictCard
 import com.mwilky.hilight.plus.ui.diagnostics.rememberCallPermissionLauncher
 import com.mwilky.hilight.plus.ui.diagnostics.rememberPermissionState
@@ -446,6 +447,13 @@ fun AboutContent(
                 onOpenSettings = onOpenSettings
             )
 
+            if (stockState.favoriteMessagesAvailable) {
+                FavouriteMessagesStockCard(
+                    stockState = stockState,
+                    onOpenSettings = onOpenSettings
+                )
+            }
+
             CallPermissionsCard(
                 state = permissionState,
                 onRequestPermissions = onRequestPhonePerms,
@@ -667,7 +675,10 @@ fun AboutScreenPreview() {
             onOpenShizukuApp = {},
             onRestartApp = {},
             onSetUpConnection = {},
-            stockState = StockHiLightState(favoriteCallsActive = false, known = true, geminiFeedbackActive = true, geminiKnown = true),
+            stockState = StockHiLightState(
+                favoriteCallsActive = false, known = true, geminiFeedbackActive = true, geminiKnown = true,
+                favoriteMessagesKnown = true, favoriteMessagesAvailable = true
+            ),
             permissionState = PermissionState(
                 context = LocalContext.current,
                 isContactsGranted = true,

@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.database.ContentObserver
 import android.net.Uri
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
@@ -26,7 +27,11 @@ data class StockHiLightState(
     val known: Boolean = false,
     // Stock Gemini feedback (listening, thinking, replying), read separately.
     val geminiFeedbackActive: Boolean = false,
-    val geminiKnown: Boolean = false
+    val geminiKnown: Boolean = false,
+    // Stock "Messages from favourites", only on builds that have the toggle (see [favoriteMessagesAvailable]).
+    val favoriteMessagesActive: Boolean = false,
+    val favoriteMessagesKnown: Boolean = false,
+    val favoriteMessagesAvailable: Boolean = false
 )
 
 /**
@@ -39,6 +44,10 @@ object NativeHiLightDetector {
 
     const val KEY_FAVORITE_CALLS = "light_animation_favorite_calls_enabled"
     const val KEY_GEMINI_FEEDBACK = "light_animation_feedback_enabled"
+    const val KEY_FAVORITE_MESSAGES = "light_animation_favorite_messages_enabled"
+
+    // "Messages from favourites" arrived with Android 17 QPR2 (SDK 37.2; QPR1 is 37.1).
+    private const val FAVORITE_MESSAGES_SDK_FULL = 37 * 100_000 + 2
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val _state = MutableStateFlow(StockHiLightState())
@@ -68,7 +77,7 @@ object NativeHiLightDetector {
 
         if (!observerRegistered) {
             try {
-                for (key in listOf(KEY_FAVORITE_CALLS, KEY_GEMINI_FEEDBACK)) {
+                for (key in listOf(KEY_FAVORITE_CALLS, KEY_GEMINI_FEEDBACK, KEY_FAVORITE_MESSAGES)) {
                     val uri = Settings.Secure.getUriFor(key) ?: continue
                     cr.registerContentObserver(uri, true, observer)
                     observerRegistered = true
@@ -85,17 +94,20 @@ object NativeHiLightDetector {
     }
 
     private fun readFavoriteCalls(app: Context): StockHiLightState {
+        val buildHasMessages = Build.VERSION.SDK_INT_FULL >= FAVORITE_MESSAGES_SDK_FULL
         if (app is Application) {
             val bridge = DaemonBridge.get(app)
             if (bridge.isConnected()) {
                 val value = bridge.getSecureString(KEY_FAVORITE_CALLS)
                 val gemini = bridge.getSecureString(KEY_GEMINI_FEEDBACK)
+                val messages = bridge.getSecureString(KEY_FAVORITE_MESSAGES)
                 val parsed = parseFavoriteCallsSetting(value).withGeminiFeedback(gemini)
-                DebugLog.i(TAG, "Privileged read: '$KEY_FAVORITE_CALLS'='$value', '$KEY_GEMINI_FEEDBACK'='$gemini' => $parsed")
+                    .withFavoriteMessages(messages, buildHasMessages)
+                DebugLog.i(TAG, "Privileged read: '$KEY_FAVORITE_CALLS'='$value', '$KEY_GEMINI_FEEDBACK'='$gemini', '$KEY_FAVORITE_MESSAGES'='$messages' => $parsed")
                 return parsed
             }
         }
-        return StockHiLightState(known = false)
+        return StockHiLightState(known = false).withFavoriteMessages(null, buildHasMessages)
     }
 
     fun openHiLightSettings(context: Context) {
@@ -130,6 +142,20 @@ object NativeHiLightDetector {
 internal fun StockHiLightState.withGeminiFeedback(value: String?): StockHiLightState {
     val parsed = parseFavoriteCallsSetting(value)
     return copy(geminiFeedbackActive = parsed.favoriteCallsActive, geminiKnown = parsed.known)
+}
+
+/**
+ * Adds the stock "Messages from favourites" setting. Builds without the toggle would read the
+ * unwritten key as on, so it only counts there once the key has a value.
+ */
+internal fun StockHiLightState.withFavoriteMessages(value: String?, buildHasToggle: Boolean): StockHiLightState {
+    if (!buildHasToggle && value.isNullOrBlank()) return this
+    val parsed = parseFavoriteCallsSetting(value)
+    return copy(
+        favoriteMessagesActive = parsed.favoriteCallsActive,
+        favoriteMessagesKnown = parsed.known,
+        favoriteMessagesAvailable = true
+    )
 }
 
 /**

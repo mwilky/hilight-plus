@@ -17,8 +17,8 @@
 
     <!-- Onboarding Step 2: Stock HiLight Conflict -->
     <string name="onboarding_stock_title">Pixel\'s built-in HiLight</string>
-    <string name="onboarding_stock_desc1">Your Pixel already has two simple HiLight options: \'Calls from favourites\' and Gemini feedback. If they stay on, they and HiLight Plus will both try to drive the rear lights at the same time.</string>
-    <string name="onboarding_stock_desc2">Turn both off in system settings so HiLight Plus has the lights to itself. It lights the ring for Gemini instead, in the looks you choose on its Gemini page.</string>
+    <string name="onboarding_stock_desc1">Your Pixel already has its own simple HiLight options, such as \'Calls from favourites\' and Gemini feedback. If they stay on, they and HiLight Plus will both try to drive the rear lights at the same time.</string>
+    <string name="onboarding_stock_desc2">Turn them all off in system settings so HiLight Plus has the lights to itself. It lights the ring for Gemini instead, in the looks you choose on its Gemini page.</string>
     <string name="onboarding_stock_card_title">Calls from favourites</string>
     <string name="onboarding_stock_conflict_active_desc">This is still on in system settings and will clash with HiLight Plus. Tap below to turn it off.</string>
     <string name="onboarding_stock_unknown_desc">Couldn\'t read this setting yet. Connect HiLight Plus to the ring to check it.</string>
@@ -481,6 +481,8 @@
     <string name="about_version_label">Version</string>
     <string name="about_status_section_header">System Health &amp; Permissions</string>
     <string name="about_stock_ok_desc">Pixel\'s own \'Calls from favourites\' lighting is off.</string>
+    <string name="about_stock_messages_ok_desc">Pixel\'s own \'Messages from favourites\' lighting is off.</string>
+    <string name="stock_messages_card_title">Messages from favourites</string>
     <string name="about_debug_log_header">Troubleshooting</string>
     <string name="about_debug_log_title">Debug log</string>
     <plurals name="about_debug_log_entry_count">

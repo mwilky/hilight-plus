@@ -64,6 +64,7 @@ import com.mwilky.hilight.plus.ui.diagnostics.CallPermissionsCard
 import com.mwilky.hilight.plus.ui.diagnostics.NotificationAccessCard
 import com.mwilky.hilight.plus.ui.diagnostics.PermissionState
 import com.mwilky.hilight.plus.ui.diagnostics.GeminiStockCard
+import com.mwilky.hilight.plus.ui.diagnostics.FavouriteMessagesStockCard
 import com.mwilky.hilight.plus.ui.diagnostics.StockConflictCard
 import com.mwilky.hilight.plus.ui.diagnostics.rememberCallPermissionLauncher
 import com.mwilky.hilight.plus.ui.diagnostics.rememberPermissionState
@@ -162,7 +163,8 @@ fun OnboardingScreen(
         OnboardingStep.WELCOME -> true
         // Reviewers and first-time users can go on without connecting; onNext confirms first.
         OnboardingStep.CONNECT -> true
-        OnboardingStep.STOCK_CONFLICT -> !stockState.favoriteCallsActive && !stockState.geminiFeedbackActive
+        OnboardingStep.STOCK_CONFLICT -> !stockState.favoriteCallsActive && !stockState.geminiFeedbackActive &&
+            !stockState.favoriteMessagesActive
         OnboardingStep.PERMISSIONS -> permissionState.hasContactsPermission && permissionState.isNotifAccessGranted
         OnboardingStep.TRIAL -> true
     }
@@ -516,7 +518,11 @@ private fun StockConflictStepContent(
         { StepBody(stringResource(R.string.onboarding_stock_desc2)) },
         { StockConflictCard(stockState = stockState, onOpenSettings = onOpenSettings) },
         // HiLight Plus lights the ring for Gemini instead, so this has to be off too.
-        { GeminiStockCard(stockState = stockState, takeoverEnabled = true, onOpenSettings = onOpenSettings) }
+        { GeminiStockCard(stockState = stockState, takeoverEnabled = true, onOpenSettings = onOpenSettings) },
+        // Only builds with the toggle (Android 17 QPR2 and later) have this one.
+        *if (stockState.favoriteMessagesAvailable) {
+            arrayOf<@Composable () -> Unit>({ FavouriteMessagesStockCard(stockState = stockState, onOpenSettings = onOpenSettings) })
+        } else emptyArray()
     )
 }
 
@@ -664,7 +670,10 @@ fun OnboardingStep2Preview() {
 fun OnboardingStep3Preview() {
     OnboardingStepPreview(OnboardingStep.STOCK_CONFLICT) {
         StockConflictStepContent(
-            stockState = StockHiLightState(favoriteCallsActive = true, known = true, geminiFeedbackActive = true, geminiKnown = true),
+            stockState = StockHiLightState(
+                favoriteCallsActive = true, known = true, geminiFeedbackActive = true, geminiKnown = true,
+                favoriteMessagesActive = true, favoriteMessagesKnown = true, favoriteMessagesAvailable = true
+            ),
             onOpenSettings = {}
         )
     }
