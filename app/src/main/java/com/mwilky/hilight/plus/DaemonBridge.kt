@@ -18,6 +18,8 @@ import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
 import android.os.IBinder
+import java.io.File
+import java.util.Date
 import androidx.core.net.toUri
 import com.mwilky.hilight.plus.adb.ConnectionService
 import com.mwilky.hilight.plus.adb.DevSettings
@@ -249,6 +251,10 @@ class DaemonBridge private constructor(private val app: Application) {
 
     var onAvailabilityChanged: (() -> Unit)? = null
 
+    // What the shutdown did. The log reaches disk on another thread, which the phone going down
+    // can beat, so it's also written here at once and logged at the next start.
+    private val shutdownNote = File(File(app.noBackupFilesDir, "adb"), "last_shutdown")
+
     init {
         Shizuku.addRequestPermissionResultListener(permissionListener)
         Shizuku.addBinderReceivedListenerSticky {
@@ -271,6 +277,10 @@ class DaemonBridge private constructor(private val app: Application) {
                 wifiCallback
             )
         }.onFailure { DebugLog.w("HiLightPlus", "Couldn't watch Wi-Fi: ${it.message}") }
+        runCatching { shutdownNote.readText() }.getOrNull()?.let {
+            DebugLog.i("HiLightPlus", "Last shutdown: $it")
+            shutdownNote.delete()
+        }
         app.contentResolver.registerContentObserver(
             Settings.Global.getUriFor(Settings.Global.DEVELOPMENT_SETTINGS_ENABLED), false, devOptionsObserver
         )
@@ -738,23 +748,34 @@ class DaemonBridge private constructor(private val app: Application) {
     fun prepareForReboot(done: () -> Unit) {
         scope.launch {
             try {
-                if (!DevSettings.switchRefused(app) || _method.value != Method.BUILT_IN) return@launch
+                if (!DevSettings.switchRefused(app)) return@launch
+                if (_method.value != Method.BUILT_IN) {
+                    noteShutdown("not over the built-in connection; Wireless debugging is left as it is")
+                    return@launch
+                }
                 val bound = service
                 if (bound == null) {
-                    DebugLog.i("HiLightPlus", "Shutting down with no daemon connected; Wireless debugging is left as it is")
+                    noteShutdown("no daemon connected; Wireless debugging is left as it is")
                     return@launch
                 }
                 val on = withContext(Dispatchers.IO) {
                     runCatching { bound.putGlobalString(DevSettings.ADB_WIFI_ENABLED, "1") }.getOrDefault(false)
                 }
-                DebugLog.i(
-                    "HiLightPlus",
-                    if (on) "Shutting down: had the daemon turn Wireless debugging on for the next boot"
-                    else "Shutting down: the daemon couldn't turn Wireless debugging on"
+                noteShutdown(
+                    if (on) "had the daemon turn Wireless debugging on for the next boot"
+                    else "the daemon couldn't turn Wireless debugging on"
                 )
             } finally {
                 done()
             }
+        }
+    }
+
+    private fun noteShutdown(what: String) {
+        DebugLog.i("HiLightPlus", "Shutting down: $what")
+        runCatching {
+            shutdownNote.parentFile?.mkdirs()
+            shutdownNote.writeText("$what (at ${Date()})")
         }
     }
 

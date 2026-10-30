@@ -64,6 +64,7 @@ class DaemonStartReceiver : BroadcastReceiver() {
                 LightController.get(context).refreshStatus()
             }
             Intent.ACTION_SHUTDOWN -> {
+                DebugLog.i("DaemonStartReceiver", "${intent.action} -> preparing for the next boot")
                 // Ordered: Android waits for this (a few seconds at most) before going down.
                 val pending = goAsync()
                 LightController.get(context).daemon.prepareForReboot { pending.finish() }
