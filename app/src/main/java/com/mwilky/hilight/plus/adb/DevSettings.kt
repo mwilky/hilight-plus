@@ -104,10 +104,22 @@ object DevSettings {
     /** After a start: the daemon doesn't need Wireless debugging to keep running. */
     fun disableWirelessDebugging(context: Context): Boolean = setWirelessDebugging(context, false)
 
+    /**
+     * Set once Android refuses to let the app switch Wireless debugging, even with secure settings
+     * granted: Android 17 QPR3 Beta 3 asks for MANAGE_DEBUGGING, which apps can't hold. From then
+     * on only a running daemon (shell holds it) or the user can switch it.
+     */
+    @Volatile
+    var switchRefused = false
+        private set
+
     private fun setWirelessDebugging(context: Context, on: Boolean): Boolean {
         if (!canWriteSecureSettings(context)) return false
         return runCatching { Settings.Global.putInt(context.contentResolver, ADB_WIFI_ENABLED, if (on) 1 else 0) }
-            .onFailure { DebugLog.w(TAG, "Couldn't turn Wireless debugging ${if (on) "on" else "off"}: ${it.message}") }
+            .onFailure {
+                if (it is SecurityException) switchRefused = true
+                DebugLog.w(TAG, "Couldn't turn Wireless debugging ${if (on) "on" else "off"}: ${it.message}")
+            }
             .getOrDefault(false)
     }
 }

@@ -166,6 +166,7 @@ fun ConnectionStatusCard(
             DaemonBridge.State.DISCONNECTED -> stringResource(R.string.shizuku_desc_disconnected)
             DaemonBridge.State.NEEDS_SETUP -> stringResource(R.string.connect_desc_needs_setup)
             DaemonBridge.State.NETWORK_NOT_ALLOWED -> stringResource(R.string.connect_desc_network_not_allowed)
+            DaemonBridge.State.WIRELESS_DEBUGGING_OFF -> stringResource(R.string.connect_desc_wireless_off)
             DaemonBridge.State.WAITING_FOR_WIFI -> stringResource(R.string.connect_desc_waiting_wifi)
             DaemonBridge.State.NEEDS_PERMISSION -> stringResource(R.string.shizuku_desc_needs_permission)
             DaemonBridge.State.NOT_RUNNING -> stringResource(R.string.shizuku_desc_not_running)
@@ -187,6 +188,7 @@ fun ConnectionStatusCard(
             DaemonBridge.State.ASKING_TO_ALLOW_NETWORK -> stringResource(R.string.connect_status_asking_network)
             DaemonBridge.State.NEEDS_SETUP -> stringResource(R.string.connect_status_needs_setup)
             DaemonBridge.State.NETWORK_NOT_ALLOWED -> stringResource(R.string.connect_status_network_not_allowed)
+            DaemonBridge.State.WIRELESS_DEBUGGING_OFF -> stringResource(R.string.connect_status_wireless_off)
             DaemonBridge.State.WAITING_FOR_WIFI -> stringResource(R.string.connect_status_waiting_wifi)
             DaemonBridge.State.NEEDS_PERMISSION -> stringResource(R.string.shizuku_status_needs_permission)
             DaemonBridge.State.NOT_RUNNING -> stringResource(R.string.shizuku_status_not_running)
@@ -237,6 +239,15 @@ fun ConnectionStatusCard(
                 DaemonBridge.State.NETWORK_NOT_ALLOWED -> {
                     Button(onClick = onConnect, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) {
                         ButtonLabel(Icons.Rounded.Refresh, stringResource(R.string.connect_btn_ask_again))
+                    }
+                }
+                DaemonBridge.State.WIRELESS_DEBUGGING_OFF -> {
+                    Button(
+                        onClick = { SetupIntents.open(context, SetupIntents.developerOptions(context)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shapes = ButtonDefaults.shapes()
+                    ) {
+                        ButtonLabel(Icons.AutoMirrored.Rounded.Launch, stringResource(R.string.connect_btn_wireless_off))
                     }
                 }
                 DaemonBridge.State.WAITING_FOR_WIFI -> {

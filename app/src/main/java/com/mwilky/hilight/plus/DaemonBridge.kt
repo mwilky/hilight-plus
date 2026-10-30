@@ -69,6 +69,11 @@ class DaemonBridge private constructor(private val app: Application) {
          * switched it straight back off. Waits for the user to allow it.
          */
         NETWORK_NOT_ALLOWED,
+        /**
+         * Built-in: Wireless debugging is off and Android won't let the app switch it on (from
+         * Android 17 QPR3 Beta 3). Waits for the user to turn it on.
+         */
+        WIRELESS_DEBUGGING_OFF,
         NOT_INSTALLED,
         NOT_RUNNING,
         NEEDS_PERMISSION,
@@ -230,8 +235,12 @@ class DaemonBridge private constructor(private val app: Application) {
     // just allowed it (it only stays on when the network is allowed).
     private val wirelessDebuggingObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean) {
-            if (_state.value != State.NETWORK_NOT_ALLOWED) return
-            if (DevSettings.isWirelessDebuggingOn(app) != true) return
+            when (_state.value) {
+                // The user switching it on; the app may read 0 whichever way it went, so try anyway.
+                State.WIRELESS_DEBUGGING_OFF -> Unit
+                State.NETWORK_NOT_ALLOWED -> if (DevSettings.isWirelessDebuggingOn(app) != true) return
+                else -> return
+            }
             DebugLog.i("HiLightPlus", "Wireless debugging on (${_state.value}) -> starting the daemon")
             builtInFailures = 0
             refresh()
@@ -437,7 +446,13 @@ class DaemonBridge private constructor(private val app: Application) {
                 _state.value = State.FAILED
                 retryBuiltInLater()
             }
-            WirelessAdb.StartResult.NotReachable -> {
+            WirelessAdb.StartResult.NotReachable -> if (DevSettings.switchRefused) {
+                // The app couldn't switch it on, so it's simply off (or Android switched it
+                // straight back off on a network not allowed yet, which turning it on also asks).
+                DebugLog.w("HiLightPlus", "Wireless debugging isn't reachable and the app can't switch it on; waiting for the user")
+                _state.value = State.WIRELESS_DEBUGGING_OFF
+                SetupNotifier.showWirelessDebuggingOff(app)
+            } else {
                 // On Wi-Fi with Developer options on, so almost always this network not being
                 // allowed. Retrying won't change that; wait for the user instead.
                 DebugLog.w("HiLightPlus", "Wireless debugging isn't reachable; waiting for this Wi-Fi to be allowed")
@@ -558,6 +573,15 @@ class DaemonBridge private constructor(private val app: Application) {
             // As for a start: it may be on without saying so, so try either way.
             if (DevSettings.isWirelessDebuggingOn(app) != true && DevSettings.enableWirelessDebugging(app, whenUnsure = true)) {
                 turnOffWirelessDebugging = true
+            } else if (DevSettings.switchRefused) {
+                // The old daemon still may, as shell. Left on: the app couldn't switch it on again.
+                val switched = withContext(Dispatchers.IO) {
+                    runCatching { service?.putGlobalString(DevSettings.ADB_WIFI_ENABLED, "1") }.getOrNull()
+                }
+                if (switched == true) {
+                    DebugLog.i("HiLightPlus", "Had the running daemon turn Wireless debugging on")
+                    delay(WIRELESS_DEBUGGING_SETTLE_MS)
+                }
             }
             val result = startDaemon()
             if (result != WirelessAdb.StartResult.Started) {

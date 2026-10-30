@@ -1,6 +1,6 @@
 # Privacy Policy for HiLight Plus
 
-**Last updated:** October 21, 2026
+**Last updated:** October 30, 2026
 
 **HiLight Plus** ("we", "our", or "the app") is developed by **mwilky**. We are committed to protecting your privacy. This Privacy Policy outlines how your information is handled when you use HiLight Plus.
 
@@ -27,7 +27,7 @@ HiLight Plus requests sensitive Android permissions solely to deliver real-time 
 - **Data Handling:** Notification metadata (app package name, sender or caller title) is processed in real time to match your custom lighting rules. We do **not** read or store notification contents, chat bodies, or attachments.
 
 ### C. Reaching the Rear Lights (`INTERNET`, `ACCESS_LOCAL_NETWORK`, `WRITE_SECURE_SETTINGS`)
-- **Purpose:** Android only lets the phone's own developer tools control the rear LED array. HiLight Plus pairs once with your phone's Wireless debugging and uses it to start a small helper process on your phone that drives the lights. The Internet permission is needed for that connection, which goes only to the phone itself (127.0.0.1). Local network access is used to find the pairing screen, which Wireless debugging announces on the phone. After the first connection, the helper grants the app permission to change secure system settings, used only to switch Wireless debugging on when the helper needs starting (after a restart, for example), and off again afterwards when it can safely do so, so the lights resume without your help.
+- **Purpose:** Android only lets the phone's own developer tools control the rear LED array. HiLight Plus pairs once with your phone's Wireless debugging and uses it to start a small helper process on your phone that drives the lights. The Internet permission is needed for that connection, which goes only to the phone itself (127.0.0.1). Local network access is used to find the pairing screen, which Wireless debugging announces on the phone. After the first connection, the helper grants the app permission to change secure system settings, used only to switch Wireless debugging on when the helper needs starting (after a restart, for example), and off again afterwards when it can safely do so, so the lights resume without your help. From Android 17 QPR3 Beta 3, Android no longer allows apps to change this setting; the helper may still switch it on while it is running, and otherwise the app asks you to turn it on.
 - **Data Handling:** No data is sent off your device. The pairing key is stored in the app's private storage, is excluded from backups, and is never shared. You can remove the pairing at any time under Developer options > Wireless debugging.
 
 ### D. Notifications (`POST_NOTIFICATIONS`) and Start-up (`RECEIVE_BOOT_COMPLETED`)

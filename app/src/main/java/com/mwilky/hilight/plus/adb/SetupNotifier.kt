@@ -174,6 +174,32 @@ class SetupNotifier(private val context: Context) {
             context.getSystemService(NotificationManager::class.java).notify(NETWORK_NOTIFICATION_ID, notification)
         }
 
+        /**
+         * Wireless debugging is off and Android won't let the app switch it on (Android 17 QPR3
+         * Beta 3). Tapping opens Developer options at the switch. Shares the network approval's
+         * slot: only one of them applies at a time, and connecting clears either.
+         */
+        fun showWirelessDebuggingOff(context: Context) {
+            if (context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
+            SetupNotifier(context).ensureChannel()
+            val open = PendingIntent.getActivity(
+                context, REQUEST_WIRELESS_OFF,
+                SetupIntents.developerOptions(context),
+                PENDING_FLAGS
+            )
+            val text = context.getString(R.string.setup_notif_wireless_off_text)
+            val notification = Notification.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_stat_ring)
+                .setContentTitle(context.getString(R.string.setup_notif_wireless_off_title))
+                .setContentText(text)
+                .setStyle(Notification.BigTextStyle().bigText(text))
+                .setContentIntent(open)
+                .setCategory(Notification.CATEGORY_STATUS)
+                .setAutoCancel(true)
+                .build()
+            context.getSystemService(NotificationManager::class.java).notify(NETWORK_NOTIFICATION_ID, notification)
+        }
+
         fun cancelNetworkApproval(context: Context) {
             context.getSystemService(NotificationManager::class.java).cancel(NETWORK_NOTIFICATION_ID)
         }
@@ -208,6 +234,7 @@ class SetupNotifier(private val context: Context) {
         }
         private const val PAIRING_LOST_NOTIFICATION_ID = 4105
         private const val REQUEST_PAIR_AGAIN = 5
+        private const val REQUEST_WIRELESS_OFF = 6
         private const val REQUEST_SETTINGS = 1
         private const val REQUEST_CODE = 2
         private const val REQUEST_APP = 3

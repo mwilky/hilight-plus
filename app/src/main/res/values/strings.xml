@@ -106,6 +106,8 @@
     <string name="setup_notif_done_text">HiLight Plus is connected to the rear lights.</string>
     <string name="setup_notif_network_title">Allow Wireless debugging on this Wi-Fi</string>
     <string name="setup_notif_network_text">HiLight Plus needs it for a few seconds to start the lights. Tap here, then choose Always allow on this network when Android asks.</string>
+    <string name="setup_notif_wireless_off_title">Turn on Wireless debugging</string>
+    <string name="setup_notif_wireless_off_text">HiLight Plus can\'t start the lights while it\'s off, and Android no longer lets the app turn it on. Tap here to go straight to it.</string>
     <string name="setup_notif_pairing_lost_title">Pair HiLight Plus again</string>
     <string name="setup_notif_pairing_lost_text">Your phone no longer accepts HiLight Plus\'s Wireless debugging pairing, so the lights can\'t start after a restart or update. Tap to pair again.</string>
 
@@ -180,6 +182,9 @@
     <string name="connect_status_network_not_allowed">Allow this Wi-Fi</string>
     <string name="connect_desc_network_not_allowed">Wireless debugging hasn\'t been allowed on this Wi-Fi network yet, so HiLight Plus can\'t start the lights. Tap Ask again, then choose Always allow on this network when Android asks. If you turned Developer options off, turn it back on first.</string>
     <string name="connect_btn_ask_again">Ask again</string>
+    <string name="connect_status_wireless_off">Turn on Wireless debugging</string>
+    <string name="connect_desc_wireless_off">Wireless debugging is off, and this version of Android no longer lets HiLight Plus turn it on. Turn it on in Developer options and the lights start by themselves. Leave it on and they come back on their own after a restart.</string>
+    <string name="connect_btn_wireless_off">Open Developer options</string>
     <string name="connect_btn_set_up">Set up</string>
     <string name="connect_btn_wifi">Turn on Wi-Fi</string>
     <string name="pairing_lost_title">Pair again</string>
