@@ -273,6 +273,10 @@ class DaemonBridge private constructor(private val app: Application) {
     // can beat, so it's also written here at once and logged at the next start.
     private val shutdownNote = File(File(app.noBackupFilesDir, "adb"), "last_shutdown")
 
+    // Present when the shutdown hook switched Wireless debugging on for a user who had it off:
+    // the first daemon of the next boot switches it off again.
+    private val restoreOffMarker = File(File(app.noBackupFilesDir, "adb"), "restore_wireless_off")
+
     init {
         Shizuku.addRequestPermissionResultListener(permissionListener)
         Shizuku.addBinderReceivedListenerSticky {
@@ -719,7 +723,10 @@ class DaemonBridge private constructor(private val app: Application) {
      * on for the next start, and off again now if it was only on for this one.
      */
     private fun afterConnect(bound: IHiLightService, via: Method) {
-        val turnOff = via == Method.BUILT_IN && turnOffWirelessDebugging
+        // Switched on by the shutdown hook for this boot, for a user who had it off.
+        val restoreOff = via == Method.BUILT_IN && restoreOffMarker.exists()
+        restoreOffMarker.delete()
+        val turnOff = via == Method.BUILT_IN && (turnOffWirelessDebugging || restoreOff)
         turnOffWirelessDebugging = false
         scope.launch {
             val canWrite = DevSettings.canWriteSecureSettings(app) || withContext(Dispatchers.IO) {
@@ -740,7 +747,15 @@ class DaemonBridge private constructor(private val app: Application) {
                 DebugLog.i("HiLightPlus", "Leaving Wireless debugging on: USB debugging is off, so turning it off would stop the daemon")
                 return@launch
             }
-            if (DevSettings.disableWirelessDebugging(app)) {
+            // Where the app may not switch it, the daemon does.
+            val off = if (DevSettings.switchRefused(app)) {
+                withContext(Dispatchers.IO) {
+                    runCatching { bound.putGlobalString(DevSettings.ADB_WIFI_ENABLED, "0") }.getOrDefault(false)
+                }
+            } else {
+                DevSettings.disableWirelessDebugging(app)
+            }
+            if (off) {
                 DebugLog.i("HiLightPlus", "Turned Wireless debugging off again; USB debugging keeps the daemon running")
             }
         }
@@ -779,11 +794,21 @@ class DaemonBridge private constructor(private val app: Application) {
                     noteShutdown("no daemon connected; Wireless debugging is left as it is")
                     return@launch
                 }
+                // The daemon reads the real value, which the app may not; one left on stays as the
+                // user had it, one that was off goes back off once the next daemon is running.
+                val wasOn = withContext(Dispatchers.IO) {
+                    runCatching { bound.getGlobalString(DevSettings.ADB_WIFI_ENABLED) }.getOrNull()?.trim() == "1"
+                }
+                if (wasOn) {
+                    noteShutdown("Wireless debugging was already on")
+                    return@launch
+                }
                 val on = withContext(Dispatchers.IO) {
                     runCatching { bound.putGlobalString(DevSettings.ADB_WIFI_ENABLED, "1") }.getOrDefault(false)
                 }
+                if (on) runCatching { restoreOffMarker.createNewFile() }
                 noteShutdown(
-                    if (on) "had the daemon turn Wireless debugging on for the next boot"
+                    if (on) "had the daemon turn Wireless debugging on for the next boot; it was off, so it goes off again once connected"
                     else "the daemon couldn't turn Wireless debugging on"
                 )
             } finally {
