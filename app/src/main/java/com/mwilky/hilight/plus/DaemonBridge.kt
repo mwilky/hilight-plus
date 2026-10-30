@@ -1,9 +1,11 @@
 package com.mwilky.hilight.plus
 
 import android.app.Application
+import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
@@ -256,6 +258,17 @@ class DaemonBridge private constructor(private val app: Application) {
 
     var onAvailabilityChanged: (() -> Unit)? = null
 
+    // Registered, not in the manifest: Android sends ACTION_SHUTDOWN with
+    // FLAG_RECEIVER_REGISTERED_ONLY (ShutdownThread), so a manifest receiver never sees it. This
+    // process lives as long as the daemon does, which keeps it out of the freezer.
+    private val shutdownReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            DebugLog.i("HiLightPlus", "${intent.action} -> preparing for the next boot")
+            val pending = goAsync()
+            prepareForReboot { pending.finish() }
+        }
+    }
+
     // What the shutdown did. The log reaches disk on another thread, which the phone going down
     // can beat, so it's also written here at once and logged at the next start.
     private val shutdownNote = File(File(app.noBackupFilesDir, "adb"), "last_shutdown")
@@ -287,6 +300,8 @@ class DaemonBridge private constructor(private val app: Application) {
             shutdownNote.delete()
         }
         DebugLog.i("HiLightPlus", "Started ${SystemClock.elapsedRealtime() / 1000}s after boot; Wi-Fi connected: ${DevSettings.isWifiConnected(app)}")
+        // Exported, as a system broadcast needs; ACTION_SHUTDOWN is protected, so only the system sends it.
+        app.registerReceiver(shutdownReceiver, IntentFilter(Intent.ACTION_SHUTDOWN), Context.RECEIVER_EXPORTED)
         app.contentResolver.registerContentObserver(
             Settings.Global.getUriFor(Settings.Global.DEVELOPMENT_SETTINGS_ENABLED), false, devOptionsObserver
         )

@@ -53,8 +53,7 @@ class DaemonBinderProvider : ContentProvider() {
 
 /**
  * After a reboot or an app update, gets the daemon going again without the user opening the app.
- * With the built-in connection that means waiting for Wi-Fi and turning Wireless debugging back on,
- * or, where the app may not, having the daemon turn it on as the phone goes down.
+ * With the built-in connection that means waiting for Wi-Fi and turning Wireless debugging back on.
  */
 class DaemonStartReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -62,12 +61,6 @@ class DaemonStartReceiver : BroadcastReceiver() {
             Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED -> {
                 DebugLog.i("DaemonStartReceiver", "${intent.action} -> connecting")
                 LightController.get(context).refreshStatus()
-            }
-            Intent.ACTION_SHUTDOWN -> {
-                DebugLog.i("DaemonStartReceiver", "${intent.action} -> preparing for the next boot")
-                // Ordered: Android waits for this (a few seconds at most) before going down.
-                val pending = goAsync()
-                LightController.get(context).daemon.prepareForReboot { pending.finish() }
             }
         }
     }
