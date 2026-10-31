@@ -2,7 +2,7 @@ I've been working on an app for the Pixel 11 Pro's rear LED ring and it's now on
 
 The short version: a colour and pattern for each contact or app, a charging gauge, a low battery warning, a Do Not Disturb indicator, and rules for when it should stay dark. It can also redo Gemini's lights in whatever look you want.
 
-And best of all, Shizuku isn't required!
+And best of all, no root and no Shizuku needed!
 
 [Google Play](https://play.google.com/store/apps/details?id=com.mwilky.hilight.plus) · [Source on GitHub](https://github.com/mwilky/hilight-plus) · [Screenshots](https://github.com/mwilky/hilight-plus#readme)
 
@@ -75,7 +75,7 @@ And best of all, Shizuku isn't required!
 * USB or Wireless debugging needs to stay on. Wi-Fi is needed whenever the helper has to start (setup, reboot, update) because Wireless debugging only runs on Wi-Fi.
 * On Android 17 QPR3 Beta 3 and later, Google stopped apps switching Wireless debugging on. The helper still can, so it switches it on as the phone shuts down, and the lights come back by themselves after a reboot as long as you're on a Wi-Fi network you've allowed it on. If you had it off, it goes back off once the lights are running. After a crash or a reboot elsewhere, the app tells you and starts the lights as soon as you turn it on. Leaving it on avoids that altogether.
 * I'd recommend turning on "Disable adb authorization timeout" in Developer options, otherwise Android forgets the pairing after 7 days unused. The app suggests it but won't change it for you, and tells you if the pairing is lost.
-* [Shizuku](https://shizuku.rikka.app/) still works too if you already use it.
+* [Shizuku](https://shizuku.rikka.app/) works too, over wireless debugging or root, if you'd rather use that.
 * Turn off the stock "Calls from favourites", "Gemini feedback" and (on QPR2 and later) "Messages from favourites" HiLight options so they don't fight over the ring. Onboarding checks this.
 
 It's open source under GPL-3.0: [github.com/mwilky/hilight-plus](https://github.com/mwilky/hilight-plus). Happy to answer questions or take suggestions, and if something doesn't work on your phone the debug log share in About is the quickest way to get it to me.
