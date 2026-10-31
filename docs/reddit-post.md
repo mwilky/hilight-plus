@@ -18,6 +18,7 @@ And best of all, no root and no Shizuku needed!
 **Notifications**
 
 * Rules per sender and per app. App rules can pull the colour from the app icon.
+* Text rules, for when a title or message contains (or is exactly) some text. Handy for delivery updates or verification codes, from any app or just one.
 * 13 patterns in three groups: Simple, Motion and Gemini. Solid, Breathe, Pulse, Wave, Comet, Orbit, Beacon, Ripple, Sparkle, Rainbow, plus Gemini's own Listening, Thinking and Replying effects.
 * Eight preset colours or anything from a colour wheel.
 * Brightness from a dim glow to full, and speed from half to double the pattern's normal pace, per rule.

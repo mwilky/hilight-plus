@@ -3,6 +3,7 @@ package com.mwilky.hilight.plus
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.Person
+import android.os.Parcelable
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import com.mwilky.hilight.plus.core.AppIconColorExtractor
@@ -332,6 +333,28 @@ class NotificationTrigger : NotificationListenerService() {
             return null
         }
 
+        // Text rules are the most specific thing a user can ask for, so they sit above contacts and apps.
+        val textRule = snapshot.findTextRule(pkg, extractTitle(notification), extractMessages(notification))
+        if (textRule != null) {
+            if (textRule.pattern == PatternMode.OFF) {
+                DebugLog.i(TAG, "Text rule ${textRule.id} matched ($pkg) but is OFF -> NO LIGHT")
+                return null
+            }
+            DebugLog.i(TAG, "Text rule ${textRule.id} matched ($pkg)")
+            return ResolvedAlert(
+                "text_${textRule.id}",
+                textRule.pattern,
+                textRule.color,
+                textRule.faceDownMode,
+                textRule.dndMode,
+                textRule.quietHoursMode,
+                textRule.quietHoursStartMinutes,
+                textRule.quietHoursEndMinutes,
+                textRule.brightness,
+                textRule.speed
+            )
+        }
+
         val senderName = extractSenderName(notification)
         val contactRule = if (senderName.isNotBlank()) snapshot.findMessageRuleForSender(senderName) else null
         if (contactRule != null) {
@@ -593,6 +616,29 @@ class NotificationTrigger : NotificationListenerService() {
         if (!convoTitle.isNullOrBlank()) return convoTitle
 
         return ""
+    }
+
+    /** The bold first line; a conversation that has no title of its own uses the conversation's. */
+    private fun extractTitle(notification: Notification): String? {
+        val extras = notification.extras ?: return null
+        return extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()?.takeIf { it.isNotBlank() }
+            ?: extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE)?.toString()?.takeIf { it.isNotBlank() }
+    }
+
+    /**
+     * Every place an app may have put the message: the collapsed text, the expanded text, an
+     * inbox's lines and a conversation's newest message. A text rule matches if any of them does.
+     */
+    private fun extractMessages(notification: Notification): List<String> {
+        val extras = notification.extras ?: return emptyList()
+        return buildList {
+            extras.getCharSequence(Notification.EXTRA_TEXT)?.let { add(it.toString()) }
+            extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.let { add(it.toString()) }
+            extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)?.forEach { add(it.toString()) }
+            extras.getParcelableArray(Notification.EXTRA_MESSAGES, Parcelable::class.java)
+                ?.let { Notification.MessagingStyle.Message.getMessagesFromBundleArray(it) }
+                ?.lastOrNull()?.text?.let { add(it.toString()) }
+        }.filter { it.isNotBlank() }.distinct()
     }
 
     private sealed interface ListenerEvent {

@@ -84,6 +84,11 @@ internal object DebugReport {
             snapshot.appRules.forEach {
                 rule("App ${it.packageName}", it.isEnabled, it.pattern, it.color, it.faceDownMode, it.dndMode, it.quietHoursMode, it.quietHoursStartMinutes, it.quietHoursEndMinutes, "autoColor=${it.isAutoColor}")
             }
+            // The text itself is left out: it can be a name or anything else personal.
+            snapshot.textRules.forEach {
+                val match = it.match
+                rule("Text ${it.id}", it.isEnabled, it.pattern, it.color, it.faceDownMode, it.dndMode, it.quietHoursMode, it.quietHoursStartMinutes, it.quietHoursEndMinutes, "${match.field} ${match.type}, app=${match.packageName ?: "any"}")
+            }
             appendLine("Battery: ${snapshot.battery}")
             appendLine("Gemini: ${snapshot.gemini}")
             appendLine("DND indicator: ${snapshot.dndIndicator}")

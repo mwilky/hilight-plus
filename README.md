@@ -24,6 +24,7 @@ Pixel's built-in HiLight lights the rear ring for calls from favourites and Gemi
 **Notifications**
 - Rules per message sender and per app, plus a general default with automatic colour taken from the app icon.
 - Starred contacts can share a favourites style, which sits between a sender's own rule and the app rule.
+- Text rules: light up when a notification's title or message contains, or is exactly, some text, from any app or just one. They're checked before every other notification rule, so a title containing "Delivery" or a message containing "verification code" can have its own look.
 - Thirteen patterns, picked by group (Simple, Motion, Gemini): solid, breathe, pulse, beacon, wave, comet, orbit, ripple, sparkle, rainbow, and copies of Gemini's own listening, thinking and replying effects.
 - Eight preset colours or any custom colour from a colour wheel, for every rule, battery's fixed colour and Gemini's states. The custom colour's hex code can be copied and pasted into another rule.
 - A brightness setting, from 10% to 100%, for every rule and each of Gemini's states.

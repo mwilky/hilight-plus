@@ -42,6 +42,7 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 [LIST]
 [*]Per-sender and per-app rules with dynamic colour extraction from app icons.
 [*]Starred contacts can share a favourites style, sitting between a sender's own rule and the app rule.
+[*]Text rules: match a notification's [B]title[/B] or [B]message[/B] that [I]contains[/I] or [I]is exactly[/I] some text, from any app or just one. Checked before every other notification rule.
 [*]13 distinct LED animation patterns, picked by group: [I]Solid, Breathe, Pulse, Beacon, Wave, Comet, Orbit, Ripple, Sparkle, Rainbow[/I], plus copies of Gemini's own [I]Listening, Thinking[/I] and [I]Replying[/I] effects.
 [*]Eight preset colours or any custom colour from a colour wheel, for every rule, battery and Gemini. Hex codes can be copied and pasted between rules.
 [*]Brightness from 10% to 100% for every rule and each Gemini state.

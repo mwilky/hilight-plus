@@ -239,6 +239,32 @@
     <string name="notifs_app_rules_header">Custom app rules (%1$d)</string>
     <string name="notifs_no_app_rules">No custom app rules.</string>
     <string name="notifs_add_app_btn">Add app</string>
+    <string name="notifs_text_rules_header">Text rules (%1$d)</string>
+    <string name="notifs_no_text_rules">No text rules. Light up for notifications whose title or message matches some text.</string>
+    <string name="notifs_add_text_rule_btn">Add text rule</string>
+    <string name="text_rule_name">text rule</string>
+    <string name="text_rule_new_title">New text rule</string>
+    <string name="text_rule_section_match">Match</string>
+    <string name="text_rule_field_title">Look in</string>
+    <string name="text_rule_field_title_option">Title</string>
+    <string name="text_rule_field_message_option">Message</string>
+    <string name="text_rule_field_title_desc">The notification\'s bold first line, usually the sender or subject.</string>
+    <string name="text_rule_field_message_desc">The text under the title, including the expanded message.</string>
+    <string name="text_rule_type_title">Match when it</string>
+    <string name="text_rule_type_contains">Contains</string>
+    <string name="text_rule_type_equals">Is exactly</string>
+    <string name="text_rule_type_contains_desc">Lights when the text appears anywhere in it.</string>
+    <string name="text_rule_type_equals_desc">Lights only when it is this text and nothing else.</string>
+    <string name="text_rule_text_label">Text</string>
+    <string name="text_rule_text_supporting">Not case-sensitive. Text rules are checked before contact and app rules.</string>
+    <string name="text_rule_app_title">App</string>
+    <string name="text_rule_any_app">Any app</string>
+    <string name="text_rule_any_app_cd">Match any app</string>
+    <string name="text_rule_summary_title_contains">Title contains “%1$s”</string>
+    <string name="text_rule_summary_title_equals">Title is “%1$s”</string>
+    <string name="text_rule_summary_message_contains">Message contains “%1$s”</string>
+    <string name="text_rule_summary_message_equals">Message is “%1$s”</string>
+    <string name="text_rule_summary_in_app">%1$s · %2$s</string>
 
     <!-- Additional Settings Section -->
     <string name="settings_additional_header">Additional settings</string>

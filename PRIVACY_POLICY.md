@@ -1,6 +1,6 @@
 # Privacy Policy for HiLight Plus
 
-**Last updated:** October 30, 2026
+**Last updated:** October 31, 2026
 
 **HiLight Plus** ("we", "our", or "the app") is developed by **mwilky**. We are committed to protecting your privacy. This Privacy Policy outlines how your information is handled when you use HiLight Plus.
 
@@ -24,7 +24,7 @@ HiLight Plus requests sensitive Android permissions solely to deliver real-time 
 
 ### B. Notification Listener Access (`BIND_NOTIFICATION_LISTENER_SERVICE`)
 - **Purpose:** Used to detect incoming calls (from the phone dialer and from apps such as WhatsApp, Teams and Meet) and incoming notifications and chats from user-selected applications, to trigger corresponding LED light alerts. HiLight Plus does **not** request phone-state or call-log permissions; calls are recognised from the dialer's own call notification.
-- **Data Handling:** Notification metadata (app package name, sender or caller title) is processed in real time to match your custom lighting rules. We do **not** read or store notification contents, chat bodies, or attachments.
+- **Data Handling:** Notification metadata (app package name, sender or caller title) is processed in real time to match your custom lighting rules. If you create a text rule, a notification's title and message text are also checked against it as the notification arrives. This happens in memory on your device only: notification text is never stored, logged, or sent anywhere, and attachments are never read.
 
 ### C. Reaching the Rear Lights (`INTERNET`, `ACCESS_LOCAL_NETWORK`, `WRITE_SECURE_SETTINGS`)
 - **Purpose:** Android only lets the phone's own developer tools control the rear LED array. HiLight Plus pairs once with your phone's Wireless debugging and uses it to start a small helper process on your phone that drives the lights. The Internet permission is needed for that connection, which goes only to the phone itself (127.0.0.1). Local network access is used to find the pairing screen, which Wireless debugging announces on the phone. After the first connection, the helper grants the app permission to change secure system settings, used only to switch Wireless debugging on when the helper needs starting (after a restart, for example), and off again afterwards when it can safely do so, so the lights resume without your help. From Android 17 QPR3 Beta 3, Android no longer allows apps to change this setting; the helper, which still may, switches it on as the phone shuts down so the lights resume after a restart, and off again afterwards if you had it off; otherwise the app asks you to turn it on.

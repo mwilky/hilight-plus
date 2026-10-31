@@ -21,6 +21,7 @@ import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.SettingsSnapshot
 import com.mwilky.hilight.plus.SplitAnimation
 import com.mwilky.hilight.plus.SplitLook
+import com.mwilky.hilight.plus.TextNotificationRule
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -68,6 +69,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteMessageContactRule(ruleId: String) = launch { store.deleteMessageContactRule(ruleId) }
     fun saveAppRule(rule: AppNotificationRule) = launch { store.saveAppRule(rule) }
     fun deleteAppRule(packageName: String) = launch { store.deleteAppRule(packageName) }
+    fun saveTextRule(rule: TextNotificationRule) = launch { store.saveTextRule(rule) }
+    fun deleteTextRule(ruleId: String) = launch { store.deleteTextRule(ruleId) }
     fun setCallRuleSort(sort: RuleSort) = launch { store.setCallRuleSort(sort) }
     fun setMessageRuleSort(sort: RuleSort) = launch { store.setMessageRuleSort(sort) }
     fun setAppRuleSort(sort: RuleSort) = launch { store.setAppRuleSort(sort) }

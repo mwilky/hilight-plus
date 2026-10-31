@@ -24,6 +24,7 @@ class AppStore private constructor(private val appContext: Context) {
     @Volatile private var lastGoodContactRules: List<ContactRule> = emptyList()
     @Volatile private var lastGoodMessageRules: List<MessageContactRule> = emptyList()
     @Volatile private var lastGoodAppRules: List<AppNotificationRule> = emptyList()
+    @Volatile private var lastGoodTextRules: List<TextNotificationRule> = emptyList()
 
     companion object {
         private val KEY_ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
@@ -139,6 +140,7 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_APP_RULES_JSON = stringPreferencesKey("app_rules_json")
         private val KEY_MESSAGE_CONTACT_RULES_SORT = stringPreferencesKey("message_contact_rules_sort")
         private val KEY_APP_RULES_SORT = stringPreferencesKey("app_rules_sort")
+        private val KEY_TEXT_RULES_JSON = stringPreferencesKey("text_rules_json")
 
         // Battery Indicator Settings
         private val KEY_BATTERY_JSON = stringPreferencesKey("battery_settings_json")
@@ -640,6 +642,26 @@ class AppStore private constructor(private val appContext: Context) {
         }
     }
 
+    suspend fun saveTextRule(rule: TextNotificationRule) {
+        appContext.dataStore.edit { prefs ->
+            val currentRules = readTextRules(prefs[KEY_TEXT_RULES_JSON]).toMutableList()
+            val index = currentRules.indexOfFirst { it.id == rule.id }
+            if (index >= 0) {
+                currentRules[index] = rule
+            } else {
+                currentRules.add(rule)
+            }
+            prefs[KEY_TEXT_RULES_JSON] = encodeRuleArray(currentRules) { it.toJson() }
+        }
+    }
+
+    suspend fun deleteTextRule(ruleId: String) {
+        appContext.dataStore.edit { prefs ->
+            val currentRules = readTextRules(prefs[KEY_TEXT_RULES_JSON]).filterNot { it.id == ruleId }
+            prefs[KEY_TEXT_RULES_JSON] = encodeRuleArray(currentRules) { it.toJson() }
+        }
+    }
+
     suspend fun snapshot(): SettingsSnapshot = buildSnapshot(appContext.dataStore.data.first())
 
     /** Every setting, as a backup file's contents (see [SettingsBackup] for what's left out). */
@@ -757,6 +779,7 @@ class AppStore private constructor(private val appContext: Context) {
             favouriteNotifSpeed = prefs[KEY_FAV_NOTIF_SPEED] ?: d.favouriteNotifSpeed,
             messageContactRules = readMessageRules(prefs[KEY_MESSAGE_CONTACT_RULES_JSON]),
             appRules = readAppRules(prefs[KEY_APP_RULES_JSON]),
+            textRules = readTextRules(prefs[KEY_TEXT_RULES_JSON]),
             messageRuleSort = enumOr(prefs[KEY_MESSAGE_CONTACT_RULES_SORT], d.messageRuleSort),
             appRuleSort = enumOr(prefs[KEY_APP_RULES_SORT], d.appRuleSort),
             battery = BatterySettings.fromJson(prefs[KEY_BATTERY_JSON]),
@@ -780,6 +803,12 @@ class AppStore private constructor(private val appContext: Context) {
     private fun readAppRules(raw: String?): List<AppNotificationRule> {
         val parsed = parseRuleArray(raw, lastGoodAppRules, AppNotificationRule::fromJson)
         lastGoodAppRules = parsed
+        return parsed
+    }
+
+    private fun readTextRules(raw: String?): List<TextNotificationRule> {
+        val parsed = parseRuleArray(raw, lastGoodTextRules, TextNotificationRule::fromJson)
+        lastGoodTextRules = parsed
         return parsed
     }
 }
@@ -865,6 +894,8 @@ data class SettingsSnapshot(
     val favouriteNotifSpeed: Float,
     val messageContactRules: List<MessageContactRule>,
     val appRules: List<AppNotificationRule>,
+    // Checked in saved order, so the first matching rule wins; there is no sort for them.
+    val textRules: List<TextNotificationRule> = emptyList(),
     val messageRuleSort: RuleSort,
     val appRuleSort: RuleSort,
     val battery: BatterySettings,
@@ -879,6 +910,9 @@ data class SettingsSnapshot(
 
     fun findMessageRuleForSender(senderName: String): MessageContactRule? =
         firstEnabledNameMatch(senderName, messageContactRules, MessageContactRule::name, MessageContactRule::isEnabled)
+
+    fun findTextRule(packageName: String, title: String?, messages: List<String>): TextNotificationRule? =
+        textRules.firstOrNull { it.isEnabled && it.match.matches(packageName, title, messages) }
 
     fun findRuleForPackage(packageName: String): AppNotificationRule? {
         if (packageName.isBlank()) return null

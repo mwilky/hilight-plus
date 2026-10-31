@@ -381,7 +381,9 @@ fun EmptyRuleHint(text: String, icon: ImageVector) {
         colors = ListItemDefaults.colors(
             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
         ),
-        shapes = ListItemDefaults.shapes(shape = MaterialTheme.shapes.large)
+        shapes = ListItemDefaults.shapes(shape = MaterialTheme.shapes.large),
+        // Keeps the icon level with hints that wrap onto more than one line.
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(text)
     }

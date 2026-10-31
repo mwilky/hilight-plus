@@ -72,6 +72,10 @@ import com.mwilky.hilight.plus.DaemonBridge
 import com.mwilky.hilight.plus.SplitAnimation
 import com.mwilky.hilight.plus.SplitLook
 import com.mwilky.hilight.plus.StockHiLightState
+import com.mwilky.hilight.plus.TextMatch
+import com.mwilky.hilight.plus.TextMatchField
+import com.mwilky.hilight.plus.TextMatchType
+import com.mwilky.hilight.plus.TextNotificationRule
 import com.mwilky.hilight.plus.core.PatternRenderer
 import com.mwilky.hilight.plus.ui.diagnostics.PairingLostCard
 import com.mwilky.hilight.plus.ui.diagnostics.PermissionState
@@ -116,6 +120,7 @@ fun HomeScreen(
 
     var msgRuleBeingEdited by remember { mutableStateOf<MessageContactRule?>(null) }
     var appRuleBeingEdited by remember { mutableStateOf<AppNotificationRule?>(null) }
+    var textRuleBeingEdited by remember { mutableStateOf<TextNotificationRule?>(null) }
     var isPickingApp by remember { mutableStateOf(false) }
     var isConfiguringDefaultNotif by remember { mutableStateOf(false) }
     var isConfiguringFavouriteNotif by remember { mutableStateOf(false) }
@@ -237,6 +242,14 @@ fun HomeScreen(
         onDeleteAppRule = viewModel::deleteAppRule,
         onChangeAppRuleSort = viewModel::setAppRuleSort,
         onAddApp = { isPickingApp = true },
+        onToggleTextRule = { rule, isEnabled ->
+            viewModel.saveTextRule(rule.copy(isEnabled = isEnabled))
+        },
+        onEditTextRule = { rule -> textRuleBeingEdited = rule },
+        onDeleteTextRule = viewModel::deleteTextRule,
+        onAddTextRule = {
+            textRuleBeingEdited = TextNotificationRule(id = UUID.randomUUID().toString(), match = TextMatch())
+        },
         onBatteryChange = viewModel::setBattery,
         renderer = renderer,
         onGeminiChange = viewModel::setGemini,
@@ -585,6 +598,48 @@ fun HomeScreen(
         )
     }
 
+    // Text Rule Dialog
+    textRuleBeingEdited?.let { rule ->
+        val isNew = state.textRules.none { it.id == rule.id }
+        CustomRuleDialog(
+            title = if (isNew) {
+                stringResource(R.string.text_rule_new_title)
+            } else {
+                stringResource(R.string.dialog_configure_title, stringResource(R.string.text_rule_name))
+            },
+            initialColor = rule.color,
+            initialPattern = rule.pattern,
+            initialFaceDown = rule.faceDownMode,
+            initialDnd = rule.dndMode,
+            initialQuietHours = rule.quietHoursMode,
+            initialQuietStart = rule.quietHoursStartMinutes ?: state.quietHoursStartMinutes,
+            initialQuietEnd = rule.quietHoursEndMinutes ?: state.quietHoursEndMinutes,
+            initialBrightness = rule.brightness,
+            initialSpeed = rule.speed,
+            initialTextMatch = rule.match,
+            renderer = renderer,
+            controller = controller,
+            onDismiss = { textRuleBeingEdited = null },
+            onSave = { result ->
+                viewModel.saveTextRule(
+                    rule.copy(
+                        match = result.textMatch ?: rule.match,
+                        pattern = result.pattern,
+                        color = result.color,
+                        faceDownMode = result.faceDown,
+                        dndMode = result.dndMode,
+                        quietHoursMode = result.quietHoursMode,
+                        quietHoursStartMinutes = result.quietHoursStartMinutes,
+                        quietHoursEndMinutes = result.quietHoursEndMinutes,
+                        brightness = result.brightness,
+                        speed = result.speed
+                    )
+                )
+                textRuleBeingEdited = null
+            }
+        )
+    }
+
     // Favourite Contacts (Notifications) Dialog
     if (isConfiguringFavouriteNotif) {
         CustomRuleDialog(
@@ -721,6 +776,10 @@ fun HomeContent(
     onDeleteAppRule: (String) -> Unit,
     onChangeAppRuleSort: (RuleSort) -> Unit,
     onAddApp: () -> Unit,
+    onToggleTextRule: (TextNotificationRule, Boolean) -> Unit = { _, _ -> },
+    onEditTextRule: (TextNotificationRule) -> Unit = {},
+    onDeleteTextRule: (String) -> Unit = {},
+    onAddTextRule: () -> Unit = {},
     // Battery
     onBatteryChange: (BatterySettings) -> Unit,
     renderer: PatternRenderer,
@@ -847,6 +906,10 @@ fun HomeContent(
                         onDeleteAppRule = onDeleteAppRule,
                         onChangeAppRuleSort = onChangeAppRuleSort,
                         onAddApp = onAddApp,
+                        onToggleTextRule = onToggleTextRule,
+                        onEditTextRule = onEditTextRule,
+                        onDeleteTextRule = onDeleteTextRule,
+                        onAddTextRule = onAddTextRule,
                         onChangeDuration = onChangeDuration,
                         onChangeMultiAlertMode = onChangeMultiAlertMode,
                         onChangeSplitAnimation = onChangeSplitAnimation,
@@ -1243,6 +1306,16 @@ fun HomeScreenPreviewContent(
         )
     } else emptyList()
 
+    val mockTextRules = if (hasAppRules) {
+        listOf(
+            TextNotificationRule(
+                id = "1",
+                match = TextMatch(TextMatchField.TITLE, TextMatchType.CONTAINS, "Delivery", "com.amazon.mShop.android.shopping", "Amazon"),
+                pattern = PatternMode.BEACON
+            )
+        )
+    } else emptyList()
+
     HiLightPlusTheme {
         HomeContent(
             connectionState = DaemonBridge.State.CONNECTED,
@@ -1271,6 +1344,7 @@ fun HomeScreenPreviewContent(
                 contactRules = mockCallContacts,
                 messageContactRules = mockMsgContacts,
                 appRules = mockApps,
+                textRules = mockTextRules,
                 multiAlertMode = multiAlertMode,
                 splitAnimation = splitAnimation,
                 splitLook = splitLook,

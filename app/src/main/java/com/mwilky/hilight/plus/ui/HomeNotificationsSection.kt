@@ -26,6 +26,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.automirrored.rounded.Message
 import androidx.compose.material.icons.rounded.PersonAdd
+import androidx.compose.material.icons.rounded.TextFields
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -65,6 +66,10 @@ import com.mwilky.hilight.plus.DaemonBridge
 import com.mwilky.hilight.plus.SplitAnimation
 import com.mwilky.hilight.plus.SplitLook
 import com.mwilky.hilight.plus.StockHiLightState
+import com.mwilky.hilight.plus.TextMatch
+import com.mwilky.hilight.plus.TextMatchField
+import com.mwilky.hilight.plus.TextMatchType
+import com.mwilky.hilight.plus.TextNotificationRule
 import com.mwilky.hilight.plus.core.PatternRenderer
 import com.mwilky.hilight.plus.ui.diagnostics.NotificationAccessCard
 import com.mwilky.hilight.plus.ui.diagnostics.PermissionState
@@ -105,6 +110,10 @@ fun HomeNotifsPage(
     onDeleteAppRule: (String) -> Unit,
     onChangeAppRuleSort: (RuleSort) -> Unit,
     onAddApp: () -> Unit,
+    onToggleTextRule: (TextNotificationRule, Boolean) -> Unit,
+    onEditTextRule: (TextNotificationRule) -> Unit,
+    onDeleteTextRule: (String) -> Unit,
+    onAddTextRule: () -> Unit,
     onChangeDuration: (Int) -> Unit,
     onChangeMultiAlertMode: (MultiAlertMode) -> Unit,
     onChangeSplitAnimation: (SplitAnimation) -> Unit,
@@ -152,7 +161,7 @@ fun HomeNotifsPage(
             title = stringResource(R.string.hero_notifs_title),
             statusText = heroStatusText(
                 enabled = state.isNotificationsEnabled,
-                ruleCount = messageRules.size + appRules.size
+                ruleCount = messageRules.size + appRules.size + state.textRules.size
             ),
             checked = state.isNotificationsEnabled,
             onCheckedChange = onToggleNotifs
@@ -256,6 +265,35 @@ fun HomeNotifsPage(
                     }
                 }
                 AddRuleButton(stringResource(R.string.notifs_add_app_btn), Icons.Rounded.Add, onAddApp)
+
+                // Saved order is match order (the first matching rule lights), so there's no sort.
+                val textRules = state.textRules
+                RuleGroupHeader(stringResource(R.string.notifs_text_rules_header, textRules.size))
+                if (textRules.isEmpty()) {
+                    EmptyRuleHint(stringResource(R.string.notifs_no_text_rules), Icons.Rounded.TextFields)
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+                        textRules.forEachIndexed { index, rule ->
+                            RuleListItem(
+                                index = index,
+                                count = textRules.size,
+                                title = textRuleTitle(rule.match),
+                                pattern = rule.pattern,
+                                speed = rule.speed,
+                                color = rule.color,
+                                faceDownMode = rule.faceDownMode,
+                                dndMode = rule.dndMode,
+                                quietHoursMode = rule.quietHoursMode,
+                                renderer = renderer,
+                                isEnabled = rule.isEnabled,
+                                onToggle = { isEnabled -> onToggleTextRule(rule, isEnabled) },
+                                onEdit = { onEditTextRule(rule) },
+                                onDelete = { onDeleteTextRule(rule.id) }
+                            )
+                        }
+                    }
+                }
+                AddRuleButton(stringResource(R.string.notifs_add_text_rule_btn), Icons.Rounded.Add, onAddTextRule)
 
                 RuleGroupHeader(stringResource(R.string.settings_additional_header))
                 Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
@@ -414,6 +452,21 @@ fun HomeNotifsPage(
 
         Spacer(Modifier.height(24.dp))
     }
+}
+
+/** A text rule's name in the list: what it looks for, and the app when it's limited to one. */
+@Composable
+private fun textRuleTitle(match: TextMatch): String {
+    val condition = stringResource(
+        when (match.field to match.type) {
+            TextMatchField.TITLE to TextMatchType.CONTAINS -> R.string.text_rule_summary_title_contains
+            TextMatchField.TITLE to TextMatchType.EQUALS -> R.string.text_rule_summary_title_equals
+            TextMatchField.MESSAGE to TextMatchType.CONTAINS -> R.string.text_rule_summary_message_contains
+            else -> R.string.text_rule_summary_message_equals
+        },
+        match.text
+    )
+    return match.appName?.let { stringResource(R.string.text_rule_summary_in_app, condition, it) } ?: condition
 }
 
 /** Three waiting notifications in the chosen animation, so it's visible before any arrive. */

@@ -39,13 +39,16 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.TextFields
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ButtonGroupDefaults
@@ -58,6 +61,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -89,6 +93,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -108,6 +114,9 @@ import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.DaemonBridge
 import com.mwilky.hilight.plus.R
+import com.mwilky.hilight.plus.TextMatch
+import com.mwilky.hilight.plus.TextMatchField
+import com.mwilky.hilight.plus.TextMatchType
 import com.mwilky.hilight.plus.core.PatternRenderer
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -124,7 +133,8 @@ data class RuleEditorResult(
     val quietHoursStartMinutes: Int,
     val quietHoursEndMinutes: Int,
     val brightness: Float,
-    val speed: Float
+    val speed: Float,
+    val textMatch: TextMatch? = null
 )
 
 /**
@@ -183,7 +193,8 @@ fun CustomRuleDialog(
     initialBrightness: Float = DEFAULT_BRIGHTNESS,
     initialSpeed: Float = DEFAULT_SPEED,
     showDndChoice: Boolean = true,
-    patternGroups: List<PatternGroup> = PatternGroup.RULES
+    patternGroups: List<PatternGroup> = PatternGroup.RULES,
+    initialTextMatch: TextMatch? = null
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -217,7 +228,8 @@ fun CustomRuleDialog(
             initialBrightness = initialBrightness,
             initialSpeed = initialSpeed,
             showDndChoice = showDndChoice,
-            patternGroups = patternGroups
+            patternGroups = patternGroups,
+            initialTextMatch = initialTextMatch
         )
     }
 }
@@ -243,8 +255,11 @@ private fun RuleEditorContent(
     initialSpeed: Float,
     // Off for the DND indicator, which only ever shows during Do Not Disturb.
     showDndChoice: Boolean = true,
-    patternGroups: List<PatternGroup> = PatternGroup.RULES
+    patternGroups: List<PatternGroup> = PatternGroup.RULES,
+    // Only text rules have one; it adds a Match section above the look.
+    initialTextMatch: TextMatch? = null
 ) {
+    var textMatch by remember(initialTextMatch) { mutableStateOf(initialTextMatch) }
     var isAutoColor by remember(initialAutoColor) { mutableStateOf(initialAutoColor) }
     var selectedColor by remember(initialColor) {
         mutableLongStateOf(
@@ -311,10 +326,12 @@ private fun RuleEditorContent(
                 quietHoursStartMinutes = quietStartMinutes,
                 quietHoursEndMinutes = quietEndMinutes,
                 brightness = selectedBrightness,
-                speed = selectedSpeed
+                speed = selectedSpeed,
+                textMatch = textMatch?.let { it.copy(text = it.text.trim()) }
             )
         )
     }
+    val canSave = textMatch.let { it == null || it.text.isNotBlank() }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -331,6 +348,7 @@ private fun RuleEditorContent(
                     actions = {
                         Button(
                             onClick = { save() },
+                            enabled = canSave,
                             shapes = ButtonDefaults.shapes(),
                             modifier = Modifier.padding(end = 8.dp)
                         ) {
@@ -363,6 +381,12 @@ private fun RuleEditorContent(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            textMatch?.let { match ->
+                EditorSection(title = stringResource(R.string.text_rule_section_match)) {
+                    TextMatchControls(match = match, onMatchChange = { textMatch = it })
+                }
+            }
+
             EditorSection(title = stringResource(R.string.dialog_section_look)) {
                 Text(
                     text = stringResource(R.string.dialog_pattern_label),
@@ -582,6 +606,92 @@ private fun RuleEditorContent(
             onConfirm = { minutes ->
                 quietEndMinutes = minutes
                 editingQuietEnd = false
+            }
+        )
+    }
+}
+
+/** Where to look, how to compare, the text itself and which app: the Match section of a text rule. */
+@Composable
+private fun TextMatchControls(match: TextMatch, onMatchChange: (TextMatch) -> Unit) {
+    var pickingApp by remember { mutableStateOf(false) }
+    ChoiceGroup(
+        title = stringResource(R.string.text_rule_field_title),
+        description = stringResource(
+            when (match.field) {
+                TextMatchField.TITLE -> R.string.text_rule_field_title_desc
+                TextMatchField.MESSAGE -> R.string.text_rule_field_message_desc
+            }
+        ),
+        options = listOf(
+            TextMatchField.TITLE to stringResource(R.string.text_rule_field_title_option),
+            TextMatchField.MESSAGE to stringResource(R.string.text_rule_field_message_option)
+        ),
+        selected = match.field,
+        onSelect = { onMatchChange(match.copy(field = it)) }
+    )
+    ChoiceGroup(
+        title = stringResource(R.string.text_rule_type_title),
+        description = stringResource(
+            when (match.type) {
+                TextMatchType.CONTAINS -> R.string.text_rule_type_contains_desc
+                TextMatchType.EQUALS -> R.string.text_rule_type_equals_desc
+            }
+        ),
+        options = listOf(
+            TextMatchType.CONTAINS to stringResource(R.string.text_rule_type_contains),
+            TextMatchType.EQUALS to stringResource(R.string.text_rule_type_equals)
+        ),
+        selected = match.type,
+        onSelect = { onMatchChange(match.copy(type = it)) }
+    )
+    OutlinedTextField(
+        value = match.text,
+        onValueChange = { onMatchChange(match.copy(text = it)) },
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        label = { Text(stringResource(R.string.text_rule_text_label)) },
+        leadingIcon = { Icon(Icons.Rounded.TextFields, contentDescription = null) },
+        supportingText = { Text(stringResource(R.string.text_rule_text_supporting)) },
+        singleLine = true,
+        shape = MaterialTheme.shapes.large,
+        keyboardOptions = KeyboardOptions(
+            capitalization = KeyboardCapitalization.Sentences,
+            imeAction = ImeAction.Done
+        )
+    )
+    // Laid out like the auto colour row, so the editor's tappable rows all look alike.
+    ListItem(
+        onClick = { pickingApp = true },
+        modifier = Modifier.padding(horizontal = 16.dp),
+        shapes = ListItemDefaults.shapes(),
+        colors = ListItemDefaults.colors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        ),
+        leadingContent = { Icon(Icons.Rounded.Apps, contentDescription = null) },
+        supportingContent = {
+            AnimatedText(match.appName ?: stringResource(R.string.text_rule_any_app))
+        },
+        trailingContent = {
+            if (match.packageName != null) {
+                IconButton(onClick = { onMatchChange(match.copy(packageName = null, appName = null)) }) {
+                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.text_rule_any_app_cd))
+                }
+            }
+        }
+    ) {
+        Text(stringResource(R.string.text_rule_app_title))
+    }
+
+    if (pickingApp) {
+        AppPickerDialog(
+            context = LocalContext.current,
+            alreadyAdded = emptySet(),
+            onDismiss = { pickingApp = false },
+            onAppSelected = { pkg, name ->
+                pickingApp = false
+                onMatchChange(match.copy(packageName = pkg, appName = name))
             }
         )
     }
@@ -918,6 +1028,39 @@ private fun RuleEditorPreview() {
             autoExtractedColor = 0xFF25D366,
             initialBrightness = 0.6f,
             initialSpeed = 1.5f
+        )
+    }
+}
+
+@Preview(name = "Text rule editor", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun TextRuleEditorPreview() {
+    HiLightPlusTheme {
+        RuleEditorContent(
+            title = "New text rule",
+            initialColor = 0xFFFF007F,
+            initialPattern = PatternMode.BEACON,
+            renderer = PatternRenderer(),
+            controller = LightController.get(LocalContext.current),
+            onDismiss = {},
+            onSave = {},
+            initialFaceDown = FaceDownMode.INHERIT,
+            initialDnd = DndMode.INHERIT,
+            initialQuietHours = QuietHoursMode.INHERIT,
+            initialQuietStart = 22 * 60,
+            initialQuietEnd = 7 * 60,
+            showAutoColorToggle = false,
+            initialAutoColor = false,
+            autoExtractedColor = null,
+            initialBrightness = DEFAULT_BRIGHTNESS,
+            initialSpeed = DEFAULT_SPEED,
+            initialTextMatch = TextMatch(
+                field = TextMatchField.MESSAGE,
+                type = TextMatchType.CONTAINS,
+                text = "verification code",
+                packageName = "com.google.android.apps.messaging",
+                appName = "Messages"
+            )
         )
     }
 }

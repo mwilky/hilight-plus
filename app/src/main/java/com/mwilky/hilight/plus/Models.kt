@@ -345,6 +345,113 @@ data class AppNotificationRule(
     }
 }
 
+/** Which part of a notification a [TextMatch] reads. */
+enum class TextMatchField(val id: String) {
+    TITLE("title"),
+    MESSAGE("message");
+
+    companion object {
+        fun fromId(id: String?) = entries.find { it.id == id } ?: TITLE
+    }
+}
+
+enum class TextMatchType(val id: String) {
+    CONTAINS("contains"),
+    EQUALS("equals");
+
+    companion object {
+        fun fromId(id: String?) = entries.find { it.id == id } ?: CONTAINS
+    }
+}
+
+/**
+ * What a [TextNotificationRule] looks for: [text] in a notification's title or message, ignoring
+ * case and surrounding spaces, from one app ([packageName]) or from any app when that is null.
+ */
+data class TextMatch(
+    val field: TextMatchField = TextMatchField.TITLE,
+    val type: TextMatchType = TextMatchType.CONTAINS,
+    val text: String = "",
+    val packageName: String? = null,
+    val appName: String? = null
+) {
+    /**
+     * Whether a notification from [pkg] matches. A message can be spread over several extras (the
+     * short text, the expanded text, a conversation's newest message), so any one of [messages]
+     * matching is enough.
+     */
+    fun matches(pkg: String, title: String?, messages: List<String>): Boolean {
+        val wanted = text.trim()
+        if (wanted.isEmpty()) return false
+        if (packageName != null && !packageName.equals(pkg, ignoreCase = true)) return false
+        val candidates = when (field) {
+            TextMatchField.TITLE -> listOfNotNull(title)
+            TextMatchField.MESSAGE -> messages
+        }
+        return candidates.any { candidate ->
+            when (type) {
+                TextMatchType.CONTAINS -> candidate.contains(wanted, ignoreCase = true)
+                TextMatchType.EQUALS -> candidate.trim().equals(wanted, ignoreCase = true)
+            }
+        }
+    }
+}
+
+/**
+ * Lighting rule for notifications whose title or message matches some text, e.g. a title
+ * containing "Delivery" or a message containing "verification code".
+ */
+data class TextNotificationRule(
+    val id: String,
+    val match: TextMatch,
+    val color: Long = DEFAULT_TEXT_COLOR,
+    val pattern: PatternMode = PatternMode.PULSE,
+    val isEnabled: Boolean = true,
+    val faceDownMode: FaceDownMode = FaceDownMode.INHERIT,
+    val dndMode: DndMode = DndMode.INHERIT,
+    val quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT,
+    val quietHoursStartMinutes: Int? = null,
+    val quietHoursEndMinutes: Int? = null,
+    val brightness: Float = DEFAULT_BRIGHTNESS,
+    val speed: Float = DEFAULT_SPEED
+) {
+    fun toJson(): JSONObject = JSONObject().apply {
+        put("id", id)
+        put("field", match.field.id)
+        put("matchType", match.type.id)
+        put("text", match.text)
+        match.packageName?.let { put("packageName", it) }
+        match.appName?.let { put("appName", it) }
+        putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes, brightness, speed)
+    }
+
+    companion object {
+        fun fromJson(json: JSONObject): TextNotificationRule {
+            val shared = json.readSharedRuleFields(DEFAULT_TEXT_COLOR)
+            return TextNotificationRule(
+                id = json.optString("id", ""),
+                match = TextMatch(
+                    field = TextMatchField.fromId(json.optString("field")),
+                    type = TextMatchType.fromId(json.optString("matchType")),
+                    text = json.optString("text", ""),
+                    packageName = json.optString("packageName").takeIf { it.isNotBlank() },
+                    appName = json.optString("appName").takeIf { it.isNotBlank() }
+                ),
+                color = shared.color,
+                pattern = shared.pattern,
+                isEnabled = shared.isEnabled,
+                faceDownMode = shared.faceDownMode,
+                dndMode = shared.dndMode,
+                quietHoursMode = shared.quietHoursMode,
+                quietHoursStartMinutes = shared.quietHoursStartMinutes,
+                quietHoursEndMinutes = shared.quietHoursEndMinutes,
+                brightness = shared.brightness,
+                speed = shared.speed
+            )
+        }
+    }
+}
+
 /** Full brightness: what every rule used before brightness could be set. */
 const val DEFAULT_BRIGHTNESS = 1f
 
@@ -373,6 +480,7 @@ fun clampSpeed(value: Float): Float =
 private const val DEFAULT_CONTACT_COLOR = 0xFF4285F4L
 private const val DEFAULT_MESSAGE_COLOR = 0xFF00E5FFL
 private const val DEFAULT_APP_COLOR = 0xFF34A853L
+private const val DEFAULT_TEXT_COLOR = 0xFFFF007FL
 private const val DEFAULT_BATTERY_COLOR = 0xFF34A853L
 
 /**
