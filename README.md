@@ -5,12 +5,13 @@ Custom rear LED lighting for the Google Pixel 11 Pro.
 Pixel's built-in HiLight lights the rear ring for calls from favourites and Gemini's listening, thinking and replying states, and from Android 17 QPR2 for messages from favourites too. HiLight Plus replaces all of them. It takes over the eight-LED ring behind the camera bar and lets you decide what it shows: a colour and pattern per contact or app, your own looks for Gemini's states, a charging gauge, a low-battery warning, and rules for when it should stay dark. Everything runs on-device with no accounts and no analytics; the only network use is Google Play, for the purchase and the occasional rating prompt.
 
 <p align="center">
-  <img src="docs/screenshots/calls.png" width="16%" alt="Calls page with per-contact rules" />
-  <img src="docs/screenshots/rule-editor.png" width="16%" alt="Rule editor with pattern and colour pickers" />
-  <img src="docs/screenshots/split-ring.png" width="16%" alt="Multiple alerts set to split the ring" />
-  <img src="docs/screenshots/battery.png" width="16%" alt="Battery page with charging gauge preview" />
-  <img src="docs/screenshots/gemini.png" width="16%" alt="Gemini page with listening, thinking and replying states" />
-  <img src="docs/screenshots/dnd.png" width="16%" alt="Do Not Disturb page with its indicator and options" />
+  <img src="docs/screenshots/calls.png" width="13%" alt="Calls page with per-contact rules" />
+  <img src="docs/screenshots/rule-editor.png" width="13%" alt="Rule editor with pattern and colour pickers" />
+  <img src="docs/screenshots/text-rules.png" width="13%" alt="Text rule editor matching a notification title" />
+  <img src="docs/screenshots/split-ring.png" width="13%" alt="Multiple alerts set to split the ring" />
+  <img src="docs/screenshots/battery.png" width="13%" alt="Battery page with charging gauge preview" />
+  <img src="docs/screenshots/gemini.png" width="13%" alt="Gemini page with listening, thinking and replying states" />
+  <img src="docs/screenshots/dnd.png" width="13%" alt="Do Not Disturb page with its indicator and options" />
 </p>
 
 ## Features
