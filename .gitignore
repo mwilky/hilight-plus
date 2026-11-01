@@ -30,3 +30,6 @@ CLAUDE.md
 
 # Claude-generated implementation plans, kept locally only
 docs/*-plan.md
+
+# Play listing graphics, kept locally only like play_store_assets
+/app/src/main/play/listings/*/graphics/

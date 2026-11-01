@@ -1,0 +1,48 @@
+Your Pixel's rear light, your rules.
+
+Pixel's built-in HiLight only lights the rear ring for calls from favourites and for Gemini. HiLight Plus takes over the ring and lets you decide what it shows: a colour and pattern for each contact or app, your own looks for Gemini, a charging gauge, a Do Not Disturb indicator, and rules for when it stays dark.
+
+CALLS
+• A colour and pattern for each contact, so you know who is ringing from across the room
+• Separate styles for favourites, other contacts and unknown numbers
+• An optional missed-call light that stays on until you dismiss the notification
+• Works for phone calls and for app calls from WhatsApp, Teams, Google Meet and more
+
+NOTIFICATIONS
+• Rules for each app and for each person who messages you
+• Text rules: light up when a notification's title or message contains, or is exactly, some text, such as a delivery update or a verification code
+• Auto colour that matches the app's own icon
+• Several alerts at once: show the newest, take turns, or split the ring into an arc per notification
+• Lights stop as soon as you dismiss the notification
+
+THIRTEEN PATTERNS, ANY COLOUR
+Solid, Breathe, Pulse, Beacon, Wave, Comet, Orbit, Ripple, Sparkle, Rainbow, plus copies of Gemini's own listening, thinking and replying effects. Pick any colour from the wheel, and set brightness and speed for each rule. Test any look on the real ring while you edit.
+
+GEMINI
+Your own pattern and colour for Gemini's listening, thinking and replying states, in place of the stock lights.
+
+BATTERY
+• A charging gauge that fills the ring as your phone charges
+• Low-battery warning at the level you choose
+• Full-charge display that switches itself off
+
+DO NOT DISTURB
+Show at a glance that Do Not Disturb is on, with six calm looks of its own, and an optional sweep round the ring as it turns on and off.
+
+CONDITIONS
+• Pocket mode: stays dark in a pocket or bag and lights once the phone is out
+• Only light when the phone is face down
+• Stay dark during Do Not Disturb or quiet hours
+• Any rule can override these when it matters
+• Pause from a Quick Settings tile: everything or just some features, for an hour, until morning or until you resume
+
+SETUP
+No root and no Shizuku needed. HiLight Plus pairs once with your phone's own Wireless debugging, and guided setup walks you through it. After that it reconnects by itself, even after a restart. Shizuku is still supported if you already use it. Developer options needs to stay on.
+
+PRIVACY
+Everything runs on your phone. No accounts, no analytics, no ads. Contacts and notifications are read on the device to match your rules and never leave it.
+
+PRICING
+Try everything free for 7 days, then unlock it for good with a single one-off purchase. No subscription.
+
+Requires a Pixel 11 Pro, Pixel 11 Pro XL or Pixel 11 Pro Fold running Android 17.

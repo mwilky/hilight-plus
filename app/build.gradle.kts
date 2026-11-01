@@ -1,6 +1,9 @@
+import com.github.triplet.gradle.androidpublisher.ReleaseStatus
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("com.github.triplet.play")
 }
 
 android {
@@ -19,8 +22,23 @@ android {
         ndk { abiFilters += "arm64-v8a" }
     }
 
+    // The upload key, from ~/.gradle/gradle.properties so no secret lives in the repo. Without
+    // those properties, release builds stay unsigned.
+    val uploadStoreFile = providers.gradleProperty("HILIGHT_STORE_FILE").orNull
+    signingConfigs {
+        if (uploadStoreFile != null) {
+            create("release") {
+                storeFile = file(uploadStoreFile)
+                storePassword = providers.gradleProperty("HILIGHT_STORE_PASSWORD").get()
+                keyAlias = providers.gradleProperty("HILIGHT_KEY_ALIAS").get()
+                keyPassword = providers.gradleProperty("HILIGHT_KEY_PASSWORD").get()
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -58,6 +76,15 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+}
+
+// Releases straight to everyone on production, with the notes in src/main/play/release-notes,
+// once Play's review passes. The service account key sits beside gradle.properties.
+play {
+    serviceAccountCredentials.set(file("${gradle.gradleUserHomeDir}/hilight-plus-eb2b55d59b29.json"))
+    defaultToAppBundles.set(true)
+    track.set("production")
+    releaseStatus.set(ReleaseStatus.COMPLETED)
 }
 
 dependencies {
