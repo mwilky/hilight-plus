@@ -65,6 +65,12 @@ class NotificationTrigger : NotificationListenerService() {
         DebugLog.i(TAG, "Notification listener connected")
         isListenerConnected = true
         enqueue(ListenerEvent.Reconnect(currentShadeKeys()))
+        // So an app's channel list already has whatever is in the shade, before anything new arrives.
+        try {
+            activeNotifications
+        } catch (_: Throwable) {
+            null
+        }?.filter { !isBubbleOnly(it) && isEligiblePostedNotification(it, log = false) }?.forEach(::rememberChannel)
     }
 
     override fun onListenerDisconnected() {
@@ -135,6 +141,7 @@ class NotificationTrigger : NotificationListenerService() {
         }
 
         if (!isEligiblePostedNotification(sbn)) return
+        rememberChannel(sbn)
 
         val notification = sbn.notification ?: return
         enqueue(ListenerEvent.Posted(sbn.key, pkg, notification))
@@ -260,23 +267,33 @@ class NotificationTrigger : NotificationListenerService() {
         slots.forEach { dispatchSlot(controller, snapshot, it, isCycle = true) }
     }
 
-    private fun isEligiblePostedNotification(sbn: StatusBarNotification): Boolean {
+    private fun isEligiblePostedNotification(sbn: StatusBarNotification, log: Boolean = true): Boolean {
         if (sbn.isOngoing ||
             (sbn.notification.flags and Notification.FLAG_ONGOING_EVENT) != 0 ||
             (sbn.notification.flags and Notification.FLAG_NO_CLEAR) != 0 ||
             (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY) != 0
         ) {
-            DebugLog.d(TAG, "Ignoring ongoing/summary notification from ${sbn.packageName}")
+            if (log) DebugLog.d(TAG, "Ignoring ongoing/summary notification from ${sbn.packageName}")
             return false
         }
 
         // Missed calls pass even when silent (WhatsApp posts them on a low-importance channel);
         // resolveAlert only lets a silent one light through the Missed Calls rule.
         if (sbn.notification.category != Notification.CATEGORY_MISSED_CALL && isSilent(sbn.key)) {
-            DebugLog.d(TAG, "Ignoring silent/ambient notification from ${sbn.packageName}")
+            if (log) DebugLog.d(TAG, "Ignoring silent/ambient notification from ${sbn.packageName}")
             return false
         }
         return true
+    }
+
+    /** Notes the channel a notification that could light came on, for its app rule's channel list. */
+    private fun rememberChannel(sbn: StatusBarNotification) {
+        val channelId = sbn.notification?.channelId ?: return
+        val ranking = Ranking()
+        if (currentRanking?.getRanking(sbn.key, ranking) != true) return
+        val name = ranking.channel?.name?.toString()?.takeIf { it.isNotBlank() } ?: return
+        val pkg = sbn.packageName
+        scope.launch { SeenChannels.get(applicationContext).record(pkg, channelId, name) }
     }
 
     private fun isBubbleOnly(sbn: StatusBarNotification): Boolean {
@@ -400,6 +417,10 @@ class NotificationTrigger : NotificationListenerService() {
 
         val appRule = snapshot.findRuleForPackage(pkg)
         if (appRule != null) {
+            if (!appRule.lightsChannel(notification.channelId)) {
+                DebugLog.i(TAG, "Priority 2 Match: App '${appRule.appName}' but its channel is switched off -> NO LIGHT")
+                return null
+            }
             if (appRule.pattern == PatternMode.OFF) {
                 DebugLog.i(TAG, "Priority 2 Match: App '${appRule.appName}' is OFF -> NO LIGHT")
                 return null

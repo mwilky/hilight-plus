@@ -18,10 +18,13 @@ import com.mwilky.hilight.plus.PauseState
 import com.mwilky.hilight.plus.RuleSort
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.QuietHoursMode
+import com.mwilky.hilight.plus.SeenChannel
+import com.mwilky.hilight.plus.SeenChannels
 import com.mwilky.hilight.plus.SettingsSnapshot
 import com.mwilky.hilight.plus.SplitAnimation
 import com.mwilky.hilight.plus.SplitLook
 import com.mwilky.hilight.plus.TextNotificationRule
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -29,6 +32,7 @@ import kotlinx.coroutines.launch
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val store = AppStore.get(application)
+    private val channels = SeenChannels.get(application)
 
     val uiState: StateFlow<SettingsSnapshot> = store.settingsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DEFAULT_SETTINGS_SNAPSHOT)
@@ -68,6 +72,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun saveMessageContactRule(rule: MessageContactRule) = launch { store.saveMessageContactRule(rule) }
     fun deleteMessageContactRule(ruleId: String) = launch { store.deleteMessageContactRule(ruleId) }
     fun saveAppRule(rule: AppNotificationRule) = launch { store.saveAppRule(rule) }
+    fun seenChannels(packageName: String): Flow<List<SeenChannel>> = channels.channels(packageName)
     fun deleteAppRule(packageName: String) = launch { store.deleteAppRule(packageName) }
     fun saveTextRule(rule: TextNotificationRule) = launch { store.saveTextRule(rule) }
     fun deleteTextRule(ruleId: String) = launch { store.deleteTextRule(ruleId) }

@@ -561,6 +561,8 @@ fun HomeScreen(
         val autoColor = remember(rule.packageName) {
             com.mwilky.hilight.plus.core.AppIconColorExtractor.extractColorForPackage(context, rule.packageName)
         }
+        val channels by remember(rule.packageName) { viewModel.seenChannels(rule.packageName) }
+            .collectAsStateWithLifecycle(emptyList())
         CustomRuleDialog(
             title = stringResource(R.string.dialog_configure_title, rule.appName),
             initialColor = rule.color,
@@ -575,6 +577,8 @@ fun HomeScreen(
             showAutoColorToggle = true,
             initialAutoColor = rule.isAutoColor,
             autoExtractedColor = autoColor,
+            channels = channels,
+            initialExcludedChannels = rule.excludedChannelIds,
             renderer = renderer,
             controller = controller,
             onDismiss = { appRuleBeingEdited = null },
@@ -590,7 +594,8 @@ fun HomeScreen(
                         quietHoursStartMinutes = result.quietHoursStartMinutes,
                         quietHoursEndMinutes = result.quietHoursEndMinutes,
                         brightness = result.brightness,
-                        speed = result.speed
+                        speed = result.speed,
+                        excludedChannelIds = result.excludedChannelIds
                     )
                 )
                 appRuleBeingEdited = null

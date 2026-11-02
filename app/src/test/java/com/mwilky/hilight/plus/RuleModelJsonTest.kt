@@ -89,6 +89,25 @@ class RuleModelJsonTest {
         val parsed = AppNotificationRule.fromJson(JSONObject())
         assertEquals(0xFF34A853, parsed.color)
         assertEquals(true, parsed.isAutoColor)
+        assertEquals(emptySet<String>(), parsed.excludedChannelIds)
+    }
+
+    @Test
+    fun appNotificationRuleRoundTripsExcludedChannels() {
+        val rule = AppNotificationRule(
+            packageName = "com.discord",
+            appName = "Discord",
+            excludedChannelIds = setOf("server_messages", "mentions")
+        )
+        assertEquals(rule, AppNotificationRule.fromJson(rule.toJson()))
+    }
+
+    @Test
+    fun appNotificationRuleLightsEveryChannelButTheExcludedOnes() {
+        val rule = AppNotificationRule("com.discord", "Discord", excludedChannelIds = setOf("server_messages"))
+        assertEquals(false, rule.lightsChannel("server_messages"))
+        assertEquals(true, rule.lightsChannel("direct_messages"))
+        assertEquals(true, rule.lightsChannel(null))
     }
 
     @Test

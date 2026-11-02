@@ -1,5 +1,6 @@
 package com.mwilky.hilight.plus
 
+import org.json.JSONArray
 import org.json.JSONObject
 import java.text.Collator
 import kotlin.math.roundToLong
@@ -314,12 +315,18 @@ data class AppNotificationRule(
     val quietHoursStartMinutes: Int? = null,
     val quietHoursEndMinutes: Int? = null,
     val brightness: Float = DEFAULT_BRIGHTNESS,
-    val speed: Float = DEFAULT_SPEED
+    val speed: Float = DEFAULT_SPEED,
+    // Channels switched off, so a channel the app adds later still lights until it is switched off too.
+    val excludedChannelIds: Set<String> = emptySet()
 ) {
+    /** Whether a notification posted on [channelId] lights through this rule. */
+    fun lightsChannel(channelId: String?): Boolean = channelId == null || channelId !in excludedChannelIds
+
     fun toJson(): JSONObject = JSONObject().apply {
         put("packageName", packageName)
         put("appName", appName)
         put("isAutoColor", isAutoColor)
+        if (excludedChannelIds.isNotEmpty()) put("excludedChannels", JSONArray(excludedChannelIds.sorted()))
         putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes, brightness, speed)
     }
 
@@ -339,7 +346,10 @@ data class AppNotificationRule(
                 quietHoursStartMinutes = shared.quietHoursStartMinutes,
                 quietHoursEndMinutes = shared.quietHoursEndMinutes,
                 brightness = shared.brightness,
-                speed = shared.speed
+                speed = shared.speed,
+                excludedChannelIds = json.optJSONArray("excludedChannels")
+                    ?.let { array -> (0 until array.length()).mapNotNull { array.optString(it).takeIf(String::isNotBlank) }.toSet() }
+                    .orEmpty()
             )
         }
     }

@@ -5,13 +5,14 @@ Custom rear LED lighting for the Google Pixel 11 Pro.
 Pixel's built-in HiLight lights the rear ring for calls from favourites and Gemini's listening, thinking and replying states, and from Android 17 QPR2 for messages from favourites too. HiLight Plus replaces all of them. It takes over the eight-LED ring behind the camera bar and lets you decide what it shows: a colour and pattern per contact or app, your own looks for Gemini's states, a charging gauge, a low-battery warning, and rules for when it should stay dark. Everything runs on-device with no accounts and no analytics; the only network use is Google Play, for the purchase and the occasional rating prompt.
 
 <p align="center">
-  <img src="docs/screenshots/calls.png" width="13%" alt="Calls page with per-contact rules" />
-  <img src="docs/screenshots/rule-editor.png" width="13%" alt="Rule editor with pattern and colour pickers" />
-  <img src="docs/screenshots/text-rules.png" width="13%" alt="Text rule editor matching a notification title" />
-  <img src="docs/screenshots/split-ring.png" width="13%" alt="Multiple alerts set to split the ring" />
-  <img src="docs/screenshots/battery.png" width="13%" alt="Battery page with charging gauge preview" />
-  <img src="docs/screenshots/gemini.png" width="13%" alt="Gemini page with listening, thinking and replying states" />
-  <img src="docs/screenshots/dnd.png" width="13%" alt="Do Not Disturb page with its indicator and options" />
+  <img src="docs/screenshots/calls.png" width="12%" alt="Calls page with per-contact rules" />
+  <img src="docs/screenshots/rule-editor.png" width="12%" alt="Rule editor with pattern and colour pickers" />
+  <img src="docs/screenshots/text-rules.png" width="12%" alt="Text rule editor matching a notification title" />
+  <img src="docs/screenshots/channels.png" width="12%" alt="App rule's channel list with a channel switched off" />
+  <img src="docs/screenshots/split-ring.png" width="12%" alt="Multiple alerts set to split the ring" />
+  <img src="docs/screenshots/battery.png" width="12%" alt="Battery page with charging gauge preview" />
+  <img src="docs/screenshots/gemini.png" width="12%" alt="Gemini page with listening, thinking and replying states" />
+  <img src="docs/screenshots/dnd.png" width="12%" alt="Do Not Disturb page with its indicator and options" />
 </p>
 
 ## Features
@@ -25,6 +26,7 @@ Pixel's built-in HiLight lights the rear ring for calls from favourites and Gemi
 **Notifications**
 - Rules per message sender and per app, plus a general default with automatic colour taken from the app icon.
 - Starred contacts can share a favourites style, which sits between a sender's own rule and the app rule.
+- App rules can switch off individual notification channels, such as an app's promotions or group chats. Each channel is listed by name once the app posts a notification on it, and lights until it's switched off. A text or contact rule can still light a switched-off channel.
 - Text rules: light up when a notification's title or message contains, or is exactly, some text, from any app or just one. They're checked before every other notification rule, so a title containing "Delivery" or a message containing "verification code" can have its own look.
 - Thirteen patterns, picked by group (Simple, Motion, Gemini): solid, breathe, pulse, beacon, wave, comet, orbit, ripple, sparkle, rainbow, and copies of Gemini's own listening, thinking and replying effects.
 - Eight preset colours or any custom colour from a colour wheel, for every rule, battery's fixed colour and Gemini's states. The custom colour's hex code can be copied and pasted into another rule.

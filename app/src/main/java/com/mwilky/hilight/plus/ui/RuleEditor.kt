@@ -45,6 +45,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.Schedule
@@ -60,15 +61,19 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedListItem
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -79,6 +84,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -89,6 +95,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -114,12 +121,14 @@ import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.DaemonBridge
 import com.mwilky.hilight.plus.R
+import com.mwilky.hilight.plus.SeenChannel
 import com.mwilky.hilight.plus.TextMatch
 import com.mwilky.hilight.plus.TextMatchField
 import com.mwilky.hilight.plus.TextMatchType
 import com.mwilky.hilight.plus.core.PatternRenderer
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 private const val TEST_DURATION_MS = 4000L
 
@@ -134,7 +143,8 @@ data class RuleEditorResult(
     val quietHoursEndMinutes: Int,
     val brightness: Float,
     val speed: Float,
-    val textMatch: TextMatch? = null
+    val textMatch: TextMatch? = null,
+    val excludedChannelIds: Set<String> = emptySet()
 )
 
 /**
@@ -194,7 +204,9 @@ fun CustomRuleDialog(
     initialSpeed: Float = DEFAULT_SPEED,
     showDndChoice: Boolean = true,
     patternGroups: List<PatternGroup> = PatternGroup.RULES,
-    initialTextMatch: TextMatch? = null
+    initialTextMatch: TextMatch? = null,
+    channels: List<SeenChannel>? = null,
+    initialExcludedChannels: Set<String> = emptySet()
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -229,7 +241,9 @@ fun CustomRuleDialog(
             initialSpeed = initialSpeed,
             showDndChoice = showDndChoice,
             patternGroups = patternGroups,
-            initialTextMatch = initialTextMatch
+            initialTextMatch = initialTextMatch,
+            channels = channels,
+            initialExcludedChannels = initialExcludedChannels
         )
     }
 }
@@ -257,9 +271,13 @@ private fun RuleEditorContent(
     showDndChoice: Boolean = true,
     patternGroups: List<PatternGroup> = PatternGroup.RULES,
     // Only text rules have one; it adds a Match section above the look.
-    initialTextMatch: TextMatch? = null
+    initialTextMatch: TextMatch? = null,
+    // Only app rules have them; they add a Match section with the app's channels.
+    channels: List<SeenChannel>? = null,
+    initialExcludedChannels: Set<String> = emptySet()
 ) {
     var textMatch by remember(initialTextMatch) { mutableStateOf(initialTextMatch) }
+    var excludedChannels by remember(initialExcludedChannels) { mutableStateOf(initialExcludedChannels) }
     var isAutoColor by remember(initialAutoColor) { mutableStateOf(initialAutoColor) }
     var selectedColor by remember(initialColor) {
         mutableLongStateOf(
@@ -327,7 +345,8 @@ private fun RuleEditorContent(
                 quietHoursEndMinutes = quietEndMinutes,
                 brightness = selectedBrightness,
                 speed = selectedSpeed,
-                textMatch = textMatch?.let { it.copy(text = it.text.trim()) }
+                textMatch = textMatch?.let { it.copy(text = it.text.trim()) },
+                excludedChannelIds = excludedChannels
             )
         )
     }
@@ -384,6 +403,11 @@ private fun RuleEditorContent(
             textMatch?.let { match ->
                 EditorSection(title = stringResource(R.string.text_rule_section_match)) {
                     TextMatchControls(match = match, onMatchChange = { textMatch = it })
+                }
+            }
+            channels?.let { seen ->
+                EditorSection(title = stringResource(R.string.text_rule_section_match)) {
+                    ChannelControls(channels = seen, excluded = excludedChannels, onExcludedChange = { excludedChannels = it })
                 }
             }
 
@@ -694,6 +718,110 @@ private fun TextMatchControls(match: TextMatch, onMatchChange: (TextMatch) -> Un
                 onMatchChange(match.copy(packageName = pkg, appName = name))
             }
         )
+    }
+}
+
+/** The Match section of an app rule: which of the app's channels light. */
+@Composable
+private fun ChannelControls(
+    channels: List<SeenChannel>,
+    excluded: Set<String>,
+    onExcludedChange: (Set<String>) -> Unit
+) {
+    var pickingChannels by remember { mutableStateOf(false) }
+    val litCount = channels.count { it.id !in excluded }
+    // Laid out like the text rule's App row, so the editor's tappable rows all look alike.
+    ListItem(
+        onClick = { pickingChannels = true },
+        modifier = Modifier.padding(horizontal = 16.dp),
+        shapes = ListItemDefaults.shapes(),
+        colors = ListItemDefaults.colors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        ),
+        leadingContent = { Icon(Icons.Rounded.FilterList, contentDescription = null) },
+        supportingContent = {
+            AnimatedText(
+                if (litCount == channels.size) {
+                    stringResource(R.string.channels_all)
+                } else {
+                    pluralStringResource(R.plurals.channels_lit_count, channels.size, litCount, channels.size)
+                }
+            )
+        }
+    ) {
+        Text(stringResource(R.string.channels_title))
+    }
+
+    if (pickingChannels) {
+        ChannelSheet(
+            channels = channels,
+            excluded = excluded,
+            onExcludedChange = onExcludedChange,
+            onDismiss = { pickingChannels = false }
+        )
+    }
+}
+
+/** A switch per channel the app has posted on, laid out like the pause sheet's list. */
+@Composable
+private fun ChannelSheet(
+    channels: List<SeenChannel>,
+    excluded: Set<String>,
+    onExcludedChange: (Set<String>) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded)
+    )
+    val scope = rememberCoroutineScope()
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(stringResource(R.string.channels_title), style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    stringResource(R.string.channels_sheet_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            if (channels.isEmpty()) {
+                EmptyRuleHint(stringResource(R.string.channels_empty), Icons.Rounded.FilterList)
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+                    channels.forEachIndexed { index, channel ->
+                        val lights = channel.id !in excluded
+                        SegmentedListItem(
+                            onClick = { onExcludedChange(if (lights) excluded + channel.id else excluded - channel.id) },
+                            modifier = Modifier.semantics { role = Role.Switch },
+                            shapes = ListItemDefaults.segmentedShapes(index = index, count = channels.size),
+                            colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                            trailingContent = { Switch(checked = lights, onCheckedChange = null) }
+                        ) {
+                            Text(channel.name)
+                        }
+                    }
+                }
+            }
+
+            Button(
+                onClick = { scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() } },
+                shapes = ButtonDefaults.shapes(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+            ) {
+                Text(stringResource(R.string.channels_done))
+            }
+        }
     }
 }
 
@@ -1027,7 +1155,13 @@ private fun RuleEditorPreview() {
             initialAutoColor = false,
             autoExtractedColor = 0xFF25D366,
             initialBrightness = 0.6f,
-            initialSpeed = 1.5f
+            initialSpeed = 1.5f,
+            channels = listOf(
+                SeenChannel("group_chat_defaults", "Group notifications"),
+                SeenChannel("individual_chat_defaults", "Message notifications"),
+                SeenChannel("other", "Other notifications")
+            ),
+            initialExcludedChannels = setOf("group_chat_defaults")
         )
     }
 }

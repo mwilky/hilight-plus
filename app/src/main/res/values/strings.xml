@@ -265,6 +265,15 @@
     <string name="text_rule_summary_message_contains">Message contains “%1$s”</string>
     <string name="text_rule_summary_message_equals">Message is “%1$s”</string>
     <string name="text_rule_summary_in_app">%1$s · %2$s</string>
+    <string name="channels_title">Channels</string>
+    <string name="channels_all">All channels</string>
+    <plurals name="channels_lit_count">
+        <item quantity="one">%1$d of %2$d channel</item>
+        <item quantity="other">%1$d of %2$d channels</item>
+    </plurals>
+    <string name="channels_sheet_desc">Switched-off channels don\'t light for this app, unless a text or contact rule matches. New channels light until you switch them off.</string>
+    <string name="channels_empty">No channels yet. They show up here once this app posts a notification that could light.</string>
+    <string name="channels_done">Done</string>
 
     <!-- Additional Settings Section -->
     <string name="settings_additional_header">Additional settings</string>
