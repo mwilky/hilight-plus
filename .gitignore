@@ -22,7 +22,9 @@ app/release/
 # Local AI-assistant and IDE files
 CLAUDE.md
 .claudeignore
+/.claude/
 /.idea/markdown.xml
+/.idea/deviceManager.xml
 /.idea/inspectionProfiles/
 
 # Play Store listing graphics, kept locally only
