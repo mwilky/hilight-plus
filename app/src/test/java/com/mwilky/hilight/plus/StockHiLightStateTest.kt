@@ -44,10 +44,13 @@ class StockHiLightStateTest {
         assertFalse(base.withFavoriteMessages("", buildHasToggle = false).favoriteMessagesAvailable)
         assertFalse(base.withFavoriteMessages(null, buildHasToggle = false).favoriteMessagesAvailable)
 
+        // Unlike favourite calls, the stock default is off until the user turns it on.
         val unwritten = base.withFavoriteMessages("", buildHasToggle = true)
         assertTrue(unwritten.favoriteMessagesAvailable)
         assertTrue(unwritten.favoriteMessagesKnown)
-        assertTrue(unwritten.favoriteMessagesActive)
+        assertFalse(unwritten.favoriteMessagesActive)
+
+        assertTrue(base.withFavoriteMessages("1", buildHasToggle = true).favoriteMessagesActive)
 
         val off = base.withFavoriteMessages("0", buildHasToggle = true)
         assertTrue(off.favoriteMessagesKnown)

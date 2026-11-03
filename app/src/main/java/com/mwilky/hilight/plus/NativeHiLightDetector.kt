@@ -145,12 +145,13 @@ internal fun StockHiLightState.withGeminiFeedback(value: String?): StockHiLightS
 }
 
 /**
- * Adds the stock "Messages from favourites" setting. Builds without the toggle would read the
- * unwritten key as on, so it only counts there once the key has a value.
+ * Adds the stock "Messages from favourites" setting. Unlike favourite calls, Settings shows it off
+ * until the user first turns it on, so an unwritten key means off. On builds without the toggle it
+ * only counts once the key has a value.
  */
 internal fun StockHiLightState.withFavoriteMessages(value: String?, buildHasToggle: Boolean): StockHiLightState {
     if (!buildHasToggle && value.isNullOrBlank()) return this
-    val parsed = parseFavoriteCallsSetting(value)
+    val parsed = if (value != null && value.isBlank()) StockHiLightState(known = true) else parseFavoriteCallsSetting(value)
     return copy(
         favoriteMessagesActive = parsed.favoriteCallsActive,
         favoriteMessagesKnown = parsed.known,
