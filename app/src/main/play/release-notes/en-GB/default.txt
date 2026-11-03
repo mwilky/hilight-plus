@@ -1,0 +1,1 @@
+• App rules can switch off individual notification channels, such as an app's promotions or group chats, while the rest of the app still lights. Channels are listed by name under Match in the app rule once the app posts a notification on them, and new ones light until you switch them off.

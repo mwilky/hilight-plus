@@ -10,6 +10,7 @@ CALLS
 
 NOTIFICATIONS
 • Rules for each app and for each person who messages you
+• Switch off an app's individual notification channels, such as promotions or group chats, while the rest of the app still lights
 • Text rules: light up when a notification's title or message contains, or is exactly, some text, such as a delivery update or a verification code
 • Auto colour that matches the app's own icon
 • Several alerts at once: show the newest, take turns, or split the ring into an arc per notification
