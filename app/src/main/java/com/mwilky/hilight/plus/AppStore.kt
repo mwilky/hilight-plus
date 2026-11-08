@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transformLatest
+import java.time.DayOfWeek
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "hilight_plus_settings")
 
@@ -51,6 +52,9 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_QUIET_HOURS_ENABLED = booleanPreferencesKey("quiet_hours_enabled")
         private val KEY_QUIET_HOURS_START = intPreferencesKey("quiet_hours_start_min")
         private val KEY_QUIET_HOURS_END = intPreferencesKey("quiet_hours_end_min")
+        // Weekend and per-day windows, and which of those modes is on; the two keys above stay the
+        // every-day (or weekday) window.
+        private val KEY_QUIET_HOURS_SCHEDULE_JSON = stringPreferencesKey("quiet_hours_schedule_json")
 
         // Call Settings: All Other Contacts
         private val KEY_CALL_LIGHTS_ENABLED = booleanPreferencesKey("call_lights_enabled")
@@ -194,6 +198,9 @@ class AppStore private constructor(private val appContext: Context) {
     val quietHoursEndMinutes: Flow<Int> = appContext.dataStore.data
         .map { it[KEY_QUIET_HOURS_END] ?: 7 * 60 }
 
+    val quietHoursSchedule: Flow<QuietHoursSchedule> = appContext.dataStore.data
+        .map { QuietHoursSchedule.fromJson(it[KEY_QUIET_HOURS_SCHEDULE_JSON]) }
+
     val isCallLightsEnabled: Flow<Boolean> = appContext.dataStore.data
         .map { it[KEY_CALL_LIGHTS_ENABLED] ?: true }
 
@@ -334,6 +341,25 @@ class AppStore private constructor(private val appContext: Context) {
         appContext.dataStore.edit { prefs ->
             prefs[KEY_QUIET_HOURS_START] = startMinutes
             prefs[KEY_QUIET_HOURS_END] = endMinutes
+        }
+    }
+
+    suspend fun setQuietHoursRepeat(repeat: QuietHoursRepeat) {
+        editQuietHoursSchedule { it.copy(repeat = repeat) }
+    }
+
+    suspend fun setQuietHoursWeekend(startMinutes: Int, endMinutes: Int) {
+        editQuietHoursSchedule { it.copy(weekend = QuietWindow(startMinutes, endMinutes)) }
+    }
+
+    suspend fun setQuietHoursDay(day: DayOfWeek, window: QuietWindow) {
+        editQuietHoursSchedule { it.copy(days = it.days + (day to window)) }
+    }
+
+    private suspend fun editQuietHoursSchedule(change: (QuietHoursSchedule) -> QuietHoursSchedule) {
+        appContext.dataStore.edit { prefs ->
+            val schedule = QuietHoursSchedule.fromJson(prefs[KEY_QUIET_HOURS_SCHEDULE_JSON])
+            prefs[KEY_QUIET_HOURS_SCHEDULE_JSON] = change(schedule).toJson().toString()
         }
     }
 
@@ -706,6 +732,7 @@ class AppStore private constructor(private val appContext: Context) {
             quietHoursEnabled = prefs[KEY_QUIET_HOURS_ENABLED] ?: d.quietHoursEnabled,
             quietHoursStartMinutes = prefs[KEY_QUIET_HOURS_START] ?: d.quietHoursStartMinutes,
             quietHoursEndMinutes = prefs[KEY_QUIET_HOURS_END] ?: d.quietHoursEndMinutes,
+            quietHoursSchedule = QuietHoursSchedule.fromJson(prefs[KEY_QUIET_HOURS_SCHEDULE_JSON]),
             isCallLightsEnabled = prefs[KEY_CALL_LIGHTS_ENABLED] ?: d.isCallLightsEnabled,
             contactRules = readContactRules(prefs[KEY_CALL_RULES_JSON]),
             callRuleSort = enumOr(prefs[KEY_CALL_RULES_SORT], d.callRuleSort),
@@ -820,6 +847,7 @@ data class SettingsSnapshot(
     val quietHoursEnabled: Boolean,
     val quietHoursStartMinutes: Int,
     val quietHoursEndMinutes: Int,
+    val quietHoursSchedule: QuietHoursSchedule = QuietHoursSchedule(),
     val isCallLightsEnabled: Boolean,
     val contactRules: List<ContactRule>,
     val callRuleSort: RuleSort,
@@ -904,6 +932,10 @@ data class SettingsSnapshot(
 ) {
     /** CYCLE and SPLIT both keep every waiting alert queued; only LATEST uses the timed single alert. */
     val isCycleNotifications: Boolean get() = multiAlertMode.keepsQueue
+
+    /** The Conditions page's quiet window for each day, Monday first. */
+    fun quietHoursWeek(weekendDays: Set<DayOfWeek>): List<QuietWindow> =
+        quietHoursSchedule.week(QuietWindow(quietHoursStartMinutes, quietHoursEndMinutes), weekendDays)
 
     fun findRuleForContactName(contactName: String): ContactRule? =
         firstEnabledNameMatch(contactName, contactRules, ContactRule::name, ContactRule::isEnabled)

@@ -203,11 +203,10 @@ class LightController private constructor(private val app: Application) {
             combine(
                 store.quietHoursEnabled,
                 store.quietHoursStartMinutes,
-                store.quietHoursEndMinutes
-            ) { enabled, start, end -> Triple(enabled, start, end) }
-                .collect { (enabled, start, end) ->
-                    daemon.setQuietHours(enabled, start, end)
-                }
+                store.quietHoursEndMinutes,
+                store.quietHoursSchedule
+            ) { enabled, start, end, schedule -> Triple(enabled, QuietWindow(start, end), schedule) }
+                .collect { (enabled, main, schedule) -> pushQuietHours(enabled, main, schedule) }
         }
         scope.launch {
             store.pause.collect { daemon.setPause(it) }
@@ -460,10 +459,10 @@ class LightController private constructor(private val app: Application) {
         daemon.setSplitLook(store.splitLook.first())
         daemon.setSplitSpeed(store.splitSpeed.first())
         daemon.setSplitAnnounceNew(store.splitAnnounceNew.first())
-        daemon.setQuietHours(
+        pushQuietHours(
             store.quietHoursEnabled.first(),
-            store.quietHoursStartMinutes.first(),
-            store.quietHoursEndMinutes.first()
+            QuietWindow(store.quietHoursStartMinutes.first(), store.quietHoursEndMinutes.first()),
+            store.quietHoursSchedule.first()
         )
         daemon.setPause(store.pause.first())
         pushBatteryConfig(
@@ -472,6 +471,11 @@ class LightController private constructor(private val app: Application) {
             store.isOnlyWhenFaceDown.first()
         )
         daemon.setBatteryState(lastBatteryLevel, lastBatteryCharging, lastBatteryFull)
+    }
+
+    /** The daemon only gets each day's window; which days are the weekend is the locale's call. */
+    private fun pushQuietHours(enabled: Boolean, main: QuietWindow, schedule: QuietHoursSchedule) {
+        daemon.setQuietHours(enabled, main, schedule.week(main, localeWeekendDays()))
     }
 
     private fun pushBatteryConfig(settings: BatterySettings, entitled: Boolean, globalOnlyWhenFaceDown: Boolean) {

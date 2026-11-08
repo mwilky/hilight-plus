@@ -14,6 +14,7 @@ import com.mwilky.hilight.plus.LowBatteryPattern
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.PauseFeature
 import com.mwilky.hilight.plus.QuietHoursMode
+import com.mwilky.hilight.plus.QuietWindow
 import com.mwilky.hilight.plus.SplitAnimation
 import com.mwilky.hilight.plus.SplitLook
 import com.mwilky.hilight.plus.DEFAULT_SPEED
@@ -182,7 +183,16 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
     }
 
     override fun setQuietHours(enabled: Boolean, startMinutes: Int, endMinutes: Int) {
-        engine.setQuietHours(enabled, startMinutes, endMinutes)
+        engine.setQuietHours(enabled, List(7) { QuietWindow(startMinutes, endMinutes) })
+    }
+
+    override fun setQuietHoursWeek(enabled: Boolean, startMinutes: IntArray?, endMinutes: IntArray?): Boolean {
+        if (startMinutes?.size != 7 || endMinutes?.size != 7) {
+            DebugLog.w(TAG, "setQuietHoursWeek ignored: needs 7 days, got ${startMinutes?.size}/${endMinutes?.size}")
+            return true
+        }
+        engine.setQuietHours(enabled, List(7) { QuietWindow(startMinutes[it], endMinutes[it]) })
+        return true
     }
 
     override fun setPause(untilEpochMs: Long, features: String?) {

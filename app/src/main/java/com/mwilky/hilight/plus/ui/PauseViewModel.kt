@@ -6,8 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.mwilky.hilight.plus.AppStore
 import com.mwilky.hilight.plus.PauseDuration
 import com.mwilky.hilight.plus.PauseFeature
+import com.mwilky.hilight.plus.currentMinutesOfWeek
 import com.mwilky.hilight.plus.enabledPauseFeatures
 import com.mwilky.hilight.plus.fitPauseSelection
+import com.mwilky.hilight.plus.localeWeekendDays
 import com.mwilky.hilight.plus.pauseMorningMinutes
 import com.mwilky.hilight.plus.togglePauseSelection
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,12 +42,17 @@ class PauseViewModel(application: Application) : AndroidViewModel(application) {
             // Changing a pause starts from what it covers now; otherwise from the last choice.
             val features = store.activePause.first()?.features ?: last.features
             val available = snapshot.enabledPauseFeatures()
+            val now = System.currentTimeMillis()
             _state.value = PauseSheetState(
                 available = available,
                 selection = fitPauseSelection(features, available),
                 duration = last.duration,
-                openedAtMillis = System.currentTimeMillis(),
-                morningMinutes = pauseMorningMinutes(snapshot.quietHoursEnabled, snapshot.quietHoursEndMinutes)
+                openedAtMillis = now,
+                morningMinutes = pauseMorningMinutes(
+                    snapshot.quietHoursEnabled,
+                    snapshot.quietHoursWeek(localeWeekendDays()),
+                    currentMinutesOfWeek(now)
+                )
             )
         }
     }

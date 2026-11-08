@@ -52,7 +52,7 @@ And best of all, no root and no Shizuku needed!
 
 * Face down only. The accelerometer only runs while something is waiting to light.
 * Stay dark during Do Not Disturb.
-* Quiet hours, with per-rule overrides.
+* Quiet hours, with per-rule overrides. Weekends can have their own times, or you can set each day separately.
 * Pocket mode, on by default. No glowing through your jeans: the ring waits until the phone's out of your pocket. Face down on a table doesn't count, so face-down rules still work.
 
 **Pause**

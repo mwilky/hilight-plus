@@ -2,6 +2,7 @@ package com.mwilky.hilight.plus.core
 
 import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.QuietHoursMode
+import com.mwilky.hilight.plus.QuietWindow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -77,8 +78,7 @@ class AlertRenderPolicyTest {
                 deviceFaceDown = true,
                 quietHoursMode = QuietHoursMode.INHERIT,
                 quietHoursEnabled = false,
-                quietHoursStartMinutes = 9 * 60,
-                quietHoursEndMinutes = 17 * 60,
+                quietHoursWeek = List(7) { QuietWindow(9 * 60, 17 * 60) },
                 nowMinutes = 15 * 60
             )
         )
@@ -88,8 +88,7 @@ class AlertRenderPolicyTest {
                 deviceFaceDown = true,
                 quietHoursMode = QuietHoursMode.INHERIT,
                 quietHoursEnabled = true,
-                quietHoursStartMinutes = 9 * 60,
-                quietHoursEndMinutes = 17 * 60,
+                quietHoursWeek = List(7) { QuietWindow(9 * 60, 17 * 60) },
                 nowMinutes = 15 * 60
             )
         )
@@ -99,8 +98,7 @@ class AlertRenderPolicyTest {
                 deviceFaceDown = true,
                 quietHoursMode = QuietHoursMode.INHERIT,
                 quietHoursEnabled = true,
-                quietHoursStartMinutes = 9 * 60,
-                quietHoursEndMinutes = 17 * 60,
+                quietHoursWeek = List(7) { QuietWindow(9 * 60, 17 * 60) },
                 nowMinutes = 18 * 60
             )
         )
@@ -135,8 +133,7 @@ class AlertRenderPolicyTest {
                 requiresFaceDown = false,
                 deviceFaceDown = false,
                 quietHoursMode = QuietHoursMode.SKIP,
-                quietHoursStartMinutes = 22 * 60,
-                quietHoursEndMinutes = 7 * 60,
+                quietHoursWeek = List(7) { QuietWindow(22 * 60, 7 * 60) },
                 nowMinutes = 23 * 60
             )
         )
@@ -145,8 +142,7 @@ class AlertRenderPolicyTest {
                 requiresFaceDown = false,
                 deviceFaceDown = false,
                 quietHoursMode = QuietHoursMode.SKIP,
-                quietHoursStartMinutes = 22 * 60,
-                quietHoursEndMinutes = 7 * 60,
+                quietHoursWeek = List(7) { QuietWindow(22 * 60, 7 * 60) },
                 nowMinutes = 12 * 60
             )
         )

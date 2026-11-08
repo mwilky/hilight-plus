@@ -66,7 +66,7 @@ internal object DebugReport {
             appendLine()
 
             appendLine("== Settings ==")
-            appendLine("Only face down=${snapshot.isOnlyWhenFaceDown}, skip in DND=${snapshot.suppressDuringDnd}, pocket mode=${snapshot.pocketMode}, quiet hours=${snapshot.quietHoursEnabled} ${time(snapshot.quietHoursStartMinutes)}-${time(snapshot.quietHoursEndMinutes)}")
+            appendLine("Only face down=${snapshot.isOnlyWhenFaceDown}, skip in DND=${snapshot.suppressDuringDnd}, pocket mode=${snapshot.pocketMode}, quiet hours=${snapshot.quietHoursEnabled} ${time(snapshot.quietHoursStartMinutes)}-${time(snapshot.quietHoursEndMinutes)} (${snapshot.quietHoursSchedule.repeat.id}, weekend ${localeWeekendDays()})")
             appendLine("Calls enabled=${snapshot.isCallLightsEnabled}")
             rule("Other contacts", snapshot.isOtherContactsEnabled, snapshot.otherContactsPattern, snapshot.otherContactsColor, snapshot.otherContactsFaceDownMode, snapshot.otherContactsDndMode, snapshot.otherContactsQuietHoursMode, snapshot.otherContactsQuietHoursStartMinutes, snapshot.otherContactsQuietHoursEndMinutes)
             rule("Favourite calls", snapshot.isFavouriteCallsEnabled, snapshot.favouriteCallsPattern, snapshot.favouriteCallsColor, snapshot.favouriteCallsFaceDownMode, snapshot.favouriteCallsDndMode, snapshot.favouriteCallsQuietHoursMode, snapshot.favouriteCallsQuietHoursStartMinutes, snapshot.favouriteCallsQuietHoursEndMinutes)

@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.DayOfWeek
 import java.time.LocalDateTime
 import java.time.ZoneId
 
@@ -33,8 +34,30 @@ class PauseTest {
 
     @Test
     fun morningFollowsQuietHoursWhenTheyAreOn() {
-        assertEquals(6 * 60 + 30, pauseMorningMinutes(quietHoursEnabled = true, quietHoursEndMinutes = 6 * 60 + 30))
-        assertEquals(7 * 60, pauseMorningMinutes(quietHoursEnabled = false, quietHoursEndMinutes = 6 * 60 + 30))
+        val week = List(7) { QuietWindow(22 * 60, 6 * 60 + 30) }
+        val mondayNight = 23 * 60
+        assertEquals(6 * 60 + 30, pauseMorningMinutes(quietHoursEnabled = true, week, mondayNight))
+        assertEquals(7 * 60, pauseMorningMinutes(quietHoursEnabled = false, week, mondayNight))
+    }
+
+    @Test
+    fun morningIsWhenTonightsWindowEnds() {
+        val saturday = DayOfWeek.SATURDAY.ordinal
+        // Weekday nights end at 06:30, Saturday and Sunday nights at 09:00.
+        val week = List(7) { if (it >= saturday) QuietWindow(23 * 60, 9 * 60) else QuietWindow(22 * 60, 6 * 60 + 30) }
+        val minutes = { day: DayOfWeek, time: Int -> day.ordinal * 24 * 60 + time }
+        assertEquals(9 * 60, pauseMorningMinutes(true, week, minutes(DayOfWeek.SATURDAY, 23 * 60 + 30)))
+        // Friday night belongs to Friday, a weekday, even though it ends on Saturday.
+        assertEquals(6 * 60 + 30, pauseMorningMinutes(true, week, minutes(DayOfWeek.FRIDAY, 21 * 60)))
+        // Sunday night's window ends on Monday at 09:00.
+        assertEquals(9 * 60, pauseMorningMinutes(true, week, minutes(DayOfWeek.SUNDAY, 23 * 60 + 30)))
+    }
+
+    @Test
+    fun morningSkipsDaysWithoutQuietHoursAndFallsBackWithNone() {
+        val week = List(7) { QuietWindow(22 * 60, 6 * 60, enabled = it == DayOfWeek.WEDNESDAY.ordinal) }
+        assertEquals(6 * 60, pauseMorningMinutes(true, week, 12 * 60))
+        assertEquals(7 * 60, pauseMorningMinutes(true, List(7) { QuietWindow(22 * 60, 6 * 60, enabled = false) }, 12 * 60))
     }
 
     @Test

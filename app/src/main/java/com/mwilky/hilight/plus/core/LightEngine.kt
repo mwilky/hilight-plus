@@ -10,9 +10,10 @@ import com.mwilky.hilight.plus.LowBatteryPattern
 import com.mwilky.hilight.plus.PauseFeature
 import com.mwilky.hilight.plus.PauseState
 import com.mwilky.hilight.plus.QuietHoursMode
+import com.mwilky.hilight.plus.QuietWindow
 import com.mwilky.hilight.plus.SplitAnimation
 import com.mwilky.hilight.plus.SplitLook
-import com.mwilky.hilight.plus.currentMinutesOfDay
+import com.mwilky.hilight.plus.currentMinutesOfWeek
 
 /**
  * Clean, lightweight render engine driving the Pixel 11 rear LEDs.
@@ -53,8 +54,8 @@ class LightEngine {
     private var dndActive = false
     private var dndSuppressEnabled = false
     private var quietHoursEnabled = false
-    private var quietHoursStartMinutes = 22 * 60
-    private var quietHoursEndMinutes = 7 * 60
+    // Monday first, as the app sends it.
+    private var quietHoursWeek = List(7) { QuietWindow(22 * 60, 7 * 60) }
     // A pause from the tile or the app keeps its features dark until it runs out. Whether the
     // last tick had one in force, so the moment it runs out is handled once.
     private var pause: PauseState? = null
@@ -579,20 +580,21 @@ class LightEngine {
         }
     }
 
-    fun setQuietHours(enabled: Boolean, startMinutes: Int, endMinutes: Int) {
+    fun setQuietHours(enabled: Boolean, week: List<QuietWindow>) {
         synchronized(lock) {
-            if (quietHoursEnabled == enabled &&
-                quietHoursStartMinutes == startMinutes &&
-                quietHoursEndMinutes == endMinutes
-            ) {
-                return
-            }
+            if (quietHoursEnabled == enabled && quietHoursWeek == week) return
             quietHoursEnabled = enabled
-            quietHoursStartMinutes = startMinutes
-            quietHoursEndMinutes = endMinutes
+            quietHoursWeek = week
             onLiveConditionChanged()
-            DebugLog.i(TAG, "setQuietHours: enabled=$enabled, start=$startMinutes, end=$endMinutes")
+            DebugLog.i(TAG, "setQuietHours: enabled=$enabled, ${describeQuietWeek()}")
         }
+    }
+
+    /** "every day 22:00-07:00", or each day's window from Monday, "-" for none. */
+    private fun describeQuietWeek(): String {
+        fun time(minutes: Int) = "%02d:%02d".format(minutes / 60, minutes % 60)
+        val windows = quietHoursWeek.map { if (it.isEmpty) "-" else "${time(it.start)}-${time(it.end)}" }
+        return if (windows.distinct().size == 1) "every day ${windows[0]}" else windows.joinToString(" ")
     }
 
     /** Keeps [features] dark until [untilEpochMs] (wall clock). No features, or a time passed, ends it. */
@@ -872,7 +874,7 @@ class LightEngine {
             val now = SystemClock.elapsedRealtime()
             // Gaps only matter while frames drive the ring; an effect keeps playing through them.
             if (framesDriving) noteFrameGap(now, SystemClock.uptimeMillis()) else lastTickElapsedMs = 0L
-            val nowMinutes = currentMinutesOfDay()
+            val nowMinutes = currentMinutesOfWeek()
             val pauseNow = pause?.isActive() == true
             if (pauseNow != pauseInForce) {
                 pauseInForce = pauseNow
@@ -1311,7 +1313,7 @@ class LightEngine {
         buildString {
             appendLine("ring=$lastRenderReason, sessionOpen=${lights.isSessionOpen}, unclosedSessions=${lights.unclosedSessionCount}, leds=${lights.ledCount}, running=$running, renderThreadAlive=${renderThread?.isAlive}, lastFrame=${now - lastTickElapsedMs}ms ago")
             appendLine("route=${if (framesDriving) "frames" else "effects"}, effectsSupported=${lights.supportsEffects}, effectsFailed=$effectsFailed, period=${lights.effectPeriodMs}ms, showing=${shownEffectKey?.let { shownEffectInfo }}")
-            appendLine("faceDown=$deviceFaceDown, dndActive=$dndActive, dndSuppress=$dndSuppressEnabled, quietHours=$quietHoursEnabled $quietHoursStartMinutes-$quietHoursEndMinutes, splitRing=$splitRing (${splitAnimation.id}, $splitLook, speed $splitSpeed, announceNew=$splitAnnounceNew${splitIntro?.let { ", announcing ${it.key}" } ?: ""})")
+            appendLine("faceDown=$deviceFaceDown, dndActive=$dndActive, dndSuppress=$dndSuppressEnabled, quietHours=$quietHoursEnabled ${describeQuietWeek()}, splitRing=$splitRing (${splitAnimation.id}, $splitLook, speed $splitSpeed, announceNew=$splitAnnounceNew${splitIntro?.let { ", announcing ${it.key}" } ?: ""})")
             appendLine("pause=${describePause()}, rearCamera=$rearCameraActive, inPocket=$inPocket")
             appendLine("test=${testAlert?.let { "${it.pattern} ${hex(it.color)}, ${it.expiresAtMs - now}ms left" }}")
             appendLine("gemini=${if (geminiEnabled) "on, ${geminiState?.id ?: "idle"}${geminiState?.let { ", for ${(now - geminiStateSinceMs) / 1000}s" } ?: ""}, looks=${geminiLooks.map { "${it.key.id}:${it.value.pattern}" }}" else "off"}")
@@ -1363,7 +1365,7 @@ class LightEngine {
 
     private fun firstEligibleAlertIndex(startIndex: Int): Int? {
         if (activeAlerts.isEmpty() || paused(PauseFeature.NOTIFICATIONS)) return null
-        val nowMinutes = currentMinutesOfDay()
+        val nowMinutes = currentMinutesOfWeek()
         val start = startIndex.coerceAtLeast(0) % activeAlerts.size
         for (offset in activeAlerts.indices) {
             val i = (start + offset) % activeAlerts.size
@@ -1400,7 +1402,7 @@ class LightEngine {
         quietHoursMode: QuietHoursMode,
         quietStartOverride: Int?,
         quietEndOverride: Int?,
-        nowMinutes: Int = currentMinutesOfDay()
+        nowMinutes: Int = currentMinutesOfWeek()
     ): Boolean = !paused(PauseFeature.NOTIFICATIONS) && AlertRenderPolicy.canShowNotification(
         callActive = incomingCallAlert != null,
         requiresFaceDown = requiresFaceDown,
@@ -1410,8 +1412,7 @@ class LightEngine {
         dndActive = dndActive,
         quietHoursMode = quietHoursMode,
         quietHoursEnabled = quietHoursEnabled,
-        quietHoursStartMinutes = quietHoursStartMinutes,
-        quietHoursEndMinutes = quietHoursEndMinutes,
+        quietHoursWeek = quietHoursWeek,
         quietStartOverride = quietStartOverride,
         quietEndOverride = quietEndOverride,
         nowMinutes = nowMinutes
@@ -1423,7 +1424,7 @@ class LightEngine {
         quietHoursMode: QuietHoursMode,
         quietStartOverride: Int?,
         quietEndOverride: Int?,
-        nowMinutes: Int = currentMinutesOfDay()
+        nowMinutes: Int = currentMinutesOfWeek()
     ): Boolean = AlertRenderPolicy.canShowAlert(
         requiresFaceDown,
         deviceFaceDown,
@@ -1432,8 +1433,7 @@ class LightEngine {
         dndActive,
         quietHoursMode,
         quietHoursEnabled,
-        quietHoursStartMinutes,
-        quietHoursEndMinutes,
+        quietHoursWeek,
         quietStartOverride,
         quietEndOverride,
         nowMinutes
@@ -1449,8 +1449,7 @@ class LightEngine {
             dndActive = dndActive,
             quietHoursMode = config.quietHoursMode,
             quietHoursEnabled = quietHoursEnabled,
-            quietHoursStartMinutes = quietHoursStartMinutes,
-            quietHoursEndMinutes = quietHoursEndMinutes,
+            quietHoursWeek = quietHoursWeek,
             quietStartOverride = config.quietStartOverride,
             quietEndOverride = config.quietEndOverride,
             nowMinutes = nowMinutes
@@ -1476,13 +1475,13 @@ class LightEngine {
 
     private fun batteryActiveNow(): Boolean {
         val config = batteryConfig ?: return false
-        return batteryVisible(config, currentMinutesOfDay()) &&
+        return batteryVisible(config, currentMinutesOfWeek()) &&
             batteryLayerWantsToRender(config, SystemClock.elapsedRealtime())
     }
 
     /** Whether a layer that fills the idle slot (battery or DND) has something to show, so the ring shouldn't be blanked. */
     private fun idleLayerActiveNow(): Boolean =
-        batteryActiveNow() || dndLayerNow(SystemClock.elapsedRealtime(), currentMinutesOfDay()) != null
+        batteryActiveNow() || dndLayerNow(SystemClock.elapsedRealtime(), currentMinutesOfWeek()) != null
 
     private sealed interface DndShow {
         val spec: DndIndicatorSpec
@@ -1499,8 +1498,7 @@ class LightEngine {
             deviceFaceDown = deviceFaceDown,
             quietHoursMode = spec.quietHoursMode,
             quietHoursEnabled = quietHoursEnabled,
-            quietHoursStartMinutes = quietHoursStartMinutes,
-            quietHoursEndMinutes = quietHoursEndMinutes,
+            quietHoursWeek = quietHoursWeek,
             quietStartOverride = spec.quietStartOverride,
             quietEndOverride = spec.quietEndOverride,
             nowMinutes = nowMinutes

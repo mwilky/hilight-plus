@@ -465,6 +465,16 @@
     <string name="conditions_quiet_hours_desc">Stay dark between the times below. Overnight windows are fine.</string>
     <string name="conditions_quiet_hours_start">Starts</string>
     <string name="conditions_quiet_hours_end">Ends</string>
+    <string name="conditions_quiet_hours_every_day">Every day</string>
+    <string name="conditions_quiet_hours_weekends_differ">Weekends differ</string>
+    <string name="conditions_quiet_hours_custom">Custom</string>
+    <string name="conditions_quiet_hours_weekdays">Weekdays</string>
+    <string name="conditions_quiet_hours_weekends">Weekends</string>
+    <string name="conditions_quiet_hours_day_off">No quiet hours</string>
+    <string name="conditions_quiet_hours_range">%1$s – %2$s</string>
+    <!-- A time picker's title: the day or days, then "Starts" or "Ends". -->
+    <string name="conditions_quiet_hours_dialog_title">%1$s · %2$s</string>
+    <string name="conditions_quiet_hours_overnight">Overnight times count for the day they start on, so Friday\'s run into Saturday morning.</string>
     <string name="conditions_pocket_title">Pocket mode</string>
     <string name="conditions_pocket_desc">Stay dark in a pocket or bag and light once the phone is out. Lying face down never counts as a pocket. Applies to everything; rules can\'t override it.</string>
 

@@ -57,4 +57,8 @@ interface IHiLightService {
     void setSplitAnnounceNew(boolean enabled);
     // Whether the phone is in a pocket or bag; the ring stays dark while it is.
     void setInPocket(boolean inPocket);
+    // Quiet hours with a window per day, Monday first, each belonging to the day it starts on; a
+    // start equal to its end is none that day. Replaces whatever setQuietHours last set. Always
+    // true; a daemon from before it replies with nothing, which reads as false.
+    boolean setQuietHoursWeek(boolean enabled, in int[] startMinutes, in int[] endMinutes);
 }

@@ -18,6 +18,8 @@ import com.mwilky.hilight.plus.PauseState
 import com.mwilky.hilight.plus.RuleSort
 import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.QuietHoursMode
+import com.mwilky.hilight.plus.QuietHoursRepeat
+import com.mwilky.hilight.plus.QuietWindow
 import com.mwilky.hilight.plus.SeenChannel
 import com.mwilky.hilight.plus.SeenChannels
 import com.mwilky.hilight.plus.SettingsSnapshot
@@ -29,6 +31,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.DayOfWeek
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val store = AppStore.get(application)
@@ -66,6 +69,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun setPocketMode(enabled: Boolean) = launch { store.setPocketMode(enabled) }
     fun setQuietHoursEnabled(enabled: Boolean) = launch { store.setQuietHoursEnabled(enabled) }
     fun setQuietHoursWindow(startMinutes: Int, endMinutes: Int) = launch { store.setQuietHoursWindow(startMinutes, endMinutes) }
+    fun setQuietHoursRepeat(repeat: QuietHoursRepeat) = launch { store.setQuietHoursRepeat(repeat) }
+    fun setQuietHoursWeekend(startMinutes: Int, endMinutes: Int) = launch { store.setQuietHoursWeekend(startMinutes, endMinutes) }
+    fun setQuietHoursDay(day: DayOfWeek, window: QuietWindow) = launch { store.setQuietHoursDay(day, window) }
 
     fun saveContactRule(rule: ContactRule) = launch { store.saveContactRule(rule) }
     fun deleteContactRule(ruleId: String) = launch { store.deleteContactRule(ruleId) }

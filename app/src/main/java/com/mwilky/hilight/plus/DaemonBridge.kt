@@ -1077,8 +1077,21 @@ class DaemonBridge private constructor(private val app: Application) {
         runRemote("setDndSuppressEnabled") { it.setDndSuppressEnabled(enabled) }
     }
 
-    fun setQuietHours(enabled: Boolean, startMinutes: Int, endMinutes: Int) {
-        runRemote("setQuietHours") { it.setQuietHours(enabled, startMinutes, endMinutes) }
+    /**
+     * [week] is each day's window, Monday first. A daemon from before setQuietHoursWeek answers it
+     * with false, and then gets [main] for every day through the old call instead. Never both, or a
+     * current daemon would briefly use [main] on every day in between.
+     */
+    fun setQuietHours(enabled: Boolean, main: QuietWindow, week: List<QuietWindow>) {
+        runRemote("setQuietHours") { service ->
+            // A day without quiet hours goes as a start equal to its end.
+            val tookWeek = service.setQuietHoursWeek(
+                enabled,
+                week.map { if (it.isEmpty) 0 else it.startMinutes }.toIntArray(),
+                week.map { if (it.isEmpty) 0 else it.endMinutes }.toIntArray()
+            )
+            if (!tookWeek) service.setQuietHours(enabled, main.startMinutes, main.endMinutes)
+        }
     }
 
     fun setRearCameraActive(active: Boolean) {

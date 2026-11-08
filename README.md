@@ -62,7 +62,7 @@ Pixel's built-in HiLight lights the rear ring for calls from favourites and Gemi
 **Conditions**
 - Only light when the phone is face down.
 - Skip during Do Not Disturb.
-- Quiet hours with a daily window.
+- Quiet hours the same every day, different at weekends, or set day by day with any day left out. An overnight window counts for the day it starts on.
 - Every rule can follow these defaults, always light, or opt out, and rules can carry their own quiet-hours window.
 - Pocket mode, on by default: the ring stays dark in a pocket or bag and lights once the phone is out. Lying face down never counts as a pocket, so face-down rules keep working. It applies to everything and can be turned off on the Conditions page.
 

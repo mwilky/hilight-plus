@@ -105,11 +105,11 @@ internal fun togglePauseSelection(
 }
 
 /**
- * "Morning" is when quiet hours end, so a pause until morning hands over to the same schedule,
+ * "Morning" is when quiet hours next end, so a pause until morning hands over to the same schedule,
  * or 07:00 for anyone without quiet hours.
  */
-internal fun pauseMorningMinutes(quietHoursEnabled: Boolean, quietHoursEndMinutes: Int): Int =
-    if (quietHoursEnabled) quietHoursEndMinutes else DEFAULT_MORNING_MINUTES
+internal fun pauseMorningMinutes(quietHoursEnabled: Boolean, quietHoursWeek: List<QuietWindow>, nowWeekMinutes: Int): Int =
+    (if (quietHoursEnabled) nextQuietEndMinutes(quietHoursWeek, nowWeekMinutes) else null) ?: DEFAULT_MORNING_MINUTES
 
 /** The next time the clock reads [minutesOfDay] after [nowMillis]: later today, or else tomorrow. */
 internal fun nextTimeOfDayMillis(nowMillis: Long, minutesOfDay: Int, zone: ZoneId = ZoneId.systemDefault()): Long {

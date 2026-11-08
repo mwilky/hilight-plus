@@ -2,6 +2,7 @@ package com.mwilky.hilight.plus.core
 
 import com.mwilky.hilight.plus.DndMode
 import com.mwilky.hilight.plus.QuietHoursMode
+import com.mwilky.hilight.plus.QuietWindow
 import com.mwilky.hilight.plus.quietHoursBlocked
 
 /**
@@ -18,8 +19,7 @@ internal object AlertRenderPolicy {
         dndActive: Boolean = false,
         quietHoursMode: QuietHoursMode = QuietHoursMode.ALWAYS,
         quietHoursEnabled: Boolean = false,
-        quietHoursStartMinutes: Int = 0,
-        quietHoursEndMinutes: Int = 0,
+        quietHoursWeek: List<QuietWindow> = emptyList(),
         quietStartOverride: Int? = null,
         quietEndOverride: Int? = null,
         nowMinutes: Int = 0
@@ -29,8 +29,7 @@ internal object AlertRenderPolicy {
         if (quietHoursBlocked(
                 quietHoursMode,
                 quietHoursEnabled,
-                quietHoursStartMinutes,
-                quietHoursEndMinutes,
+                quietHoursWeek,
                 quietStartOverride,
                 quietEndOverride,
                 nowMinutes
@@ -80,8 +79,7 @@ internal object AlertRenderPolicy {
         dndActive: Boolean = false,
         quietHoursMode: QuietHoursMode = QuietHoursMode.ALWAYS,
         quietHoursEnabled: Boolean = false,
-        quietHoursStartMinutes: Int = 0,
-        quietHoursEndMinutes: Int = 0,
+        quietHoursWeek: List<QuietWindow> = emptyList(),
         quietStartOverride: Int? = null,
         quietEndOverride: Int? = null,
         nowMinutes: Int = 0
@@ -95,8 +93,7 @@ internal object AlertRenderPolicy {
             dndActive,
             quietHoursMode,
             quietHoursEnabled,
-            quietHoursStartMinutes,
-            quietHoursEndMinutes,
+            quietHoursWeek,
             quietStartOverride,
             quietEndOverride,
             nowMinutes
