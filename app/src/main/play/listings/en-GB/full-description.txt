@@ -34,6 +34,7 @@ CONDITIONS
 • Pocket mode: stays dark in a pocket or bag and lights once the phone is out
 • Only light when the phone is face down
 • Stay dark during Do Not Disturb or quiet hours
+• Quiet hours the same every day, different at weekends, or set day by day
 • Any rule can override these when it matters
 • Pause from a Quick Settings tile: everything or just some features, for an hour, until morning or until you resume
 

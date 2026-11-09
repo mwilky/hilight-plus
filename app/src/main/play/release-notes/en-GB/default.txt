@@ -1,1 +1,2 @@
-• Fixed a warning telling you to turn off Pixel's own 'Messages from favourites' lighting when it was already off. It only warns now if you've switched that setting on.
+• Quiet hours can now differ at weekends, or be set day by day with any day left out. Your current quiet hours carry on as they are under Every day.
+• Pause until morning ends when your next quiet hours end, so a weekend lie-in counts.
