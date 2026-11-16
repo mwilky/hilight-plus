@@ -207,6 +207,47 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
         engine.setInPocket(inPocket)
     }
 
+    override fun setCountdown(
+        key: String?,
+        totalMs: Long,
+        remainingMs: Long,
+        requiresFaceDown: Boolean,
+        dndMode: String?,
+        quietHoursMode: String?
+    ) {
+        if (key == null || !entitled) return
+        engine.setCountdown(key, totalMs, remainingMs, requiresFaceDown, DndMode.fromId(dndMode), QuietHoursMode.fromId(quietHoursMode))
+    }
+
+    override fun clearCountdown() {
+        engine.clearCountdown()
+    }
+
+    override fun setProgress(
+        key: String?,
+        totalMs: Long,
+        remainingMs: Long,
+        fraction: Float,
+        color: Long,
+        brightness: Float,
+        requiresFaceDown: Boolean,
+        dndMode: String?,
+        quietHoursMode: String?,
+        quietStart: Int,
+        quietEnd: Int
+    ) {
+        if (key == null || !entitled) return
+        val dnd = DndMode.fromId(dndMode)
+        val quiet = QuietHoursMode.fromId(quietHoursMode)
+        val start = quietStart.takeIf { it >= 0 }
+        val end = quietEnd.takeIf { it >= 0 }
+        if (totalMs > 0L) {
+            engine.setCountdown(key, totalMs, remainingMs, requiresFaceDown, dnd, quiet, start, end)
+        } else {
+            engine.setFill(key, fraction, color, brightness, requiresFaceDown, dnd, quiet, start, end)
+        }
+    }
+
     override fun setSplitRing(enabled: Boolean) {
         engine.setSplitRing(enabled)
     }
@@ -599,7 +640,25 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
         "pid=${Process.myPid()} uid=${Process.myUid()} entitled=$entitled\n" +
             "appPid=$appPid appFrozen=${if (appPid == 0) null else isAppFrozen(appPid)}\n" +
             engine.describeState() +
-            "\n\n-- dumpsys lights --\n" + lightsDump()
+            "\n\n-- dumpsys lights --\n" + lightsDump() +
+            "\n\n-- app sensors --\n" + appSensorsDump()
+
+    /**
+     * Android's view of the app's sensors, for when face-down stops working: the app's process
+     * state (sensors are cut off for apps Android treats as idle) and the sensor service's lines
+     * about the app's registrations. The app can't read either for itself.
+     */
+    private fun appSensorsDump(): String {
+        val uidState = runCommand("cmd", "activity", "get-uid-state", appUid.toString())?.trim()
+        val sensors = runCommand("dumpsys", "sensorservice")?.lines().orEmpty()
+        val mine = sensors.filter { line ->
+            line.contains("hilight", ignoreCase = true) || line.contains("uid=$appUid") || line.contains(" $appUid ")
+        }.takeLast(40)
+        val idle = sensors.filter { it.contains("idle", ignoreCase = true) && it.contains(appUid.toString()) }
+        return "uid=$appUid state=${uidState ?: "unavailable"}\n" +
+            (idle.joinToString("\n").ifEmpty { "(no idle line for this uid)" }) + "\n" +
+            (mine.joinToString("\n").ifEmpty { "(sensor service lists nothing for this app)" })
+    }
 
     override fun isRingStuck(): Boolean {
         val mismatch = engine.ringMismatch() ?: return false

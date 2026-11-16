@@ -28,6 +28,7 @@ Pixel's built-in HiLight lights the rear ring for calls from favourites and Gemi
 - Starred contacts can share a favourites style, which sits between a sender's own rule and the app rule.
 - App rules can switch off individual notification channels, such as an app's promotions or group chats. Each channel is listed by name once the app posts a notification on it, and lights until it's switched off. A text or contact rule can still light a switched-off channel.
 - Text rules: light up when a notification's title or message contains, or is exactly, some text, from any app or just one. They're checked before every other notification rule, so a title containing "Delivery" or a message containing "verification code" can have its own look.
+- App rules can show progress. A running timer, such as Clock's, empties the ring as it counts down, turning amber at halfway and red near the end. A download or other progress bar fills it in the rule's colour. The app's notifications still light over it, and the ring goes dark once the timer ends or the bar finishes.
 - Thirteen patterns, picked by group (Simple, Motion, Gemini): solid, breathe, pulse, beacon, wave, comet, orbit, ripple, sparkle, rainbow, and copies of Gemini's own listening, thinking and replying effects.
 - Eight preset colours or any custom colour from a colour wheel, for every rule, battery's fixed colour and Gemini's states. The custom colour's hex code can be copied and pasted into another rule.
 - A brightness setting, from 10% to 100%, for every rule and each of Gemini's states.
@@ -101,7 +102,7 @@ Pixel's built-in HiLight lights the rear ring for calls from favourites and Gemi
 | Permission | Why |
 |---|---|
 | Contacts | Tell saved callers and senders from unknown ones, spot starred favourites, match them to your rules, and pick contacts when creating a rule |
-| Notification access | Notice incoming calls, new notifications and app calls, and know when they are dismissed |
+| Notification access | Notice incoming calls, new notifications and app calls, read a timer's time left or a progress bar's position for rules that show progress, and know when they are dismissed |
 | Internet | Connect to the phone's own Wireless debugging over loopback (127.0.0.1) to start the lights daemon. Nothing is sent off the device |
 | Local network access | Find the pairing dialog, which Wireless debugging advertises over mDNS on the phone itself |
 | Notifications | The setup guide that follows you into Settings and takes the pairing code |
@@ -136,7 +137,7 @@ Standard Android Gradle project. Open in Android Studio or run:
 
 Release builds are minified with R8. There is also a `debugMinified` variant, signed with the debug key, for checking the shrunk app on a device. Keep the `mapping.txt` from each release build for readable crash reports.
 
-Unit tests cover the rule model, JSON round-tripping, contact matching, rule sorting, quiet hours, the pattern renderer, the battery and split-ring layouts, the conversion of every look into a hardware effect within the keyframe budget, the Gemini log parser, the call-state machine, the notification slot tracker and the connect-setup guide. Anything that touches the LEDs needs a physical Pixel.
+Unit tests cover the rule model, JSON round-tripping, contact matching, rule sorting, quiet hours, the pattern renderer, the battery and split-ring layouts, the conversion of every look into a hardware effect within the keyframe budget, the Gemini log parser, timer and progress-bar readings and the countdown ring, the call-state machine, the notification slot tracker and the connect-setup guide. Anything that touches the LEDs needs a physical Pixel.
 
 ## Pricing
 

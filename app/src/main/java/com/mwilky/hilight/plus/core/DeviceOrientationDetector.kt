@@ -44,6 +44,25 @@ object DeviceOrientationDetector {
     var lastKnownFaceDown: Boolean = false
         private set
 
+    // For the debug report: whether readings are actually arriving.
+    @Volatile
+    private var lastSampleElapsedMs = 0L
+    @Volatile
+    private var monitoringRegistered: Boolean? = null
+    @Volatile
+    private var tiltRegistered: Boolean? = null
+    @Volatile
+    private var missedSamples = 0
+
+    /** What the detector holds, and when it last heard from the sensor. */
+    @Synchronized
+    fun describe(): String {
+        val age = if (lastSampleElapsedMs == 0L) "never" else "${(android.os.SystemClock.elapsedRealtime() - lastSampleElapsedMs) / 1000}s ago"
+        return "lastKnown=$lastKnownFaceDown, lastReading=$age, monitoring=${activeListener != null} " +
+            "(tokens=$monitorTokens, registered=$monitoringRegistered, tilt=$tiltRegistered), " +
+            "missed one-off readings=$missedSamples"
+    }
+
     var onOrientationChanged: ((isFaceDown: Boolean) -> Unit)? = null
 
     /**
@@ -97,7 +116,12 @@ object DeviceOrientationDetector {
             runCatching { wakeLock?.acquire(timeoutMs + 100L) }
             withTimeoutOrNull(timeoutMs) {
                 deferred.await()
-            } ?: lastKnownFaceDown
+            } ?: run {
+                // Silent until now: a sensor that never answers looks exactly like "not face down".
+                missedSamples++
+                DebugLog.w(TAG, "No orientation reading within ${timeoutMs}ms; keeping isFaceDown=$lastKnownFaceDown (missed $missedSamples)")
+                lastKnownFaceDown
+            }
         } finally {
             sensorManager.unregisterListener(listener)
             if (wakeLock?.isHeld == true) {
@@ -139,6 +163,7 @@ object DeviceOrientationDetector {
 
     private fun rememberFaceDown(faceDown: Boolean) {
         lastKnownFaceDown = faceDown
+        lastSampleElapsedMs = android.os.SystemClock.elapsedRealtime()
     }
 
     private fun failClosed(): Boolean {
@@ -181,7 +206,8 @@ object DeviceOrientationDetector {
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
         }
 
-        sensorManager.registerListener(activeListener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+        monitoringRegistered = sensorManager.registerListener(activeListener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+        tiltRegistered = null
 
         // Gravity doesn't wake the CPU: while the phone sleeps its readings wait for something
         // else to wake it, so a flip would go unseen. The wake-up tilt detector fires in the
@@ -198,9 +224,9 @@ object DeviceOrientationDetector {
 
                 override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
             }
-            sensorManager.registerListener(tiltListener, tilt, SensorManager.SENSOR_DELAY_NORMAL)
+            tiltRegistered = sensorManager.registerListener(tiltListener, tilt, SensorManager.SENSOR_DELAY_NORMAL)
         }
-        DebugLog.i(TAG, "Started orientation monitoring for pending alerts (tilt wake-up=${tilt != null})")
+        DebugLog.i(TAG, "Started orientation monitoring for pending alerts (gravity registered=$monitoringRegistered, tilt wake-up=$tiltRegistered)")
     }
 
     private fun stopMonitoringLocked() {

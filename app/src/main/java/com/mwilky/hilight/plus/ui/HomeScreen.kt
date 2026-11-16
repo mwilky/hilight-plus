@@ -579,6 +579,7 @@ fun HomeScreen(
             autoExtractedColor = autoColor,
             channels = channels,
             initialExcludedChannels = rule.excludedChannelIds,
+            initialShowProgress = rule.showProgress,
             renderer = renderer,
             controller = controller,
             onDismiss = { appRuleBeingEdited = null },
@@ -595,7 +596,8 @@ fun HomeScreen(
                         quietHoursEndMinutes = result.quietHoursEndMinutes,
                         brightness = result.brightness,
                         speed = result.speed,
-                        excludedChannelIds = result.excludedChannelIds
+                        excludedChannelIds = result.excludedChannelIds,
+                        showProgress = result.showProgress
                     )
                 )
                 appRuleBeingEdited = null

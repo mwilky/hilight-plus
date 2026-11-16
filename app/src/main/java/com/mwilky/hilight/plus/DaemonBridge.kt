@@ -1102,6 +1102,29 @@ class DaemonBridge private constructor(private val app: Application) {
         runRemote("setInPocket") { it.setInPocket(inPocket) }
     }
 
+    /** [show] with [remainingMs] left if it's a timer; see [IHiLightService.setProgress]. */
+    fun setProgress(show: ProgressShow, remainingMs: Long) {
+        runRemote("setProgress") {
+            it.setProgress(
+                show.key,
+                show.totalMs,
+                remainingMs,
+                show.fraction,
+                show.color,
+                show.brightness,
+                show.requiresFaceDown,
+                show.dndMode.id,
+                show.quietHoursMode.id,
+                show.quietStartMinutes ?: -1,
+                show.quietEndMinutes ?: -1
+            )
+        }
+    }
+
+    fun clearProgress() {
+        runRemote("clearProgress") { it.clearCountdown() }
+    }
+
     /** Null, or a pause that has run out, clears it. The daemon ends a running one on time itself. */
     fun setPause(pause: PauseState?) {
         runRemote("setPause") { it.setPause(pause?.untilMillis ?: 0L, pause?.features?.let(PauseFeature::encode).orEmpty()) }

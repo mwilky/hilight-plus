@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.FileProvider
+import com.mwilky.hilight.plus.core.DeviceOrientationDetector
 import com.mwilky.hilight.plus.ui.diagnostics.isNotificationListenerEnabled
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -55,6 +56,7 @@ internal object DebugReport {
             appendLine("Daemon: ${controller.daemon.state.value} via ${controller.daemon.method.value}${controller.daemon.errorText()?.let { " ($it)" } ?: ""}")
             appendLine("Notification access: granted=${isNotificationListenerEnabled(context)}, listener connected=${NotificationTrigger.isListenerConnected}")
             appendLine("Contacts permission: ${context.checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED}")
+            appendLine("Face down: ${DeviceOrientationDetector.describe()}")
             appendLine("Stock favourite-calls HiLight: ${if (stock.known) stock.favoriteCallsActive else "unknown"}")
             appendLine("Stock Gemini feedback: ${if (stock.geminiKnown) stock.geminiFeedbackActive else "unknown"}")
             appendLine("Stock favourite-messages HiLight: ${if (!stock.favoriteMessagesAvailable) "not on this build" else if (stock.favoriteMessagesKnown) stock.favoriteMessagesActive else "unknown"}")
@@ -82,7 +84,7 @@ internal object DebugReport {
                 rule("Sender contact ${it.id}", it.isEnabled, it.pattern, it.color, it.faceDownMode, it.dndMode, it.quietHoursMode, it.quietHoursStartMinutes, it.quietHoursEndMinutes)
             }
             snapshot.appRules.forEach {
-                rule("App ${it.packageName}", it.isEnabled, it.pattern, it.color, it.faceDownMode, it.dndMode, it.quietHoursMode, it.quietHoursStartMinutes, it.quietHoursEndMinutes, "autoColor=${it.isAutoColor}")
+                rule("App ${it.packageName}", it.isEnabled, it.pattern, it.color, it.faceDownMode, it.dndMode, it.quietHoursMode, it.quietHoursStartMinutes, it.quietHoursEndMinutes, "autoColor=${it.isAutoColor}, showProgress=${it.showProgress}")
             }
             // The text itself is left out: it can be a name or anything else personal.
             snapshot.textRules.forEach {

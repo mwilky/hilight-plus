@@ -317,7 +317,9 @@ data class AppNotificationRule(
     val brightness: Float = DEFAULT_BRIGHTNESS,
     val speed: Float = DEFAULT_SPEED,
     // Channels switched off, so a channel the app adds later still lights until it is switched off too.
-    val excludedChannelIds: Set<String> = emptySet()
+    val excludedChannelIds: Set<String> = emptySet(),
+    // A running timer or progress bar from this app drains or fills the ring while it runs.
+    val showProgress: Boolean = false
 ) {
     /** Whether a notification posted on [channelId] lights through this rule. */
     fun lightsChannel(channelId: String?): Boolean = channelId == null || channelId !in excludedChannelIds
@@ -327,6 +329,7 @@ data class AppNotificationRule(
         put("appName", appName)
         put("isAutoColor", isAutoColor)
         if (excludedChannelIds.isNotEmpty()) put("excludedChannels", JSONArray(excludedChannelIds.sorted()))
+        if (showProgress) put("showProgress", true)
         putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes, brightness, speed)
     }
 
@@ -349,7 +352,8 @@ data class AppNotificationRule(
                 speed = shared.speed,
                 excludedChannelIds = json.optJSONArray("excludedChannels")
                     ?.let { array -> (0 until array.length()).mapNotNull { array.optString(it).takeIf(String::isNotBlank) }.toSet() }
-                    .orEmpty()
+                    .orEmpty(),
+                showProgress = json.optBoolean("showProgress", false)
             )
         }
     }

@@ -13,6 +13,7 @@ import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.QuietWindow
 import com.mwilky.hilight.plus.SplitAnimation
 import com.mwilky.hilight.plus.SplitLook
+import com.mwilky.hilight.plus.clampBrightness
 import com.mwilky.hilight.plus.currentMinutesOfWeek
 
 /**
@@ -209,6 +210,42 @@ class LightEngine {
     private var dndFlash: DndFlash? = null
 
     // Multi-Notification Cyclic Queue
+    /** A running timer: [totalMs] long, ending at [endsAtMs] on the elapsed-realtime clock. */
+    private data class Countdown(
+        val key: String,
+        val totalMs: Long,
+        val endsAtMs: Long,
+        val requiresFaceDown: Boolean,
+        val dndMode: DndMode,
+        val quietHoursMode: QuietHoursMode,
+        val quietStartOverride: Int? = null,
+        val quietEndOverride: Int? = null
+    )
+
+    /** A progress bar [fraction] done, in an app rule's [color], last sent at [updatedAtMs]. */
+    private data class Fill(
+        val key: String,
+        val fraction: Float,
+        val color: Long,
+        val brightness: Float,
+        val requiresFaceDown: Boolean,
+        val dndMode: DndMode,
+        val quietHoursMode: QuietHoursMode,
+        val quietStartOverride: Int?,
+        val quietEndOverride: Int?,
+        val updatedAtMs: Long
+    )
+
+    // The progress slot holds a countdown or a fill, never both. A countdown holds its own end
+    // time, so it goes dark on time even if the app never clears it; a fill has no end, so it
+    // goes dark when the app stops repeating it.
+    private var countdown: Countdown? = null
+    private var fill: Fill? = null
+    private var nextCountdownStepAtMs: Long? = null
+    // A long countdown goes to the hardware in parts: when the part last sent runs out.
+    private var countdownEffectEndsAtMs: Long? = null
+    private var countdownParts = 0
+
     private val activeAlerts = mutableListOf<QueuedAlert>()
     private var currentAlertIndex = 0
     private var cycleStartTimeMs = 0L
@@ -690,6 +727,82 @@ class LightEngine {
         }
     }
 
+    /**
+     * Shows a timer [totalMs] long with [remainingMs] to go as a draining ring, beneath calls,
+     * Gemini and notifications. Replaces any countdown already showing.
+     */
+    fun setCountdown(
+        key: String,
+        totalMs: Long,
+        remainingMs: Long,
+        requiresFaceDown: Boolean,
+        dndMode: DndMode,
+        quietHoursMode: QuietHoursMode,
+        quietStartOverride: Int? = null,
+        quietEndOverride: Int? = null
+    ) {
+        synchronized(lock) {
+            val total = totalMs.coerceAtMost(MAX_COUNTDOWN_MS)
+            val remaining = remainingMs.coerceAtMost(total)
+            fill = null
+            if (remaining <= 0L) {
+                countdown = null
+            } else {
+                countdown = Countdown(
+                    key, total, SystemClock.elapsedRealtime() + remaining, requiresFaceDown, dndMode, quietHoursMode,
+                    quietStartOverride, quietEndOverride
+                )
+            }
+            DebugLog.i(TAG, "setCountdown: ${remaining / 1000}s left of ${total / 1000}s, requiresFaceDown=$requiresFaceDown, dndMode=$dndMode, quietHoursMode=$quietHoursMode")
+            wake()
+        }
+    }
+
+    /**
+     * Shows a progress bar [fraction] done as a filling ring in [color], in the same slot as a
+     * countdown, which it replaces. It goes dark unless sent again within [FILL_STALE_MS].
+     */
+    fun setFill(
+        key: String,
+        fraction: Float,
+        color: Long,
+        brightness: Float,
+        requiresFaceDown: Boolean,
+        dndMode: DndMode,
+        quietHoursMode: QuietHoursMode,
+        quietStartOverride: Int?,
+        quietEndOverride: Int?
+    ) {
+        synchronized(lock) {
+            val previous = fill
+            countdown = null
+            fill = Fill(
+                key, fraction.coerceIn(0f, 1f), color, clampBrightness(brightness), requiresFaceDown, dndMode,
+                quietHoursMode, quietStartOverride, quietEndOverride, SystemClock.elapsedRealtime()
+            )
+            // Repeats are the app's heartbeat and a bar creeps along a percent at a time; only a
+            // change the ring shows is worth a line.
+            val count = lights.ledCount
+            if (previous == null || previous.key != key || previous.color != color ||
+                ProgressFill.litCount(previous.fraction, count) != ProgressFill.litCount(fraction, count)
+            ) {
+                DebugLog.i(TAG, "setFill: ${(fraction * 100).toInt()}% ${hex(color)}, requiresFaceDown=$requiresFaceDown, dndMode=$dndMode, quietHoursMode=$quietHoursMode")
+            }
+            wake()
+        }
+    }
+
+    /** Clears the progress slot, countdown or fill. */
+    fun clearCountdown() {
+        synchronized(lock) {
+            if (countdown == null && fill == null) return
+            countdown = null
+            fill = null
+            DebugLog.i(TAG, "clearCountdown")
+            wake()
+        }
+    }
+
     private fun onLiveConditionChanged() {
         val now = SystemClock.elapsedRealtime()
         syncNotificationTimer(now)
@@ -749,6 +862,8 @@ class LightEngine {
             splitIntro = null
             testAlert = null
             geminiState = null
+            countdown = null
+            fill = null
             // Also drop the battery reading, so the layer can't simply light back up on the next
             // tick and undo the blank. It resumes when the app pushes a fresh reading.
             batteryStateUpdatedAtMs = 0L
@@ -805,6 +920,9 @@ class LightEngine {
         if (directAlert != null) due = minOf(due, now + directAlertTimer.remainingMs(now))
         activeAlerts.forEach { if (it.expiresAtMs != Long.MAX_VALUE) due = minOf(due, it.expiresAtMs) }
         nextTurnAtMs?.let { due = minOf(due, it) }
+        countdown?.let { due = minOf(due, it.endsAtMs) }
+        fill?.let { due = minOf(due, maxOf(now, it.updatedAtMs + FILL_STALE_MS)) }
+        nextCountdownStepAtMs?.let { due = minOf(due, maxOf(now, it)) }
         geminiState?.let { due = minOf(due, geminiStateSinceMs + GeminiLogParser.maxDurationMs(it)) }
         splitIntro?.let { intro ->
             activeAlerts.firstOrNull { it.key == intro.key }?.let { due = minOf(due, maxOf(now, intro.startedAtMs + splitIntroMs(it))) }
@@ -956,6 +1074,26 @@ class LightEngine {
             }
             val dndShow = dndLayerNow(now, nowMinutes)
 
+            if (countdown?.let { now >= it.endsAtMs } == true) {
+                countdown = null
+                DebugLog.i(TAG, "Countdown finished")
+            }
+            if (fill?.let { now - it.updatedAtMs >= FILL_STALE_MS } == true) {
+                fill = null
+                DebugLog.w(TAG, "Progress fill not repeated for ${FILL_STALE_MS / 1000}s; clearing it")
+            }
+            val timer = countdown?.takeIf {
+                !paused(PauseFeature.NOTIFICATIONS) &&
+                    alertVisible(it.requiresFaceDown, it.dndMode, it.quietHoursMode, it.quietStartOverride, it.quietEndOverride, nowMinutes)
+            }
+            val filling = fill?.takeIf {
+                !paused(PauseFeature.NOTIFICATIONS) &&
+                    alertVisible(it.requiresFaceDown, it.dndMode, it.quietHoursMode, it.quietStartOverride, it.quietEndOverride, nowMinutes)
+            }
+            var renderCountdown: Countdown? = null
+            var renderFill: Fill? = null
+            nextCountdownStepAtMs = null
+
             var currentPattern = ambientPattern
             var currentColor = ambientColor
             var currentBrightness = ambientBrightness
@@ -974,11 +1112,16 @@ class LightEngine {
             var effectRemainingMs: Long? = null
             nextTurnAtMs = null
 
-            // The idle slot: the DND layer or the battery layer. The battery wins unless the DND
-            // indicator is set to go over it; a flash always does (it only gets here beneath a
-            // call hidden by its conditions).
+            // The idle slot: progress (a countdown or a fill), the DND layer or the battery layer.
+            // Progress was asked for, so it goes over the other two. Of those the battery wins
+            // unless the DND indicator is set to go over it; a flash always does (it only gets
+            // here beneath a call hidden by its conditions).
             fun useIdleLayer() {
-                if (dndShow != null && (dndShow is DndShow.Flash || dndShow.spec.overridesBattery || !batteryEligible)) {
+                if (timer != null && dndShow !is DndShow.Flash) {
+                    renderCountdown = timer
+                } else if (filling != null && dndShow !is DndShow.Flash) {
+                    renderFill = filling
+                } else if (dndShow != null && (dndShow is DndShow.Flash || dndShow.spec.overridesBattery || !batteryEligible)) {
                     renderDnd = dndShow
                 } else if (batteryEligible) {
                     renderBattery = true
@@ -1151,11 +1294,64 @@ class LightEngine {
                     }
                 }
             }
+            val timerShown = renderCountdown
+            val fillShown = renderFill
+            if (timerShown != null) reason = "countdown ${timerShown.totalMs / 1000}s timer"
+            val count = lights.ledCount
+            val fillLit = fillShown?.let { ProgressFill.litCount(it.fraction, count) }
+            if (fillShown != null) reason = "progress $fillLit/$count ${hex(fillShown.color)}"
             noteRender(reason)
             val useEffects = effectsEnabled()
             framesDriving = !useEffects
             val period = lights.effectPeriodMs
-            val count = lights.ledCount
+
+            if (fillShown != null) {
+                if (useEffects) {
+                    // Keyed on what the ring shows, so a bar creeping along within one LED, or the
+                    // app's heartbeat, doesn't send the same look again.
+                    showEffect(listOf("fill", fillShown.key, fillLit, fillShown.color, fillShown.brightness)) {
+                        RingEffect.sample(ProgressFill.LOOP_MS, period, count) { t ->
+                            ProgressFill.frame(fillShown.fraction, fillShown.color, fillShown.brightness, t, count)
+                        }
+                    }
+                    return
+                }
+                shownEffectKey = null
+                if (needsSessionReset || !lights.isSessionOpen) {
+                    lights.openSession(sessionPriority)
+                    needsSessionReset = false
+                }
+                lights.pushFrame(ProgressFill.frame(fillShown.fraction, fillShown.color, fillShown.brightness, now, count))
+                return
+            }
+
+            if (timerShown != null) {
+                val total = timerShown.totalMs
+                val remaining = timerShown.endsAtMs - now
+                val changes = CountdownRing.changesAhead(total, remaining, count)
+                nextCountdownStepAtMs = changes.firstOrNull()?.let { timerShown.endsAtMs - it }
+                if (useEffects) {
+                    // One effect runs as much of the countdown as the hardware will take, so the
+                    // ring keeps draining while the phone sleeps. It is sent again at each step
+                    // while awake, which puts the ring right if the hardware drifted, and when a
+                    // part of a long countdown runs out.
+                    if (countdownEffectEndsAtMs?.let { now >= it } == true) countdownParts++
+                    showEffect(listOf("countdown", timerShown, changes.size, countdownParts), iterations = 1) {
+                        CountdownRing.effect(total, remaining, period, count).also { countdownEffectEndsAtMs = now + it.durationMs }
+                    }
+                    countdownEffectEndsAtMs?.let { partEnd ->
+                        nextCountdownStepAtMs = minOf(nextCountdownStepAtMs ?: partEnd, partEnd)
+                    }
+                    return
+                }
+                shownEffectKey = null
+                if (needsSessionReset || !lights.isSessionOpen) {
+                    lights.openSession(sessionPriority)
+                    needsSessionReset = false
+                }
+                lights.pushFrame(CountdownRing.frame(total, remaining, count))
+                return
+            }
 
             if (renderBattery && battery != null && useEffects) {
                 val low = !batteryCharging && !batteryFull && battery.lowWarningEnabled &&
@@ -1326,6 +1522,8 @@ class LightEngine {
                 val expiry = if (it.expiresAtMs == Long.MAX_VALUE) "until dismissed" else "${it.expiresAtMs - now}ms left"
                 appendLine("  ${it.key}: ${it.pattern} ${hex(it.color)}, $expiry, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}")
             }
+            appendLine("countdown=${countdown?.let { "${(it.endsAtMs - now) / 1000}s left of ${it.totalMs / 1000}s, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}" }}")
+            appendLine("fill=${fill?.let { "${(it.fraction * 100).toInt()}% ${hex(it.color)}, updated ${(now - it.updatedAtMs) / 1000}s ago, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}" }}")
             val stateAge = if (batteryStateUpdatedAtMs == 0L) "never" else "${(now - batteryStateUpdatedAtMs) / 1000}s ago"
             append("battery=${batteryConfig?.let { "enabled=${it.enabled}, pattern=${it.chargingPattern}, overrides=${it.overridesNotifications}" }}, level=$batteryLevel, charging=$batteryCharging, full=$batteryFull, updated $stateAge")
         }
@@ -1481,7 +1679,7 @@ class LightEngine {
 
     /** Whether a layer that fills the idle slot (battery or DND) has something to show, so the ring shouldn't be blanked. */
     private fun idleLayerActiveNow(): Boolean =
-        batteryActiveNow() || dndLayerNow(SystemClock.elapsedRealtime(), currentMinutesOfWeek()) != null
+        countdown != null || fill != null || batteryActiveNow() || dndLayerNow(SystemClock.elapsedRealtime(), currentMinutesOfWeek()) != null
 
     private sealed interface DndShow {
         val spec: DndIndicatorSpec
@@ -1547,5 +1745,11 @@ class LightEngine {
         // A test always hands the ring back, even if a caller (or a mismatched app build) asks
         // for a duration that would otherwise leave it lit for good.
         private const val MAX_TEST_MS = 60_000L
+
+        // Clock's longest timer is under 100 hours; nothing sensible asks for more.
+        private const val MAX_COUNTDOWN_MS = 100 * 3_600_000L
+
+        // Three missed heartbeats from the app, as for the battery reading.
+        private const val FILL_STALE_MS = 3 * 60_000L
     }
 }

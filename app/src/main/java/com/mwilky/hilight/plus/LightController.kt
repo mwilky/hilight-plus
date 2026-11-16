@@ -14,6 +14,7 @@ import android.os.SystemClock
 import com.mwilky.hilight.plus.core.DeviceOrientationDetector
 import com.mwilky.hilight.plus.core.PatternRenderer
 import com.mwilky.hilight.plus.core.PocketDetector
+import com.mwilky.hilight.plus.core.ProgressFill
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -74,6 +75,11 @@ class LightController private constructor(private val app: Application) {
     private var lastDndIndicatorOn = false
     @Volatile
     private var lastDndIndicatorRequiresFaceDown = false
+
+    // What the progress slot was last asked to show: a fill has no end of its own, so the daemon
+    // drops it unless it hears it again, and it's sent again on the heartbeat below.
+    @Volatile
+    private var lastProgress: ProgressShow? = null
 
     // A ring left on one of our old sessions (the render loop can't reach it any more) is only
     // noticed by the user when they pick the phone up, so that's when to check for it.
@@ -258,6 +264,8 @@ class LightController private constructor(private val app: Application) {
                 if (lastDndIndicatorOn && lastDndActive) {
                     daemon.setDndActive(lastDndActive)
                 }
+                // And a progress bar, which has no end of its own.
+                lastProgress?.takeIf { !it.isTimer }?.let { daemon.setProgress(it, 0L) }
             }
         }
     }
@@ -363,6 +371,33 @@ class LightController private constructor(private val app: Application) {
      */
     fun removeNotificationAlert(key: String) {
         daemon.removeAlert(key)
+    }
+
+    /** Shows a running timer on the ring; see [TimerCountdown]. It follows the Conditions page. */
+    fun showProgress(show: ProgressShow) {
+        val remaining = if (show.isTimer) show.endsAtElapsedMs - SystemClock.elapsedRealtime() else 0L
+        if (show.isTimer && remaining <= 0L) {
+            clearProgress()
+            return
+        }
+        val previous = lastProgress
+        val logWorthy = previous == null || previous.key != show.key || previous.isTimer != show.isTimer ||
+            (show.isTimer && previous != show) ||
+            (!show.isTimer && ProgressFill.litCount(previous.fraction, 8) != ProgressFill.litCount(show.fraction, 8))
+        if (logWorthy) {
+            DebugLog.i(
+                TAG,
+                if (show.isTimer) "Progress: ${remaining / 1000}s left of ${show.totalMs / 1000}s timer"
+                else "Progress: ${(show.fraction * 100).toInt()}% bar"
+            )
+        }
+        lastProgress = show
+        daemon.setProgress(show, remaining)
+    }
+
+    fun clearProgress() {
+        lastProgress = null
+        daemon.clearProgress()
     }
 
     /**

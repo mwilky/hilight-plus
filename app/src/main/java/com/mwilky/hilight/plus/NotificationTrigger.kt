@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationManager
 import android.app.Person
 import android.os.Parcelable
+import android.os.SystemClock
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import com.mwilky.hilight.plus.core.AppIconColorExtractor
@@ -33,6 +34,24 @@ class NotificationTrigger : NotificationListenerService() {
 
     @Volatile
     private var lastKnownCycling: Boolean? = null
+
+    /**
+     * A notification showing a timer or progress bar, as of when it was posted. [totalMs] is a
+     * timer's length: what the notification said, or the most time left it has shown.
+     */
+    private data class ProgressItem(
+        val key: String,
+        val pkg: String,
+        val channelId: String?,
+        val reading: ProgressReading,
+        val postedAtElapsedMs: Long,
+        val totalMs: Long
+    )
+
+    // Every notification under way, oldest first; the newest one its app rule shows is on the
+    // ring. Only touched while handling events, like the tracker.
+    private val progress = LinkedHashMap<String, ProgressItem>()
+    private var shownProgress: ProgressShow? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -71,6 +90,8 @@ class NotificationTrigger : NotificationListenerService() {
         } catch (_: Throwable) {
             null
         }?.filter { !isBubbleOnly(it) && isEligiblePostedNotification(it, log = false) }?.forEach(::rememberChannel)
+        // A timer or download already running when the listener (re)connects.
+        enqueue(ListenerEvent.ProgressScan)
     }
 
     override fun onListenerDisconnected() {
@@ -90,6 +111,7 @@ class NotificationTrigger : NotificationListenerService() {
         // mid-alert. Clear both rather than leave the ring lit.
         DebugLog.w(TAG, "Notification listener destroyed -> clearing notification and call lights")
         LightController.get(applicationContext).clearAlert()
+        LightController.get(applicationContext).clearProgress()
         IncomingCallProcessor.submitListenerGone(applicationContext)
     }
 
@@ -132,6 +154,18 @@ class NotificationTrigger : NotificationListenerService() {
         // missed-call notification in place) means it is no longer ringing. No-op for other keys.
         IncomingCallProcessor.submitVoipEnded(applicationContext, sbn.key)
 
+        // A timer or progress bar may show as progress on the ring instead of an ordinary alert,
+        // if its app rule says so; that is decided against the settings, off this thread.
+        val reading = posted?.let { readProgress(sbn, it) }
+        if (posted != null && reading != null) {
+            val eligible = !isBubbleOnly(sbn) && isEligiblePostedNotification(sbn, log = false)
+            if (eligible) rememberChannel(sbn)
+            enqueue(ListenerEvent.Progress(sbn.key, pkg, posted, reading, postedAtElapsed(sbn), eligible))
+            return
+        }
+        // Whatever this key showed before, it shows no progress now (a download that finished).
+        enqueue(ListenerEvent.NoProgress(sbn.key))
+
         // Swiping away a bubbled conversation (Google Messages) doesn't remove it: it is re-posted
         // with its shade entry suppressed and only the bubble left. To the user it is dismissed.
         if (isBubbleOnly(sbn)) {
@@ -156,7 +190,11 @@ class NotificationTrigger : NotificationListenerService() {
     private suspend fun handle(event: ListenerEvent) {
         when (event) {
             is ListenerEvent.Posted -> handlePosted(event)
+            is ListenerEvent.Progress -> handleProgress(event)
+            is ListenerEvent.NoProgress -> if (progress.remove(event.key) != null) pushProgress()
+            is ListenerEvent.ProgressScan -> scanForProgress()
             is ListenerEvent.Removed -> {
+                if (progress.remove(event.key) != null) pushProgress()
                 applyRemovals(
                     listOf(tracker.remove(event.key)),
                     AppStore.get(applicationContext).snapshot().isCycleNotifications
@@ -164,6 +202,7 @@ class NotificationTrigger : NotificationListenerService() {
             }
             is ListenerEvent.Reconnect -> {
                 val shadeKeys = event.shadeKeys ?: return
+                if (progress.keys.retainAll(shadeKeys)) pushProgress()
                 IncomingCallProcessor.submitVoipShadeSync(applicationContext, shadeKeys)
                 applyRemovals(
                     tracker.pruneMissing(shadeKeys),
@@ -201,6 +240,10 @@ class NotificationTrigger : NotificationListenerService() {
         val snapshot = AppStore.get(applicationContext).snapshot()
         val previousCycling = lastKnownCycling
         lastKnownCycling = snapshot.isCycleNotifications
+
+        // A rule may have just started or stopped showing progress, or changed its look: read the
+        // shade again, which also takes progress out of the alerts below.
+        scanForProgress()
 
         if (!snapshot.isNotificationsEnabled) {
             DebugLog.i(TAG, "Notifications disabled -> stopping queued lights")
@@ -256,6 +299,8 @@ class NotificationTrigger : NotificationListenerService() {
     private suspend fun handleDaemonConnected() {
         val snapshot = AppStore.get(applicationContext).snapshot()
         LightController.get(applicationContext).clearAlert()
+        // A daemon that restarted has lost the progress; one that kept running takes it again.
+        pushProgress(force = true)
         if (!snapshot.isNotificationsEnabled || !snapshot.isCycleNotifications) return
         val slots = tracker.slotsInOrder()
         if (slots.isEmpty()) return
@@ -600,13 +645,176 @@ class NotificationTrigger : NotificationListenerService() {
         syncNotificationMonitor()
     }
 
+    /** When [sbn] was posted, on the elapsed-realtime clock the daemon counts on. */
+    private fun postedAtElapsed(sbn: StatusBarNotification): Long =
+        SystemClock.elapsedRealtime() - (System.currentTimeMillis() - sbn.postTime).coerceAtLeast(0L)
+
+    /**
+     * What [notification] says is under way, as of when it was posted, or null for most
+     * notifications. A timer wins over a progress bar: a timer's notification can carry an empty
+     * bar too.
+     */
+    private fun readProgress(sbn: StatusBarNotification, notification: Notification): ProgressReading? {
+        val extras = notification.extras ?: return null
+        val timer = (if (sbn.packageName == ProgressReader.CLOCK_PACKAGE) ProgressReader.fromSortKey(notification.sortKey) else null)
+            ?: metricTimerReading(notification, postedAtElapsed(sbn), sbn.postTime)
+            ?: ProgressReader.fromChronometer(
+                showsChronometer = extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER),
+                countsDown = extras.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN),
+                whenMs = notification.`when`,
+                postedAtMs = sbn.postTime
+            )
+        val reading = timer ?: ProgressReader.fromProgressBar(
+            progress = extras.getInt(Notification.EXTRA_PROGRESS),
+            max = extras.getInt(Notification.EXTRA_PROGRESS_MAX),
+            indeterminate = extras.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE)
+        )
+        if (reading != null) DebugLog.d(TAG, "Progress in ${sbn.packageName} key=${DebugLog.redactKey(sbn.key)}: $reading")
+        return reading
+    }
+
+    /**
+     * A timer posted as an Android 17 metric, as Clock does: the moment it reaches zero while
+     * running, or the time left while paused. It doesn't say how long the timer was set for.
+     */
+    private fun metricTimerReading(notification: Notification, postedAtElapsedMs: Long, postedAtMs: Long): TimerReading? {
+        // Rebuilding the style is the only way to read its metrics; only worth it for this style.
+        if (notification.extras?.getString(Notification.EXTRA_TEMPLATE) != Notification.MetricStyle::class.java.name) return null
+        val style = runCatching {
+            Notification.Builder.recoverBuilder(applicationContext, notification).style as? Notification.MetricStyle
+        }.getOrNull() ?: return null
+        fun timer(metric: Notification.Metric?) =
+            (metric?.value as? Notification.Metric.TimeDifference)?.takeIf { it.isTimer }
+        val value = timer(style.criticalMetric) ?: style.metrics.firstNotNullOfOrNull(::timer) ?: return null
+        value.pausedDuration?.let { return TimerReading(running = false, remainingMs = it.toMillis()) }
+        val remaining = value.zeroElapsedRealtime?.let { it - postedAtElapsedMs }
+            ?: value.zeroTime?.let { it.toEpochMilli() - postedAtMs }
+            ?: return null
+        return TimerReading(running = true, remainingMs = remaining)
+    }
+
+    /** The app rule that shows [pkg]'s progress on [channelId], if any. */
+    private fun progressRule(snapshot: SettingsSnapshot, pkg: String, channelId: String?): AppNotificationRule? =
+        snapshot.findRuleForPackage(pkg)?.takeIf {
+            snapshot.isNotificationsEnabled && it.showProgress && it.lightsChannel(channelId)
+        }
+
+    private suspend fun handleProgress(event: ListenerEvent.Progress) {
+        val snapshot = AppStore.get(applicationContext).snapshot()
+        if (progressRule(snapshot, event.pkg, event.notification.channelId) == null) {
+            // Its app doesn't show progress: an ordinary notification, as it always was.
+            if (progress.remove(event.key) != null) pushProgress()
+            if (event.eligible) handlePosted(ListenerEvent.Posted(event.key, event.pkg, event.notification))
+            return
+        }
+        // It is progress now, so it stops being an alert if it was one.
+        applyRemovals(listOf(tracker.remove(event.key)), snapshot.isCycleNotifications)
+        remember(event.key, event.pkg, event.notification.channelId, event.reading, event.postedAtElapsedMs)
+        pushProgress()
+    }
+
+    /**
+     * Keeps [reading] for [key], or drops the key when it isn't under way any more: a paused or
+     * finished timer. Another notification's reading says nothing about the ones kept.
+     */
+    private fun remember(key: String, pkg: String, channelId: String?, reading: ProgressReading, postedAtElapsedMs: Long) {
+        if (reading is TimerReading && (!reading.running || postedAtElapsedMs + reading.remainingMs <= SystemClock.elapsedRealtime())) {
+            progress.remove(key)
+            return
+        }
+        // Not every timer says how long it was set for; then the most time left seen stands in.
+        val seen = progress[key]?.totalMs ?: 0L
+        val total = (reading as? TimerReading)?.let { maxOf(it.totalMs ?: 0L, seen, it.remainingMs) } ?: 0L
+        // Replacing a key keeps its place, so an update doesn't make it the newest.
+        progress[key] = ProgressItem(key, pkg, channelId, reading, postedAtElapsedMs, total)
+    }
+
+    /**
+     * Reads every timer and progress bar in the shade again, for a rule that changed or a listener
+     * that (re)connected. Lengths already worked out for timers are kept.
+     */
+    private suspend fun scanForProgress() {
+        if (!isListenerConnected) return
+        val shade = try {
+            activeNotifications
+        } catch (_: Throwable) {
+            null
+        } ?: return
+        val snapshot = AppStore.get(applicationContext).snapshot()
+        val shown = mutableSetOf<String>()
+        for (sbn in shade) {
+            val notification = sbn.notification ?: continue
+            if (progressRule(snapshot, sbn.packageName, notification.channelId) == null) continue
+            val reading = readProgress(sbn, notification) ?: continue
+            remember(sbn.key, sbn.packageName, notification.channelId, reading, postedAtElapsed(sbn))
+            if (progress.containsKey(sbn.key)) shown += sbn.key
+        }
+        progress.keys.retainAll(shown)
+        if (shown.isNotEmpty()) applyRemovals(shown.map { tracker.remove(it) }, snapshot.isCycleNotifications)
+        pushProgress()
+    }
+
+    /** How [item] shows through its app rule now, or null if it doesn't. */
+    private fun showFor(item: ProgressItem, snapshot: SettingsSnapshot): ProgressShow? {
+        val rule = progressRule(snapshot, item.pkg, item.channelId) ?: return null
+        val reading = item.reading
+        val endsAt = (reading as? TimerReading)?.let { item.postedAtElapsedMs + it.remainingMs } ?: 0L
+        if (reading is TimerReading && endsAt <= SystemClock.elapsedRealtime()) return null
+        val color = if (rule.isAutoColor) {
+            AppIconColorExtractor.extractColorForPackage(applicationContext, rule.packageName, rule.color)
+        } else {
+            rule.color
+        }
+        val ownQuiet = rule.quietHoursMode == QuietHoursMode.SKIP
+        return ProgressShow(
+            key = item.key,
+            totalMs = if (reading is TimerReading) item.totalMs else 0L,
+            endsAtElapsedMs = endsAt,
+            fraction = (reading as? BarReading)?.fraction ?: 0f,
+            color = color,
+            brightness = rule.brightness,
+            requiresFaceDown = rule.faceDownMode.requiresFaceDown(snapshot.isOnlyWhenFaceDown),
+            dndMode = rule.dndMode,
+            quietHoursMode = rule.quietHoursMode,
+            quietStartMinutes = if (ownQuiet) rule.quietHoursStartMinutes else null,
+            quietEndMinutes = if (ownQuiet) rule.quietHoursEndMinutes else null
+        )
+    }
+
+    /**
+     * Puts the newest progress its rule shows on the ring, or clears the slot. Only sends when
+     * that changes, unless [force]d for a daemon that may have lost it.
+     */
+    private suspend fun pushProgress(force: Boolean = false) {
+        val snapshot = AppStore.get(applicationContext).snapshot()
+        val show = progress.values.reversed().firstNotNullOfOrNull { showFor(it, snapshot) }
+        val controller = LightController.get(applicationContext)
+        if (show == null) {
+            if (shownProgress != null || force) {
+                DebugLog.i(TAG, "Progress cleared: nothing under way that a rule shows")
+                controller.clearProgress()
+            }
+            shownProgress = null
+        } else if (show != shownProgress || force) {
+            if (show.requiresFaceDown) {
+                DeviceOrientationDetector.retainMonitoring(applicationContext, DeviceOrientationDetector.TOKEN_NOTIFICATIONS)
+                controller.setDeviceFaceDown(DeviceOrientationDetector.isDeviceFaceDown(applicationContext))
+            }
+            controller.showProgress(show)
+            shownProgress = show
+        }
+        syncNotificationMonitor()
+    }
+
     private fun syncNotificationMonitor() {
-        if (tracker.hasRestrictedSlot()) {
+        // A timer that has run out lights nothing, whether or not its app has removed it yet.
+        val activeProgress = shownProgress?.takeIf { !it.isTimer || it.endsAtElapsedMs > SystemClock.elapsedRealtime() }
+        if (tracker.hasRestrictedSlot() || activeProgress?.requiresFaceDown == true) {
             DeviceOrientationDetector.retainMonitoring(applicationContext, DeviceOrientationDetector.TOKEN_NOTIFICATIONS)
         } else {
             DeviceOrientationDetector.releaseMonitoring(DeviceOrientationDetector.TOKEN_NOTIFICATIONS)
         }
-        if (tracker.sourceCount > 0) {
+        if (tracker.sourceCount > 0 || activeProgress != null) {
             PocketDetector.retain(applicationContext, PocketDetector.TOKEN_NOTIFICATIONS)
         } else {
             PocketDetector.release(PocketDetector.TOKEN_NOTIFICATIONS)
@@ -665,6 +873,16 @@ class NotificationTrigger : NotificationListenerService() {
     private sealed interface ListenerEvent {
         data class Posted(val key: String, val pkg: String, val notification: Notification) : ListenerEvent
         data class Removed(val key: String) : ListenerEvent
+        data class Progress(
+            val key: String,
+            val pkg: String,
+            val notification: Notification,
+            val reading: ProgressReading,
+            val postedAtElapsedMs: Long,
+            val eligible: Boolean
+        ) : ListenerEvent
+        data class NoProgress(val key: String) : ListenerEvent
+        data object ProgressScan : ListenerEvent
         data class Reconnect(val shadeKeys: Set<String>?) : ListenerEvent
         data object SettingsChanged : ListenerEvent
         data object DaemonConnected : ListenerEvent

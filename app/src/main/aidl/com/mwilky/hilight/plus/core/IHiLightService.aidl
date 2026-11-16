@@ -61,4 +61,15 @@ interface IHiLightService {
     // start equal to its end is none that day. Replaces whatever setQuietHours last set. Always
     // true; a daemon from before it replies with nothing, which reads as false.
     boolean setQuietHoursWeek(boolean enabled, in int[] startMinutes, in int[] endMinutes);
+    // A running timer drawn as a draining ring: totalMs long with remainingMs to go from now.
+    // Replaces any earlier one, and goes dark by itself when the time is up. Superseded by
+    // setProgress, and kept so its transaction code is never reused.
+    void setCountdown(String key, long totalMs, long remainingMs, boolean requiresFaceDown, String dndMode, String quietHoursMode);
+    // Clears whatever setProgress (or setCountdown) last showed.
+    void clearCountdown();
+    // What an app rule's notification says is under way, in the slot under notifications. With
+    // totalMs above 0, a timer that long with remainingMs to go, which goes dark by itself when
+    // the time is up. Otherwise a progress bar fraction (0-1) done in color and brightness, which
+    // goes dark unless sent again within 3 minutes. quietStart and quietEnd are -1 for none.
+    void setProgress(String key, long totalMs, long remainingMs, float fraction, long color, float brightness, boolean requiresFaceDown, String dndMode, String quietHoursMode, int quietStart, int quietEnd);
 }

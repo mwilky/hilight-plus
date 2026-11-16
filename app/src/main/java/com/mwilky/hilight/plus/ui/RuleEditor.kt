@@ -144,7 +144,8 @@ data class RuleEditorResult(
     val brightness: Float,
     val speed: Float,
     val textMatch: TextMatch? = null,
-    val excludedChannelIds: Set<String> = emptySet()
+    val excludedChannelIds: Set<String> = emptySet(),
+    val showProgress: Boolean = false
 )
 
 /**
@@ -206,7 +207,8 @@ fun CustomRuleDialog(
     patternGroups: List<PatternGroup> = PatternGroup.RULES,
     initialTextMatch: TextMatch? = null,
     channels: List<SeenChannel>? = null,
-    initialExcludedChannels: Set<String> = emptySet()
+    initialExcludedChannels: Set<String> = emptySet(),
+    initialShowProgress: Boolean = false
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -243,7 +245,8 @@ fun CustomRuleDialog(
             patternGroups = patternGroups,
             initialTextMatch = initialTextMatch,
             channels = channels,
-            initialExcludedChannels = initialExcludedChannels
+            initialExcludedChannels = initialExcludedChannels,
+            initialShowProgress = initialShowProgress
         )
     }
 }
@@ -274,10 +277,12 @@ private fun RuleEditorContent(
     initialTextMatch: TextMatch? = null,
     // Only app rules have them; they add a Match section with the app's channels.
     channels: List<SeenChannel>? = null,
-    initialExcludedChannels: Set<String> = emptySet()
+    initialExcludedChannels: Set<String> = emptySet(),
+    initialShowProgress: Boolean = false
 ) {
     var textMatch by remember(initialTextMatch) { mutableStateOf(initialTextMatch) }
     var excludedChannels by remember(initialExcludedChannels) { mutableStateOf(initialExcludedChannels) }
+    var showProgress by remember(initialShowProgress) { mutableStateOf(initialShowProgress) }
     var isAutoColor by remember(initialAutoColor) { mutableStateOf(initialAutoColor) }
     var selectedColor by remember(initialColor) {
         mutableLongStateOf(
@@ -346,7 +351,8 @@ private fun RuleEditorContent(
                 brightness = selectedBrightness,
                 speed = selectedSpeed,
                 textMatch = textMatch?.let { it.copy(text = it.text.trim()) },
-                excludedChannelIds = excludedChannels
+                excludedChannelIds = excludedChannels,
+                showProgress = showProgress
             )
         )
     }
@@ -408,6 +414,19 @@ private fun RuleEditorContent(
             channels?.let { seen ->
                 EditorSection(title = stringResource(R.string.text_rule_section_match)) {
                     ChannelControls(channels = seen, excluded = excludedChannels, onExcludedChange = { excludedChannels = it })
+                    // Laid out like the Look section's Auto colour row.
+                    ListItem(
+                        onClick = { showProgress = !showProgress },
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        shapes = ListItemDefaults.shapes(),
+                        colors = ListItemDefaults.colors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        ),
+                        supportingContent = { Text(stringResource(R.string.dialog_show_progress_desc)) },
+                        trailingContent = { Switch(checked = showProgress, onCheckedChange = { showProgress = it }) }
+                    ) {
+                        Text(stringResource(R.string.dialog_show_progress_title))
+                    }
                 }
             }
 
@@ -1161,7 +1180,8 @@ private fun RuleEditorPreview() {
                 SeenChannel("individual_chat_defaults", "Message notifications"),
                 SeenChannel("other", "Other notifications")
             ),
-            initialExcludedChannels = setOf("group_chat_defaults")
+            initialExcludedChannels = setOf("group_chat_defaults"),
+            initialShowProgress = true
         )
     }
 }

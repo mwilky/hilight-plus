@@ -103,6 +103,15 @@ class RuleModelJsonTest {
     }
 
     @Test
+    fun appNotificationRuleRoundTripsShowProgress() {
+        val rule = AppNotificationRule("com.google.android.deskclock", "Clock", showProgress = true)
+        assertEquals(rule, AppNotificationRule.fromJson(rule.toJson()))
+        // Rules saved before it existed don't show progress.
+        val old = rule.toJson().apply { remove("showProgress") }
+        assertEquals(false, AppNotificationRule.fromJson(old).showProgress)
+    }
+
+    @Test
     fun appNotificationRuleLightsEveryChannelButTheExcludedOnes() {
         val rule = AppNotificationRule("com.discord", "Discord", excludedChannelIds = setOf("server_messages"))
         assertEquals(false, rule.lightsChannel("server_messages"))

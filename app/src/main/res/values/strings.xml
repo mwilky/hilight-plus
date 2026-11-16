@@ -317,6 +317,8 @@
     <string name="dialog_custom_color_copy">Copy colour code</string>
     <string name="dialog_auto_color_title">Auto colour</string>
     <string name="dialog_auto_color_desc">Extract dynamic vibrant color directly from app icon</string>
+    <string name="dialog_show_progress_title">Show progress</string>
+    <string name="dialog_show_progress_desc">Shows this app\'s timers and downloads on the ring. A timer empties it, turning amber at halfway and red near the end. A download fills it in the colour you choose under Look.</string>
     <string name="dialog_orientation_title">Phone position</string>
     <string name="dialog_orientation_desc_default">Follows the face-down setting on the Conditions page.</string>
     <string name="dialog_orientation_desc_always">Lights whether the phone is face down, face up or in your hand.</string>
