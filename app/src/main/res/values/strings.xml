@@ -9,35 +9,35 @@
     <string name="onboarding_feature_notifs_title">Notifications</string>
     <string name="onboarding_feature_notifs_desc">Light up differently for specific apps and contacts.</string>
     <string name="onboarding_feature_conditions_title">Conditions</string>
-    <string name="onboarding_feature_conditions_desc">Choose conditions that stop the lights from showing.</string>
+    <string name="onboarding_feature_conditions_desc">Keep the lights dark in a pocket, in Do Not Disturb or during quiet hours, or light only when the phone is face down.</string>
     <string name="onboarding_feature_battery_title">Battery</string>
-    <string name="onboarding_feature_battery_desc">Show a charging gauge or low-battery warning on the ring.</string>
+    <string name="onboarding_feature_battery_desc">Show a charging gauge or low-battery warning on the lights.</string>
     <string name="onboarding_feature_gemini_title">Gemini</string>
     <string name="onboarding_feature_gemini_desc">Replace Pixel\'s own Gemini lights with your own looks for listening, thinking and replying.</string>
 
     <!-- Onboarding Step 2: Stock HiLight Conflict -->
     <string name="onboarding_stock_title">Pixel\'s built-in HiLight</string>
-    <string name="onboarding_stock_desc1">Your Pixel already has its own simple HiLight options, such as \'Calls from favourites\' and Gemini feedback. If they stay on, they and HiLight Plus will both try to drive the rear lights at the same time.</string>
-    <string name="onboarding_stock_desc2">Turn them all off in system settings so HiLight Plus has the lights to itself. It lights the ring for Gemini instead, in the looks you choose on its Gemini page.</string>
+    <string name="onboarding_stock_desc1">Your Pixel already has its own simple HiLight options, such as \'Calls from favourites\' and Gemini feedback. If they stay on, they clash with HiLight Plus, because both try to control the rear lights at once.</string>
+    <string name="onboarding_stock_desc2">Turn them all off in system settings so HiLight Plus has the lights to itself. HiLight Plus then lights for Gemini, in the looks you choose on its Gemini page.</string>
     <string name="onboarding_stock_card_title">Calls from favourites</string>
     <string name="onboarding_stock_conflict_active_desc">This is still on in system settings and will clash with HiLight Plus. Tap below to turn it off.</string>
-    <string name="onboarding_stock_unknown_desc">Couldn\'t read this setting yet. Connect HiLight Plus to the ring to check it.</string>
+    <string name="onboarding_stock_unknown_desc">Couldn\'t read this setting yet. Connect HiLight Plus to the lights to check it.</string>
     <string name="onboarding_stock_status_conflict">Still on</string>
     <string name="onboarding_stock_status_ready">Off</string>
     <string name="onboarding_stock_status_unknown">Unknown</string>
     <string name="onboarding_stock_btn_open">Open system settings</string>
 
     <!-- Onboarding Step 3: Connect to the ring (built-in connection, Shizuku optional) -->
-    <string name="connect_title">Connect to the ring</string>
-    <string name="connect_desc">Android only lets the phone\'s own developer tools reach the rear lights, so HiLight Plus uses them, entirely on your phone. Three switches, once, and each one ticks itself off.</string>
+    <string name="connect_title">Connect to the lights</string>
+    <string name="connect_desc">Android only lets the phone\'s own developer tools control the rear lights, so HiLight Plus uses them. Everything stays on your phone. There are three steps to do once, and each is ticked off as you finish it.</string>
     <string name="connect_step_dev_title">Turn on Developer options</string>
     <string name="connect_step_dev_desc">Tap Build number 7 times. HiLight Plus opens the right screen for you.</string>
     <string name="connect_step_dev_done">Developer options is on.</string>
-    <string name="connect_step_dev_unknown">If you haven\'t yet, tap Build number 7 times. Android doesn\'t tell apps about this one, so it ticks off once HiLight Plus can see Wireless debugging is on.</string>
+    <string name="connect_step_dev_unknown">Tap Build number 7 times if you haven\'t already. Android doesn\'t tell apps whether Developer options is on, so this step is ticked off once Wireless debugging is on.</string>
     <string name="connect_step_dev_btn">Open About phone</string>
     <string name="connect_step_wireless_title">Turn on Wireless debugging</string>
     <string name="connect_step_wireless_desc">Switch on Wireless debugging. If you\'re asked, allow it on this network.</string>
-    <string name="connect_step_wireless_unknown">Switch on Wireless debugging. If you\'re asked, allow it on this network. Android doesn\'t tell apps about this one either, so it ticks off once you open Pair device with pairing code.</string>
+    <string name="connect_step_wireless_unknown">Switch on Wireless debugging. If you\'re asked, allow it on this network. Android doesn\'t tell apps whether it\'s on, so this step is ticked off once you open Pair device with pairing code.</string>
     <string name="connect_step_wireless_done">Wireless debugging is on.</string>
     <string name="connect_step_wireless_btn">Open Developer options</string>
     <string name="connect_step_wifi_desc">Connect to Wi-Fi first. Wireless debugging only works on Wi-Fi, not mobile data.</string>
@@ -55,7 +55,7 @@
     <string name="connect_use_shizuku">Already use Shizuku?</string>
     <string name="connect_use_builtin">Use the built-in connection instead</string>
     <string name="onboarding_connect_skip_title">Continue without connecting?</string>
-    <string name="onboarding_connect_skip_desc">You can set up rules, but the rear lights won\'t do anything until HiLight Plus is connected. The card on the Home screen will walk you through it whenever you\'re ready.</string>
+    <string name="onboarding_connect_skip_desc">You can set up rules, but the rear lights won\'t do anything until HiLight Plus is connected. You can connect later from the card on the Home screen.</string>
     <string name="onboarding_connect_skip_confirm">Continue anyway</string>
     <string name="onboarding_connect_skip_cancel">Go back</string>
 
@@ -76,7 +76,7 @@
     <string name="migration_not_now">Not now</string>
 
     <!-- Shown while the app pairs with and starts the lights service -->
-    <string name="connection_notif_channel">Ring connection</string>
+    <string name="connection_notif_channel">Lights connection</string>
     <string name="connection_notif_channel_desc">Shown for a few seconds while HiLight Plus starts the lights service.</string>
     <string name="connection_notif_title">Connecting to the rear lights&#8230;</string>
 
@@ -109,7 +109,7 @@
     <string name="setup_notif_wireless_off_title">Turn on Wireless debugging</string>
     <string name="setup_notif_wireless_off_text">HiLight Plus can\'t start the lights while it\'s off, and Android no longer lets the app turn it on. Tap here to go straight to it.</string>
     <string name="setup_notif_pairing_lost_title">Pair HiLight Plus again</string>
-    <string name="setup_notif_pairing_lost_text">Your phone no longer accepts HiLight Plus\'s Wireless debugging pairing, so the lights can\'t start after a restart or update. Tap to pair again.</string>
+    <string name="setup_notif_pairing_lost_text">Your phone has forgotten its Wireless debugging pairing with HiLight Plus, so the lights can\'t start after a restart or update. Tap to pair again.</string>
 
     <!-- Onboarding Step 4: Permissions -->
     <string name="onboarding_perms_title">Permissions</string>
@@ -122,8 +122,8 @@
     <string name="onboarding_perms_calls_btn_grant">Grant access</string>
     <string name="onboarding_perms_calls_btn_app_info">App info</string>
     <string name="onboarding_perms_notif_title">Notification access</string>
-    <string name="onboarding_perms_notif_granted_desc">Notification access is granted and listening.</string>
-    <string name="onboarding_perms_notif_not_running_desc">Access is granted but the listener has stopped. Turn it off and on again in settings if alerts stop lighting.</string>
+    <string name="onboarding_perms_notif_granted_desc">Notification access is granted and working.</string>
+    <string name="onboarding_perms_notif_not_running_desc">Notification access is granted but has stopped working. Turn it off and on again in system settings.</string>
     <string name="onboarding_perms_notif_status_not_running">Not running</string>
     <string name="onboarding_perms_notif_needed_desc">Needed to notice incoming calls and new notifications from your apps and contacts.</string>
     <string name="onboarding_perms_notif_status_needed">Needed</string>
@@ -148,7 +148,7 @@
         <item quantity="one">%1$d day left</item>
         <item quantity="other">%1$d days left</item>
     </plurals>
-    <string name="license_desc_pending">Your %1$d-day trial starts the first time HiLight Plus connects to the ring.</string>
+    <string name="license_desc_pending">Your %1$d-day trial starts the first time HiLight Plus connects to the lights.</string>
     <string name="license_desc_trial">Everything is unlocked during the trial. Keep it forever with a one-off purchase. No subscription.</string>
     <string name="license_desc_trial_price">Everything is unlocked during the trial. Keep it forever for %1$s, one-off. No subscription.</string>
     <string name="license_desc_expired">Your trial is over, so the lights are paused. Your rules are saved and pick up again the moment you unlock.</string>
@@ -169,7 +169,7 @@
 
     <!-- Ring connection status card (built-in or Shizuku) -->
     <string name="connect_card_title">Rear lights</string>
-    <string name="connect_desc_connected">Connected. Keep Developer options on, with Wireless debugging or USB debugging, and the lights keep working.</string>
+    <string name="connect_desc_connected">Connected. To keep the lights working, leave Developer options on, with Wireless debugging or USB debugging on too.</string>
     <string name="connect_desc_needs_setup">HiLight Plus needs a one-time connection to reach the rear lights. It takes about a minute, with no extra app to install.</string>
     <string name="connect_desc_waiting_wifi">The lights come back as soon as you\'re on Wi-Fi. Wireless debugging, which HiLight Plus uses to reach them, only runs on Wi-Fi.</string>
     <string name="connect_desc_connecting">Starting the lights service&#8230;</string>
@@ -183,13 +183,13 @@
     <string name="connect_desc_network_not_allowed">Wireless debugging hasn\'t been allowed on this Wi-Fi network yet, so HiLight Plus can\'t start the lights. Tap Ask again, then choose Always allow on this network when Android asks. If you turned Developer options off, turn it back on first.</string>
     <string name="connect_btn_ask_again">Ask again</string>
     <string name="connect_status_wireless_off">Turn on Wireless debugging</string>
-    <string name="connect_desc_wireless_off">Wireless debugging is off, and this version of Android no longer lets HiLight Plus turn it on. Turn it on in Developer options and the lights start by themselves. HiLight Plus normally switches it on for you as the phone restarts, but can\'t after a crash, or on a Wi-Fi network you haven\'t allowed it on.</string>
+    <string name="connect_desc_wireless_off">Wireless debugging is off, and this version of Android no longer lets HiLight Plus turn it on. Turn it on in Developer options and the lights start by themselves.</string>
     <string name="connect_btn_wireless_off">Open Developer options</string>
     <string name="connect_btn_set_up">Set up</string>
     <string name="connect_btn_wifi">Turn on Wi-Fi</string>
     <string name="pairing_lost_title">Pair again</string>
     <string name="pairing_lost_status">Pairing lost</string>
-    <string name="pairing_lost_desc">Your phone no longer accepts HiLight Plus\'s Wireless debugging pairing. The lights work for now, but can\'t start again after a restart or update until you pair again.</string>
+    <string name="pairing_lost_desc">Your phone has forgotten its Wireless debugging pairing with HiLight Plus. The lights work for now, but can\'t start again after a restart or update until you pair again.</string>
     <string name="pairing_lost_btn">Pair again</string>
     <string name="adb_timeout_title">Keep the pairing from expiring</string>
     <string name="adb_timeout_status">Recommended</string>
@@ -212,7 +212,7 @@
     <string name="shizuku_desc_connected">Connected. HiLight Plus can control the rear lights.</string>
     <string name="shizuku_desc_disconnected">Paused, so the lights won\'t respond. Tap Connect to resume.</string>
     <string name="shizuku_desc_needs_permission">Shizuku is running but hasn\'t allowed HiLight Plus yet. Tap Allow to grant access.</string>
-    <string name="shizuku_desc_not_running">Shizuku isn\'t running. Start it from the Shizuku app (Wireless debugging or ADB), then come back here and it will connect. If you started it while HiLight Plus was still open, tap Restart app instead.</string>
+    <string name="shizuku_desc_not_running">Shizuku isn\'t running. Start it from the Shizuku app, then come back here and HiLight Plus will connect. If you started it while HiLight Plus was open, tap Restart app instead.</string>
     <string name="shizuku_desc_not_installed">Shizuku isn\'t installed. Tap Install to get it, then come back here.</string>
     <string name="shizuku_desc_connecting">Connecting to Shizuku&#8230;</string>
     <string name="shizuku_btn_disconnect">Disconnect</string>
@@ -278,18 +278,18 @@
     <!-- Additional Settings Section -->
     <string name="settings_additional_header">Additional settings</string>
     <string name="settings_duration_title">Light duration</string>
-    <string name="settings_duration_desc">How long to display the lights after receiving a notification</string>
-    <string name="settings_duration_cycling_desc">Duration does not apply in this mode. Lights continue until each notification is dismissed.</string>
+    <string name="settings_duration_desc">How long the lights stay on after a notification arrives.</string>
+    <string name="settings_duration_cycling_desc">Not used with this Multiple alerts option. The lights stay on until each notification is dismissed.</string>
     <string name="settings_multi_title">Multiple alerts</string>
     <string name="settings_multi_latest">Newest only</string>
     <string name="settings_multi_cycle">Take turns</string>
-    <string name="settings_multi_split">Split the ring</string>
+    <string name="settings_multi_split">Split the lights</string>
     <string name="settings_multi_latest_desc">Only the newest notification lights, for the duration above.</string>
     <string name="settings_multi_cycle_desc">Each waiting notification plays its own pattern in turn, until it is dismissed.</string>
-    <string name="settings_multi_split_desc">Each waiting notification gets its own arc of the ring in its colour, with a dark gap between arcs, until it is dismissed. Up to four are shown around the ring, using the animation and brightness below instead of each rule\'s own. A single notification still plays its own pattern.</string>
+    <string name="settings_multi_split_desc">Each waiting notification gets its own section of the lights in its colour, with a dark gap between sections, until it is dismissed. Up to four are shown at once, using the animation and brightness below instead of each rule\'s own. A single notification still plays its own pattern.</string>
     <string name="settings_split_animation_title">Animation</string>
-    <string name="settings_split_dim_warning" formatted="false">Below 45%, a dim arc next to a bright one may look like glow spilling over from its neighbour rather than a notification of its own.</string>
-    <string name="settings_split_steady_warning" formatted="false">Above 50%, neighbouring colours may blend into each other and the dark gaps between arcs get harder to see.</string>
+    <string name="settings_split_dim_warning" formatted="false">Below 45%, a dim section next to a bright one may look like glow spilling over from its neighbour rather than a notification of its own.</string>
+    <string name="settings_split_steady_warning" formatted="false">Above 50%, neighbouring colours may blend into each other and the dark gaps between sections get harder to see.</string>
     <string name="settings_split_animation_breathe">Breathe</string>
     <string name="settings_split_animation_solid">Solid</string>
     <string name="settings_split_animation_spotlight">Spotlight</string>
@@ -297,9 +297,9 @@
     <string name="settings_split_example_breathe">Three waiting, breathing together: newest at the top, then clockwise</string>
     <string name="settings_split_example_solid">Three waiting, held dim so each keeps its own colour: newest at the top, then clockwise</string>
     <string name="settings_split_example_spotlight">Three waiting, each brightening in turn: newest at the top first, then clockwise</string>
-    <string name="settings_split_example_rotate">Three waiting, circling the ring: they start with the newest at the top, then keep moving</string>
+    <string name="settings_split_example_rotate">Three waiting, moving round: they start with the newest at the top, then keep going</string>
     <string name="settings_split_announce_title">Announce new notifications</string>
-    <string name="settings_split_announce_desc">Each new notification plays its own rule\'s pattern once, then the ring goes back to the arcs.</string>
+    <string name="settings_split_announce_desc">Each new notification plays its own rule\'s pattern once, then the lights go back to the split.</string>
 
     <!-- Dialogs & Customization -->
     <string name="dialog_section_look">Look</string>
@@ -316,14 +316,14 @@
     <string name="dialog_custom_color_hex">Hex code</string>
     <string name="dialog_custom_color_copy">Copy colour code</string>
     <string name="dialog_auto_color_title">Auto colour</string>
-    <string name="dialog_auto_color_desc">Extract dynamic vibrant color directly from app icon</string>
+    <string name="dialog_auto_color_desc">Takes the colour from the app\'s icon.</string>
     <string name="dialog_light_for_title">Light for</string>
     <string name="dialog_light_for_notifications">Notifications</string>
     <string name="dialog_light_for_progress">Progress</string>
     <string name="dialog_light_for_both">Both</string>
     <string name="dialog_light_for_desc_notifications">Lights for this app\'s notifications.</string>
-    <string name="dialog_light_for_desc_progress">Shows only this app\'s timers and downloads on the ring. A timer empties it, turning amber at halfway and red near the end. A download fills it in the app icon\'s colour.</string>
-    <string name="dialog_light_for_desc_both">Lights for this app\'s notifications, and shows its timers and downloads on the ring. A timer empties it, turning amber at halfway and red near the end. A download fills it in the colour you choose below.</string>
+    <string name="dialog_light_for_desc_progress">Shows only this app\'s timers and downloads on the lights. A timer counts down as the lights go out one by one, turning amber at halfway and red near the end. A download lights them one by one in the app icon\'s colour.</string>
+    <string name="dialog_light_for_desc_both">Lights for this app\'s notifications, and shows its timers and downloads too. A timer counts down as the lights go out one by one, turning amber at halfway and red near the end. A download lights them one by one in the colour you choose below.</string>
     <string name="rule_progress_only">Progress only</string>
     <string name="rule_pattern_and_progress">%1$s and progress</string>
     <string name="dialog_orientation_title">Phone position</string>
@@ -340,7 +340,7 @@
     <string name="dialog_quiet_hours_title">Quiet hours</string>
     <string name="dialog_quiet_hours_desc_default">Follows the quiet hours setting on the Conditions page.</string>
     <string name="dialog_quiet_hours_desc_always">Lights even during quiet hours.</string>
-    <string name="dialog_quiet_hours_desc_skip">Stays dark during the window below, even if quiet hours are off on the Conditions page.</string>
+    <string name="dialog_quiet_hours_desc_skip">Stays dark between the times below, even if quiet hours are off on the Conditions page.</string>
     <string name="dialog_mode_default">Default</string>
     <string name="dialog_mode_always">Always light</string>
     <string name="dialog_mode_skip">Stay dark</string>
@@ -397,7 +397,7 @@
         <item quantity="one">%d state</item>
         <item quantity="other">%d states</item>
     </plurals>
-    <string name="section_off_hint">Turned off. Your rules are kept and apply again when you switch back on.</string>
+    <string name="section_off_hint">Turned off. Your rules are kept and apply again when you switch it back on.</string>
     <string name="rule_delete_cd">Delete rule</string>
     <string name="rule_sort_added">Date added</string>
     <string name="rule_sort_name_asc">Name A–Z</string>
@@ -440,13 +440,13 @@
     <string name="gemini_state_replying">Replying</string>
     <string name="gemini_stock_card_title">Gemini feedback</string>
     <string name="gemini_stock_conflict_desc">Pixel\'s own Gemini lighting is still on and will clash with HiLight Plus. Tap below and turn off Gemini feedback.</string>
-    <string name="gemini_stock_ok_desc">Pixel\'s own Gemini lighting is off, so HiLight Plus has the ring to itself.</string>
-    <string name="gemini_stock_handling_desc">Pixel is lighting the ring for Gemini. Turn on Gemini lights in HiLight Plus to use your own looks instead.</string>
-    <string name="gemini_stock_neither_desc">Pixel\'s own Gemini lighting is off, and so are Gemini lights in HiLight Plus, so the ring stays dark for Gemini.</string>
+    <string name="gemini_stock_ok_desc">Pixel\'s own Gemini lighting is off, so HiLight Plus has the lights to itself.</string>
+    <string name="gemini_stock_handling_desc">Pixel is controlling the lights for Gemini. Turn on Gemini lights in HiLight Plus to use your own looks instead.</string>
+    <string name="gemini_stock_neither_desc">Pixel\'s own Gemini lighting is off, and so are Gemini lights in HiLight Plus, so the lights stay dark for Gemini.</string>
     <string name="gemini_stock_status_on">On</string>
     <string name="battery_pattern_gauge">Gauge</string>
     <string name="battery_pattern_charge_fill">Charge fill</string>
-    <string name="battery_pattern_gradient_ring">Gradient ring</string>
+    <string name="battery_pattern_gradient_ring">Gradient</string>
     <string name="battery_full_timeout_stay_on">Stay on</string>
     <string name="battery_full_timeout_1m">1 min</string>
     <string name="battery_full_timeout_5m">5 min</string>
@@ -471,7 +471,7 @@
     <string name="conditions_dnd_title">Do Not Disturb</string>
     <string name="conditions_dnd_desc">Stay dark while Do Not Disturb is on.</string>
     <string name="conditions_quiet_hours_title">Quiet hours</string>
-    <string name="conditions_quiet_hours_desc">Stay dark between the times below. Overnight windows are fine.</string>
+    <string name="conditions_quiet_hours_desc">Stay dark between the times below. The end time can be the next morning.</string>
     <string name="conditions_quiet_hours_start">Starts</string>
     <string name="conditions_quiet_hours_end">Ends</string>
     <string name="conditions_quiet_hours_every_day">Every day</string>
@@ -494,18 +494,18 @@
     <string name="battery_group_charging">Charging</string>
     <string name="battery_group_low">Low battery</string>
     <string name="battery_show_charging_title">Show while charging</string>
-    <string name="battery_show_charging_desc">Light the ring while plugged in, using the pattern below. Turn off to keep only the low battery warning.</string>
+    <string name="battery_show_charging_desc">Light up while plugged in, using the pattern below. Turn off to keep only the low battery warning.</string>
     <string name="battery_section_auto_color">Auto colour</string>
     <string name="battery_section_auto_color_desc">Red to green as the battery charges. Turn off to pick a fixed colour.</string>
     <string name="battery_threshold_title">Warn below</string>
     <string name="battery_threshold_value">%1$d%%</string>
     <string name="battery_section_low_title">Low battery warning</string>
-    <string name="battery_section_low_desc">Lights when unplugged and below the threshold, in the pattern below.</string>
+    <string name="battery_section_low_desc">Lights in the pattern below when the phone is unplugged and the battery is under the level you set.</string>
     <string name="battery_low_pattern_heartbeat">Heartbeat</string>
     <string name="battery_low_pattern_breathe">Breathe</string>
     <string name="battery_low_pattern_solid">Solid</string>
     <string name="battery_section_full_timeout_title">Full charge timeout</string>
-    <string name="battery_section_full_timeout_desc">How long the full-battery display stays on once charging finishes.</string>
+    <string name="battery_section_full_timeout_desc">How long the lights stay on once the battery is full.</string>
     <string name="battery_section_overrides_notifications">Prioritise over notifications</string>
     <string name="battery_section_overrides_notifications_desc">When on, notification lights won\'t interrupt the battery display. Incoming calls always interrupt it.</string>
 
@@ -521,7 +521,7 @@
     <string name="dnd_show_for_1m">1 min</string>
     <string name="dnd_show_for_5m">5 min</string>
     <string name="dnd_flash_title">Announce on and off</string>
-    <string name="dnd_flash_desc">A quick sweep round the ring in the indicator\'s colour whenever Do Not Disturb is switched on or off.</string>
+    <string name="dnd_flash_desc">A quick sweep round the lights in the indicator\'s colour whenever Do Not Disturb is switched on or off.</string>
     <string name="dnd_overrides_battery_title">Prioritise over battery</string>
     <string name="dnd_overrides_battery_desc">When on, the indicator shows instead of the battery display. Notifications and calls always go over it.</string>
 
@@ -531,7 +531,7 @@
     <string name="about_rate_desc">A review helps other Pixel owners find HiLight Plus.</string>
     <string name="about_app_desc">Custom rear LED lighting for Google Pixel.</string>
     <string name="about_led_walk_title">LED %1$d</string>
-    <string name="about_led_walk_desc">Lighting each LED in turn, 0 to 7. The ring above shows where the app thinks this LED is; compare it with the phone.</string>
+    <string name="about_led_walk_desc">Lighting each LED in turn, 0 to 7. The diagram above shows where the app thinks this LED is; compare it with the phone.</string>
     <string name="about_version_label">Version</string>
     <string name="about_status_section_header">System Health &amp; Permissions</string>
     <string name="about_stock_ok_desc">Pixel\'s own \'Calls from favourites\' lighting is off.</string>
@@ -543,7 +543,7 @@
         <item quantity="one">%d entry</item>
         <item quantity="other">%d entries</item>
     </plurals>
-    <string name="about_debug_log_desc">If the ring stays lit or does something unexpected, share this log as soon as you can. It includes your settings and what the lights were doing. Contact names and message text are left out.</string>
+    <string name="about_debug_log_desc">If the lights stay lit or do something unexpected, share this log as soon as you can. It includes your settings and what the lights were doing. Contact names and message text are left out.</string>
     <string name="about_debug_log_empty">Nothing logged yet.</string>
     <string name="about_debug_log_share">Share</string>
     <string name="about_debug_log_clear">Clear</string>
@@ -551,14 +551,14 @@
     <string name="about_debug_log_share_subject">HiLight Plus debug log (%1$s)</string>
     <string name="about_debug_log_share_body">What happened, and roughly when:\n\n</string>
     <string name="about_debug_log_reset">Reset lights</string>
-    <string name="about_debug_log_reset_desc">Ring stuck on and not responding? Reset restarts the lights service, which releases the ring without restarting your phone. Once it reconnects, alerts that stay lit until dismissed are sent to it again. Timed alerts aren\'t, but new notifications light as normal.</string>
+    <string name="about_debug_log_reset_desc">Use this if the lights are stuck on. It restarts the lights service, which turns them off without restarting your phone. Notifications that stay lit until dismissed light again afterwards, and new ones light as normal.</string>
     <string name="about_debug_log_reset_started">Restarting the lights service</string>
     <string name="about_disclaimer">HiLight Plus is provided as is, without warranty of any kind. You use it at your own risk: the developer isn\'t responsible for any damage to your phone, its LEDs or anything else.</string>
     <string name="about_debug_log_share_failed">Couldn\'t prepare the log</string>
     <string name="about_backup_header">Backup</string>
     <string name="about_backup_title">Settings backup</string>
     <string name="about_backup_status">Rules &amp; settings</string>
-    <string name="about_backup_desc">Save your rules and settings to a file, then restore them after reinstalling, or on a test build. Your purchase isn\'t included: Google Play restores it with your account. After a reinstall, the connection to the ring needs setting up again.</string>
+    <string name="about_backup_desc">Save your rules and settings to a file, then restore them after reinstalling, or on a test build. Your purchase isn\'t included: Google Play restores it with your account. After a reinstall, the connection to the lights needs setting up again.</string>
     <string name="about_backup_save">Back up</string>
     <string name="about_backup_restore">Restore</string>
     <string name="about_backup_saved">Settings backed up</string>
