@@ -48,6 +48,7 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.activity.compose.LocalActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mwilky.hilight.plus.AppLightFor
 import com.mwilky.hilight.plus.AppNotificationRule
 import com.mwilky.hilight.plus.BatterySettings
 import com.mwilky.hilight.plus.GeminiSettings
@@ -579,7 +580,7 @@ fun HomeScreen(
             autoExtractedColor = autoColor,
             channels = channels,
             initialExcludedChannels = rule.excludedChannelIds,
-            initialShowProgress = rule.showProgress,
+            initialLightFor = rule.lightFor,
             renderer = renderer,
             controller = controller,
             onDismiss = { appRuleBeingEdited = null },
@@ -597,7 +598,7 @@ fun HomeScreen(
                         brightness = result.brightness,
                         speed = result.speed,
                         excludedChannelIds = result.excludedChannelIds,
-                        showProgress = result.showProgress
+                        lightFor = result.lightFor
                     )
                 )
                 appRuleBeingEdited = null
@@ -1309,7 +1310,8 @@ fun HomeScreenPreviewContent(
 
     val mockApps = if (hasAppRules) {
         listOf(
-            AppNotificationRule("com.whatsapp", "WhatsApp", 0xFF25D366, PatternMode.PULSE, true)
+            AppNotificationRule("com.whatsapp", "WhatsApp", 0xFF25D366, PatternMode.PULSE, true),
+            AppNotificationRule("com.google.android.deskclock", "Clock", 0xFF4285F4, lightFor = AppLightFor.PROGRESS)
         )
     } else emptyList()
 

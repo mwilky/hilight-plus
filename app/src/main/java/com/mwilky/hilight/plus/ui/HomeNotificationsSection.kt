@@ -54,6 +54,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import com.mwilky.hilight.plus.AppLightFor
 import com.mwilky.hilight.plus.AppNotificationRule
 import com.mwilky.hilight.plus.SPLIT_READABLE_FLOOR
 import com.mwilky.hilight.plus.SPLIT_SEPARATE_CEILING
@@ -257,6 +258,19 @@ fun HomeNotifsPage(
                                 quietHoursMode = rule.quietHoursMode,
                                 renderer = renderer,
                                 isEnabled = rule.isEnabled,
+                                subtitle = when (rule.lightFor) {
+                                    AppLightFor.NOTIFICATIONS -> null
+                                    AppLightFor.PROGRESS -> stringResource(R.string.rule_progress_only)
+                                    AppLightFor.BOTH -> stringResource(R.string.rule_pattern_and_progress, stringResource(rule.pattern.titleRes))
+                                },
+                                badgeFrameAt = when (rule.lightFor) {
+                                    AppLightFor.NOTIFICATIONS -> null
+                                    AppLightFor.PROGRESS -> ::countdownPreviewFrame
+                                    AppLightFor.BOTH -> { t ->
+                                        if (previewShowsCountdown(t)) countdownTurnFrame(t)
+                                        else badgePatternFrame(renderer, rule.pattern, rule.color, rule.speed, t)
+                                    }
+                                },
                                 onToggle = { isEnabled -> onToggleAppRule(rule, isEnabled) },
                                 onEdit = { onEditAppRule(rule) },
                                 onDelete = { onDeleteAppRule(rule.packageName) }

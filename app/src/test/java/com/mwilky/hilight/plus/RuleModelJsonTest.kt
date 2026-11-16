@@ -103,12 +103,27 @@ class RuleModelJsonTest {
     }
 
     @Test
-    fun appNotificationRuleRoundTripsShowProgress() {
-        val rule = AppNotificationRule("com.google.android.deskclock", "Clock", showProgress = true)
-        assertEquals(rule, AppNotificationRule.fromJson(rule.toJson()))
-        // Rules saved before it existed don't show progress.
-        val old = rule.toJson().apply { remove("showProgress") }
-        assertEquals(false, AppNotificationRule.fromJson(old).showProgress)
+    fun appNotificationRuleRoundTripsWhatItLightsFor() {
+        AppLightFor.entries.forEach { lightFor ->
+            val rule = AppNotificationRule("com.google.android.deskclock", "Clock", lightFor = lightFor)
+            assertEquals(rule, AppNotificationRule.fromJson(rule.toJson()))
+        }
+        // Rules saved before it existed light for notifications only.
+        val old = AppNotificationRule("com.whatsapp", "WhatsApp", lightFor = AppLightFor.BOTH).toJson().apply { remove("lightFor") }
+        assertEquals(AppLightFor.NOTIFICATIONS, AppNotificationRule.fromJson(old).lightFor)
+    }
+
+    @Test
+    fun aProgressOnlyAppRuleShowsProgressButNotNotifications() {
+        val progressOnly = AppNotificationRule("com.google.android.deskclock", "Clock", lightFor = AppLightFor.PROGRESS)
+        assertEquals(true, progressOnly.showsProgress)
+        assertEquals(false, progressOnly.lightsNotifications)
+        val both = progressOnly.copy(lightFor = AppLightFor.BOTH)
+        assertEquals(true, both.showsProgress)
+        assertEquals(true, both.lightsNotifications)
+        val notifications = progressOnly.copy(lightFor = AppLightFor.NOTIFICATIONS)
+        assertEquals(false, notifications.showsProgress)
+        assertEquals(true, notifications.lightsNotifications)
     }
 
     @Test

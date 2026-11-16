@@ -112,6 +112,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mwilky.hilight.plus.AppLightFor
 import com.mwilky.hilight.plus.DEFAULT_BRIGHTNESS
 import com.mwilky.hilight.plus.DEFAULT_SPEED
 import com.mwilky.hilight.plus.DndMode
@@ -145,7 +146,7 @@ data class RuleEditorResult(
     val speed: Float,
     val textMatch: TextMatch? = null,
     val excludedChannelIds: Set<String> = emptySet(),
-    val showProgress: Boolean = false
+    val lightFor: AppLightFor = AppLightFor.NOTIFICATIONS
 )
 
 /**
@@ -208,7 +209,7 @@ fun CustomRuleDialog(
     initialTextMatch: TextMatch? = null,
     channels: List<SeenChannel>? = null,
     initialExcludedChannels: Set<String> = emptySet(),
-    initialShowProgress: Boolean = false
+    initialLightFor: AppLightFor = AppLightFor.NOTIFICATIONS
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -246,7 +247,7 @@ fun CustomRuleDialog(
             initialTextMatch = initialTextMatch,
             channels = channels,
             initialExcludedChannels = initialExcludedChannels,
-            initialShowProgress = initialShowProgress
+            initialLightFor = initialLightFor
         )
     }
 }
@@ -278,11 +279,13 @@ private fun RuleEditorContent(
     // Only app rules have them; they add a Match section with the app's channels.
     channels: List<SeenChannel>? = null,
     initialExcludedChannels: Set<String> = emptySet(),
-    initialShowProgress: Boolean = false
+    initialLightFor: AppLightFor = AppLightFor.NOTIFICATIONS
 ) {
     var textMatch by remember(initialTextMatch) { mutableStateOf(initialTextMatch) }
     var excludedChannels by remember(initialExcludedChannels) { mutableStateOf(initialExcludedChannels) }
-    var showProgress by remember(initialShowProgress) { mutableStateOf(initialShowProgress) }
+    var lightFor by remember(initialLightFor) { mutableStateOf(initialLightFor) }
+    // Timers and progress bars have looks of their own, so the pattern and speed don't apply.
+    val progressOnly = channels != null && lightFor == AppLightFor.PROGRESS
     var isAutoColor by remember(initialAutoColor) { mutableStateOf(initialAutoColor) }
     var selectedColor by remember(initialColor) {
         mutableLongStateOf(
@@ -352,7 +355,7 @@ private fun RuleEditorContent(
                 speed = selectedSpeed,
                 textMatch = textMatch?.let { it.copy(text = it.text.trim()) },
                 excludedChannelIds = excludedChannels,
-                showProgress = showProgress
+                lightFor = lightFor
             )
         )
     }
@@ -393,7 +396,9 @@ private fun RuleEditorContent(
                     renderer = renderer,
                     isTesting = isTesting,
                     testEnabled = connectionState == DaemonBridge.State.CONNECTED,
-                    onToggleTest = ::toggleTest
+                    onToggleTest = ::toggleTest,
+                    progressOnly = progressOnly,
+                    alsoProgress = channels != null && lightFor == AppLightFor.BOTH
                 )
             }
         }
@@ -413,125 +418,155 @@ private fun RuleEditorContent(
             }
             channels?.let { seen ->
                 EditorSection(title = stringResource(R.string.text_rule_section_match)) {
-                    ChannelControls(channels = seen, excluded = excludedChannels, onExcludedChange = { excludedChannels = it })
-                    // Laid out like the Look section's Auto colour row.
-                    ListItem(
-                        onClick = { showProgress = !showProgress },
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        shapes = ListItemDefaults.shapes(),
-                        colors = ListItemDefaults.colors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                    ChoiceGroup(
+                        title = stringResource(R.string.dialog_light_for_title),
+                        description = stringResource(
+                            when (lightFor) {
+                                AppLightFor.NOTIFICATIONS -> R.string.dialog_light_for_desc_notifications
+                                AppLightFor.PROGRESS -> R.string.dialog_light_for_desc_progress
+                                AppLightFor.BOTH -> R.string.dialog_light_for_desc_both
+                            }
                         ),
-                        supportingContent = { Text(stringResource(R.string.dialog_show_progress_desc)) },
-                        trailingContent = { Switch(checked = showProgress, onCheckedChange = { showProgress = it }) }
-                    ) {
-                        Text(stringResource(R.string.dialog_show_progress_title))
-                    }
+                        options = AppLightFor.entries.map { mode ->
+                            mode to stringResource(
+                                when (mode) {
+                                    AppLightFor.NOTIFICATIONS -> R.string.dialog_light_for_notifications
+                                    AppLightFor.PROGRESS -> R.string.dialog_light_for_progress
+                                    AppLightFor.BOTH -> R.string.dialog_light_for_both
+                                }
+                            )
+                        },
+                        selected = lightFor,
+                        onSelect = { lightFor = it }
+                    )
+                    ChannelControls(channels = seen, excluded = excludedChannels, onExcludedChange = { excludedChannels = it })
                 }
             }
 
             EditorSection(title = stringResource(R.string.dialog_section_look)) {
-                Text(
-                    text = stringResource(R.string.dialog_pattern_label),
-                    style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-                // One short row per group under its own heading, rather than one long row.
-                patternGroups.forEach { group ->
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = stringResource(group.titleRes),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-                        // Rows all start at the same edge; one only opens scrolled when the
-                        // rule's pattern would otherwise be out of view.
-                        val listState = rememberLazyListState(
-                            initialFirstVisibleItemIndex = (group.patterns.indexOf(initialPattern) - (PATTERN_CARDS_IN_VIEW - 1)).coerceAtLeast(0)
-                        )
-                        // Inset rather than padded inside, so cards scrolling past are cut off at
-                        // the section's margin, in line with everything else in it.
-                        LazyRow(
-                            state = listState,
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(PATTERN_CARD_GAP)
+                // The pattern and colour go together for a progress-only rule, in step with the
+                // description above changing, so the section shrinks in one movement.
+                Column {
+                    AnimatedVisibility(
+                        visible = !progressOnly,
+                        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
+                            fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+                        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
+                            fadeOut(MaterialTheme.motionScheme.defaultEffectsSpec())
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(bottom = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            items(group.patterns, key = { it.id }) { p ->
-                                PatternCard(
-                                    pattern = p,
-                                    title = stringResource(p.cardTitleRes),
-                                    color = selectedColor,
-                                    selected = selectedPattern == p,
-                                    elapsedMs = clockMs,
-                                    renderer = renderer,
-                                    onClick = { selectedPattern = p }
+                            Text(
+                                text = stringResource(R.string.dialog_pattern_label),
+                                style = MaterialTheme.typography.labelLarge,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            // One short row per group under its own heading, rather than one long row.
+                            patternGroups.forEach { group ->
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text(
+                                        text = stringResource(group.titleRes),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 16.dp)
+                                    )
+                                    // Rows all start at the same edge; one only opens scrolled when the
+                                    // rule's pattern would otherwise be out of view.
+                                    val listState = rememberLazyListState(
+                                        initialFirstVisibleItemIndex = (group.patterns.indexOf(initialPattern) - (PATTERN_CARDS_IN_VIEW - 1)).coerceAtLeast(0)
+                                    )
+                                    // Inset rather than padded inside, so cards scrolling past are cut off at
+                                    // the section's margin, in line with everything else in it.
+                                    LazyRow(
+                                        state = listState,
+                                        modifier = Modifier.padding(horizontal = 16.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(PATTERN_CARD_GAP)
+                                    ) {
+                                        items(group.patterns, key = { it.id }) { p ->
+                                            PatternCard(
+                                                pattern = p,
+                                                title = stringResource(p.cardTitleRes),
+                                                color = selectedColor,
+                                                selected = selectedPattern == p,
+                                                elapsedMs = clockMs,
+                                                renderer = renderer,
+                                                onClick = { selectedPattern = p }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            if (showAutoColorToggle) {
+                                val setAutoColor: (Boolean) -> Unit = { auto ->
+                                    isAutoColor = auto
+                                    if (auto && autoExtractedColor != null) {
+                                        selectedColor = autoExtractedColor
+                                    }
+                                }
+                                ListItem(
+                                    onClick = { setAutoColor(!isAutoColor) },
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    shapes = ListItemDefaults.shapes(),
+                                    colors = ListItemDefaults.colors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                                    ),
+                                    supportingContent = { Text(stringResource(R.string.dialog_auto_color_desc)) },
+                                    trailingContent = { Switch(checked = isAutoColor, onCheckedChange = setAutoColor) }
+                                ) {
+                                    Text(stringResource(R.string.dialog_auto_color_title))
+                                }
+                            }
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                                    .alpha(manualColorAlpha),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Text(
+                                    text = if (showAutoColorToggle && isAutoColor) {
+                                        stringResource(R.string.dialog_color_auto_label)
+                                    } else {
+                                        stringResource(R.string.dialog_color_label)
+                                    },
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                                ColorSwatchGrid(
+                                    selectedColor = selectedColor,
+                                    enabled = canPickManualColor,
+                                    onSelect = { selectedColor = it }
                                 )
                             }
                         }
                     }
-                }
-
-                if (showAutoColorToggle) {
-                    val setAutoColor: (Boolean) -> Unit = { auto ->
-                        isAutoColor = auto
-                        if (auto && autoExtractedColor != null) {
-                            selectedColor = autoExtractedColor
-                        }
-                    }
-                    ListItem(
-                        onClick = { setAutoColor(!isAutoColor) },
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        shapes = ListItemDefaults.shapes(),
-                        colors = ListItemDefaults.colors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                        ),
-                        supportingContent = { Text(stringResource(R.string.dialog_auto_color_desc)) },
-                        trailingContent = { Switch(checked = isAutoColor, onCheckedChange = setAutoColor) }
+                    BrightnessSlider(
+                        brightness = selectedBrightness,
+                        onBrightnessChange = { selectedBrightness = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        titleStyle = MaterialTheme.typography.labelLarge
+                    )
+                    AnimatedVisibility(
+                        visible = !progressOnly,
+                        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
+                            fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+                        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
+                            fadeOut(MaterialTheme.motionScheme.defaultEffectsSpec())
                     ) {
-                        Text(stringResource(R.string.dialog_auto_color_title))
+                        SpeedSlider(
+                            speed = selectedSpeed,
+                            onSpeedChange = { selectedSpeed = it },
+                            enabled = selectedPattern.moves,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp, end = 16.dp, top = 16.dp),
+                            titleStyle = MaterialTheme.typography.labelLarge
+                        )
                     }
                 }
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .alpha(manualColorAlpha),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = if (showAutoColorToggle && isAutoColor) {
-                            stringResource(R.string.dialog_color_auto_label)
-                        } else {
-                            stringResource(R.string.dialog_color_label)
-                        },
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                    ColorSwatchGrid(
-                        selectedColor = selectedColor,
-                        enabled = canPickManualColor,
-                        onSelect = { selectedColor = it }
-                    )
-                }
-
-                BrightnessSlider(
-                    brightness = selectedBrightness,
-                    onBrightnessChange = { selectedBrightness = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    titleStyle = MaterialTheme.typography.labelLarge
-                )
-                SpeedSlider(
-                    speed = selectedSpeed,
-                    onSpeedChange = { selectedSpeed = it },
-                    enabled = selectedPattern.moves,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    titleStyle = MaterialTheme.typography.labelLarge
-                )
             }
 
             EditorSection(title = stringResource(R.string.dialog_section_when)) {
@@ -881,7 +916,10 @@ private fun PreviewHeader(
     renderer: PatternRenderer,
     isTesting: Boolean,
     testEnabled: Boolean,
-    onToggleTest: () -> Unit
+    onToggleTest: () -> Unit,
+    progressOnly: Boolean = false,
+    // Lights for notifications too: the pattern and a countdown take turns.
+    alsoProgress: Boolean = false
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -893,13 +931,25 @@ private fun PreviewHeader(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            PatternRing(pattern = pattern, color = color, elapsedMs = elapsedMs, renderer = renderer, size = 96.dp, brightness = brightness, speed = speed)
-            Text(
-                text = stringResource(pattern.titleRes),
+            val showCountdown = progressOnly || (alsoProgress && previewShowsCountdown(elapsedMs))
+            if (showCountdown) {
+                DiffusedRingPreview(
+                    frames = if (progressOnly) countdownPreviewFrame(elapsedMs) else countdownTurnFrame(elapsedMs),
+                    modifier = Modifier
+                        .size(96.dp)
+                        .clip(CircleShape),
+                    size = 96.dp
+                )
+            } else {
+                PatternRing(pattern = pattern, color = color, elapsedMs = elapsedMs, renderer = renderer, size = 96.dp, brightness = brightness, speed = speed)
+            }
+            AnimatedText(
+                text = if (showCountdown) stringResource(R.string.dialog_light_for_progress) else stringResource(pattern.titleRes),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            TestOnLedsButton(isTesting = isTesting, enabled = testEnabled, onClick = onToggleTest)
+            // The test plays a pattern, which a progress-only rule doesn't have.
+            TestOnLedsButton(isTesting = isTesting, enabled = testEnabled && !progressOnly, onClick = onToggleTest)
         }
     }
 }
@@ -1120,7 +1170,8 @@ private fun <T> ChoiceGroup(
         AnimatedText(
             text = description,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            clip = true
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1181,7 +1232,7 @@ private fun RuleEditorPreview() {
                 SeenChannel("other", "Other notifications")
             ),
             initialExcludedChannels = setOf("group_chat_defaults"),
-            initialShowProgress = true
+            initialLightFor = AppLightFor.BOTH
         )
     }
 }

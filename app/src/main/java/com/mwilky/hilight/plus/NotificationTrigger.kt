@@ -466,6 +466,10 @@ class NotificationTrigger : NotificationListenerService() {
                 DebugLog.i(TAG, "Priority 2 Match: App '${appRule.appName}' but its channel is switched off -> NO LIGHT")
                 return null
             }
+            if (!appRule.lightsNotifications) {
+                DebugLog.i(TAG, "Priority 2 Match: App '${appRule.appName}' lights for progress only -> NO LIGHT")
+                return null
+            }
             if (appRule.pattern == PatternMode.OFF) {
                 DebugLog.i(TAG, "Priority 2 Match: App '${appRule.appName}' is OFF -> NO LIGHT")
                 return null
@@ -696,7 +700,7 @@ class NotificationTrigger : NotificationListenerService() {
     /** The app rule that shows [pkg]'s progress on [channelId], if any. */
     private fun progressRule(snapshot: SettingsSnapshot, pkg: String, channelId: String?): AppNotificationRule? =
         snapshot.findRuleForPackage(pkg)?.takeIf {
-            snapshot.isNotificationsEnabled && it.showProgress && it.lightsChannel(channelId)
+            snapshot.isNotificationsEnabled && it.showsProgress && it.lightsChannel(channelId)
         }
 
     private suspend fun handleProgress(event: ListenerEvent.Progress) {
@@ -760,7 +764,8 @@ class NotificationTrigger : NotificationListenerService() {
         val reading = item.reading
         val endsAt = (reading as? TimerReading)?.let { item.postedAtElapsedMs + it.remainingMs } ?: 0L
         if (reading is TimerReading && endsAt <= SystemClock.elapsedRealtime()) return null
-        val color = if (rule.isAutoColor) {
+        // A progress-only rule has no colour of its own to pick, so a bar fills in the app's.
+        val color = if (rule.isAutoColor || !rule.lightsNotifications) {
             AppIconColorExtractor.extractColorForPackage(applicationContext, rule.packageName, rule.color)
         } else {
             rule.color

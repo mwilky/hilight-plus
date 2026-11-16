@@ -84,7 +84,7 @@ internal object DebugReport {
                 rule("Sender contact ${it.id}", it.isEnabled, it.pattern, it.color, it.faceDownMode, it.dndMode, it.quietHoursMode, it.quietHoursStartMinutes, it.quietHoursEndMinutes)
             }
             snapshot.appRules.forEach {
-                rule("App ${it.packageName}", it.isEnabled, it.pattern, it.color, it.faceDownMode, it.dndMode, it.quietHoursMode, it.quietHoursStartMinutes, it.quietHoursEndMinutes, "autoColor=${it.isAutoColor}, showProgress=${it.showProgress}")
+                rule("App ${it.packageName}", it.isEnabled, it.pattern, it.color, it.faceDownMode, it.dndMode, it.quietHoursMode, it.quietHoursStartMinutes, it.quietHoursEndMinutes, "autoColor=${it.isAutoColor}, lightFor=${it.lightFor.id}")
             }
             // The text itself is left out: it can be a name or anything else personal.
             snapshot.textRules.forEach {

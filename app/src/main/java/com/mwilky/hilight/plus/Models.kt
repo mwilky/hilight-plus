@@ -318,18 +318,23 @@ data class AppNotificationRule(
     val speed: Float = DEFAULT_SPEED,
     // Channels switched off, so a channel the app adds later still lights until it is switched off too.
     val excludedChannelIds: Set<String> = emptySet(),
-    // A running timer or progress bar from this app drains or fills the ring while it runs.
-    val showProgress: Boolean = false
+    val lightFor: AppLightFor = AppLightFor.NOTIFICATIONS
 ) {
     /** Whether a notification posted on [channelId] lights through this rule. */
     fun lightsChannel(channelId: String?): Boolean = channelId == null || channelId !in excludedChannelIds
+
+    /** A running timer or progress bar from this app empties or fills the ring while it runs. */
+    val showsProgress: Boolean get() = lightFor != AppLightFor.NOTIFICATIONS
+
+    /** The app's ordinary notifications light in the rule's pattern. */
+    val lightsNotifications: Boolean get() = lightFor != AppLightFor.PROGRESS
 
     fun toJson(): JSONObject = JSONObject().apply {
         put("packageName", packageName)
         put("appName", appName)
         put("isAutoColor", isAutoColor)
         if (excludedChannelIds.isNotEmpty()) put("excludedChannels", JSONArray(excludedChannelIds.sorted()))
-        if (showProgress) put("showProgress", true)
+        if (lightFor != AppLightFor.NOTIFICATIONS) put("lightFor", lightFor.id)
         putSharedRuleFields(color, pattern, isEnabled, faceDownMode, dndMode, quietHoursMode, quietHoursStartMinutes, quietHoursEndMinutes, brightness, speed)
     }
 
@@ -353,9 +358,20 @@ data class AppNotificationRule(
                 excludedChannelIds = json.optJSONArray("excludedChannels")
                     ?.let { array -> (0 until array.length()).mapNotNull { array.optString(it).takeIf(String::isNotBlank) }.toSet() }
                     .orEmpty(),
-                showProgress = json.optBoolean("showProgress", false)
+                lightFor = AppLightFor.fromId(json.optString("lightFor"))
             )
         }
+    }
+}
+
+/** What an app rule lights the ring for: the app's notifications, its timers and progress bars, or both. */
+enum class AppLightFor(val id: String) {
+    NOTIFICATIONS("notifications"),
+    PROGRESS("progress"),
+    BOTH("both");
+
+    companion object {
+        fun fromId(id: String?): AppLightFor = entries.firstOrNull { it.id == id } ?: NOTIFICATIONS
     }
 }
 

@@ -44,7 +44,7 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 [*]Starred contacts can share a favourites style, sitting between a sender's own rule and the app rule.
 [*]App rules can switch off individual [B]notification channels[/B], like an app's promotions or group chats. Channels are listed by name as the app posts on them and light until switched off. Text and contact rules can still light a switched-off channel.
 [*]Text rules: match a notification's [B]title[/B] or [B]message[/B] that [I]contains[/I] or [I]is exactly[/I] some text, from any app or just one. Checked before every other notification rule.
-[*][B]Show progress[/B] on app rules: a running timer (such as Clock's) drains the ring, turning amber at halfway and red near the end, and a download or other progress bar fills it in the rule's colour. Notifications still light over it.
+[*]App rules light for the app's [B]notifications[/B], its [B]progress[/B], or both: a running timer (such as Clock's) drains the ring, turning amber at halfway and red near the end, and a download or other progress bar fills it in the rule's colour, or the app icon's for progress only.
 [*]13 distinct LED animation patterns, picked by group: [I]Solid, Breathe, Pulse, Beacon, Wave, Comet, Orbit, Ripple, Sparkle, Rainbow[/I], plus copies of Gemini's own [I]Listening, Thinking[/I] and [I]Replying[/I] effects.
 [*]Eight preset colours or any custom colour from a colour wheel, for every rule, battery and Gemini. Hex codes can be copied and pasted between rules.
 [*]Brightness from 10% to 100% for every rule and each Gemini state.

@@ -71,6 +71,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -109,6 +110,7 @@ import com.mwilky.hilight.plus.PatternMode
 import com.mwilky.hilight.plus.QuietHoursMode
 import com.mwilky.hilight.plus.R
 import com.mwilky.hilight.plus.RuleSort
+import com.mwilky.hilight.plus.core.CountdownRing
 import com.mwilky.hilight.plus.core.PatternRenderer
 import java.text.DecimalFormat
 import kotlinx.coroutines.delay
@@ -201,7 +203,11 @@ fun RuleListItem(
     onDelete: (() -> Unit)? = null,
     dndMode: DndMode = DndMode.INHERIT,
     quietHoursMode: QuietHoursMode = QuietHoursMode.INHERIT,
-    speed: Float = DEFAULT_SPEED
+    speed: Float = DEFAULT_SPEED,
+    // In place of the pattern's name, for a rule that lights for more (or other) than a pattern.
+    subtitle: String? = null,
+    // An animation of its own in place of the pattern badge's, given the time in milliseconds.
+    badgeFrameAt: ((Long) -> IntArray)? = null
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     Box {
@@ -213,7 +219,11 @@ fun RuleListItem(
             colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
             verticalAlignment = Alignment.CenterVertically,
             leadingContent = {
-                AnimatedRingBadge(pattern = pattern, color = color, renderer = renderer, size = 36.dp, speed = speed)
+                if (badgeFrameAt != null) {
+                    AnimatedFramesBadge(size = 36.dp, frameAt = badgeFrameAt)
+                } else {
+                    AnimatedRingBadge(pattern = pattern, color = color, renderer = renderer, size = 36.dp, speed = speed)
+                }
             },
             supportingContent = {
                 // Pattern on its own line; only conditions overridden from the Conditions page get a chip.
@@ -238,7 +248,7 @@ fun RuleListItem(
                     modifier = Modifier.animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec()),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    AnimatedText(text = stringResource(pattern.titleRes))
+                    AnimatedText(text = subtitle ?: stringResource(pattern.titleRes))
                     if (chips.isNotEmpty()) {
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -296,13 +306,16 @@ private fun ConditionChipView(chip: ConditionChip) {
 
 /**
  * Text that cross-fades and resizes with the expressive motion scheme when its content changes.
+ * [clip] keeps text that gains lines inside its growing bounds, so it doesn't spill over whatever
+ * sits below until that has moved out of the way.
  */
 @Composable
 fun AnimatedText(
     text: String,
     modifier: Modifier = Modifier,
     style: TextStyle = LocalTextStyle.current,
-    color: Color = Color.Unspecified
+    color: Color = Color.Unspecified,
+    clip: Boolean = false
 ) {
     val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
@@ -311,7 +324,7 @@ fun AnimatedText(
         modifier = modifier,
         transitionSpec = {
             fadeIn(effects).togetherWith(fadeOut(effects))
-                .using(SizeTransform(clip = false) { _, _ -> spatial })
+                .using(SizeTransform(clip = clip) { _, _ -> spatial })
         },
         label = "animatedText"
     ) { value ->
@@ -401,6 +414,67 @@ fun AddRuleButton(text: String, icon: ImageVector, onClick: () -> Unit) {
         Text(text)
     }
 }
+
+/** A ring badge playing [frameAt], on the clock the pattern badges share. */
+@Composable
+internal fun AnimatedFramesBadge(size: Dp, frameAt: (Long) -> IntArray) {
+    val currentFrameAt by rememberUpdatedState(frameAt)
+    var frames by remember { mutableStateOf(IntArray(8)) }
+    LaunchedEffect(Unit) {
+        while (isActive) {
+            frames = currentFrameAt(SystemClock.uptimeMillis())
+            delay(33)
+        }
+    }
+    DiffusedRingPreview(
+        frames = frames,
+        modifier = Modifier
+            .size(size)
+            .clip(CircleShape),
+        size = size
+    )
+}
+
+/**
+ * A timer of [COUNTDOWN_PREVIEW_TOTAL_MS] counting down, sped up to run in a few seconds, then a
+ * moment dark before it starts again: how a progress-only rule looks while a timer runs.
+ */
+internal fun countdownPreviewFrame(elapsedMs: Long): IntArray {
+    val t = elapsedMs.mod(COUNTDOWN_PREVIEW_RUN_MS + COUNTDOWN_PREVIEW_PAUSE_MS)
+    val remaining = COUNTDOWN_PREVIEW_TOTAL_MS - t * (COUNTDOWN_PREVIEW_TOTAL_MS / COUNTDOWN_PREVIEW_RUN_MS)
+    return CountdownRing.frame(COUNTDOWN_PREVIEW_TOTAL_MS, remaining, 8)
+}
+
+// Long enough for the red final lap, played 16 times faster.
+private const val COUNTDOWN_PREVIEW_TOTAL_MS = 160_000L
+private const val COUNTDOWN_PREVIEW_RUN_MS = 10_000L
+private const val COUNTDOWN_PREVIEW_PAUSE_MS = 1_000L
+
+/**
+ * For a rule that lights for notifications and progress: whether, [elapsedMs] in, its preview is
+ * on the countdown rather than the pattern. It plays the pattern for a few seconds, then one
+ * countdown, in turn.
+ */
+internal fun previewShowsCountdown(elapsedMs: Long): Boolean =
+    elapsedMs.mod(PATTERN_THEN_COUNTDOWN_MS) >= PATTERN_TURN_MS
+
+/** The countdown's frame [elapsedMs] in, during [previewShowsCountdown]'s countdown turn. */
+internal fun countdownTurnFrame(elapsedMs: Long): IntArray =
+    countdownPreviewFrame(elapsedMs.mod(PATTERN_THEN_COUNTDOWN_MS) - PATTERN_TURN_MS)
+
+/** One frame of [pattern] [elapsedMs] in, as the list badges draw it. */
+internal fun badgePatternFrame(renderer: PatternRenderer, pattern: PatternMode, color: Long, speed: Float, elapsedMs: Long): IntArray =
+    renderer.renderFrame(
+        pattern = pattern.id,
+        colorLong = color,
+        brightness = 1.0f,
+        speedMs = pattern.speedMs(speed),
+        elapsedTimeMs = elapsedMs,
+        ledCount = 8
+    )
+
+private const val PATTERN_TURN_MS = 5_000L
+private const val PATTERN_THEN_COUNTDOWN_MS = PATTERN_TURN_MS + COUNTDOWN_PREVIEW_RUN_MS + COUNTDOWN_PREVIEW_PAUSE_MS
 
 @Composable
 fun AnimatedRingBadge(
