@@ -1,2 +1,3 @@
-• Quiet hours can now differ at weekends, or be set day by day with any day left out. Your current quiet hours carry on as they are under Every day.
-• Pause until morning ends when your next quiet hours end, so a weekend lie-in counts.
+• Timers and downloads on the ring: set an app rule to light for Progress or Both. A running timer, such as Clock's, empties the ring, turning amber at halfway and red near the end, and a download fills it up.
+• A Progress-only rule lights for the app's timers and downloads but not its other notifications.
+• Shorter rule list headings and quieter empty-list hints.
