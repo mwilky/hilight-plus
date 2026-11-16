@@ -228,16 +228,16 @@
     <string name="calls_other_contacts_title">All other contacts</string>
     <string name="calls_unknown_numbers_title">Unknown numbers</string>
     <string name="calls_missed_calls_title">Missed calls</string>
-    <string name="calls_custom_rules_header">Custom caller rules (%1$d)</string>
-    <string name="calls_no_rules">No custom caller rules.</string>
+    <string name="calls_custom_rules_header">Caller rules (%1$d)</string>
+    <string name="calls_no_rules">No caller rules.</string>
     <string name="calls_add_contact_btn">Add contact</string>
 
     <!-- Notifications Section -->
     <string name="notifs_default_title">All other notifications</string>
-    <string name="notifs_contact_rules_header">Custom contact rules (%1$d)</string>
-    <string name="notifs_no_contact_rules">No contact message rules.</string>
-    <string name="notifs_app_rules_header">Custom app rules (%1$d)</string>
-    <string name="notifs_no_app_rules">No custom app rules.</string>
+    <string name="notifs_contact_rules_header">Contact rules (%1$d)</string>
+    <string name="notifs_no_contact_rules">No contact rules.</string>
+    <string name="notifs_app_rules_header">App rules (%1$d)</string>
+    <string name="notifs_no_app_rules">No app rules.</string>
     <string name="notifs_add_app_btn">Add app</string>
     <string name="notifs_text_rules_header">Text rules (%1$d)</string>
     <string name="notifs_no_text_rules">No text rules. Light up for notifications whose title or message matches some text.</string>

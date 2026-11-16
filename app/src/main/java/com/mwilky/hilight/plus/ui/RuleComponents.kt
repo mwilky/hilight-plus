@@ -385,7 +385,7 @@ fun EmptyRuleHint(text: String, icon: ImageVector) {
         // Keeps the icon level with hints that wrap onto more than one line.
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text)
+        Text(text, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -824,7 +824,7 @@ private fun RuleComponentsPreview() {
                     quietHoursMode = QuietHoursMode.ALWAYS
                 )
             }
-            EmptyRuleHint("No custom caller rules.", Icons.Rounded.Lightbulb)
+            EmptyRuleHint("No caller rules.",Icons.Rounded.Lightbulb)
             AddRuleButton("Add contact", Icons.Rounded.Lightbulb, onClick = {})
         }
     }
