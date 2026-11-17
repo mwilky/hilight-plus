@@ -65,7 +65,7 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 [*]Dynamic red-to-green gradient mapped to charge percentage, or static user colours.
 [*]Full-charge indicator with an auto-off sleep timer.
 [*]Customizable low-battery alert threshold.
-[*]Configurable layer priority (can sit below alerts or override standard notifications).
+[*]Sits below calls, Gemini, notifications and timers by default, and can be moved up the Priority list.
 [/LIST]
 
 [B]Gemini[/B]
@@ -80,8 +80,8 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 [*]Lights the ring while Do Not Disturb is on, in any pattern, colour, brightness and speed, edited like any rule.
 [*]Six calm patterns of its own: [I]DND sign[/I] (the 3 and 9 o'clock LEDs, the default), [I]Crescent, Sleep, Snooze, Glance[/I] and [I]Drift[/I].
 [*]Shows for as long as DND is on, or just the first 10 seconds, 1 minute or 5 minutes.
-[*]Optional flash as DND turns on and off, played over everything except a call.
-[*]Follows face-down and quiet hours like any rule; the indicator sits below calls, Gemini and notifications, and below battery unless set to take priority.
+[*]Optional flash as DND turns on and off, played over everything, calls included.
+[*]Follows face-down and quiet hours like any rule; the indicator sits at the bottom of the Priority list, below everything else, unless moved up.
 [*]Goes dark by itself if the app stops confirming DND is still on, so it can't be left lit.
 [/LIST]
 
@@ -91,6 +91,7 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 [*]Automatic Do Not Disturb (DND) suppression.
 [*]Global quiet hours scheduler: the same every day, different at weekends, or set day by day. Per-rule override options.
 [*]Pocket mode (on by default): the ring stays dark in a pocket or bag and lights once the phone is out. Face down never counts as a pocket, so face-down rules are unaffected. Proximity sensor engages only when alerts are pending.
+[*][B]Priority:[/B] the lights show one thing at a time, and a drag-to-reorder list decides which. The default order is [I]Calls, Gemini, Notifications, Timers & progress, Battery, DND[/I]. If something higher is hidden by its own conditions (a face-down-only call while the phone is face up, say), the next one down shows instead.
 [/LIST]
 
 [B]Pause[/B]

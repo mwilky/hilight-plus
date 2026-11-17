@@ -28,7 +28,7 @@ Pixel's built-in HiLight lights the rear ring for calls from favourites and Gemi
 - Starred contacts can share a favourites style, which sits between a sender's own rule and the app rule.
 - App rules can switch off individual notification channels, such as an app's promotions or group chats. Each channel is listed by name once the app posts a notification on it, and lights until it's switched off. A text or contact rule can still light a switched-off channel.
 - Text rules: light up when a notification's title or message contains, or is exactly, some text, from any app or just one. They're checked before every other notification rule, so a title containing "Delivery" or a message containing "verification code" can have its own look.
-- App rules light for the app's notifications, its progress, or both. With progress, a running timer, such as Clock's, empties the ring as it counts down, turning amber at halfway and red near the end, and a download or other progress bar fills it in the rule's colour, or the app icon's for progress only. The ring goes dark once the timer ends or the bar finishes, and with both, the app's notifications light over it.
+- App rules light for the app's notifications, its progress, or both. With progress, a running timer, such as Clock's, empties the ring as it counts down, turning amber at halfway and red near the end, and a download or other progress bar fills it in the rule's colour, or the app icon's for progress only. The lights go dark once the timer ends or the bar finishes. With both, the app's notifications light over its progress unless Timers & progress is moved above Notifications in the Priority list.
 - Thirteen patterns, picked by group (Simple, Motion, Gemini): solid, breathe, pulse, beacon, wave, comet, orbit, ripple, sparkle, rainbow, and copies of Gemini's own listening, thinking and replying effects.
 - Eight preset colours or any custom colour from a colour wheel, for every rule, battery's fixed colour and Gemini's states. The custom colour's hex code can be copied and pasted into another rule.
 - A brightness setting, from 10% to 100%, for every rule and each of Gemini's states.
@@ -44,20 +44,20 @@ Pixel's built-in HiLight lights the rear ring for calls from favourites and Gemi
 - Charging gauge, charge-fill or gradient ring while plugged in, with an automatic red-to-green colour by level or a fixed colour.
 - Full-charge display with a configurable timeout.
 - Low-battery warning below a threshold you choose.
-- Battery sits underneath calls and notifications, or can be set to take priority over notifications.
+- Battery sits underneath calls, Gemini, notifications and timers unless moved up the Priority list on the Conditions page.
 
 **Gemini**
 - Replaces Pixel's own Gemini feedback with a pattern and colour for each of Gemini's listening, thinking and replying states, defaulting to copies of the stock animations. On by default.
 - Each state can be switched off, and follows the conditions below or its own, like any rule.
-- Gemini shows above notifications and battery, and below calls.
+- Gemini shows below calls and above everything else unless moved in the Priority list on the Conditions page.
 - Gemini broadcasts none of this, so the daemon follows Gemini's own app log, on the phone only.
 
 **Do Not Disturb**
 - Lights the ring to show Do Not Disturb is on, in any pattern, colour, brightness and speed, edited like any rule.
 - Six calm patterns of its own: DND sign (the 3 and 9 o'clock LEDs, the bar across the ring's circle, and the default), crescent, sleep, snooze, glance and drift.
 - Shows for as long as Do Not Disturb is on, or only for the first 10 seconds, 1 minute or 5 minutes.
-- An optional flash as Do Not Disturb turns on (a sweep round the ring) and off (the same sweep backwards). It plays over everything except a call, and whatever it covered carries on after it.
-- Follows the face-down and quiet-hours conditions, or its own. The indicator sits underneath calls, Gemini and notifications, and underneath battery unless set to take priority over it.
+- An optional flash as Do Not Disturb turns on (a sweep round the ring) and off (the same sweep backwards). It plays over everything, calls included, and whatever it covered carries on after it.
+- Follows the face-down and quiet-hours conditions, or its own. The indicator sits at the bottom of the Priority list, underneath everything else, unless moved up.
 - Goes dark by itself if the app stops confirming Do Not Disturb is still on, so it can't be left lit.
 
 **Conditions**
@@ -66,6 +66,7 @@ Pixel's built-in HiLight lights the rear ring for calls from favourites and Gemi
 - Quiet hours the same every day, different at weekends, or set day by day with any day left out. An overnight window counts for the day it starts on.
 - Every rule can follow these defaults, always light, or opt out, and rules can carry their own quiet-hours window.
 - Pocket mode, on by default: the ring stays dark in a pocket or bag and lights once the phone is out. Lying face down never counts as a pocket, so face-down rules keep working. It applies to everything and can be turned off on the Conditions page.
+- Priority: the lights show one thing at a time, and a drag-to-reorder list decides which. Whichever is higher is shown. The default order is Calls, Gemini, Notifications, Timers & progress, Battery, DND. If something higher is hidden by its own conditions, such as a call set to light only face down while the phone is face up, the next one down shows instead.
 
 **Pause**
 - A Pause lights tile in Quick Settings keeps the ring dark for a while: everything, or just calls, notifications, battery, Gemini or Do Not Disturb.
@@ -137,7 +138,7 @@ Standard Android Gradle project. Open in Android Studio or run:
 
 Release builds are minified with R8. There is also a `debugMinified` variant, signed with the debug key, for checking the shrunk app on a device. Keep the `mapping.txt` from each release build for readable crash reports.
 
-Unit tests cover the rule model, JSON round-tripping, contact matching, rule sorting, quiet hours, the pattern renderer, the battery and split-ring layouts, the conversion of every look into a hardware effect within the keyframe budget, the Gemini log parser, timer and progress-bar readings and the countdown ring, the call-state machine, the notification slot tracker and the connect-setup guide. Anything that touches the LEDs needs a physical Pixel.
+Unit tests cover the rule model, JSON round-tripping, contact matching, rule sorting, quiet hours, the pattern renderer, the battery and split-ring layouts, the conversion of every look into a hardware effect within the keyframe budget, the Gemini log parser, timer and progress-bar readings and the countdown ring, the call-state machine, the notification slot tracker, the priority order and the connect-setup guide. Anything that touches the LEDs needs a physical Pixel.
 
 ## Pricing
 

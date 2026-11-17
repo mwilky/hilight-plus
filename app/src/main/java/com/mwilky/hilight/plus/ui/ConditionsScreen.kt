@@ -6,42 +6,65 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
+import androidx.compose.material.icons.rounded.DragHandle
+import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.ScreenRotation
 import androidx.compose.material.icons.rounded.Sensors
+import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mwilky.hilight.plus.QuietHoursRepeat
 import com.mwilky.hilight.plus.QuietHoursSchedule
 import com.mwilky.hilight.plus.QuietWindow
 import com.mwilky.hilight.plus.R
+import com.mwilky.hilight.plus.core.LightChannel
 import com.mwilky.hilight.plus.localeWeekendDays
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.format.TextStyle
 import java.time.temporal.WeekFields
@@ -71,7 +94,9 @@ fun ConditionsScreen(viewModel: HomeViewModel = viewModel()) {
         weekendDays = remember { localeWeekendDays() },
         onChangeQuietHoursRepeat = viewModel::setQuietHoursRepeat,
         onChangeQuietHoursWeekend = viewModel::setQuietHoursWeekend,
-        onChangeQuietHoursDay = viewModel::setQuietHoursDay
+        onChangeQuietHoursDay = viewModel::setQuietHoursDay,
+        channelOrder = state.channelOrder,
+        onChangeChannelOrder = viewModel::setChannelOrder
     )
 }
 
@@ -106,7 +131,9 @@ fun ConditionsContent(
     weekendDays: Set<DayOfWeek>,
     onChangeQuietHoursRepeat: (QuietHoursRepeat) -> Unit,
     onChangeQuietHoursWeekend: (Int, Int) -> Unit,
-    onChangeQuietHoursDay: (DayOfWeek, QuietWindow) -> Unit
+    onChangeQuietHoursDay: (DayOfWeek, QuietWindow) -> Unit,
+    channelOrder: List<LightChannel>,
+    onChangeChannelOrder: (List<LightChannel>) -> Unit
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     var editing by remember { mutableStateOf<QuietTimeEdit?>(null) }
@@ -284,6 +311,17 @@ fun ConditionsContent(
                 checked = pocketMode,
                 onCheckedChange = onTogglePocketMode
             )
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                RuleGroupHeader(stringResource(R.string.conditions_priority_title))
+                Text(
+                    text = stringResource(R.string.conditions_priority_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+                )
+                PriorityList(order = channelOrder, onReorder = onChangeChannelOrder)
+            }
         }
     }
 
@@ -412,30 +450,188 @@ private fun ConditionRow(
         shapes = ListItemDefaults.segmentedShapes(index = index, count = count),
         colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         verticalAlignment = Alignment.CenterVertically,
-        leadingContent = {
-            val container by animateColorAsState(
-                targetValue = if (checked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
-                animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-                label = "conditionIconContainer"
-            )
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(container),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    icon,
-                    contentDescription = null,
-                    tint = if (checked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        },
+        leadingContent = { ConditionIcon(icon, active = checked) },
         supportingContent = { Text(subtitle) },
         trailingContent = { Switch(checked = checked, onCheckedChange = onCheckedChange) }
     ) {
         Text(title)
+    }
+}
+
+@Composable
+private fun ConditionIcon(icon: ImageVector, active: Boolean) {
+    val container by animateColorAsState(
+        targetValue = if (active) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
+        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+        label = "conditionIconContainer"
+    )
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(container),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = if (active) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+private val LightChannel.icon: ImageVector
+    get() = when (this) {
+        LightChannel.CALLS -> Icons.Rounded.Call
+        LightChannel.GEMINI -> Icons.Rounded.AutoAwesome
+        LightChannel.NOTIFICATIONS -> Icons.Rounded.Notifications
+        LightChannel.PROGRESS -> Icons.Rounded.Timer
+        LightChannel.BATTERY -> Icons.Rounded.BatteryChargingFull
+        LightChannel.DND -> Icons.Rounded.DoNotDisturbOn
+    }
+
+private val LightChannel.titleRes: Int
+    get() = when (this) {
+        LightChannel.CALLS -> R.string.home_tab_calls
+        LightChannel.GEMINI -> R.string.home_tab_gemini
+        LightChannel.NOTIFICATIONS -> R.string.home_tab_notifications
+        LightChannel.PROGRESS -> R.string.conditions_priority_progress
+        LightChannel.BATTERY -> R.string.home_tab_battery
+        LightChannel.DND -> R.string.home_tab_dnd
+    }
+
+/**
+ * The channels, highest first. A row moves by dragging its handle, or anywhere on it after a long
+ * press, and the new order is saved when it is let go. TalkBack gets move up and down actions.
+ */
+@Composable
+private fun PriorityList(order: List<LightChannel>, onReorder: (List<LightChannel>) -> Unit) {
+    var items by remember(order) { mutableStateOf(order) }
+    var dragging by remember { mutableStateOf<LightChannel?>(null) }
+    // The row last picked up, kept on top while it settles back into place after the drop.
+    var lifted by remember { mutableStateOf<LightChannel?>(null) }
+    var dragOffset by remember { mutableFloatStateOf(0f) }
+    // Each row's distance from its place in the list, eased back to 0 after a move so rows slide
+    // rather than jump. Set in the same frame as the move, before the row is laid out in its new place.
+    val slide = remember { mutableStateMapOf<LightChannel, Float>() }
+    val slideJobs = remember { mutableMapOf<LightChannel, Job>() }
+    // One row plus the gap under it: how far a row travels to swap with its neighbour.
+    var slotPx by remember { mutableFloatStateOf(0f) }
+    val gapPx = with(LocalDensity.current) { ListItemDefaults.SegmentedGap.toPx() }
+    val scope = rememberCoroutineScope()
+    val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+    val haptics = LocalHapticFeedback.current
+    val moveUpLabel = stringResource(R.string.conditions_priority_move_up)
+    val moveDownLabel = stringResource(R.string.conditions_priority_move_down)
+
+    fun moved(from: Int, to: Int) = items.toMutableList().apply { add(to, removeAt(from)) }
+    fun slideFrom(channel: LightChannel, by: Float) {
+        val start = (slide[channel] ?: 0f) + by
+        slide[channel] = start
+        slideJobs[channel]?.cancel()
+        slideJobs[channel] = scope.launch {
+            animate(start, 0f, animationSpec = spatial) { value, _ -> slide[channel] = value }
+        }
+    }
+    fun swap(index: Int, to: Int) {
+        // The neighbour starts where it was and slides into the gap the moved row left.
+        slideFrom(items[to], (to - index) * slotPx)
+        items = moved(index, to)
+    }
+    fun startDrag(channel: LightChannel) {
+        // Picks the row up where it is, even mid-settle.
+        slideJobs.remove(channel)?.cancel()
+        dragOffset = slide.remove(channel) ?: 0f
+        dragging = channel
+        lifted = channel
+        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+    }
+    fun dragBy(channel: LightChannel, dy: Float) {
+        dragOffset += dy
+        val index = items.indexOf(channel)
+        if (slotPx <= 0f || index < 0) return
+        if (dragOffset > slotPx / 2 && index < items.lastIndex) {
+            swap(index, index + 1)
+            dragOffset -= slotPx
+            haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+        } else if (dragOffset < -slotPx / 2 && index > 0) {
+            swap(index, index - 1)
+            dragOffset += slotPx
+            haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+        }
+    }
+    fun endDrag() {
+        val channel = dragging ?: return
+        // Hands the leftover drag distance to the slide, so the row settles into place.
+        slideFrom(channel, dragOffset)
+        dragOffset = 0f
+        dragging = null
+        if (items != order) onReorder(items)
+    }
+    fun moveByAction(index: Int, to: Int) {
+        slideFrom(items[index], (index - to) * slotPx)
+        swap(index, to)
+        onReorder(items)
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+        items.forEachIndexed { index, channel ->
+            key(channel) {
+                val isDragging = dragging == channel
+                val lift by animateFloatAsState(if (isDragging) 1f else 0f, spatial, label = "priorityLift")
+                val container by animateColorAsState(
+                    targetValue = if (isDragging) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surfaceContainer,
+                    animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+                    label = "priorityContainer"
+                )
+                SegmentedListItem(
+                    onClick = {},
+                    modifier = Modifier
+                        .onSizeChanged { slotPx = it.height + gapPx }
+                        .zIndex(if (lifted == channel) 1f else 0f)
+                        .graphicsLayer {
+                            translationY = (slide[channel] ?: 0f) + if (isDragging) dragOffset else 0f
+                            scaleX = 1f + 0.03f * lift
+                            scaleY = 1f + 0.03f * lift
+                        }
+                        .pointerInput(channel, order) {
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = { startDrag(channel) },
+                                onDragEnd = ::endDrag,
+                                onDragCancel = ::endDrag,
+                                onDrag = { change, amount -> change.consume(); dragBy(channel, amount.y) }
+                            )
+                        }
+                        .semantics {
+                            customActions = listOfNotNull(
+                                if (index > 0) CustomAccessibilityAction(moveUpLabel) { moveByAction(index, index - 1); true } else null,
+                                if (index < items.lastIndex) CustomAccessibilityAction(moveDownLabel) { moveByAction(index, index + 1); true } else null
+                            )
+                        },
+                    shapes = ListItemDefaults.segmentedShapes(index = index, count = items.size),
+                    colors = ListItemDefaults.segmentedColors(containerColor = container),
+                    verticalAlignment = Alignment.CenterVertically,
+                    leadingContent = { ConditionIcon(channel.icon, active = true) },
+                    trailingContent = {
+                        Icon(
+                            Icons.Rounded.DragHandle,
+                            contentDescription = stringResource(R.string.conditions_priority_drag),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.pointerInput(channel, order) {
+                                detectDragGestures(
+                                    onDragStart = { startDrag(channel) },
+                                    onDragEnd = ::endDrag,
+                                    onDragCancel = ::endDrag,
+                                    onDrag = { change, amount -> change.consume(); dragBy(channel, amount.y) }
+                                )
+                            }
+                        )
+                    }
+                ) {
+                    Text(stringResource(channel.titleRes))
+                }
+            }
+        }
     }
 }
 
@@ -462,7 +658,9 @@ fun ConditionsScreenPreview() {
             weekendDays = setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY),
             onChangeQuietHoursRepeat = {},
             onChangeQuietHoursWeekend = { _, _ -> },
-            onChangeQuietHoursDay = { _, _ -> }
+            onChangeQuietHoursDay = { _, _ -> },
+            channelOrder = LightChannel.DEFAULT_ORDER,
+            onChangeChannelOrder = {}
         )
     }
 }

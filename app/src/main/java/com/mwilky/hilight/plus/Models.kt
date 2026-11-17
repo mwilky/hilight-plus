@@ -571,6 +571,8 @@ data class BatterySettings(
     val lowWarningEnabled: Boolean = true,
     val lowThresholdPercent: Int = 20,
     val fullTimeout: BatteryFullTimeout = BatteryFullTimeout.FIVE_MIN,
+    // Replaced by the Priority list on the Conditions page. No longer shown; only read to seed
+    // that list's order the first time.
     val overridesNotifications: Boolean = false,
     // Same tri-state as every rule's own condition fields, for the same reason: face-down and DND
     // can defer to the Conditions page instead of needing their own copy of that decision.
@@ -770,6 +772,8 @@ data class DndIndicatorSettings(
     val quietHoursEndMinutes: Int? = null,
     val showFor: DndIndicatorDuration = DndIndicatorDuration.WHILE_ON,
     val flashOnChange: Boolean = true,
+    // Replaced by the Priority list on the Conditions page. No longer shown; only read to seed
+    // that list's order the first time.
     val overridesBattery: Boolean = false
 ) {
     fun toJson(): JSONObject = JSONObject().apply {

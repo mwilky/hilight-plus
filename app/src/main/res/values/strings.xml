@@ -485,6 +485,12 @@
     <string name="conditions_quiet_hours_dialog_title">%1$s · %2$s</string>
     <string name="conditions_quiet_hours_overnight">Overnight times count for the day they start on, so Friday\'s run into Saturday morning.</string>
     <string name="conditions_pocket_title">Pocket mode</string>
+    <string name="conditions_priority_title">Priority</string>
+    <string name="conditions_priority_desc">The lights show one thing at a time. If a notification arrives while a call is ringing, whichever is higher here is shown. Drag to reorder.</string>
+    <string name="conditions_priority_progress">Timers &amp; progress</string>
+    <string name="conditions_priority_move_up">Move up</string>
+    <string name="conditions_priority_move_down">Move down</string>
+    <string name="conditions_priority_drag">Drag to reorder</string>
     <string name="conditions_pocket_desc">Stay dark in a pocket or bag and light once the phone is out. Lying face down never counts as a pocket. Applies to everything; rules can\'t override it.</string>
 
     <!-- Battery Screen -->
@@ -506,8 +512,6 @@
     <string name="battery_low_pattern_solid">Solid</string>
     <string name="battery_section_full_timeout_title">Full charge timeout</string>
     <string name="battery_section_full_timeout_desc">How long the lights stay on once the battery is full.</string>
-    <string name="battery_section_overrides_notifications">Prioritise over notifications</string>
-    <string name="battery_section_overrides_notifications_desc">When on, notification lights won\'t interrupt the battery display. Incoming calls always interrupt it.</string>
 
     <!-- Do Not Disturb Screen -->
     <string name="dnd_group_indicator">While Do Not Disturb is on</string>
@@ -522,8 +526,6 @@
     <string name="dnd_show_for_5m">5 min</string>
     <string name="dnd_flash_title">Announce on and off</string>
     <string name="dnd_flash_desc">A quick sweep round the lights in the indicator\'s colour whenever Do Not Disturb is switched on or off.</string>
-    <string name="dnd_overrides_battery_title">Prioritise over battery</string>
-    <string name="dnd_overrides_battery_desc">When on, the indicator shows instead of the battery display. Notifications and calls always go over it.</string>
 
     <!-- About Screen -->
     <string name="about_title">About &amp; Diagnostics</string>

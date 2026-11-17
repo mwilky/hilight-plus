@@ -264,6 +264,8 @@ class LightEngine {
     // Announcing a new arrival: while the split ring is up, a newly posted notification plays one
     // loop of its own pattern before the arcs come back. Which one, and when it was posted.
     private var splitAnnounceNew = false
+    // Which channel goes over which, highest first.
+    private var channelOrder = LightChannel.DEFAULT_ORDER
     private data class SplitIntro(val key: String, val startedAtMs: Long)
     private var splitIntro: SplitIntro? = null
 
@@ -604,6 +606,15 @@ class LightEngine {
             splitAnnounceNew = enabled
             if (!enabled) splitIntro = null
             DebugLog.i(TAG, "setSplitAnnounceNew: $enabled")
+            wake()
+        }
+    }
+
+    fun setChannelOrder(order: List<LightChannel>) {
+        synchronized(lock) {
+            if (channelOrder == order) return
+            channelOrder = order
+            DebugLog.i(TAG, "setChannelOrder: ${LightChannel.encode(order)}")
             wake()
         }
     }
@@ -1061,9 +1072,6 @@ class LightEngine {
             val batteryEligible = battery != null &&
                 batteryVisible(battery, nowMinutes) &&
                 batteryLayerWantsToRender(battery, now)
-            // When on, the battery layer takes the whole notification-priority slot rather than
-            // just the gaps between alerts, so it isn't flickered on and off as alerts cycle.
-            val batterySuppressesNotifications = batteryEligible && battery.overridesNotifications
 
             if (dndFlash?.let { now - it.startedAtMs >= PatternRenderer.DND_FLASH_MS } == true) dndFlash = null
             // Dropped here too, not only where the split ring is drawn: with a single alert
@@ -1112,23 +1120,7 @@ class LightEngine {
             var effectRemainingMs: Long? = null
             nextTurnAtMs = null
 
-            // The idle slot: progress (a countdown or a fill), the DND layer or the battery layer.
-            // Progress was asked for, so it goes over the other two. Of those the battery wins
-            // unless the DND indicator is set to go over it; a flash always does (it only gets
-            // here beneath a call hidden by its conditions).
-            fun useIdleLayer() {
-                if (timer != null && dndShow !is DndShow.Flash) {
-                    renderCountdown = timer
-                } else if (filling != null && dndShow !is DndShow.Flash) {
-                    renderFill = filling
-                } else if (dndShow != null && (dndShow is DndShow.Flash || dndShow.spec.overridesBattery || !batteryEligible)) {
-                    renderDnd = dndShow
-                } else if (batteryEligible) {
-                    renderBattery = true
-                }
-            }
-
-            var reason: String
+            var reason = "off"
             if (test?.split != null) {
                 reason = "test split ${test.split.animation.id} ${test.split.colors.size} arcs"
                 splitColors = test.split.colors.toLongArray()
@@ -1147,118 +1139,142 @@ class LightEngine {
                 elapsedMs = now - test.startedAtMs
                 effectKey = listOf("test", test)
                 effectRemainingMs = test.expiresAtMs - now
-            } else if (call != null) {
-                if (callVisible) {
-                    reason = "call ${call.pattern} ${hex(call.color)}"
-                    currentPattern = call.pattern
-                    currentColor = call.color
-                    currentBrightness = call.brightness
-                    currentSpeed = call.speedMs
-                    elapsedMs = now - call.startedAtMs
-                    effectKey = listOf("call", call)
-                } else {
-                    reason = "off (call hidden by conditions)"
-                    useIdleLayer()
-                }
             } else if (dndShow is DndShow.Flash) {
                 // The on/off flash is the answer to the user switching DND, and only lasts a
-                // moment, so it goes over Gemini, notifications and battery; whatever it covered
-                // carries on once it's done. Calls still beat it.
+                // moment, so it goes over every channel; whatever it covered carries on once
+                // it's done.
                 reason = "dnd flash"
                 renderDnd = dndShow
-            } else if (geminiLook != null) {
-                val (state, look) = geminiLook
-                reason = "gemini ${state.id} ${look.pattern}"
-                currentPattern = look.pattern
-                currentColor = look.color
-                currentBrightness = look.brightness
-                currentSpeed = look.speedMs
-                elapsedMs = now - geminiStateSinceMs
-                effectKey = listOf("gemini", state, geminiStateSinceMs, look)
-            } else if (!batterySuppressesNotifications && direct != null && notificationVisible(
-                    direct.requiresFaceDown, direct.dndMode, direct.quietHoursMode,
-                    direct.quietStartOverride, direct.quietEndOverride, nowMinutes
-                )
-            ) {
-                reason = "latest-only ${direct.pattern} ${hex(direct.color)}"
-                currentPattern = direct.pattern
-                currentColor = direct.color
-                currentBrightness = direct.brightness
-                currentSpeed = direct.speedMs
-                elapsedMs = directAlertTimer.elapsedMs(now)
-                effectKey = listOf("latest", directGeneration, direct)
-                effectRemainingMs = directAlertTimer.remainingMs(now)
-            } else if (!batterySuppressesNotifications && activeAlerts.isNotEmpty()) {
-                val eligibleStart = firstEligibleAlertIndex(currentAlertIndex)
-                val splitAlerts = if (splitRing && eligibleStart != null) visibleAlertsNewestFirst(nowMinutes) else emptyList()
-                if (eligibleStart == null) {
-                    reason = "off (${activeAlerts.size} queued, hidden by conditions)"
-                    useIdleLayer()
-                } else if (splitAlerts.size >= 2 && splitIntroAlert(splitAlerts, now) != null) {
-                    // A new arrival announces itself with one loop of its own pattern, timed so
-                    // the hardware stops by itself; the arcs come back on the next tick after.
-                    val intro = splitIntro!!
-                    val alert = splitIntroAlert(splitAlerts, now)!!
-                    reason = "split intro ${alert.key} ${alert.pattern}"
-                    currentPattern = alert.pattern
-                    currentColor = alert.color
-                    currentBrightness = alert.brightness
-                    currentSpeed = alert.speedMs
-                    elapsedMs = now - intro.startedAtMs
-                    effectKey = listOf("splitIntro", intro, alert)
-                    effectRemainingMs = splitIntroMs(alert) - elapsedMs
-                } else if (splitAlerts.size >= 2) {
-                    val keys = splitAlerts.take(PatternRenderer.MAX_SPLIT_SEGMENTS).map { it.key }
-                    if (keys != splitKeys) {
-                        splitKeys = keys
-                        splitStartedAtMs = now
-                    }
-                    reason = "split ${splitAnimation.id} $keys"
-                    splitColors = LongArray(minOf(splitAlerts.size, PatternRenderer.MAX_SPLIT_SEGMENTS)) { splitAlerts[it].color }
-                } else {
-                    val turns = visibleAlertsNewestFirst(nowMinutes)
-                    reason = "queue ${turns.map { it.key }}"
-                    if (currentAlertIndex != eligibleStart) {
-                        currentAlertIndex = eligibleStart
-                        cycleStartTimeMs = now
-                    }
-
-                    // Check if current alert's animation cycle has completed
-                    val currentAlert = activeAlerts[currentAlertIndex]
-                    val singleCycleDuration = currentAlert.speedMs.coerceAtLeast(300L)
-                    val alertElapsedInCycle = now - cycleStartTimeMs
-
-                    if (alertElapsedInCycle >= singleCycleDuration) {
-                        val next = firstEligibleAlertIndex((currentAlertIndex + 1) % activeAlerts.size)
-                        currentAlertIndex = next ?: currentAlertIndex
-                        cycleStartTimeMs = now
-                    }
-
-                    val activeAlertToRender = activeAlerts[currentAlertIndex.coerceIn(0, activeAlerts.size - 1)]
-                    currentPattern = activeAlertToRender.pattern
-                    currentColor = activeAlertToRender.color
-                    currentBrightness = activeAlertToRender.brightness
-                    currentSpeed = activeAlertToRender.speedMs
-
-                    // Clamp elapsed time strictly within [0, singleCycleDuration]
-                    elapsedMs = (now - cycleStartTimeMs).coerceIn(0L, singleCycleDuration)
-
-                    // A lone alert simply loops. With several, each turn is its own effect, sent
-                    // when the turn starts: one effect holding every turn wouldn't fit the hardware.
-                    effectKey = if (turns.size <= 1) {
-                        listOf("queue", activeAlertToRender)
-                    } else {
-                        nextTurnAtMs = cycleStartTimeMs + singleCycleDuration
-                        listOf("turn", currentAlertIndex, cycleStartTimeMs, activeAlertToRender)
-                    }
-                }
             } else {
-                reason = when {
-                    direct != null || activeAlerts.isNotEmpty() ->
-                        if (batterySuppressesNotifications) "off (notifications under battery)" else "off (latest-only alert hidden by conditions)"
-                    else -> "off"
+                // The channels in the user's order. The first with something to show takes the
+                // ring; one with nothing, paused or hidden by its conditions lets the next through.
+                var shown: LightChannel? = null
+                channels@ for (channel in channelOrder) {
+                    when (channel) {
+                        LightChannel.CALLS -> {
+                            if (call == null || !callVisible) continue@channels
+                            reason = "call ${call.pattern} ${hex(call.color)}"
+                            currentPattern = call.pattern
+                            currentColor = call.color
+                            currentBrightness = call.brightness
+                            currentSpeed = call.speedMs
+                            elapsedMs = now - call.startedAtMs
+                            effectKey = listOf("call", call)
+                        }
+                        LightChannel.GEMINI -> {
+                            if (geminiLook == null) continue@channels
+                            val (state, look) = geminiLook
+                            reason = "gemini ${state.id} ${look.pattern}"
+                            currentPattern = look.pattern
+                            currentColor = look.color
+                            currentBrightness = look.brightness
+                            currentSpeed = look.speedMs
+                            elapsedMs = now - geminiStateSinceMs
+                            effectKey = listOf("gemini", state, geminiStateSinceMs, look)
+                        }
+                        LightChannel.NOTIFICATIONS -> {
+                            val eligibleStart = if (activeAlerts.isEmpty()) null else firstEligibleAlertIndex(currentAlertIndex)
+                            if (direct != null && notificationVisible(
+                                    direct.requiresFaceDown, direct.dndMode, direct.quietHoursMode,
+                                    direct.quietStartOverride, direct.quietEndOverride, nowMinutes
+                                )
+                            ) {
+                                reason = "latest-only ${direct.pattern} ${hex(direct.color)}"
+                                currentPattern = direct.pattern
+                                currentColor = direct.color
+                                currentBrightness = direct.brightness
+                                currentSpeed = direct.speedMs
+                                elapsedMs = directAlertTimer.elapsedMs(now)
+                                effectKey = listOf("latest", directGeneration, direct)
+                                effectRemainingMs = directAlertTimer.remainingMs(now)
+                            } else if (eligibleStart == null) {
+                                continue@channels
+                            } else {
+                                val splitAlerts = if (splitRing) visibleAlertsNewestFirst(nowMinutes) else emptyList()
+                                if (splitAlerts.size >= 2 && splitIntroAlert(splitAlerts, now) != null) {
+                                    // A new arrival announces itself with one loop of its own pattern, timed so
+                                    // the hardware stops by itself; the arcs come back on the next tick after.
+                                    val intro = splitIntro!!
+                                    val alert = splitIntroAlert(splitAlerts, now)!!
+                                    reason = "split intro ${alert.key} ${alert.pattern}"
+                                    currentPattern = alert.pattern
+                                    currentColor = alert.color
+                                    currentBrightness = alert.brightness
+                                    currentSpeed = alert.speedMs
+                                    elapsedMs = now - intro.startedAtMs
+                                    effectKey = listOf("splitIntro", intro, alert)
+                                    effectRemainingMs = splitIntroMs(alert) - elapsedMs
+                                } else if (splitAlerts.size >= 2) {
+                                    val keys = splitAlerts.take(PatternRenderer.MAX_SPLIT_SEGMENTS).map { it.key }
+                                    if (keys != splitKeys) {
+                                        splitKeys = keys
+                                        splitStartedAtMs = now
+                                    }
+                                    reason = "split ${splitAnimation.id} $keys"
+                                    splitColors = LongArray(minOf(splitAlerts.size, PatternRenderer.MAX_SPLIT_SEGMENTS)) { splitAlerts[it].color }
+                                } else {
+                                    val turns = visibleAlertsNewestFirst(nowMinutes)
+                                    reason = "queue ${turns.map { it.key }}"
+                                    if (currentAlertIndex != eligibleStart) {
+                                        currentAlertIndex = eligibleStart
+                                        cycleStartTimeMs = now
+                                    }
+
+                                    // Check if current alert's animation cycle has completed
+                                    val currentAlert = activeAlerts[currentAlertIndex]
+                                    val singleCycleDuration = currentAlert.speedMs.coerceAtLeast(300L)
+                                    val alertElapsedInCycle = now - cycleStartTimeMs
+
+                                    if (alertElapsedInCycle >= singleCycleDuration) {
+                                        val next = firstEligibleAlertIndex((currentAlertIndex + 1) % activeAlerts.size)
+                                        currentAlertIndex = next ?: currentAlertIndex
+                                        cycleStartTimeMs = now
+                                    }
+
+                                    val activeAlertToRender = activeAlerts[currentAlertIndex.coerceIn(0, activeAlerts.size - 1)]
+                                    currentPattern = activeAlertToRender.pattern
+                                    currentColor = activeAlertToRender.color
+                                    currentBrightness = activeAlertToRender.brightness
+                                    currentSpeed = activeAlertToRender.speedMs
+
+                                    // Clamp elapsed time strictly within [0, singleCycleDuration]
+                                    elapsedMs = (now - cycleStartTimeMs).coerceIn(0L, singleCycleDuration)
+
+                                    // A lone alert simply loops. With several, each turn is its own effect, sent
+                                    // when the turn starts: one effect holding every turn wouldn't fit the hardware.
+                                    effectKey = if (turns.size <= 1) {
+                                        listOf("queue", activeAlertToRender)
+                                    } else {
+                                        nextTurnAtMs = cycleStartTimeMs + singleCycleDuration
+                                        listOf("turn", currentAlertIndex, cycleStartTimeMs, activeAlertToRender)
+                                    }
+                                }
+                            }
+                        }
+                        LightChannel.PROGRESS -> when {
+                            timer != null -> renderCountdown = timer
+                            filling != null -> renderFill = filling
+                            else -> continue@channels
+                        }
+                        LightChannel.DND -> {
+                            if (dndShow == null) continue@channels
+                            renderDnd = dndShow
+                        }
+                        LightChannel.BATTERY -> {
+                            if (!batteryEligible) continue@channels
+                            renderBattery = true
+                        }
+                    }
+                    shown = channel
+                    break@channels
                 }
-                useIdleLayer()
+                if (shown == null) {
+                    reason = when {
+                        call != null -> "off (call hidden by conditions)"
+                        direct != null || activeAlerts.isNotEmpty() -> "off (notifications hidden by conditions)"
+                        else -> "off"
+                    }
+                }
             }
             if (splitColors == null) splitKeys = null
 
@@ -1509,6 +1525,7 @@ class LightEngine {
         buildString {
             appendLine("ring=$lastRenderReason, sessionOpen=${lights.isSessionOpen}, unclosedSessions=${lights.unclosedSessionCount}, leds=${lights.ledCount}, running=$running, renderThreadAlive=${renderThread?.isAlive}, lastFrame=${now - lastTickElapsedMs}ms ago")
             appendLine("route=${if (framesDriving) "frames" else "effects"}, effectsSupported=${lights.supportsEffects}, effectsFailed=$effectsFailed, period=${lights.effectPeriodMs}ms, showing=${shownEffectKey?.let { shownEffectInfo }}")
+            appendLine("channels=${LightChannel.encode(channelOrder)}")
             appendLine("faceDown=$deviceFaceDown, dndActive=$dndActive, dndSuppress=$dndSuppressEnabled, quietHours=$quietHoursEnabled ${describeQuietWeek()}, splitRing=$splitRing (${splitAnimation.id}, $splitLook, speed $splitSpeed, announceNew=$splitAnnounceNew${splitIntro?.let { ", announcing ${it.key}" } ?: ""})")
             appendLine("pause=${describePause()}, rearCamera=$rearCameraActive, inPocket=$inPocket")
             appendLine("test=${testAlert?.let { "${it.pattern} ${hex(it.color)}, ${it.expiresAtMs - now}ms left" }}")

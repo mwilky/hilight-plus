@@ -334,7 +334,7 @@ private fun WhenGroup(
     onEditQuietEnd: () -> Unit,
     onBatteryChange: (BatterySettings) -> Unit
 ) {
-    val rowCount = 4
+    val rowCount = 3
     val context = LocalContext.current
 
     Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
@@ -435,15 +435,6 @@ private fun WhenGroup(
                 }
             }
         }
-
-        SwitchRow(
-            index = 3,
-            count = rowCount,
-            title = stringResource(R.string.battery_section_overrides_notifications),
-            description = stringResource(R.string.battery_section_overrides_notifications_desc),
-            checked = battery.overridesNotifications,
-            onCheckedChange = { onBatteryChange(battery.copy(overridesNotifications = it)) }
-        )
     }
 }
 

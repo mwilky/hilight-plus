@@ -206,6 +206,11 @@ class LightController private constructor(private val app: Application) {
             }
         }
         scope.launch {
+            store.channelOrder.collect { order ->
+                daemon.setChannelOrder(order)
+            }
+        }
+        scope.launch {
             combine(
                 store.quietHoursEnabled,
                 store.quietHoursStartMinutes,
@@ -494,6 +499,7 @@ class LightController private constructor(private val app: Application) {
         daemon.setSplitLook(store.splitLook.first())
         daemon.setSplitSpeed(store.splitSpeed.first())
         daemon.setSplitAnnounceNew(store.splitAnnounceNew.first())
+        daemon.setChannelOrder(store.channelOrder.first())
         pushQuietHours(
             store.quietHoursEnabled.first(),
             QuietWindow(store.quietHoursStartMinutes.first(), store.quietHoursEndMinutes.first()),

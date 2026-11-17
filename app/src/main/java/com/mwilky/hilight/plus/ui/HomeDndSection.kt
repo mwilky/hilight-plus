@@ -106,7 +106,7 @@ fun HomeDndPage(
                     // rather than hidden, so the group keeps its shape, as on the Battery page.
                     OptionsRow(
                         index = 0,
-                        count = 3,
+                        count = 2,
                         title = stringResource(R.string.dnd_show_for_title),
                         description = stringResource(R.string.dnd_show_for_desc),
                         options = DndIndicatorDuration.entries.map { it to stringResource(it.titleRes) },
@@ -116,19 +116,11 @@ fun HomeDndPage(
                     )
                     SwitchRow(
                         index = 1,
-                        count = 3,
+                        count = 2,
                         title = stringResource(R.string.dnd_flash_title),
                         description = stringResource(R.string.dnd_flash_desc),
                         checked = dnd.flashOnChange,
                         onCheckedChange = { onDndChange(dnd.copy(flashOnChange = it)) }
-                    )
-                    SwitchRow(
-                        index = 2,
-                        count = 3,
-                        title = stringResource(R.string.dnd_overrides_battery_title),
-                        description = stringResource(R.string.dnd_overrides_battery_desc),
-                        checked = dnd.overridesBattery,
-                        onCheckedChange = { onDndChange(dnd.copy(overridesBattery = it)) }
                     )
                 }
             }

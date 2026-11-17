@@ -34,7 +34,7 @@ And best of all, no root and no Shizuku needed!
 * Red to green by charge level, or a fixed colour.
 * Full charge indicator with a timeout.
 * Low battery warning at whatever level you set.
-* Battery can sit under notifications or override them.
+* Battery sits under calls, Gemini, notifications and timers by default, and you can move it up (see Priority below).
 
 **Gemini**
 
@@ -55,6 +55,7 @@ And best of all, no root and no Shizuku needed!
 * Stay dark during Do Not Disturb.
 * Quiet hours, with per-rule overrides. Weekends can have their own times, or you can set each day separately.
 * Pocket mode, on by default. No glowing through your jeans: the ring waits until the phone's out of your pocket. Face down on a table doesn't count, so face-down rules still work.
+* Priority. The lights only show one thing at a time, so there's a list of Calls, Gemini, Notifications, Timers & progress, Battery and DND that you drag into the order you want, and whichever is higher gets shown. That's the default order too. If something higher is hidden by its own conditions (say a face-down-only call while the phone's face up), the next one down shows instead.
 
 **Pause**
 

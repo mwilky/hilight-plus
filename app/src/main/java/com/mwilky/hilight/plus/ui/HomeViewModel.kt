@@ -26,6 +26,7 @@ import com.mwilky.hilight.plus.SettingsSnapshot
 import com.mwilky.hilight.plus.SplitAnimation
 import com.mwilky.hilight.plus.SplitLook
 import com.mwilky.hilight.plus.TextNotificationRule
+import com.mwilky.hilight.plus.core.LightChannel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -67,6 +68,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun setOnlyWhenFaceDown(enabled: Boolean) = launch { store.setOnlyWhenFaceDown(enabled) }
     fun setSuppressDuringDnd(enabled: Boolean) = launch { store.setSuppressDuringDnd(enabled) }
     fun setPocketMode(enabled: Boolean) = launch { store.setPocketMode(enabled) }
+    fun setChannelOrder(order: List<LightChannel>) = launch { store.setChannelOrder(order) }
     fun setQuietHoursEnabled(enabled: Boolean) = launch { store.setQuietHoursEnabled(enabled) }
     fun setQuietHoursWindow(startMinutes: Int, endMinutes: Int) = launch { store.setQuietHoursWindow(startMinutes, endMinutes) }
     fun setQuietHoursRepeat(repeat: QuietHoursRepeat) = launch { store.setQuietHoursRepeat(repeat) }

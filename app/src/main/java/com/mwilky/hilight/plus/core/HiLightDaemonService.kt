@@ -276,6 +276,10 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
         engine.setSplitAnnounceNew(enabled)
     }
 
+    override fun setChannelOrder(channels: String?) {
+        engine.setChannelOrder(LightChannel.decode(channels))
+    }
+
     override fun testSplitAtSpeed(
         colors: LongArray?,
         animation: String?,

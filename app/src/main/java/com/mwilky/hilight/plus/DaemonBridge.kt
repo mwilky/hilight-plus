@@ -30,6 +30,7 @@ import com.mwilky.hilight.plus.adb.WirelessAdb
 import com.mwilky.hilight.plus.core.HiLightDaemonService
 import com.mwilky.hilight.plus.core.IHiLightService
 import com.mwilky.hilight.plus.core.ILogSink
+import com.mwilky.hilight.plus.core.LightChannel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -1158,6 +1159,10 @@ class DaemonBridge private constructor(private val app: Application) {
 
     fun setSplitAnnounceNew(enabled: Boolean) {
         runRemote("setSplitAnnounceNew") { it.setSplitAnnounceNew(enabled) }
+    }
+
+    fun setChannelOrder(order: List<LightChannel>) {
+        runRemote("setChannelOrder") { it.setChannelOrder(LightChannel.encode(order)) }
     }
 
     fun testSplit(colors: LongArray, animation: SplitAnimation, look: SplitLook, speed: Float, durationMs: Long) {

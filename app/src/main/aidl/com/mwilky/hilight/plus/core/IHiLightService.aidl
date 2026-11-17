@@ -72,4 +72,8 @@ interface IHiLightService {
     // the time is up. Otherwise a progress bar fraction (0-1) done in color and brightness, which
     // goes dark unless sent again within 3 minutes. quietStart and quietEnd are -1 for none.
     void setProgress(String key, long totalMs, long remainingMs, float fraction, long color, float brightness, boolean requiresFaceDown, String dndMode, String quietHoursMode, int quietStart, int quietEnd);
+    // Which channel goes over which: comma-separated ids (calls, gemini, notifications, progress,
+    // battery, dnd), highest first. Unknown ids are dropped and missing ones put back in their
+    // default places. Supersedes the overridesNotifications and overridesBattery flags.
+    void setChannelOrder(String channels);
 }

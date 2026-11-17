@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.mwilky.hilight.plus.core.LightChannel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -150,6 +151,7 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_BATTERY_JSON = stringPreferencesKey("battery_settings_json")
         private val KEY_GEMINI_JSON = stringPreferencesKey("gemini_settings_json")
         private val KEY_DND_INDICATOR_JSON = stringPreferencesKey("dnd_indicator_settings_json")
+        private val KEY_CHANNEL_ORDER = stringPreferencesKey("channel_order")
 
         @Volatile
         private var instance: AppStore? = null
@@ -232,6 +234,10 @@ class AppStore private constructor(private val appContext: Context) {
 
     val dndIndicator: Flow<DndIndicatorSettings> = appContext.dataStore.data
         .map { DndIndicatorSettings.fromJson(it[KEY_DND_INDICATOR_JSON]) }
+
+    val channelOrder: Flow<List<LightChannel>> = appContext.dataStore.data
+        .map(::readChannelOrder)
+        .distinctUntilChanged()
 
     /** The stored pause, ended or not. The daemon is handed this and ends it on time by itself. */
     val pause: Flow<PauseState?> = appContext.dataStore.data
@@ -604,6 +610,19 @@ class AppStore private constructor(private val appContext: Context) {
         appContext.dataStore.edit { it[KEY_DND_INDICATOR_JSON] = settings.toJson().toString() }
     }
 
+    suspend fun setChannelOrder(order: List<LightChannel>) {
+        appContext.dataStore.edit { it[KEY_CHANNEL_ORDER] = LightChannel.encode(LightChannel.normalize(order)) }
+    }
+
+    /** Until the list is first reordered, the order the two toggles it replaced gave. */
+    private fun readChannelOrder(prefs: Preferences): List<LightChannel> {
+        prefs[KEY_CHANNEL_ORDER]?.let { return LightChannel.decode(it) }
+        return LightChannel.fromLegacy(
+            batteryOverNotifications = BatterySettings.fromJson(prefs[KEY_BATTERY_JSON]).overridesNotifications,
+            dndOverBattery = DndIndicatorSettings.fromJson(prefs[KEY_DND_INDICATOR_JSON]).overridesBattery
+        )
+    }
+
     suspend fun setBattery(settings: BatterySettings) {
         appContext.dataStore.edit { it[KEY_BATTERY_JSON] = settings.toJson().toString() }
     }
@@ -811,7 +830,8 @@ class AppStore private constructor(private val appContext: Context) {
             appRuleSort = enumOr(prefs[KEY_APP_RULES_SORT], d.appRuleSort),
             battery = BatterySettings.fromJson(prefs[KEY_BATTERY_JSON]),
             gemini = GeminiSettings.fromJson(prefs[KEY_GEMINI_JSON]),
-            dndIndicator = DndIndicatorSettings.fromJson(prefs[KEY_DND_INDICATOR_JSON])
+            dndIndicator = DndIndicatorSettings.fromJson(prefs[KEY_DND_INDICATOR_JSON]),
+            channelOrder = readChannelOrder(prefs)
         )
     }
 
@@ -928,7 +948,9 @@ data class SettingsSnapshot(
     val appRuleSort: RuleSort,
     val battery: BatterySettings,
     val gemini: GeminiSettings = GeminiSettings(),
-    val dndIndicator: DndIndicatorSettings = DndIndicatorSettings()
+    val dndIndicator: DndIndicatorSettings = DndIndicatorSettings(),
+    // Which channel goes over which on the ring, highest first.
+    val channelOrder: List<LightChannel> = LightChannel.DEFAULT_ORDER
 ) {
     /** CYCLE and SPLIT both keep every waiting alert queued; only LATEST uses the timed single alert. */
     val isCycleNotifications: Boolean get() = multiAlertMode.keepsQueue
