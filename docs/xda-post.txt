@@ -88,6 +88,7 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 [B]Gating & Environment Conditions[/B]
 [LIST]
 [*]Face-down only mode (accelerometer engages only when alerts are pending).
+[*]Motion-sensor check: on some Pixel builds the motion sensors can stop sending readings to apps after hours of use (other apps, the camera included, are affected too), and only a restart fixes it. Face-down rules can't light while it lasts, so the app spots it and shows a notification and a card on Home telling you to restart. Both clear once readings return.
 [*]Automatic Do Not Disturb (DND) suppression.
 [*]Global quiet hours scheduler: the same every day, different at weekends, or set day by day. Per-rule override options.
 [*]Pocket mode (on by default): the ring stays dark in a pocket or bag and lights once the phone is out. Face down never counts as a pocket, so face-down rules are unaffected. Proximity sensor engages only when alerts are pending.

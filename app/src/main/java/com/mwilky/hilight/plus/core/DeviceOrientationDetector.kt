@@ -5,9 +5,15 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
+import android.os.SystemClock
 import com.mwilky.hilight.plus.DebugLog
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
 
@@ -32,6 +38,11 @@ object DeviceOrientationDetector {
     private const val TAG = "DeviceOrientation"
     private const val TILT_DETECTOR = "android.sensor.tilt_detector"
     private const val FLIP_WAKE_MS = 2_000L
+    // How long after a tilt gravity has to answer, inside the tilt's wake lock.
+    private const val TILT_ANSWER_MS = 1_500L
+    // Unanswered requests in a row before the motion sensors count as stalled. One can be a
+    // fluke; several in a row, with the tilt detector still firing, is the phone's fault.
+    private const val STALL_AFTER = 3
 
     private val monitorTokens = mutableSetOf<String>()
     private var activeSensorManager: SensorManager? = null
@@ -53,14 +64,27 @@ object DeviceOrientationDetector {
     private var tiltRegistered: Boolean? = null
     @Volatile
     private var missedSamples = 0
+    // Requests for a reading (a one-off check, or a flush after a tilt) that got none, in a row.
+    @Volatile
+    private var unanswered = 0
+    private val handler by lazy { Handler(Looper.getMainLooper()) }
+
+    private val _motionStalled = MutableStateFlow(false)
+
+    /**
+     * The phone has stopped sending motion readings to apps, a fault some builds hit after hours
+     * of uptime that only a restart clears. Face down can't be told while it lasts. Clears itself
+     * when a reading arrives.
+     */
+    val motionStalled: StateFlow<Boolean> = _motionStalled.asStateFlow()
 
     /** What the detector holds, and when it last heard from the sensor. */
     @Synchronized
     fun describe(): String {
-        val age = if (lastSampleElapsedMs == 0L) "never" else "${(android.os.SystemClock.elapsedRealtime() - lastSampleElapsedMs) / 1000}s ago"
+        val age = if (lastSampleElapsedMs == 0L) "never" else "${(SystemClock.elapsedRealtime() - lastSampleElapsedMs) / 1000}s ago"
         return "lastKnown=$lastKnownFaceDown, lastReading=$age, monitoring=${activeListener != null} " +
             "(tokens=$monitorTokens, registered=$monitoringRegistered, tilt=$tiltRegistered), " +
-            "missed one-off readings=$missedSamples"
+            "missed one-off readings=$missedSamples, unanswered in a row=$unanswered, stalled=${_motionStalled.value}"
     }
 
     var onOrientationChanged: ((isFaceDown: Boolean) -> Unit)? = null
@@ -120,6 +144,7 @@ object DeviceOrientationDetector {
                 // Silent until now: a sensor that never answers looks exactly like "not face down".
                 missedSamples++
                 DebugLog.w(TAG, "No orientation reading within ${timeoutMs}ms; keeping isFaceDown=$lastKnownFaceDown (missed $missedSamples)")
+                noteUnanswered()
                 lastKnownFaceDown
             }
         } finally {
@@ -161,13 +186,28 @@ object DeviceOrientationDetector {
         stopMonitoringLocked()
     }
 
+    /** A real reading: also ends a stall. */
     private fun rememberFaceDown(faceDown: Boolean) {
         lastKnownFaceDown = faceDown
-        lastSampleElapsedMs = android.os.SystemClock.elapsedRealtime()
+        lastSampleElapsedMs = SystemClock.elapsedRealtime()
+        unanswered = 0
+        if (_motionStalled.value) {
+            _motionStalled.value = false
+            DebugLog.i(TAG, "Motion readings are back")
+        }
+    }
+
+    @Synchronized
+    private fun noteUnanswered() {
+        unanswered++
+        if (unanswered >= STALL_AFTER && !_motionStalled.value) {
+            _motionStalled.value = true
+            DebugLog.w(TAG, "Motion sensors stalled: $unanswered requests in a row got no reading; the phone needs restarting")
+        }
     }
 
     private fun failClosed(): Boolean {
-        rememberFaceDown(false)
+        lastKnownFaceDown = false
         return false
     }
 
@@ -219,7 +259,13 @@ object DeviceOrientationDetector {
                 override fun onSensorChanged(event: SensorEvent?) {
                     runCatching { flipWakeLock?.acquire(FLIP_WAKE_MS) }
                     DebugLog.d(TAG, "Tilt detected, reading orientation")
+                    val tiltAtMs = SystemClock.elapsedRealtime()
                     activeListener?.let { sensorManager.flush(it) }
+                    // Gravity arrives several times a second while awake, so a tilt with none
+                    // after it means the readings have stopped, not that the phone is still.
+                    handler.postDelayed({
+                        if (activeListener != null && lastSampleElapsedMs < tiltAtMs) noteUnanswered()
+                    }, TILT_ANSWER_MS)
                 }
 
                 override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}

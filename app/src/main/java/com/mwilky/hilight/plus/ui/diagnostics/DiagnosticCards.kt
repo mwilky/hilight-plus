@@ -20,6 +20,7 @@ import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Contacts
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.ScreenRotation
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.TimerOff
@@ -91,6 +92,22 @@ fun PairingLostCard(onPairAgain: () -> Unit, modifier: Modifier = Modifier) {
                 modifier = Modifier.fillMaxWidth()
             )
         }
+    )
+}
+
+/**
+ * The phone has stopped sending motion readings, so face down can't be told until it's restarted.
+ * Nothing in the app can fix it, so there's no button.
+ */
+@Composable
+fun MotionStalledCard(modifier: Modifier = Modifier) {
+    StandardDiagnosticCard(
+        title = stringResource(R.string.motion_stalled_title),
+        subtitle = stringResource(R.string.motion_stalled_desc),
+        icon = Icons.Rounded.ScreenRotation,
+        statusText = stringResource(R.string.motion_stalled_status),
+        isOk = false,
+        modifier = modifier
     )
 }
 

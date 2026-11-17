@@ -77,7 +77,9 @@ import com.mwilky.hilight.plus.TextMatch
 import com.mwilky.hilight.plus.TextMatchField
 import com.mwilky.hilight.plus.TextMatchType
 import com.mwilky.hilight.plus.TextNotificationRule
+import com.mwilky.hilight.plus.core.DeviceOrientationDetector
 import com.mwilky.hilight.plus.core.PatternRenderer
+import com.mwilky.hilight.plus.ui.diagnostics.MotionStalledCard
 import com.mwilky.hilight.plus.ui.diagnostics.PairingLostCard
 import com.mwilky.hilight.plus.ui.diagnostics.PermissionState
 import com.mwilky.hilight.plus.ui.diagnostics.rememberCallPermissionLauncher
@@ -105,6 +107,7 @@ fun HomeScreen(
     val connectionState by controller.daemon.state.collectAsStateWithLifecycle()
     val connectionMethod by controller.daemon.method.collectAsStateWithLifecycle()
     val pairingLost by controller.daemon.pairingLost.collectAsStateWithLifecycle()
+    val motionStalled by DeviceOrientationDetector.motionStalled.collectAsStateWithLifecycle()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val pause by viewModel.pause.collectAsStateWithLifecycle()
     val licenseStatus by controller.licensing.status.collectAsStateWithLifecycle()
@@ -190,6 +193,7 @@ fun HomeScreen(
         onRestartApp = { controller.daemon.restartApp(context) },
         onSetUpConnection = onSetUpConnection,
         pairingLost = pairingLost,
+        motionStalled = motionStalled,
         stockState = stockState,
         onOpenStockSettings = { NativeHiLightDetector.openHiLightSettings(context) },
         permissionState = permissionState,
@@ -735,6 +739,7 @@ fun HomeContent(
     onRestartApp: () -> Unit,
     onSetUpConnection: () -> Unit,
     pairingLost: Boolean = false,
+    motionStalled: Boolean = false,
     stockState: StockHiLightState,
     onOpenStockSettings: () -> Unit,
     permissionState: PermissionState,
@@ -829,6 +834,9 @@ fun HomeContent(
                     onPairAgain = onSetUpConnection,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
+            }
+            if (motionStalled) {
+                MotionStalledCard(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
             }
             if (pause != null) {
                 PauseCard(
@@ -1268,6 +1276,12 @@ fun HomeScreenPreviewPairingLost() {
     HomeScreenPreviewContent(hasCallRules = true, pairingLost = true)
 }
 
+@Preview(name = "Home Screen - Motion Stalled", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+fun HomeScreenPreviewMotionStalled() {
+    HomeScreenPreviewContent(hasCallRules = true, motionStalled = true)
+}
+
 @Preview(name = "Home Screen - Gemini", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 fun HomeScreenPreviewGemini() {
@@ -1293,7 +1307,8 @@ fun HomeScreenPreviewContent(
     gemini: GeminiSettings = DEFAULT_SETTINGS_SNAPSHOT.gemini,
     dndIndicator: DndIndicatorSettings = DEFAULT_SETTINGS_SNAPSHOT.dndIndicator,
     pause: PauseState? = null,
-    pairingLost: Boolean = false
+    pairingLost: Boolean = false,
+    motionStalled: Boolean = false
 ) {
     val mockCallContacts = if (hasCallRules) {
         listOf(
@@ -1337,6 +1352,7 @@ fun HomeScreenPreviewContent(
             onRestartApp = {},
             onSetUpConnection = {},
             pairingLost = pairingLost,
+            motionStalled = motionStalled,
             stockState = StockHiLightState(favoriteCallsActive = false),
             onOpenStockSettings = {},
             permissionState = PermissionState(

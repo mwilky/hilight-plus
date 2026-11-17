@@ -110,6 +110,8 @@
     <string name="setup_notif_wireless_off_text">HiLight Plus can\'t start the lights while it\'s off, and Android no longer lets the app turn it on. Tap here to go straight to it.</string>
     <string name="setup_notif_pairing_lost_title">Pair HiLight Plus again</string>
     <string name="setup_notif_pairing_lost_text">Your phone has forgotten its Wireless debugging pairing with HiLight Plus, so the lights can\'t start after a restart or update. Tap to pair again.</string>
+    <string name="motion_stalled_notif_title">Restart your phone</string>
+    <string name="motion_stalled_notif_text">Your phone\'s motion sensors have stopped sending readings, so HiLight Plus can\'t tell when it\'s face down. Anything set to light only when face down will stay dark until you restart your phone.</string>
 
     <!-- Onboarding Step 4: Permissions -->
     <string name="onboarding_perms_title">Permissions</string>
@@ -191,6 +193,9 @@
     <string name="pairing_lost_status">Pairing lost</string>
     <string name="pairing_lost_desc">Your phone has forgotten its Wireless debugging pairing with HiLight Plus. The lights work for now, but can\'t start again after a restart or update until you pair again.</string>
     <string name="pairing_lost_btn">Pair again</string>
+    <string name="motion_stalled_title">Restart your phone</string>
+    <string name="motion_stalled_status">No motion data</string>
+    <string name="motion_stalled_desc">Your phone\'s motion sensors have stopped sending readings. This is a fault in the phone and affects other apps too. HiLight Plus can\'t tell when your phone is face down, so anything set to light only when face down stays dark. Restart your phone to fix it.</string>
     <string name="adb_timeout_title">Keep the pairing from expiring</string>
     <string name="adb_timeout_status">Recommended</string>
     <string name="adb_timeout_status_done">Done</string>

@@ -52,6 +52,7 @@ And best of all, no root and no Shizuku needed!
 **Conditions**
 
 * Face down only. The accelerometer only runs while something is waiting to light.
+* On some Pixel builds I've seen the motion sensors stop sending readings to apps after hours of use (the camera's affected too), and only a restart fixes it. Face-down rules can't light while that lasts, so the app spots it and tells you to restart with a notification and a card on Home. Both clear once readings come back.
 * Stay dark during Do Not Disturb.
 * Quiet hours, with per-rule overrides. Weekends can have their own times, or you can set each day separately.
 * Pocket mode, on by default. No glowing through your jeans: the ring waits until the phone's out of your pocket. Face down on a table doesn't count, so face-down rules still work.

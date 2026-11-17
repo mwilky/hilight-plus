@@ -11,6 +11,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.Process
 import android.os.SystemClock
+import com.mwilky.hilight.plus.adb.SetupNotifier
 import com.mwilky.hilight.plus.core.DeviceOrientationDetector
 import com.mwilky.hilight.plus.core.PatternRenderer
 import com.mwilky.hilight.plus.core.PocketDetector
@@ -208,6 +209,11 @@ class LightController private constructor(private val app: Application) {
         scope.launch {
             store.channelOrder.collect { order ->
                 daemon.setChannelOrder(order)
+            }
+        }
+        scope.launch {
+            DeviceOrientationDetector.motionStalled.collect { stalled ->
+                if (stalled) SetupNotifier.showMotionStalled(app) else SetupNotifier.cancelMotionStalled(app)
             }
         }
         scope.launch {

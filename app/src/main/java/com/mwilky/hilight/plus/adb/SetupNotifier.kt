@@ -232,9 +232,41 @@ class SetupNotifier(private val context: Context) {
         fun cancelPairingLost(context: Context) {
             context.getSystemService(NotificationManager::class.java).cancel(PAIRING_LOST_NOTIFICATION_ID)
         }
+
+        /**
+         * The phone has stopped sending motion readings, so face down can't be told until it's
+         * restarted. Posted once per stall; tapping opens the app, whose Home card says the same.
+         */
+        fun showMotionStalled(context: Context) {
+            if (context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
+            SetupNotifier(context).ensureChannel()
+            val open = PendingIntent.getActivity(
+                context, REQUEST_MOTION_STALLED,
+                Intent(context, MainActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                PENDING_FLAGS
+            )
+            val text = context.getString(R.string.motion_stalled_notif_text)
+            val notification = Notification.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_stat_ring)
+                .setContentTitle(context.getString(R.string.motion_stalled_notif_title))
+                .setContentText(text)
+                .setStyle(Notification.BigTextStyle().bigText(text))
+                .setContentIntent(open)
+                .setCategory(Notification.CATEGORY_STATUS)
+                .setAutoCancel(true)
+                .build()
+            context.getSystemService(NotificationManager::class.java).notify(MOTION_STALLED_NOTIFICATION_ID, notification)
+        }
+
+        fun cancelMotionStalled(context: Context) {
+            context.getSystemService(NotificationManager::class.java).cancel(MOTION_STALLED_NOTIFICATION_ID)
+        }
         private const val PAIRING_LOST_NOTIFICATION_ID = 4105
+        private const val MOTION_STALLED_NOTIFICATION_ID = 4106
         private const val REQUEST_PAIR_AGAIN = 5
         private const val REQUEST_WIRELESS_OFF = 6
+        private const val REQUEST_MOTION_STALLED = 7
         private const val REQUEST_SETTINGS = 1
         private const val REQUEST_CODE = 2
         private const val REQUEST_APP = 3
