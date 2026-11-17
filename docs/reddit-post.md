@@ -1,6 +1,6 @@
-I've been working on an app for the Pixel 11 Pro's rear LED ring and it's now on Google Play. Out of the box the ring only does a few things: calls from favourites, Gemini's listening/thinking/replying lights, and on Android 17 QPR2 and later, messages from favourites. HiLight Plus takes it over so you can decide what it shows.
+I've been working on an app for the Pixel 11 Pro's rear LEDs and it's now on Google Play. Out of the box the lights only do a few things: calls from favourites, Gemini's listening/thinking/replying lights, and on Android 17 QPR2 and later, messages from favourites. HiLight Plus takes them over so you can decide what they show.
 
-The short version: a colour and pattern for each contact or app, a charging gauge, a low battery warning, a Do Not Disturb indicator, and rules for when it should stay dark. It can also redo Gemini's lights in whatever look you want.
+The short version: a colour and pattern for each contact or app, a charging gauge, a low battery warning, a Do Not Disturb indicator, and rules for when the lights should stay dark. It can also redo Gemini's lights in whatever look you want.
 
 And best of all, no root and no Shizuku needed!
 
@@ -20,17 +20,17 @@ And best of all, no root and no Shizuku needed!
 * Rules per sender and per app. App rules can pull the colour from the app icon.
 * App rules can switch off individual notification channels, so promos or group chats stay dark while the rest of the app lights. Channels show up by name as the app posts on them.
 * Text rules, for when a title or message contains (or is exactly) some text. Handy for delivery updates or verification codes, from any app or just one.
-* App rules can light for progress, notifications or both. Start a timer in Clock and the ring empties as it counts down, going amber at halfway and red near the end. Downloads and other progress bars fill it up in the rule's colour instead, or the app icon's if it's progress only.
+* App rules can light for progress, notifications or both. Start a timer in Clock and the lights go out one by one as it counts down, going amber at halfway and red near the end. Downloads and other progress bars light them one by one in the rule's colour instead, or the app icon's if it's progress only.
 * 13 patterns in three groups: Simple, Motion and Gemini. Solid, Breathe, Pulse, Wave, Comet, Orbit, Beacon, Ripple, Sparkle, Rainbow, plus Gemini's own Listening, Thinking and Replying effects.
 * Eight preset colours or anything from a colour wheel.
 * Brightness from a dim glow to full, and speed from half to double the pattern's normal pace, per rule.
-* Patterns run as looping effects on the ring's own light controller, the same way stock Gemini does it, so they're smooth and the app isn't redrawing the ring many times a second.
-* When several notifications are waiting you can show the newest only, take turns through them, or split the ring into an arc per notification (up to four). Split arcs can breathe, stay solid, spotlight in turn or rotate round the ring, and each new notification can optionally play its own pattern once before the arcs come back.
+* Patterns run as looping effects on the lights' own controller, the same way stock Gemini does it, so they're smooth and the app isn't redrawing them many times a second.
+* When several notifications are waiting you can show the newest only, take turns through them, or split the lights into a section per notification (up to four). The sections can breathe, stay solid, spotlight in turn or rotate round the lights, and each new notification can optionally play its own pattern once before the sections come back.
 * Lights go off the moment the notification is cleared from the shade.
 
 **Battery**
 
-* Charging gauge, fill animation or gradient ring while plugged in.
+* Charging gauge, fill animation or gradient while plugged in.
 * Red to green by charge level, or a fixed colour.
 * Full charge indicator with a timeout.
 * Low battery warning at whatever level you set.
@@ -44,34 +44,34 @@ And best of all, no root and no Shizuku needed!
 
 **Do Not Disturb**
 
-* Lights the ring while Do Not Disturb is on, with its own colour, brightness and speed.
+* Lights up while Do Not Disturb is on, with its own colour, brightness and speed.
 * Six calm patterns just for this: DND sign (the 3 and 9 o'clock LEDs), Crescent, Sleep, Snooze, Glance and Drift.
 * Show it the whole time DND is on, or just for the first 10 seconds, 1 minute or 5 minutes.
-* Optional sweep round the ring as DND turns on, and backwards as it turns off.
+* Optional sweep round the lights as DND turns on, and backwards as it turns off.
 
 **Conditions**
 
 * Face down only. The accelerometer only runs while something is waiting to light.
-* On some Pixel builds I've seen the motion sensors stop sending readings to apps after hours of use (the camera's affected too), and only a restart fixes it. Face-down rules can't light while that lasts, so the app spots it and tells you to restart with a notification and a card on Home. Both clear once readings come back.
+* I've seen the motion sensors stop sending readings to apps after hours of use, which only seems to happen on the Android 17 beta releases. The camera's affected too, and only a restart fixes it. Face-down rules can't light while that lasts, so the app spots it and tells you to restart with a notification and a card on Home. Both clear once readings come back.
 * Stay dark during Do Not Disturb.
 * Quiet hours, with per-rule overrides. Weekends can have their own times, or you can set each day separately.
-* Pocket mode, on by default. No glowing through your jeans: the ring waits until the phone's out of your pocket. Face down on a table doesn't count, so face-down rules still work.
+* Pocket mode, on by default. No glowing through your jeans: the lights wait until the phone's out of your pocket. Face down on a table doesn't count, so face-down rules still work.
 * Priority. The lights only show one thing at a time, so there's a list of Calls, Gemini, Notifications, Timers & progress, Battery and DND that you drag into the order you want, and whichever is higher gets shown. That's the default order too. If something higher is hidden by its own conditions (say a face-down-only call while the phone's face up), the next one down shows instead.
 
 **Pause**
 
 * A Quick Settings tile pauses everything, or just calls, notifications, battery, Gemini or Do Not Disturb. 1 hour, 2 hours, until morning, or until you resume.
 * Notifications that arrive during a pause still queue and light afterwards if they're still there.
-* The ring also goes dark on its own whenever a rear camera is open so it can't tint your photos.
+* The lights also go dark on their own whenever a rear camera is open so they can't tint your photos.
 
 **Other bits**
 
-* Live preview of every pattern on a ring mock-up, plus a Test on LEDs button in each rule editor.
+* Live preview of the lights for every pattern, plus a Test on LEDs button in each rule editor.
 * Sort rule lists by first name, last name or app name.
 * Guided onboarding that ticks each setting off as you flip it, with a notification that follows you into Settings for the pairing step.
 * Debug log you can share if something goes wrong (contact names are left out).
 * Back up and restore your rules to a file.
-* Reset lights button for a stuck ring, and an automatic check on unlock.
+* Reset lights button for stuck lights, and an automatic check on unlock.
 
 **Requirements**
 
@@ -81,6 +81,6 @@ And best of all, no root and no Shizuku needed!
 * On Android 17 QPR3 Beta 3 and later, Google stopped apps switching Wireless debugging on. The helper still can, so it switches it on as the phone shuts down, and the lights come back by themselves after a reboot as long as you're on a Wi-Fi network you've allowed it on. If you had it off, it goes back off once the lights are running. After a crash or a reboot elsewhere, the app tells you and starts the lights as soon as you turn it on. Leaving it on avoids that altogether.
 * I'd recommend turning on "Disable adb authorization timeout" in Developer options, otherwise Android forgets the pairing after 7 days unused. The app suggests it but won't change it for you, and tells you if the pairing is lost.
 * [Shizuku](https://shizuku.rikka.app/) works too, over wireless debugging or root, if you'd rather use that.
-* Turn off the stock "Calls from favourites", "Gemini feedback" and (on QPR2 and later) "Messages from favourites" HiLight options so they don't fight over the ring. Onboarding checks this.
+* Turn off the stock "Calls from favourites", "Gemini feedback" and (on QPR2 and later) "Messages from favourites" HiLight options so they don't fight over the lights. Onboarding checks this.
 
 It's open source under GPL-3.0: [github.com/mwilky/hilight-plus](https://github.com/mwilky/hilight-plus). Happy to answer questions or take suggestions, and if something doesn't work on your phone the debug log share in About is the quickest way to get it to me.
