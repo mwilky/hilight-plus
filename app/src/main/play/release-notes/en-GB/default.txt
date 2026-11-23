@@ -1,3 +1,4 @@
-• Timers and downloads on the ring: set an app rule to light for Progress or Both. A running timer, such as Clock's, empties the ring, turning amber at halfway and red near the end, and a download fills it up.
-• A Progress-only rule lights for the app's timers and downloads but not its other notifications.
-• Shorter rule list headings and quieter empty-list hints.
+• Priority list on the Conditions page: drag Calls, Gemini, Notifications, Timers & progress, Battery and DND into the order you want. If the top one is kept dark by its conditions, the next shows instead.
+• The lights behave as before until you reorder the list.
+• Warns you if the phone's motion sensors stop sending readings, which stops face-down rules lighting. A restart fixes it.
+• Clearer, shorter wording throughout.

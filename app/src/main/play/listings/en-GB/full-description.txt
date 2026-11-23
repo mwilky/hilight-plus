@@ -1,6 +1,6 @@
 Your Pixel's rear light, your rules.
 
-Pixel's built-in HiLight only lights the rear ring for calls from favourites and for Gemini. HiLight Plus takes over the ring and lets you decide what it shows: a colour and pattern for each contact or app, your own looks for Gemini, a charging gauge, a Do Not Disturb indicator, and rules for when it stays dark.
+Pixel's built-in HiLight only uses the rear lights for calls from favourites and for Gemini. HiLight Plus takes over the lights and lets you decide what they show: a colour and pattern for each contact or app, your own looks for Gemini, a charging gauge, a Do Not Disturb indicator, and rules for when they stay dark.
 
 CALLS
 • A colour and pattern for each contact, so you know who is ringing from across the room
@@ -12,24 +12,24 @@ NOTIFICATIONS
 • Rules for each app and for each person who messages you
 • Switch off an app's individual notification channels, such as promotions or group chats, while the rest of the app still lights
 • Text rules: light up when a notification's title or message contains, or is exactly, some text, such as a delivery update or a verification code
-• Timers and downloads on the ring: a timer, such as Clock's, empties it as it counts down, and a download fills it up, for any app you choose
+• Timers and downloads on the lights: a timer, such as Clock's, empties them as it counts down, and a download fills them up, for any app you choose
 • Auto colour that matches the app's own icon
-• Several alerts at once: show the newest, take turns, or split the ring into an arc per notification
+• Several alerts at once: show the newest, take turns, or split the lights between them
 • Lights stop as soon as you dismiss the notification
 
 THIRTEEN PATTERNS, ANY COLOUR
-Solid, Breathe, Pulse, Beacon, Wave, Comet, Orbit, Ripple, Sparkle, Rainbow, plus copies of Gemini's own listening, thinking and replying effects. Pick any colour from the wheel, and set brightness and speed for each rule. Test any look on the real ring while you edit.
+Solid, Breathe, Pulse, Beacon, Wave, Comet, Orbit, Ripple, Sparkle, Rainbow, plus copies of Gemini's own listening, thinking and replying effects. Pick any colour from the wheel, and set brightness and speed for each rule. Test any look on the real lights while you edit.
 
 GEMINI
 Your own pattern and colour for Gemini's listening, thinking and replying states, in place of the stock lights.
 
 BATTERY
-• A charging gauge that fills the ring as your phone charges
+• A charging gauge: the lights fill up as your phone charges
 • Low-battery warning at the level you choose
 • Full-charge display that switches itself off
 
 DO NOT DISTURB
-Show at a glance that Do Not Disturb is on, with six calm looks of its own, and an optional sweep round the ring as it turns on and off.
+Show at a glance that Do Not Disturb is on, with six calm looks of its own, and an optional sweep round the lights as it turns on and off.
 
 CONDITIONS
 • Pocket mode: stays dark in a pocket or bag and lights once the phone is out
@@ -37,6 +37,7 @@ CONDITIONS
 • Stay dark during Do Not Disturb or quiet hours
 • Quiet hours the same every day, different at weekends, or set day by day
 • Any rule can override these when it matters
+• Priority list: drag calls, Gemini, notifications, timers, battery and Do Not Disturb into the order you want. When one is kept dark, the next shows instead
 • Pause from a Quick Settings tile: everything or just some features, for an hour, until morning or until you resume
 
 SETUP
