@@ -510,6 +510,7 @@ internal fun ConnectScreenContent(
             StepHero(
                 step = OnboardingStep.CONNECT,
                 style = style,
+                done = done,
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
                     .padding(top = 32.dp, bottom = 8.dp)

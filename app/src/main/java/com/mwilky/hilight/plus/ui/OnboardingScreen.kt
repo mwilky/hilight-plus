@@ -7,6 +7,13 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -169,9 +176,17 @@ fun OnboardingScreen(
         OnboardingStep.TRIAL -> true
     }
 
+    // What a step asks for is done, which the hero celebrates when it happens on that step.
+    val stepDone = when (currentStep) {
+        OnboardingStep.CONNECT -> connected
+        OnboardingStep.STOCK_CONFLICT, OnboardingStep.PERMISSIONS -> isNextEnabled
+        OnboardingStep.WELCOME, OnboardingStep.TRIAL -> false
+    }
+
     OnboardingScaffold(
         currentStep = currentStep,
         isNextEnabled = isNextEnabled,
+        stepDone = stepDone,
         onBack = {
             val prevIndex = currentStep.ordinal - 1
             if (prevIndex >= 0) currentStep = OnboardingStep.entries[prevIndex]
@@ -235,6 +250,7 @@ fun OnboardingScreen(
 private fun OnboardingScaffold(
     currentStep: OnboardingStep,
     isNextEnabled: Boolean,
+    stepDone: Boolean,
     onBack: () -> Unit,
     onNext: () -> Unit,
     content: @Composable (OnboardingStep) -> Unit
@@ -262,6 +278,7 @@ private fun OnboardingScaffold(
             StepHero(
                 step = currentStep,
                 style = style,
+                done = stepDone,
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
                     .padding(top = 32.dp, bottom = 8.dp)
@@ -287,13 +304,15 @@ private fun OnboardingScaffold(
 }
 
 /**
- * Large expressive shape that morphs from the previous step's shape into the current one.
+ * Large expressive shape that morphs from the previous step's shape into the current one. While
+ * idle it slowly turns and breathes; when [done] turns true on a step, it bounces.
  */
 @Composable
 internal fun StepHero(
     step: OnboardingStep,
     style: StepStyle,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    done: Boolean = false
 ) {
     var fromShape by remember { mutableStateOf(style.shape) }
     var toShape by remember { mutableStateOf(style.shape) }
@@ -311,37 +330,76 @@ internal fun StepHero(
     val morph = remember(fromShape, toShape) { Morph(fromShape, toShape) }
     val shape = remember(morph, progress.value) { MorphShape(morph, progress.value) }
 
-    val container by animateColorAsState(
-        targetValue = style.container,
-        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-        label = "heroContainer"
+    val colorSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Color>()
+    val container by animateColorAsState(style.container, colorSpec, label = "heroContainer")
+    val onContainer by animateColorAsState(style.onContainer, colorSpec, label = "heroContent")
+
+    val idle = rememberInfiniteTransition(label = "heroIdle")
+    val turn by idle.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(HERO_TURN_MS, easing = LinearEasing)),
+        label = "heroTurn"
     )
-    val onContainer by animateColorAsState(
-        targetValue = style.onContainer,
-        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-        label = "heroContent"
+    val breath by idle.animateFloat(
+        initialValue = 1f,
+        targetValue = HERO_BREATH_SCALE,
+        animationSpec = infiniteRepeatable(tween(HERO_BREATH_MS, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "heroBreath"
     )
+
+    // Only a change seen on the same step celebrates, not arriving at a step that's already done.
+    val bounce = remember { Animatable(1f) }
+    var seen by remember { mutableStateOf(step to done) }
+    val bounceUp = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+    LaunchedEffect(step, done) {
+        val (lastStep, lastDone) = seen
+        seen = step to done
+        if (step == lastStep && done && !lastDone) {
+            bounce.animateTo(HERO_BOUNCE_SCALE, bounceUp)
+            bounce.animateTo(1f, spatial)
+        }
+    }
 
     val iconEffects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val iconSpatial = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     Box(
-        modifier = modifier
-            .size(160.dp)
-            .clip(shape)
-            .background(container),
+        modifier = modifier.size(HERO_SIZE),
         contentAlignment = Alignment.Center
     ) {
-        AnimatedContent(
-            targetState = style.icon,
-            transitionSpec = {
-                (fadeIn(iconEffects) + scaleIn(iconSpatial)).togetherWith(fadeOut(iconEffects))
-            },
-            label = "heroIcon"
-        ) { icon ->
-            Icon(icon, contentDescription = null, tint = onContainer, modifier = Modifier.size(64.dp))
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .graphicsLayer {
+                    rotationZ = turn
+                    val scale = breath * bounce.value
+                    scaleX = scale
+                    scaleY = scale
+                }
+                .clip(shape)
+                .background(container),
+            contentAlignment = Alignment.Center
+        ) {
+            AnimatedContent(
+                targetState = style.icon,
+                transitionSpec = {
+                    (fadeIn(iconEffects) + scaleIn(iconSpatial)).togetherWith(fadeOut(iconEffects))
+                },
+                // The shape turns; the icon stays upright.
+                modifier = Modifier.graphicsLayer { rotationZ = -turn },
+                label = "heroIcon"
+            ) { icon ->
+                Icon(icon, contentDescription = null, tint = onContainer, modifier = Modifier.size(64.dp))
+            }
         }
     }
 }
+
+private val HERO_SIZE = 160.dp
+private const val HERO_TURN_MS = 24_000
+private const val HERO_BREATH_MS = 2_400
+private const val HERO_BREATH_SCALE = 1.04f
+private const val HERO_BOUNCE_SCALE = 1.14f
 
 /** A [Shape] sampled from a [Morph] at [progress]; polygons are normalised so we scale to size. */
 private class MorphShape(private val morph: Morph, private val progress: Float) : Shape {
@@ -373,6 +431,20 @@ private fun OnboardingBottomBar(
     val sizeSpatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
     val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val buttonHeight = ButtonDefaults.MediumContainerHeight
+
+    // Next gives one nudge when it comes on while the user is on the step, not on arriving.
+    val nudge = remember { Animatable(1f) }
+    var seen by remember { mutableStateOf(currentStep to isNextEnabled) }
+    val nudgeUp = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+    val settle = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+    LaunchedEffect(currentStep, isNextEnabled) {
+        val (lastStep, wasEnabled) = seen
+        seen = currentStep to isNextEnabled
+        if (currentStep == lastStep && isNextEnabled && !wasEnabled) {
+            nudge.animateTo(NEXT_NUDGE_SCALE, nudgeUp)
+            nudge.animateTo(1f, settle)
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -424,6 +496,10 @@ private fun OnboardingBottomBar(
                 contentPadding = ButtonDefaults.contentPaddingFor(buttonHeight),
                 colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = onAccent),
                 modifier = Modifier
+                    .graphicsLayer {
+                        scaleX = nudge.value
+                        scaleY = nudge.value
+                    }
                     .heightIn(buttonHeight)
                     .animateContentSize(sizeSpatial)
             ) {
@@ -441,6 +517,8 @@ private fun OnboardingBottomBar(
         }
     }
 }
+
+private const val NEXT_NUDGE_SCALE = 1.1f
 
 /**
  * Fades and lifts a child into place, delayed by its [index] so siblings arrive one after another.
@@ -634,7 +712,7 @@ private fun FeatureRow(icon: ImageVector, shape: RoundedPolygon, title: String, 
 @Composable
 private fun OnboardingStepPreview(step: OnboardingStep, content: @Composable () -> Unit) {
     HiLightPlusTheme {
-        OnboardingScaffold(currentStep = step, isNextEnabled = true, onBack = {}, onNext = {}) { content() }
+        OnboardingScaffold(currentStep = step, isNextEnabled = true, stepDone = false, onBack = {}, onNext = {}) { content() }
     }
 }
 
