@@ -813,9 +813,11 @@ fun HomeContent(
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
+        containerColor = pageHeaderColor(),
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.main_title)) },
+                colors = pageHeaderBarColors(),
                 scrollBehavior = scrollBehavior
             )
         }
@@ -829,161 +831,165 @@ fun HomeContent(
                 selectedIndex = pagerState.currentPage,
                 onSelect = { page -> scope.launch { pagerState.animateScrollToPage(page) } }
             )
-            if (pairingLost) {
-                PairingLostCard(
-                    onPairAgain = onSetUpConnection,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
-            if (motionStalled) {
-                MotionStalledCard(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-            }
-            if (pause != null) {
-                PauseCard(
-                    pause = pause,
-                    enabledFeatures = state.enabledPauseFeatures(),
-                    onResume = onResumePause,
-                    onChange = onChangePause,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
-            if (licenseStatus != null && !licenseStatus.purchased) {
-                LicenseCard(
-                    status = licenseStatus,
-                    onBuy = onBuy,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize(),
-                verticalAlignment = Alignment.Top
-            ) { page ->
-                when (page) {
-                    0 -> HomeCallsPage(
-                        connectionState = connectionState,
-                        connectionMethod = connectionMethod,
-                        connectionError = connectionError,
-                        onPauseConnection = onPauseConnection,
-                        onResumeConnection = onResumeConnection,
-                        onRequestShizukuPermission = onRequestShizukuPermission,
-                        onOpenShizukuApp = onOpenShizukuApp,
-                        onRestartApp = onRestartApp,
-                        onSetUpConnection = onSetUpConnection,
-                        stockState = stockState,
-                        onOpenStockSettings = onOpenStockSettings,
-                        permissionState = permissionState,
-                        onRequestPhonePerms = onRequestPhonePerms,
-                        onOpenAppSettings = onOpenAppSettings,
-                        state = state,
-                        onToggleCallLights = onToggleCallLights,
-                        onToggleFavouriteCalls = onToggleFavouriteCalls,
-                        onEditFavouriteCalls = onEditFavouriteCalls,
-                        onToggleOtherContacts = onToggleOtherContacts,
-                        onEditOtherContacts = onEditOtherContacts,
-                        onToggleUnknownNumbers = onToggleUnknownNumbers,
-                        onEditUnknownNumbers = onEditUnknownNumbers,
-                        onToggleMissedCalls = onToggleMissedCalls,
-                        onEditMissedCalls = onEditMissedCalls,
-                        onToggleCallContactRule = onToggleCallContactRule,
-                        onEditCallContactRule = onEditCallContactRule,
-                        onDeleteCallContactRule = onDeleteCallContactRule,
-                        onChangeCallRuleSort = onChangeCallRuleSort,
-                        onAddCallContact = onAddCallContact,
-                        renderer = renderer
+            // The cards and pages sit on a sheet below the header with the tabs strip.
+            PageSheet {
+                Spacer(Modifier.height(12.dp))
+                if (pairingLost) {
+                    PairingLostCard(
+                        onPairAgain = onSetUpConnection,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                     )
-                    1 -> HomeNotifsPage(
-                        connectionState = connectionState,
-                        connectionMethod = connectionMethod,
-                        connectionError = connectionError,
-                        onPauseConnection = onPauseConnection,
-                        onResumeConnection = onResumeConnection,
-                        onRequestShizukuPermission = onRequestShizukuPermission,
-                        onOpenShizukuApp = onOpenShizukuApp,
-                        onRestartApp = onRestartApp,
-                        onSetUpConnection = onSetUpConnection,
-                        stockState = stockState,
-                        onOpenStockSettings = onOpenStockSettings,
-                        permissionState = permissionState,
-                        onOpenNotifSettings = onOpenNotifSettings,
-                        state = state,
-                        onToggleNotifs = onToggleNotifs,
-                        onToggleFavouriteNotif = onToggleFavouriteNotif,
-                        onEditFavouriteNotif = onEditFavouriteNotif,
-                        onToggleDefaultNotif = onToggleDefaultNotif,
-                        onEditDefaultNotif = onEditDefaultNotif,
-                        onToggleMessageRule = onToggleMessageRule,
-                        onEditMessageRule = onEditMessageRule,
-                        onDeleteMessageRule = onDeleteMessageRule,
-                        onChangeMessageRuleSort = onChangeMessageRuleSort,
-                        onAddMessageContact = onAddMessageContact,
-                        onToggleAppRule = onToggleAppRule,
-                        onEditAppRule = onEditAppRule,
-                        onDeleteAppRule = onDeleteAppRule,
-                        onChangeAppRuleSort = onChangeAppRuleSort,
-                        onAddApp = onAddApp,
-                        onToggleTextRule = onToggleTextRule,
-                        onEditTextRule = onEditTextRule,
-                        onDeleteTextRule = onDeleteTextRule,
-                        onAddTextRule = onAddTextRule,
-                        onChangeDuration = onChangeDuration,
-                        onChangeMultiAlertMode = onChangeMultiAlertMode,
-                        onChangeSplitAnimation = onChangeSplitAnimation,
-                        onChangeSplitLook = onChangeSplitLook,
-                        onChangeSplitSpeed = onChangeSplitSpeed,
-                        onChangeSplitAnnounceNew = onChangeSplitAnnounceNew,
-                        onTestSplit = onTestSplit,
-                        onCancelLedTest = onCancelLedTest,
-                        renderer = renderer
+                }
+                if (motionStalled) {
+                    MotionStalledCard(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                }
+                if (pause != null) {
+                    PauseCard(
+                        pause = pause,
+                        enabledFeatures = state.enabledPauseFeatures(),
+                        onResume = onResumePause,
+                        onChange = onChangePause,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                     )
-                    2 -> HomeBatteryPage(
-                        connectionState = connectionState,
-                        connectionMethod = connectionMethod,
-                        connectionError = connectionError,
-                        onPauseConnection = onPauseConnection,
-                        onResumeConnection = onResumeConnection,
-                        onRequestShizukuPermission = onRequestShizukuPermission,
-                        onOpenShizukuApp = onOpenShizukuApp,
-                        onRestartApp = onRestartApp,
-                        onSetUpConnection = onSetUpConnection,
-                        battery = state.battery,
-                        globalQuietStartMinutes = state.quietHoursStartMinutes,
-                        globalQuietEndMinutes = state.quietHoursEndMinutes,
-                        onBatteryChange = onBatteryChange,
-                        renderer = renderer
+                }
+                if (licenseStatus != null && !licenseStatus.purchased) {
+                    LicenseCard(
+                        status = licenseStatus,
+                        onBuy = onBuy,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                     )
-                    3 -> HomeGeminiPage(
-                        connectionState = connectionState,
-                        connectionMethod = connectionMethod,
-                        connectionError = connectionError,
-                        onPauseConnection = onPauseConnection,
-                        onResumeConnection = onResumeConnection,
-                        onRequestShizukuPermission = onRequestShizukuPermission,
-                        onOpenShizukuApp = onOpenShizukuApp,
-                        onRestartApp = onRestartApp,
-                        onSetUpConnection = onSetUpConnection,
-                        gemini = state.gemini,
-                        stockState = stockState,
-                        onOpenStockSettings = onOpenStockSettings,
-                        onGeminiChange = onGeminiChange,
-                        onEditState = onEditGeminiState,
-                        renderer = renderer
-                    )
-                    else -> HomeDndPage(
-                        connectionState = connectionState,
-                        connectionMethod = connectionMethod,
-                        connectionError = connectionError,
-                        onPauseConnection = onPauseConnection,
-                        onResumeConnection = onResumeConnection,
-                        onRequestShizukuPermission = onRequestShizukuPermission,
-                        onOpenShizukuApp = onOpenShizukuApp,
-                        onRestartApp = onRestartApp,
-                        onSetUpConnection = onSetUpConnection,
-                        dnd = state.dndIndicator,
-                        onDndChange = onDndChange,
-                        onEditIndicator = onEditDndIndicator,
-                        renderer = renderer
-                    )
+                }
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize(),
+                    verticalAlignment = Alignment.Top
+                ) { page ->
+                    when (page) {
+                        0 -> HomeCallsPage(
+                            connectionState = connectionState,
+                            connectionMethod = connectionMethod,
+                            connectionError = connectionError,
+                            onPauseConnection = onPauseConnection,
+                            onResumeConnection = onResumeConnection,
+                            onRequestShizukuPermission = onRequestShizukuPermission,
+                            onOpenShizukuApp = onOpenShizukuApp,
+                            onRestartApp = onRestartApp,
+                            onSetUpConnection = onSetUpConnection,
+                            stockState = stockState,
+                            onOpenStockSettings = onOpenStockSettings,
+                            permissionState = permissionState,
+                            onRequestPhonePerms = onRequestPhonePerms,
+                            onOpenAppSettings = onOpenAppSettings,
+                            state = state,
+                            onToggleCallLights = onToggleCallLights,
+                            onToggleFavouriteCalls = onToggleFavouriteCalls,
+                            onEditFavouriteCalls = onEditFavouriteCalls,
+                            onToggleOtherContacts = onToggleOtherContacts,
+                            onEditOtherContacts = onEditOtherContacts,
+                            onToggleUnknownNumbers = onToggleUnknownNumbers,
+                            onEditUnknownNumbers = onEditUnknownNumbers,
+                            onToggleMissedCalls = onToggleMissedCalls,
+                            onEditMissedCalls = onEditMissedCalls,
+                            onToggleCallContactRule = onToggleCallContactRule,
+                            onEditCallContactRule = onEditCallContactRule,
+                            onDeleteCallContactRule = onDeleteCallContactRule,
+                            onChangeCallRuleSort = onChangeCallRuleSort,
+                            onAddCallContact = onAddCallContact,
+                            renderer = renderer
+                        )
+                        1 -> HomeNotifsPage(
+                            connectionState = connectionState,
+                            connectionMethod = connectionMethod,
+                            connectionError = connectionError,
+                            onPauseConnection = onPauseConnection,
+                            onResumeConnection = onResumeConnection,
+                            onRequestShizukuPermission = onRequestShizukuPermission,
+                            onOpenShizukuApp = onOpenShizukuApp,
+                            onRestartApp = onRestartApp,
+                            onSetUpConnection = onSetUpConnection,
+                            stockState = stockState,
+                            onOpenStockSettings = onOpenStockSettings,
+                            permissionState = permissionState,
+                            onOpenNotifSettings = onOpenNotifSettings,
+                            state = state,
+                            onToggleNotifs = onToggleNotifs,
+                            onToggleFavouriteNotif = onToggleFavouriteNotif,
+                            onEditFavouriteNotif = onEditFavouriteNotif,
+                            onToggleDefaultNotif = onToggleDefaultNotif,
+                            onEditDefaultNotif = onEditDefaultNotif,
+                            onToggleMessageRule = onToggleMessageRule,
+                            onEditMessageRule = onEditMessageRule,
+                            onDeleteMessageRule = onDeleteMessageRule,
+                            onChangeMessageRuleSort = onChangeMessageRuleSort,
+                            onAddMessageContact = onAddMessageContact,
+                            onToggleAppRule = onToggleAppRule,
+                            onEditAppRule = onEditAppRule,
+                            onDeleteAppRule = onDeleteAppRule,
+                            onChangeAppRuleSort = onChangeAppRuleSort,
+                            onAddApp = onAddApp,
+                            onToggleTextRule = onToggleTextRule,
+                            onEditTextRule = onEditTextRule,
+                            onDeleteTextRule = onDeleteTextRule,
+                            onAddTextRule = onAddTextRule,
+                            onChangeDuration = onChangeDuration,
+                            onChangeMultiAlertMode = onChangeMultiAlertMode,
+                            onChangeSplitAnimation = onChangeSplitAnimation,
+                            onChangeSplitLook = onChangeSplitLook,
+                            onChangeSplitSpeed = onChangeSplitSpeed,
+                            onChangeSplitAnnounceNew = onChangeSplitAnnounceNew,
+                            onTestSplit = onTestSplit,
+                            onCancelLedTest = onCancelLedTest,
+                            renderer = renderer
+                        )
+                        2 -> HomeBatteryPage(
+                            connectionState = connectionState,
+                            connectionMethod = connectionMethod,
+                            connectionError = connectionError,
+                            onPauseConnection = onPauseConnection,
+                            onResumeConnection = onResumeConnection,
+                            onRequestShizukuPermission = onRequestShizukuPermission,
+                            onOpenShizukuApp = onOpenShizukuApp,
+                            onRestartApp = onRestartApp,
+                            onSetUpConnection = onSetUpConnection,
+                            battery = state.battery,
+                            globalQuietStartMinutes = state.quietHoursStartMinutes,
+                            globalQuietEndMinutes = state.quietHoursEndMinutes,
+                            onBatteryChange = onBatteryChange,
+                            renderer = renderer
+                        )
+                        3 -> HomeGeminiPage(
+                            connectionState = connectionState,
+                            connectionMethod = connectionMethod,
+                            connectionError = connectionError,
+                            onPauseConnection = onPauseConnection,
+                            onResumeConnection = onResumeConnection,
+                            onRequestShizukuPermission = onRequestShizukuPermission,
+                            onOpenShizukuApp = onOpenShizukuApp,
+                            onRestartApp = onRestartApp,
+                            onSetUpConnection = onSetUpConnection,
+                            gemini = state.gemini,
+                            stockState = stockState,
+                            onOpenStockSettings = onOpenStockSettings,
+                            onGeminiChange = onGeminiChange,
+                            onEditState = onEditGeminiState,
+                            renderer = renderer
+                        )
+                        else -> HomeDndPage(
+                            connectionState = connectionState,
+                            connectionMethod = connectionMethod,
+                            connectionError = connectionError,
+                            onPauseConnection = onPauseConnection,
+                            onResumeConnection = onResumeConnection,
+                            onRequestShizukuPermission = onRequestShizukuPermission,
+                            onOpenShizukuApp = onOpenShizukuApp,
+                            onRestartApp = onRestartApp,
+                            onSetUpConnection = onSetUpConnection,
+                            dnd = state.dndIndicator,
+                            onDndChange = onDndChange,
+                            onEditIndicator = onEditDndIndicator,
+                            renderer = renderer
+                        )
+                    }
                 }
             }
         }
@@ -1034,7 +1040,7 @@ private fun HomePageToggle(
                 // Surface tones rather than primary: the selected tab is a step darker than the
                 // unselected ones instead of a colour change.
                 colors = ToggleButtonDefaults.colors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    containerColor = MaterialTheme.colorScheme.surface,
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     checkedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                     checkedContentColor = MaterialTheme.colorScheme.onSurface

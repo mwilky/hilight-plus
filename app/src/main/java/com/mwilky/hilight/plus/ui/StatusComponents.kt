@@ -6,6 +6,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -153,5 +154,31 @@ fun ExpressiveStatusCard(
                 }
             }
         }
+    }
+}
+
+/** The tinted backdrop behind a tab's title, which its [PageSheet] sits on. */
+@Composable
+internal fun pageHeaderColor() = MaterialTheme.colorScheme.surfaceContainer
+
+/** A tab's top bar, tinted as the header and staying so when the page scrolls under it. */
+@Composable
+internal fun pageHeaderBarColors() = TopAppBarDefaults.topAppBarColors(
+    containerColor = pageHeaderColor(),
+    scrolledContainerColor = pageHeaderColor()
+)
+
+/**
+ * The sheet a tab's content sits on, below its header: rounded at the top and running straight
+ * down into the navigation bar, which shares its colour.
+ */
+@Composable
+internal fun PageSheet(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        shape = MaterialTheme.shapes.extraLarge.copy(bottomStart = CornerSize(0), bottomEnd = CornerSize(0)),
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Column(content = content)
     }
 }

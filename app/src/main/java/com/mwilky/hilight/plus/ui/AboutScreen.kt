@@ -300,131 +300,84 @@ fun AboutContent(
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
+        containerColor = pageHeaderColor(),
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.about_title)) },
+                colors = pageHeaderBarColors(),
                 scrollBehavior = scrollBehavior
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            ListItem(
-                // No ripple: the tap target is a hidden diagnostic and should not look tappable.
-                modifier = Modifier.clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onTitleCardTap
-                ),
-                leadingContent = {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(MaterialShapes.Cookie9Sided.toShape())
-                            .background(MaterialTheme.colorScheme.primaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Rounded.Lightbulb,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                },
-                supportingContent = {
-                    Column {
-                        Text(stringResource(R.string.about_app_desc))
-                        Text(
-                            stringResource(
-                                R.string.about_version_format,
-                                stringResource(R.string.about_version_label),
-                                BuildConfig.VERSION_NAME
-                            )
-                        )
-                    }
-                },
-                verticalAlignment = Alignment.CenterVertically,
-                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                shapes = ListItemDefaults.shapes(shape = MaterialTheme.shapes.extraLarge)
-            ) {
-                Text(stringResource(R.string.main_title), style = MaterialTheme.typography.titleLarge)
-            }
-
-            ListItem(
+        PageSheet(Modifier.padding(padding)) {
+            Column(
                 modifier = Modifier
-                    .clip(MaterialTheme.shapes.extraLarge)
-                    .clickable(onClick = onRate),
-                leadingContent = {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(MaterialShapes.Cookie9Sided.toShape())
-                            .background(MaterialTheme.colorScheme.tertiaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Rounded.Star,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                    }
-                },
-                supportingContent = { Text(stringResource(R.string.about_rate_desc)) },
-                trailingContent = {
-                    Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null)
-                },
-                verticalAlignment = Alignment.CenterVertically,
-                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                shapes = ListItemDefaults.shapes(shape = MaterialTheme.shapes.extraLarge)
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(stringResource(R.string.about_rate_title))
-            }
-
-            RuleGroupHeader(stringResource(R.string.about_status_section_header))
-
-            ConnectionStatusCard(
-                connectionState = connectionState,
-                connectionMethod = connectionMethod,
-                connectionError = connectionError,
-                onDisconnect = onPauseConnection,
-                onConnect = onResumeConnection,
-                onRequestPermission = onRequestShizukuPermission,
-                onOpenShizukuApp = onOpenShizukuApp,
-                onRestartApp = onRestartApp,
-                onSetUp = onSetUpConnection
-            )
-
-            if (showAdbTimeout) {
-                AdbTimeoutCard(timeoutDisabled = false, onOpenSettings = onOpenAdbTimeout)
-            }
-
-            if (connectionMethod == DaemonBridge.Method.SHIZUKU) {
                 ListItem(
-                    modifier = Modifier
-                        .clip(MaterialTheme.shapes.extraLarge)
-                        .clickable(onClick = onSetUpConnection),
+                    // No ripple: the tap target is a hidden diagnostic and should not look tappable.
+                    modifier = Modifier.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onTitleCardTap
+                    ),
                     leadingContent = {
                         Box(
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(MaterialShapes.Cookie9Sided.toShape())
-                                .background(MaterialTheme.colorScheme.secondaryContainer),
+                                .background(MaterialTheme.colorScheme.primaryContainer),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                Icons.Rounded.Link,
+                                Icons.Rounded.Lightbulb,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
                     },
-                    supportingContent = { Text(stringResource(R.string.about_switch_builtin_desc)) },
+                    supportingContent = {
+                        Column {
+                            Text(stringResource(R.string.about_app_desc))
+                            Text(
+                                stringResource(
+                                    R.string.about_version_format,
+                                    stringResource(R.string.about_version_label),
+                                    BuildConfig.VERSION_NAME
+                                )
+                            )
+                        }
+                    },
+                    verticalAlignment = Alignment.CenterVertically,
+                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                    shapes = ListItemDefaults.shapes(shape = MaterialTheme.shapes.extraLarge)
+                ) {
+                    Text(stringResource(R.string.main_title), style = MaterialTheme.typography.titleLarge)
+                }
+
+                ListItem(
+                    modifier = Modifier
+                        .clip(MaterialTheme.shapes.extraLarge)
+                        .clickable(onClick = onRate),
+                    leadingContent = {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(MaterialShapes.Cookie9Sided.toShape())
+                                .background(MaterialTheme.colorScheme.tertiaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Rounded.Star,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                        }
+                    },
+                    supportingContent = { Text(stringResource(R.string.about_rate_desc)) },
                     trailingContent = {
                         Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null)
                     },
@@ -432,60 +385,110 @@ fun AboutContent(
                     colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                     shapes = ListItemDefaults.shapes(shape = MaterialTheme.shapes.extraLarge)
                 ) {
-                    Text(stringResource(R.string.about_switch_builtin_title))
+                    Text(stringResource(R.string.about_rate_title))
                 }
-            }
 
-            StockConflictCard(
-                stockState = stockState,
-                onOpenSettings = onOpenSettings
-            )
+                RuleGroupHeader(stringResource(R.string.about_status_section_header))
 
-            GeminiStockCard(
-                stockState = stockState,
-                takeoverEnabled = geminiEnabled,
-                onOpenSettings = onOpenSettings
-            )
+                ConnectionStatusCard(
+                    connectionState = connectionState,
+                    connectionMethod = connectionMethod,
+                    connectionError = connectionError,
+                    onDisconnect = onPauseConnection,
+                    onConnect = onResumeConnection,
+                    onRequestPermission = onRequestShizukuPermission,
+                    onOpenShizukuApp = onOpenShizukuApp,
+                    onRestartApp = onRestartApp,
+                    onSetUp = onSetUpConnection
+                )
 
-            if (stockState.favoriteMessagesAvailable) {
-                FavouriteMessagesStockCard(
+                if (showAdbTimeout) {
+                    AdbTimeoutCard(timeoutDisabled = false, onOpenSettings = onOpenAdbTimeout)
+                }
+
+                if (connectionMethod == DaemonBridge.Method.SHIZUKU) {
+                    ListItem(
+                        modifier = Modifier
+                            .clip(MaterialTheme.shapes.extraLarge)
+                            .clickable(onClick = onSetUpConnection),
+                        leadingContent = {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(MaterialShapes.Cookie9Sided.toShape())
+                                    .background(MaterialTheme.colorScheme.secondaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Link,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        },
+                        supportingContent = { Text(stringResource(R.string.about_switch_builtin_desc)) },
+                        trailingContent = {
+                            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null)
+                        },
+                        verticalAlignment = Alignment.CenterVertically,
+                        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                        shapes = ListItemDefaults.shapes(shape = MaterialTheme.shapes.extraLarge)
+                    ) {
+                        Text(stringResource(R.string.about_switch_builtin_title))
+                    }
+                }
+
+                StockConflictCard(
                     stockState = stockState,
                     onOpenSettings = onOpenSettings
                 )
+
+                GeminiStockCard(
+                    stockState = stockState,
+                    takeoverEnabled = geminiEnabled,
+                    onOpenSettings = onOpenSettings
+                )
+
+                if (stockState.favoriteMessagesAvailable) {
+                    FavouriteMessagesStockCard(
+                        stockState = stockState,
+                        onOpenSettings = onOpenSettings
+                    )
+                }
+
+                CallPermissionsCard(
+                    state = permissionState,
+                    onRequestPermissions = onRequestPhonePerms,
+                    onOpenAppSettings = onOpenAppSettings
+                )
+
+                NotificationAccessCard(
+                    state = permissionState,
+                    onOpenNotifSettings = onOpenNotifSettings
+                )
+
+                RuleGroupHeader(stringResource(R.string.about_backup_header))
+
+                BackupCard(onBackUp = onBackUp, onRestore = { confirmRestore = true })
+
+                RuleGroupHeader(stringResource(R.string.about_debug_log_header))
+
+                DebugLogCard(
+                    lines = logLines,
+                    isSharing = isSharingLog,
+                    canResetLights = connectionState == DaemonBridge.State.CONNECTED,
+                    onShare = onShareLog,
+                    onClear = onClearLog,
+                    onResetLights = onResetLights
+                )
+
+                Text(
+                    text = stringResource(R.string.about_disclaimer),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 4.dp, top = 16.dp, end = 4.dp)
+                )
             }
-
-            CallPermissionsCard(
-                state = permissionState,
-                onRequestPermissions = onRequestPhonePerms,
-                onOpenAppSettings = onOpenAppSettings
-            )
-
-            NotificationAccessCard(
-                state = permissionState,
-                onOpenNotifSettings = onOpenNotifSettings
-            )
-
-            RuleGroupHeader(stringResource(R.string.about_backup_header))
-
-            BackupCard(onBackUp = onBackUp, onRestore = { confirmRestore = true })
-
-            RuleGroupHeader(stringResource(R.string.about_debug_log_header))
-
-            DebugLogCard(
-                lines = logLines,
-                isSharing = isSharingLog,
-                canResetLights = connectionState == DaemonBridge.State.CONNECTED,
-                onShare = onShareLog,
-                onClear = onClearLog,
-                onResetLights = onResetLights
-            )
-
-            Text(
-                text = stringResource(R.string.about_disclaimer),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 4.dp, top = 16.dp, end = 4.dp)
-            )
         }
     }
 }

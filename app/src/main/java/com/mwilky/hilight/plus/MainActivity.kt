@@ -301,7 +301,8 @@ private fun MainNavigationBar(selectedTab: NavTab, onSelect: (NavTab) -> Unit) {
 
     Box(
         modifier = Modifier
-            .background(ShortNavigationBarDefaults.containerColor)
+            // The sheet each tab sits on runs down into the bar, so they share a colour.
+            .background(MaterialTheme.colorScheme.surface)
             .onPlaced { barOrigin = it.positionInRoot() }
             .drawBehind {
                 val centre = target ?: return@drawBehind

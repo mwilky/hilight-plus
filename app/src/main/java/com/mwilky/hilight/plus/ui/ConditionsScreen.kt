@@ -150,177 +150,180 @@ fun ConditionsContent(
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
+        containerColor = pageHeaderColor(),
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.conditions_title)) },
+                colors = pageHeaderBarColors(),
                 scrollBehavior = scrollBehavior
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            ListItem(
-                leadingContent = {
-                    Icon(
-                        Icons.Outlined.Info,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                },
-                colors = ListItemDefaults.colors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                ),
-                shapes = ListItemDefaults.shapes(shape = MaterialTheme.shapes.large)
+        PageSheet(Modifier.padding(padding)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    text = stringResource(R.string.conditions_defaults_desc),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-
-            // One item on the page, so the gap above the quiet hours controls collapses with them
-            // rather than jumping shut after they have gone.
-            Column {
-                Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
-                    ConditionRow(
-                        index = 0,
-                        count = 3,
-                        title = stringResource(R.string.conditions_face_down_title),
-                        subtitle = stringResource(R.string.conditions_face_down_desc),
-                        icon = Icons.Rounded.ScreenRotation,
-                        checked = isOnlyWhenFaceDown,
-                        onCheckedChange = onToggleFaceDown
-                    )
-                    ConditionRow(
-                        index = 1,
-                        count = 3,
-                        title = stringResource(R.string.conditions_dnd_title),
-                        subtitle = stringResource(R.string.conditions_dnd_desc),
-                        icon = Icons.Rounded.DoNotDisturbOn,
-                        checked = suppressDuringDnd,
-                        onCheckedChange = onToggleDnd
-                    )
-                    ConditionRow(
-                        index = 2,
-                        count = 3,
-                        title = stringResource(R.string.conditions_quiet_hours_title),
-                        subtitle = stringResource(R.string.conditions_quiet_hours_desc),
-                        icon = Icons.Rounded.Bedtime,
-                        checked = quietHoursEnabled,
-                        onCheckedChange = onToggleQuietHours
+                ListItem(
+                    leadingContent = {
+                        Icon(
+                            Icons.Outlined.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    },
+                    colors = ListItemDefaults.colors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    ),
+                    shapes = ListItemDefaults.shapes(shape = MaterialTheme.shapes.large)
+                ) {
+                    Text(
+                        text = stringResource(R.string.conditions_defaults_desc),
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
 
-                AnimatedVisibility(
-                    visible = quietHoursEnabled,
-                    enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
-                        fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
-                    exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
-                        fadeOut(MaterialTheme.motionScheme.defaultEffectsSpec())
-                ) {
-                    Column(
-                        modifier = Modifier.padding(top = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        ConnectedChoice(
-                            options = listOf(
-                                QuietHoursRepeat.EVERY_DAY to stringResource(R.string.conditions_quiet_hours_every_day),
-                                QuietHoursRepeat.WEEKDAYS_WEEKENDS to stringResource(R.string.conditions_quiet_hours_weekends_differ),
-                                QuietHoursRepeat.EACH_DAY to stringResource(R.string.conditions_quiet_hours_custom)
-                            ),
-                            selected = quietHoursSchedule.repeat,
-                            onSelect = onChangeQuietHoursRepeat
+                // One item on the page, so the gap above the quiet hours controls collapses with them
+                // rather than jumping shut after they have gone.
+                Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+                        ConditionRow(
+                            index = 0,
+                            count = 3,
+                            title = stringResource(R.string.conditions_face_down_title),
+                            subtitle = stringResource(R.string.conditions_face_down_desc),
+                            icon = Icons.Rounded.ScreenRotation,
+                            checked = isOnlyWhenFaceDown,
+                            onCheckedChange = onToggleFaceDown
                         )
-                        // The same fade and resize the Home sections use when their rules come and go.
-                        val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
-                        val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
-                        AnimatedContent(
-                            targetState = quietHoursSchedule.repeat,
-                            transitionSpec = {
-                                (fadeIn(effects) + expandVertically(spatial))
-                                    .togetherWith(fadeOut(effects) + shrinkVertically(spatial))
-                                    .using(SizeTransform(clip = false) { _, _ -> spatial })
-                            },
-                            label = "quietHoursRepeat"
-                        ) { repeatMode ->
-                            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                                when (repeatMode) {
-                                    QuietHoursRepeat.EVERY_DAY -> QuietWindowButtons(
-                                        window = mainWindow,
-                                        onEditStart = { editing = QuietTimeEdit(QuietTarget.Main, end = false) },
-                                        onEditEnd = { editing = QuietTimeEdit(QuietTarget.Main, end = true) }
-                                    )
-                                    QuietHoursRepeat.WEEKDAYS_WEEKENDS -> {
-                                        QuietWindowGroup(stringResource(R.string.conditions_quiet_hours_weekdays)) {
-                                            QuietWindowButtons(
-                                                window = mainWindow,
-                                                onEditStart = { editing = QuietTimeEdit(QuietTarget.Main, end = false) },
-                                                onEditEnd = { editing = QuietTimeEdit(QuietTarget.Main, end = true) }
-                                            )
+                        ConditionRow(
+                            index = 1,
+                            count = 3,
+                            title = stringResource(R.string.conditions_dnd_title),
+                            subtitle = stringResource(R.string.conditions_dnd_desc),
+                            icon = Icons.Rounded.DoNotDisturbOn,
+                            checked = suppressDuringDnd,
+                            onCheckedChange = onToggleDnd
+                        )
+                        ConditionRow(
+                            index = 2,
+                            count = 3,
+                            title = stringResource(R.string.conditions_quiet_hours_title),
+                            subtitle = stringResource(R.string.conditions_quiet_hours_desc),
+                            icon = Icons.Rounded.Bedtime,
+                            checked = quietHoursEnabled,
+                            onCheckedChange = onToggleQuietHours
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = quietHoursEnabled,
+                        enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
+                            fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+                        exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
+                            fadeOut(MaterialTheme.motionScheme.defaultEffectsSpec())
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(top = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            ConnectedChoice(
+                                options = listOf(
+                                    QuietHoursRepeat.EVERY_DAY to stringResource(R.string.conditions_quiet_hours_every_day),
+                                    QuietHoursRepeat.WEEKDAYS_WEEKENDS to stringResource(R.string.conditions_quiet_hours_weekends_differ),
+                                    QuietHoursRepeat.EACH_DAY to stringResource(R.string.conditions_quiet_hours_custom)
+                                ),
+                                selected = quietHoursSchedule.repeat,
+                                onSelect = onChangeQuietHoursRepeat
+                            )
+                            // The same fade and resize the Home sections use when their rules come and go.
+                            val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+                            val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
+                            AnimatedContent(
+                                targetState = quietHoursSchedule.repeat,
+                                transitionSpec = {
+                                    (fadeIn(effects) + expandVertically(spatial))
+                                        .togetherWith(fadeOut(effects) + shrinkVertically(spatial))
+                                        .using(SizeTransform(clip = false) { _, _ -> spatial })
+                                },
+                                label = "quietHoursRepeat"
+                            ) { repeatMode ->
+                                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                                    when (repeatMode) {
+                                        QuietHoursRepeat.EVERY_DAY -> QuietWindowButtons(
+                                            window = mainWindow,
+                                            onEditStart = { editing = QuietTimeEdit(QuietTarget.Main, end = false) },
+                                            onEditEnd = { editing = QuietTimeEdit(QuietTarget.Main, end = true) }
+                                        )
+                                        QuietHoursRepeat.WEEKDAYS_WEEKENDS -> {
+                                            QuietWindowGroup(stringResource(R.string.conditions_quiet_hours_weekdays)) {
+                                                QuietWindowButtons(
+                                                    window = mainWindow,
+                                                    onEditStart = { editing = QuietTimeEdit(QuietTarget.Main, end = false) },
+                                                    onEditEnd = { editing = QuietTimeEdit(QuietTarget.Main, end = true) }
+                                                )
+                                            }
+                                            QuietWindowGroup(stringResource(R.string.conditions_quiet_hours_weekends)) {
+                                                QuietWindowButtons(
+                                                    window = weekendWindow,
+                                                    onEditStart = { editing = QuietTimeEdit(QuietTarget.Weekend, end = false) },
+                                                    onEditEnd = { editing = QuietTimeEdit(QuietTarget.Weekend, end = true) }
+                                                )
+                                            }
                                         }
-                                        QuietWindowGroup(stringResource(R.string.conditions_quiet_hours_weekends)) {
-                                            QuietWindowButtons(
-                                                window = weekendWindow,
-                                                onEditStart = { editing = QuietTimeEdit(QuietTarget.Weekend, end = false) },
-                                                onEditEnd = { editing = QuietTimeEdit(QuietTarget.Weekend, end = true) }
-                                            )
+                                        QuietHoursRepeat.EACH_DAY -> Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+                                            repeat(7) { index ->
+                                                val day = firstDay.plus(index.toLong())
+                                                val window = windowOf(QuietTarget.Day(day))
+                                                QuietDayRow(
+                                                    index = index,
+                                                    count = 7,
+                                                    day = day.getDisplayName(TextStyle.FULL, locale),
+                                                    window = window,
+                                                    onClick = { editing = QuietTimeEdit(QuietTarget.Day(day), end = false) },
+                                                    onEnabledChange = { onChangeQuietHoursDay(day, window.copy(enabled = it)) }
+                                                )
+                                            }
                                         }
                                     }
-                                    QuietHoursRepeat.EACH_DAY -> Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
-                                        repeat(7) { index ->
-                                            val day = firstDay.plus(index.toLong())
-                                            val window = windowOf(QuietTarget.Day(day))
-                                            QuietDayRow(
-                                                index = index,
-                                                count = 7,
-                                                day = day.getDisplayName(TextStyle.FULL, locale),
-                                                window = window,
-                                                onClick = { editing = QuietTimeEdit(QuietTarget.Day(day), end = false) },
-                                                onEnabledChange = { onChangeQuietHoursDay(day, window.copy(enabled = it)) }
-                                            )
-                                        }
+                                    if (repeatMode != QuietHoursRepeat.EVERY_DAY) {
+                                        Text(
+                                            text = stringResource(R.string.conditions_quiet_hours_overnight),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
-                                }
-                                if (repeatMode != QuietHoursRepeat.EVERY_DAY) {
-                                    Text(
-                                        text = stringResource(R.string.conditions_quiet_hours_overnight),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            // Not a rule default like the ones above, so it sits apart from them.
-            ConditionRow(
-                index = 0,
-                count = 1,
-                title = stringResource(R.string.conditions_pocket_title),
-                subtitle = stringResource(R.string.conditions_pocket_desc),
-                icon = Icons.Rounded.Sensors,
-                checked = pocketMode,
-                onCheckedChange = onTogglePocketMode
-            )
-
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                RuleGroupHeader(stringResource(R.string.conditions_priority_title))
-                Text(
-                    text = stringResource(R.string.conditions_priority_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+                // Not a rule default like the ones above, so it sits apart from them.
+                ConditionRow(
+                    index = 0,
+                    count = 1,
+                    title = stringResource(R.string.conditions_pocket_title),
+                    subtitle = stringResource(R.string.conditions_pocket_desc),
+                    icon = Icons.Rounded.Sensors,
+                    checked = pocketMode,
+                    onCheckedChange = onTogglePocketMode
                 )
-                PriorityList(order = channelOrder, onReorder = onChangeChannelOrder)
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    RuleGroupHeader(stringResource(R.string.conditions_priority_title))
+                    Text(
+                        text = stringResource(R.string.conditions_priority_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+                    )
+                    PriorityList(order = channelOrder, onReorder = onChangeChannelOrder)
+                }
             }
         }
     }
