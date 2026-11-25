@@ -209,29 +209,27 @@ fun HomeNotifsPage(
                         { RuleSortButton(state.messageRuleSort, RuleSort.CONTACT_OPTIONS, forContacts = true, onSortChange = onChangeMessageRuleSort) }
                     } else null
                 )
-                if (messageRules.isEmpty()) {
-                    EmptyRuleHint(stringResource(R.string.notifs_no_contact_rules), Icons.AutoMirrored.Rounded.Message)
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
-                        messageRules.forEachIndexed { index, rule ->
-                            RuleListItem(
-                                index = index,
-                                count = messageRules.size,
-                                title = rule.name,
-                                pattern = rule.pattern,
-                                speed = rule.speed,
-                                color = rule.color,
-                                faceDownMode = rule.faceDownMode,
-                                dndMode = rule.dndMode,
-                                quietHoursMode = rule.quietHoursMode,
-                                renderer = renderer,
-                                isEnabled = rule.isEnabled,
-                                onToggle = { isEnabled -> onToggleMessageRule(rule, isEnabled) },
-                                onEdit = { onEditMessageRule(rule) },
-                                onDelete = { onDeleteMessageRule(rule.id) }
-                            )
-                        }
-                    }
+                AnimatedRuleList(
+                    rules = messageRules,
+                    keyOf = { it.id },
+                    emptyHint = { EmptyRuleHint(stringResource(R.string.notifs_no_contact_rules), Icons.AutoMirrored.Rounded.Message) }
+                ) { index, count, rule ->
+                    RuleListItem(
+                        index = index,
+                        count = count,
+                        title = rule.name,
+                        pattern = rule.pattern,
+                        speed = rule.speed,
+                        color = rule.color,
+                        faceDownMode = rule.faceDownMode,
+                        dndMode = rule.dndMode,
+                        quietHoursMode = rule.quietHoursMode,
+                        renderer = renderer,
+                        isEnabled = rule.isEnabled,
+                        onToggle = { isEnabled -> onToggleMessageRule(rule, isEnabled) },
+                        onEdit = { onEditMessageRule(rule) },
+                        onDelete = { onDeleteMessageRule(rule.id) }
+                    )
                 }
                 AddRuleButton(stringResource(R.string.calls_add_contact_btn), Icons.Rounded.PersonAdd, onAddMessageContact)
 
@@ -241,71 +239,67 @@ fun HomeNotifsPage(
                         { RuleSortButton(state.appRuleSort, RuleSort.APP_OPTIONS, forContacts = false, onSortChange = onChangeAppRuleSort) }
                     } else null
                 )
-                if (appRules.isEmpty()) {
-                    EmptyRuleHint(stringResource(R.string.notifs_no_app_rules), Icons.Rounded.Apps)
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
-                        appRules.forEachIndexed { index, rule ->
-                            RuleListItem(
-                                index = index,
-                                count = appRules.size,
-                                title = rule.appName,
-                                pattern = rule.pattern,
-                                speed = rule.speed,
-                                color = rule.color,
-                                faceDownMode = rule.faceDownMode,
-                                dndMode = rule.dndMode,
-                                quietHoursMode = rule.quietHoursMode,
-                                renderer = renderer,
-                                isEnabled = rule.isEnabled,
-                                subtitle = when (rule.lightFor) {
-                                    AppLightFor.NOTIFICATIONS -> null
-                                    AppLightFor.PROGRESS -> stringResource(R.string.rule_progress_only)
-                                    AppLightFor.BOTH -> stringResource(R.string.rule_pattern_and_progress, stringResource(rule.pattern.titleRes))
-                                },
-                                badgeFrameAt = when (rule.lightFor) {
-                                    AppLightFor.NOTIFICATIONS -> null
-                                    AppLightFor.PROGRESS -> ::countdownPreviewFrame
-                                    AppLightFor.BOTH -> { t ->
-                                        if (previewShowsCountdown(t)) countdownTurnFrame(t)
-                                        else badgePatternFrame(renderer, rule.pattern, rule.color, rule.speed, t)
-                                    }
-                                },
-                                onToggle = { isEnabled -> onToggleAppRule(rule, isEnabled) },
-                                onEdit = { onEditAppRule(rule) },
-                                onDelete = { onDeleteAppRule(rule.packageName) }
-                            )
-                        }
-                    }
+                AnimatedRuleList(
+                    rules = appRules,
+                    keyOf = { it.packageName },
+                    emptyHint = { EmptyRuleHint(stringResource(R.string.notifs_no_app_rules), Icons.Rounded.Apps) }
+                ) { index, count, rule ->
+                    RuleListItem(
+                        index = index,
+                        count = count,
+                        title = rule.appName,
+                        pattern = rule.pattern,
+                        speed = rule.speed,
+                        color = rule.color,
+                        faceDownMode = rule.faceDownMode,
+                        dndMode = rule.dndMode,
+                        quietHoursMode = rule.quietHoursMode,
+                        renderer = renderer,
+                        isEnabled = rule.isEnabled,
+                        subtitle = when (rule.lightFor) {
+                            AppLightFor.NOTIFICATIONS -> null
+                            AppLightFor.PROGRESS -> stringResource(R.string.rule_progress_only)
+                            AppLightFor.BOTH -> stringResource(R.string.rule_pattern_and_progress, stringResource(rule.pattern.titleRes))
+                        },
+                        badgeFrameAt = when (rule.lightFor) {
+                            AppLightFor.NOTIFICATIONS -> null
+                            AppLightFor.PROGRESS -> ::countdownPreviewFrame
+                            AppLightFor.BOTH -> { t ->
+                                if (previewShowsCountdown(t)) countdownTurnFrame(t)
+                                else badgePatternFrame(renderer, rule.pattern, rule.color, rule.speed, t)
+                            }
+                        },
+                        onToggle = { isEnabled -> onToggleAppRule(rule, isEnabled) },
+                        onEdit = { onEditAppRule(rule) },
+                        onDelete = { onDeleteAppRule(rule.packageName) }
+                    )
                 }
                 AddRuleButton(stringResource(R.string.notifs_add_app_btn), Icons.Rounded.Add, onAddApp)
 
                 // Saved order is match order (the first matching rule lights), so there's no sort.
                 val textRules = state.textRules
                 RuleGroupHeader(stringResource(R.string.notifs_text_rules_header, textRules.size))
-                if (textRules.isEmpty()) {
-                    EmptyRuleHint(stringResource(R.string.notifs_no_text_rules), Icons.Rounded.TextFields)
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
-                        textRules.forEachIndexed { index, rule ->
-                            RuleListItem(
-                                index = index,
-                                count = textRules.size,
-                                title = textRuleTitle(rule.match),
-                                pattern = rule.pattern,
-                                speed = rule.speed,
-                                color = rule.color,
-                                faceDownMode = rule.faceDownMode,
-                                dndMode = rule.dndMode,
-                                quietHoursMode = rule.quietHoursMode,
-                                renderer = renderer,
-                                isEnabled = rule.isEnabled,
-                                onToggle = { isEnabled -> onToggleTextRule(rule, isEnabled) },
-                                onEdit = { onEditTextRule(rule) },
-                                onDelete = { onDeleteTextRule(rule.id) }
-                            )
-                        }
-                    }
+                AnimatedRuleList(
+                    rules = textRules,
+                    keyOf = { it.id },
+                    emptyHint = { EmptyRuleHint(stringResource(R.string.notifs_no_text_rules), Icons.Rounded.TextFields) }
+                ) { index, count, rule ->
+                    RuleListItem(
+                        index = index,
+                        count = count,
+                        title = textRuleTitle(rule.match),
+                        pattern = rule.pattern,
+                        speed = rule.speed,
+                        color = rule.color,
+                        faceDownMode = rule.faceDownMode,
+                        dndMode = rule.dndMode,
+                        quietHoursMode = rule.quietHoursMode,
+                        renderer = renderer,
+                        isEnabled = rule.isEnabled,
+                        onToggle = { isEnabled -> onToggleTextRule(rule, isEnabled) },
+                        onEdit = { onEditTextRule(rule) },
+                        onDelete = { onDeleteTextRule(rule.id) }
+                    )
                 }
                 AddRuleButton(stringResource(R.string.notifs_add_text_rule_btn), Icons.Rounded.Add, onAddTextRule)
 

@@ -6,12 +6,16 @@ import android.content.ClipData
 import android.os.SystemClock
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -68,6 +72,8 @@ import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -412,6 +418,78 @@ fun AddRuleButton(text: String, icon: ImageVector, onClick: () -> Unit) {
         Icon(icon, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
         Spacer(Modifier.width(ButtonDefaults.IconSpacing))
         Text(text)
+    }
+}
+
+/**
+ * A group's rules in segmented rows, or its hint when there are none. A rule added on its own
+ * grows in, and a deleted one shrinks away from where it was; a whole list arriving at once (the
+ * settings loading) just appears.
+ */
+@Composable
+internal fun <T> AnimatedRuleList(
+    rules: List<T>,
+    keyOf: (T) -> Any,
+    emptyHint: @Composable () -> Unit,
+    item: @Composable (index: Int, count: Int, rule: T) -> Unit
+) {
+    val memory = remember { RuleListMemory<T>() }
+    var exitsFinished by remember { mutableIntStateOf(0) }
+    exitsFinished // Read, so a finished exit recomposes the list without it.
+    val shown = memory.merge(rules, keyOf)
+    val enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
+        fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec())
+    val exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) +
+        fadeOut(MaterialTheme.motionScheme.defaultEffectsSpec())
+
+    Column {
+        AnimatedVisibility(visible = rules.isEmpty(), enter = enter, exit = exit) { emptyHint() }
+        Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+            shown.forEachIndexed { index, (isLeaving, rule) ->
+                val ruleKey = keyOf(rule)
+                key(ruleKey) {
+                    val visibility = remember { MutableTransitionState(ruleKey != memory.arriving) }
+                    visibility.targetState = !isLeaving
+                    AnimatedVisibility(visibleState = visibility, enter = enter, exit = exit) {
+                        item(index, shown.size, rule)
+                    }
+                    if (isLeaving && visibility.isIdle && !visibility.currentState) {
+                        LaunchedEffect(Unit) {
+                            memory.leaving.removeAll { keyOf(it.second) == ruleKey }
+                            exitsFinished++
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** What [AnimatedRuleList] needs from the last list it was given. */
+private class RuleListMemory<T> {
+    private var previous: List<T>? = null
+    /** Deleted rules still shrinking away, with the position each had. */
+    val leaving = mutableListOf<Pair<Int, T>>()
+    /** The key of a rule that was added on its own, so it grows in. */
+    var arriving: Any? = null
+        private set
+
+    /** The rules to lay out, each paired with whether it's leaving. */
+    fun merge(rules: List<T>, keyOf: (T) -> Any): List<Pair<Boolean, T>> {
+        val old = previous
+        if (old != null && rules !== old) {
+            val now = rules.mapTo(HashSet(), keyOf)
+            val before = old.mapTo(HashSet(), keyOf)
+            leaving.removeAll { keyOf(it.second) in now }
+            old.forEachIndexed { index, rule -> if (keyOf(rule) !in now) leaving += index to rule }
+            arriving = rules.filter { keyOf(it) !in before }.singleOrNull()?.let(keyOf)
+        }
+        previous = rules
+        val merged = rules.mapTo(ArrayList()) { false to it }
+        leaving.sortedBy { it.first }.forEach { (index, rule) ->
+            merged.add(index.coerceAtMost(merged.size), true to rule)
+        }
+        return merged
     }
 }
 

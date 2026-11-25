@@ -188,29 +188,27 @@ fun HomeCallsPage(
                         { RuleSortButton(state.callRuleSort, RuleSort.CONTACT_OPTIONS, forContacts = true, onSortChange = onChangeCallRuleSort) }
                     } else null
                 )
-                if (rules.isEmpty()) {
-                    EmptyRuleHint(stringResource(R.string.calls_no_rules), Icons.AutoMirrored.Rounded.PhoneCallback)
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
-                        rules.forEachIndexed { index, rule ->
-                            RuleListItem(
-                                index = index,
-                                count = rules.size,
-                                title = rule.name,
-                                pattern = rule.pattern,
-                                speed = rule.speed,
-                                color = rule.color,
-                                faceDownMode = rule.faceDownMode,
-                                dndMode = rule.dndMode,
-                                quietHoursMode = rule.quietHoursMode,
-                                renderer = renderer,
-                                isEnabled = rule.isEnabled,
-                                onToggle = { isEnabled -> onToggleCallContactRule(rule, isEnabled) },
-                                onEdit = { onEditCallContactRule(rule) },
-                                onDelete = { onDeleteCallContactRule(rule.id) }
-                            )
-                        }
-                    }
+                AnimatedRuleList(
+                    rules = rules,
+                    keyOf = { it.id },
+                    emptyHint = { EmptyRuleHint(stringResource(R.string.calls_no_rules), Icons.AutoMirrored.Rounded.PhoneCallback) }
+                ) { index, count, rule ->
+                    RuleListItem(
+                        index = index,
+                        count = count,
+                        title = rule.name,
+                        pattern = rule.pattern,
+                        speed = rule.speed,
+                        color = rule.color,
+                        faceDownMode = rule.faceDownMode,
+                        dndMode = rule.dndMode,
+                        quietHoursMode = rule.quietHoursMode,
+                        renderer = renderer,
+                        isEnabled = rule.isEnabled,
+                        onToggle = { isEnabled -> onToggleCallContactRule(rule, isEnabled) },
+                        onEdit = { onEditCallContactRule(rule) },
+                        onDelete = { onDeleteCallContactRule(rule.id) }
+                    )
                 }
                 AddRuleButton(stringResource(R.string.calls_add_contact_btn), Icons.Rounded.PersonAdd, onAddCallContact)
             }
