@@ -833,7 +833,7 @@ fun HomeContent(
             )
             // The cards and pages sit on a sheet below the header with the tabs strip.
             PageSheet {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(16.dp))
                 if (pairingLost) {
                     PairingLostCard(
                         onPairAgain = onSetUpConnection,
