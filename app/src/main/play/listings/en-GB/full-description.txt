@@ -6,7 +6,7 @@ CALLS
 • A colour and pattern for each contact, so you know who is ringing from across the room
 • Separate styles for favourites, other contacts and unknown numbers
 • An optional missed-call light that stays on until you dismiss the notification
-• An optional light while you're on a call, so people nearby can see you're busy
+• An optional light while you're on a call
 • Works for phone calls and for app calls from WhatsApp, Teams, Google Meet and more
 
 NOTIFICATIONS

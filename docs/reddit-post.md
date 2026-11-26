@@ -14,7 +14,7 @@ And best of all, no root and no Shizuku needed!
 * Starred contacts can share a favourites style if they don't have their own rule.
 * Works for normal calls and app calls (WhatsApp, Teams, Meet and so on).
 * Stays lit until you answer or reject. Optionally keeps going for a missed call until you clear the notification.
-* An optional During a call look, basically an in-call indicator, so people around you can see you're on the phone. It stays lit at your ear even with pocket mode on.
+* An optional During a call look that shows while you're on a phone or app call. It stays lit at your ear even with pocket mode on.
 
 **Notifications**
 

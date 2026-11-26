@@ -22,7 +22,7 @@ Pixel's built-in HiLight uses the rear lights for calls from favourites and Gemi
 - A favourites style for your starred contacts, used when a caller has no rule of their own.
 - Works for phone calls and for app calls such as WhatsApp, Teams and Meet. The lights stay on until the call is answered or ended.
 - An optional missed-call style, whoever called, that stays lit until the missed-call notification is dismissed.
-- An optional During a call look, for phone and app calls alike, that shows from the moment a call connects until it ends, so people nearby can see you're on a call. Pocket mode doesn't apply to it, so it stays lit with the phone at your ear. It has its own place in the Priority list.
+- An optional During a call look, for phone and app calls alike, that shows from the moment a call connects until it ends. Pocket mode doesn't apply to it, so it stays lit with the phone at your ear. It has its own place in the Priority list.
 
 **Notifications**
 - Rules per message sender and per app, plus a general default with automatic colour taken from the app icon.
