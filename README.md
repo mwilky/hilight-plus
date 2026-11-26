@@ -22,6 +22,7 @@ Pixel's built-in HiLight uses the rear lights for calls from favourites and Gemi
 - A favourites style for your starred contacts, used when a caller has no rule of their own.
 - Works for phone calls and for app calls such as WhatsApp, Teams and Meet. The lights stay on until the call is answered or ended.
 - An optional missed-call style, whoever called, that stays lit until the missed-call notification is dismissed.
+- An optional During a call look, for phone and app calls alike, that shows from the moment a call connects until it ends, so people nearby can see you're on a call. Pocket mode doesn't apply to it, so it stays lit with the phone at your ear. It has its own place in the Priority list.
 
 **Notifications**
 - Rules per message sender and per app, plus a general default with automatic colour taken from the app icon.
@@ -44,12 +45,12 @@ Pixel's built-in HiLight uses the rear lights for calls from favourites and Gemi
 - Charging gauge, charge-fill or gradient while plugged in, with an automatic red-to-green colour by level or a fixed colour.
 - Full-charge display with a configurable timeout.
 - Low-battery warning below a threshold you choose.
-- Battery sits underneath calls, Gemini, notifications and timers unless moved up the Priority list on the Conditions page.
+- Battery sits underneath calls, Gemini, notifications and timers unless moved up the Priority list on the Settings page.
 
 **Gemini**
 - Replaces Pixel's own Gemini feedback with a pattern and colour for each of Gemini's listening, thinking and replying states, defaulting to copies of the stock animations. On by default.
 - Each state can be switched off, and follows the conditions below or its own, like any rule.
-- Gemini shows below calls and above everything else unless moved in the Priority list on the Conditions page.
+- Gemini shows below calls and above everything else unless moved in the Priority list on the Settings page.
 - Gemini broadcasts none of this, so the daemon follows Gemini's own app log, on the phone only.
 
 **Do Not Disturb**
@@ -66,8 +67,8 @@ Pixel's built-in HiLight uses the rear lights for calls from favourites and Gemi
 - Skip during Do Not Disturb.
 - Quiet hours the same every day, different at weekends, or set day by day with any day left out. An overnight window counts for the day it starts on.
 - Every rule can follow these defaults, always light, or opt out, and rules can carry their own quiet-hours window.
-- Pocket mode, on by default: the lights stay dark in a pocket or bag and come on once the phone is out. Lying face down never counts as a pocket, so face-down rules keep working. It applies to everything and can be turned off on the Conditions page.
-- Priority: the lights show one thing at a time, and a drag-to-reorder list decides which. Whichever is higher is shown. The default order is Calls, Gemini, Notifications, Timers & progress, Battery, DND. If something higher is hidden by its own conditions, such as a call set to light only face down while the phone is face up, the next one down shows instead.
+- Pocket mode, on by default: the lights stay dark in a pocket or bag and come on once the phone is out. Lying face down never counts as a pocket, so face-down rules keep working. It applies to everything and can be turned off on the Settings page.
+- Priority: the lights show one thing at a time, and a drag-to-reorder list decides which. Whichever is higher is shown. The default order is Incoming calls, During a call, Gemini, Notifications, Timers & progress, Battery, DND. If something higher is hidden by its own conditions, such as a call set to light only face down while the phone is face up, the next one down shows instead.
 
 **Pause**
 - A Pause lights tile in Quick Settings keeps the lights dark for a while: everything, or just calls, notifications, battery, Gemini or Do Not Disturb.
@@ -104,7 +105,7 @@ Pixel's built-in HiLight uses the rear lights for calls from favourites and Gemi
 | Permission | Why |
 |---|---|
 | Contacts | Tell saved callers and senders from unknown ones, spot starred favourites, match them to your rules, and pick contacts when creating a rule |
-| Notification access | Notice incoming calls, new notifications and app calls, read a timer's time left or a progress bar's position for rules that show progress, and know when they are dismissed |
+| Notification access | Notice incoming calls and calls under way, new notifications and app calls, read a timer's time left or a progress bar's position for rules that show progress, and know when they are dismissed |
 | Internet | Connect to the phone's own Wireless debugging over loopback (127.0.0.1) to start the lights daemon. Nothing is sent off the device |
 | Local network access | Find the pairing dialog, which Wireless debugging advertises over mDNS on the phone itself |
 | Notifications | The setup guide that follows you into Settings and takes the pairing code |
@@ -112,7 +113,7 @@ Pixel's built-in HiLight uses the rear lights for calls from favourites and Gemi
 | Write secure settings | Granted by the daemon itself after the first connection, so the app can switch Wireless debugging on for a start (after a reboot, say), and off again straight after when USB debugging is on. From Android 17 QPR3 Beta 3, Android no longer accepts this for Wireless debugging; the daemon switches it instead, as described under Requirements |
 | Shizuku (optional) | Talk to the lights daemon over local Binder IPC, for people who start it through Shizuku |
 
-No camera permission is used either: Android tells every app when a camera opens and closes, which is all the app needs to keep the lights dark while a rear camera is in use. No phone-state or call-log permission is used: incoming calls, cellular or app, are recognised from the dialer's own call notification. Contacts and notification content never leave the device. The only network activity off the phone is Google Play, for the purchase and the in-app rating sheet; the Wireless debugging connection is to the phone itself. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for the full policy.
+No camera permission is used either: Android tells every app when a camera opens and closes, which is all the app needs to keep the lights dark while a rear camera is in use. No phone-state or call-log permission is used: calls, cellular or app, ringing or under way, are recognised from the dialer's own call notification. Contacts and notification content never leave the device. The only network activity off the phone is Google Play, for the purchase and the in-app rating sheet; the Wireless debugging connection is to the phone itself. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for the full policy.
 
 ## How it works
 
@@ -123,7 +124,7 @@ The app has two halves:
 
 Face-down detection reads the gravity sensor only while something is waiting to light, so there is no idle sensor cost. Gravity doesn't wake a sleeping phone, so it is paired with the wake-up tilt detector, which fires in the sensor hub when the phone turns and wakes the app to check. If several checks in a row get no gravity reading, the app treats the motion sensors as stalled, which only seems to happen on the Android 17 beta releases, and shows the restart notification and Home card until readings return.
 
-Pocket mode reads the wake-up proximity sensor, also only while something is waiting to light. Covered for a second while not lying flat face down counts as a pocket, and the daemon keeps the lights dark as it does for a rear camera; alerts stay queued. Orientation is only watched while the sensor is covered, so a phone taken from a pocket and put face down lights again.
+Pocket mode reads the wake-up proximity sensor, also only while something is waiting to light. Covered for a second while not lying flat face down counts as a pocket, and the daemon keeps the lights dark as it does for a rear camera; alerts stay queued. The During a call look is the exception, since a phone held to the ear covers the sensor too. Orientation is only watched while the sensor is covered, so a phone taken from a pocket and put face down lights again.
 
 ## Building
 

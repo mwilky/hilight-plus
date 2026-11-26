@@ -52,6 +52,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun setFavouriteCallsEnabled(enabled: Boolean) = launch { store.setFavouriteCallsEnabled(enabled) }
     fun setUnknownNumbersEnabled(enabled: Boolean) = launch { store.setUnknownNumbersEnabled(enabled) }
     fun setMissedCallsEnabled(enabled: Boolean) = launch { store.setMissedCallsEnabled(enabled) }
+    fun setInCallEnabled(enabled: Boolean) = launch { store.setInCallEnabled(enabled) }
     fun setNotificationsEnabled(enabled: Boolean) = launch { store.setNotificationsEnabled(enabled) }
     fun setNotificationDurationSeconds(seconds: Int) = launch { store.setNotificationDurationSeconds(seconds) }
     fun setMultiAlertMode(mode: MultiAlertMode) = launch { store.setMultiAlertMode(mode) }
@@ -172,6 +173,30 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         speed: Float
     ) = launch {
         store.setMissedCallsStyle(
+            pattern,
+            color,
+            faceDown,
+            dndMode,
+            quietHoursMode,
+            quietHoursStartMinutes,
+            quietHoursEndMinutes,
+            brightness,
+            speed
+        )
+    }
+
+    fun setInCallStyle(
+        pattern: PatternMode,
+        color: Long,
+        faceDown: FaceDownMode,
+        dndMode: DndMode,
+        quietHoursMode: QuietHoursMode,
+        quietHoursStartMinutes: Int,
+        quietHoursEndMinutes: Int,
+        brightness: Float,
+        speed: Float
+    ) = launch {
+        store.setInCallStyle(
             pattern,
             color,
             faceDown,

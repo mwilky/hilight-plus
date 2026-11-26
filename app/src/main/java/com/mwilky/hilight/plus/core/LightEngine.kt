@@ -122,6 +122,11 @@ class LightEngine {
     // Incoming calls override notification output without deleting its state.
     private var incomingCallAlert: IncomingCallAlert? = null
 
+    // The "on a call" look, shown while a call is under way. The app repeats it as a heartbeat;
+    // once that stops (the app died mid-call), it goes dark by itself after [IN_CALL_STALE_MS].
+    private var inCallAlert: IncomingCallAlert? = null
+    private var inCallUpdatedAtMs = 0L
+
     private data class DirectAlert(
         val pattern: String,
         val color: Long,
@@ -351,6 +356,56 @@ class LightEngine {
             syncNotificationTimer(now)
             needsSessionReset = true
             DebugLog.i(TAG, "startIncomingCall: pattern=$pattern, color=${hex(color)}, requiresFaceDown=$requiresFaceDown, dndMode=$dndMode, quietHoursMode=$quietHoursMode")
+            wake()
+        }
+    }
+
+    /**
+     * Shows the "on a call" look until [stopInCall], or until no repeat arrives for
+     * [IN_CALL_STALE_MS]. A repeat of the same look keeps its animation running.
+     */
+    fun startInCall(
+        pattern: String,
+        color: Long,
+        brightness: Float,
+        speedMs: Long,
+        requiresFaceDown: Boolean,
+        dndMode: DndMode,
+        quietHoursMode: QuietHoursMode,
+        quietStartOverride: Int?,
+        quietEndOverride: Int?
+    ) {
+        synchronized(lock) {
+            val now = SystemClock.elapsedRealtime()
+            inCallUpdatedAtMs = now
+            val current = inCallAlert
+            val next = IncomingCallAlert(
+                pattern,
+                color,
+                brightness,
+                speedMs,
+                current?.startedAtMs ?: now,
+                requiresFaceDown,
+                dndMode,
+                quietHoursMode,
+                quietStartOverride,
+                quietEndOverride
+            )
+            if (next == current) return
+            inCallAlert = next
+            needsSessionReset = true
+            DebugLog.i(TAG, "startInCall: pattern=$pattern, color=${hex(color)}, requiresFaceDown=$requiresFaceDown, dndMode=$dndMode, quietHoursMode=$quietHoursMode")
+            wake()
+        }
+    }
+
+    fun stopInCall() {
+        synchronized(lock) {
+            if (inCallAlert == null) return
+            inCallAlert = null
+            inCallUpdatedAtMs = 0L
+            DebugLog.i(TAG, "stopInCall")
+            needsSessionReset = true
             wake()
         }
     }
@@ -836,7 +891,7 @@ class LightEngine {
                 }
                 DebugLog.i(TAG, "removeAlert [key=$key] (remaining queue=${activeAlerts.size})")
                 wake()
-                if (incomingCallAlert == null && activeAlerts.isEmpty() && directAlert == null && !idleLayerActiveNow()) {
+                if (incomingCallAlert == null && inCallAlert == null && activeAlerts.isEmpty() && directAlert == null && !idleLayerActiveNow()) {
                     lights.blank()
                 }
             }
@@ -855,7 +910,7 @@ class LightEngine {
             activeAlerts.clear()
             currentAlertIndex = 0
             splitIntro = null
-            if (incomingCallAlert == null && !idleLayerActiveNow()) {
+            if (incomingCallAlert == null && inCallAlert == null && !idleLayerActiveNow()) {
                 lights.blank()
             }
         }
@@ -866,6 +921,8 @@ class LightEngine {
             DebugLog.i(TAG, "turnOff")
             wake()
             incomingCallAlert = null
+            inCallAlert = null
+            inCallUpdatedAtMs = 0L
             directAlert = null
             directAlertTimer.clear()
             activeAlerts.clear()
@@ -932,6 +989,7 @@ class LightEngine {
         activeAlerts.forEach { if (it.expiresAtMs != Long.MAX_VALUE) due = minOf(due, it.expiresAtMs) }
         nextTurnAtMs?.let { due = minOf(due, it) }
         countdown?.let { due = minOf(due, it.endsAtMs) }
+        if (inCallAlert != null) due = minOf(due, maxOf(now, inCallUpdatedAtMs + IN_CALL_STALE_MS))
         fill?.let { due = minOf(due, maxOf(now, it.updatedAtMs + FILL_STALE_MS)) }
         nextCountdownStepAtMs?.let { due = minOf(due, maxOf(now, it)) }
         geminiState?.let { due = minOf(due, geminiStateSinceMs + GeminiLogParser.maxDurationMs(it)) }
@@ -1023,6 +1081,23 @@ class LightEngine {
                 call.quietEndOverride,
                 nowMinutes
             )
+
+            if (inCallAlert != null && now - inCallUpdatedAtMs >= IN_CALL_STALE_MS) {
+                inCallAlert = null
+                DebugLog.w(TAG, "On-a-call look not repeated for ${IN_CALL_STALE_MS / 1000}s; clearing it")
+            }
+            val inCall = inCallAlert
+            // Held to the ear, the proximity sensor reads as a pocket, so pocket mode doesn't
+            // apply here; the rear camera and a pause still do.
+            val inCallVisible = inCall != null && !rearCameraActive && pause?.pauses(PauseFeature.CALLS) != true &&
+                alertVisible(
+                    inCall.requiresFaceDown,
+                    inCall.dndMode,
+                    inCall.quietHoursMode,
+                    inCall.quietStartOverride,
+                    inCall.quietEndOverride,
+                    nowMinutes
+                )
 
             if (testAlert != null && now >= testAlert!!.expiresAtMs) {
                 testAlert = null
@@ -1161,6 +1236,16 @@ class LightEngine {
                             elapsedMs = now - call.startedAtMs
                             effectKey = listOf("call", call)
                         }
+                        LightChannel.IN_CALL -> {
+                            if (inCall == null || !inCallVisible) continue@channels
+                            reason = "on a call ${inCall.pattern} ${hex(inCall.color)}"
+                            currentPattern = inCall.pattern
+                            currentColor = inCall.color
+                            currentBrightness = inCall.brightness
+                            currentSpeed = inCall.speedMs
+                            elapsedMs = now - inCall.startedAtMs
+                            effectKey = listOf("inCall", inCall)
+                        }
                         LightChannel.GEMINI -> {
                             if (geminiLook == null) continue@channels
                             val (state, look) = geminiLook
@@ -1271,6 +1356,7 @@ class LightEngine {
                 if (shown == null) {
                     reason = when {
                         call != null -> "off (call hidden by conditions)"
+                        inCall != null -> "off (on a call, hidden by conditions)"
                         direct != null || activeAlerts.isNotEmpty() -> "off (notifications hidden by conditions)"
                         else -> "off"
                     }
@@ -1533,6 +1619,7 @@ class LightEngine {
             val dndAge = if (dndStateUpdatedAtMs == 0L) "never" else "${(now - dndStateUpdatedAtMs) / 1000}s ago"
             appendLine("dndIndicator=${dndIndicator?.let { "${it.pattern} ${hex(it.color)}, indicator=${it.showIndicator}, showFor=${it.showForMs}, flash=${it.flashOnChange}, overBattery=${it.overridesBattery}, faceDown=${it.requiresFaceDown}, quiet=${it.quietHoursMode}" } ?: "off"}, dnd on for ${if (dndActive) "${(now - dndActiveSinceMs) / 1000}s" else "-"}, updated $dndAge, flash=${dndFlash?.let { if (it.turningOn) "on" else "off" }}")
             appendLine("call=${incomingCallAlert?.let { "${it.pattern} ${hex(it.color)}, ringing ${(now - it.startedAtMs) / 1000}s, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}" }}")
+            appendLine("inCall=${inCallAlert?.let { "${it.pattern} ${hex(it.color)}, for ${(now - it.startedAtMs) / 1000}s, updated ${(now - inCallUpdatedAtMs) / 1000}s ago, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}" }}")
             appendLine("latestOnly=${directAlert?.let { "${it.pattern} ${hex(it.color)}, ${directAlertTimer.remainingMs(now)}ms left, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}" }}")
             appendLine("queue (${activeAlerts.size}):")
             activeAlerts.forEach {
@@ -1768,5 +1855,8 @@ class LightEngine {
 
         // Three missed heartbeats from the app, as for the battery reading.
         private const val FILL_STALE_MS = 3 * 60_000L
+
+        // Three missed heartbeats from the app while a call is under way.
+        const val IN_CALL_STALE_MS = 3 * 60_000L
     }
 }

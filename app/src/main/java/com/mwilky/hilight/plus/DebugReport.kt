@@ -74,6 +74,7 @@ internal object DebugReport {
             rule("Favourite calls", snapshot.isFavouriteCallsEnabled, snapshot.favouriteCallsPattern, snapshot.favouriteCallsColor, snapshot.favouriteCallsFaceDownMode, snapshot.favouriteCallsDndMode, snapshot.favouriteCallsQuietHoursMode, snapshot.favouriteCallsQuietHoursStartMinutes, snapshot.favouriteCallsQuietHoursEndMinutes)
             rule("Unknown numbers", snapshot.isUnknownNumbersEnabled, snapshot.unknownNumbersPattern, snapshot.unknownNumbersColor, snapshot.unknownNumbersFaceDownMode, snapshot.unknownNumbersDndMode, snapshot.unknownNumbersQuietHoursMode, snapshot.unknownNumbersQuietHoursStartMinutes, snapshot.unknownNumbersQuietHoursEndMinutes)
             rule("Missed calls", snapshot.isMissedCallsEnabled, snapshot.missedCallsPattern, snapshot.missedCallsColor, snapshot.missedCallsFaceDownMode, snapshot.missedCallsDndMode, snapshot.missedCallsQuietHoursMode, snapshot.missedCallsQuietHoursStartMinutes, snapshot.missedCallsQuietHoursEndMinutes)
+            rule("During a call", snapshot.isInCallEnabled, snapshot.inCallPattern, snapshot.inCallColor, snapshot.inCallFaceDownMode, snapshot.inCallDndMode, snapshot.inCallQuietHoursMode, snapshot.inCallQuietHoursStartMinutes, snapshot.inCallQuietHoursEndMinutes)
             snapshot.contactRules.forEach {
                 rule("Call contact ${it.id}", it.isEnabled, it.pattern, it.color, it.faceDownMode, it.dndMode, it.quietHoursMode, it.quietHoursStartMinutes, it.quietHoursEndMinutes)
             }

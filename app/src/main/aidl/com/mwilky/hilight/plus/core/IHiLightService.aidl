@@ -76,4 +76,9 @@ interface IHiLightService {
     // battery, dnd), highest first. Unknown ids are dropped and missing ones put back in their
     // default places. Supersedes the overridesNotifications and overridesBattery flags.
     void setChannelOrder(String channels);
+    // The "on a call" look, shown while a call is under way, until stopInCall. The app repeats it
+    // every minute; with no repeat for 3 minutes it goes dark by itself. Pocket mode doesn't apply.
+    // quietStart and quietEnd are -1 for none.
+    void startInCall(String pattern, long color, float brightness, long speedMs, boolean requiresFaceDown, String dndMode, String quietHoursMode, int quietStartMinutes, int quietEndMinutes);
+    void stopInCall();
 }

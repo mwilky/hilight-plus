@@ -106,6 +106,18 @@ class AppStore private constructor(private val appContext: Context) {
         private val KEY_MISSED_CALLS_BRIGHTNESS = floatPreferencesKey("missed_calls_brightness")
         private val KEY_MISSED_CALLS_SPEED = floatPreferencesKey("missed_calls_speed")
 
+        // Call Settings: On a call
+        private val KEY_IN_CALL_ENABLED = booleanPreferencesKey("in_call_enabled")
+        private val KEY_IN_CALL_COLOR = longPreferencesKey("in_call_color")
+        private val KEY_IN_CALL_PATTERN = stringPreferencesKey("in_call_pattern")
+        private val KEY_IN_CALL_FACE_DOWN = stringPreferencesKey("in_call_face_down")
+        private val KEY_IN_CALL_DND = stringPreferencesKey("in_call_dnd")
+        private val KEY_IN_CALL_QUIET = stringPreferencesKey("in_call_quiet")
+        private val KEY_IN_CALL_QUIET_START = intPreferencesKey("in_call_quiet_start")
+        private val KEY_IN_CALL_QUIET_END = intPreferencesKey("in_call_quiet_end")
+        private val KEY_IN_CALL_BRIGHTNESS = floatPreferencesKey("in_call_brightness")
+        private val KEY_IN_CALL_SPEED = floatPreferencesKey("in_call_speed")
+
         private val KEY_CALL_RULES_JSON = stringPreferencesKey("contact_rules_json")
         private val KEY_CALL_RULES_SORT = stringPreferencesKey("contact_rules_sort")
 
@@ -389,6 +401,10 @@ class AppStore private constructor(private val appContext: Context) {
         appContext.dataStore.edit { it[KEY_MISSED_CALLS_ENABLED] = enabled }
     }
 
+    suspend fun setInCallEnabled(enabled: Boolean) {
+        appContext.dataStore.edit { it[KEY_IN_CALL_ENABLED] = enabled }
+    }
+
     suspend fun setNotificationsEnabled(enabled: Boolean) {
         appContext.dataStore.edit { it[KEY_NOTIFICATIONS_ENABLED] = enabled }
     }
@@ -549,6 +565,30 @@ class AppStore private constructor(private val appContext: Context) {
             prefs[KEY_MISSED_CALLS_QUIET_END] = quietHoursEndMinutes
             prefs[KEY_MISSED_CALLS_BRIGHTNESS] = clampBrightness(brightness)
             prefs[KEY_MISSED_CALLS_SPEED] = clampSpeed(speed)
+        }
+    }
+
+    suspend fun setInCallStyle(
+        pattern: PatternMode,
+        color: Long,
+        faceDown: FaceDownMode,
+        dndMode: DndMode,
+        quietHoursMode: QuietHoursMode,
+        quietHoursStartMinutes: Int,
+        quietHoursEndMinutes: Int,
+        brightness: Float,
+        speed: Float
+    ) {
+        appContext.dataStore.edit { prefs ->
+            prefs[KEY_IN_CALL_PATTERN] = pattern.name
+            prefs[KEY_IN_CALL_COLOR] = color
+            prefs[KEY_IN_CALL_FACE_DOWN] = faceDown.name
+            prefs[KEY_IN_CALL_DND] = dndMode.name
+            prefs[KEY_IN_CALL_QUIET] = quietHoursMode.name
+            prefs[KEY_IN_CALL_QUIET_START] = quietHoursStartMinutes
+            prefs[KEY_IN_CALL_QUIET_END] = quietHoursEndMinutes
+            prefs[KEY_IN_CALL_BRIGHTNESS] = clampBrightness(brightness)
+            prefs[KEY_IN_CALL_SPEED] = clampSpeed(speed)
         }
     }
 
@@ -795,6 +835,16 @@ class AppStore private constructor(private val appContext: Context) {
             missedCallsQuietHoursEndMinutes = prefs[KEY_MISSED_CALLS_QUIET_END] ?: d.missedCallsQuietHoursEndMinutes,
             missedCallsBrightness = prefs[KEY_MISSED_CALLS_BRIGHTNESS] ?: d.missedCallsBrightness,
             missedCallsSpeed = prefs[KEY_MISSED_CALLS_SPEED] ?: d.missedCallsSpeed,
+            isInCallEnabled = prefs[KEY_IN_CALL_ENABLED] ?: d.isInCallEnabled,
+            inCallColor = prefs[KEY_IN_CALL_COLOR] ?: d.inCallColor,
+            inCallPattern = enumOr(prefs[KEY_IN_CALL_PATTERN], d.inCallPattern),
+            inCallFaceDownMode = enumOr(prefs[KEY_IN_CALL_FACE_DOWN], d.inCallFaceDownMode),
+            inCallDndMode = enumOr(prefs[KEY_IN_CALL_DND], d.inCallDndMode),
+            inCallQuietHoursMode = enumOr(prefs[KEY_IN_CALL_QUIET], d.inCallQuietHoursMode),
+            inCallQuietHoursStartMinutes = prefs[KEY_IN_CALL_QUIET_START] ?: d.inCallQuietHoursStartMinutes,
+            inCallQuietHoursEndMinutes = prefs[KEY_IN_CALL_QUIET_END] ?: d.inCallQuietHoursEndMinutes,
+            inCallBrightness = prefs[KEY_IN_CALL_BRIGHTNESS] ?: d.inCallBrightness,
+            inCallSpeed = prefs[KEY_IN_CALL_SPEED] ?: d.inCallSpeed,
             isNotificationsEnabled = prefs[KEY_NOTIFICATIONS_ENABLED] ?: d.isNotificationsEnabled,
             notificationDurationSeconds = prefs[KEY_NOTIFICATION_DURATION_SEC] ?: d.notificationDurationSeconds,
             multiAlertMode = readMultiAlertMode(prefs),
@@ -911,6 +961,16 @@ data class SettingsSnapshot(
     val missedCallsQuietHoursEndMinutes: Int?,
     val missedCallsBrightness: Float,
     val missedCallsSpeed: Float,
+    val isInCallEnabled: Boolean,
+    val inCallColor: Long,
+    val inCallPattern: PatternMode,
+    val inCallFaceDownMode: FaceDownMode,
+    val inCallDndMode: DndMode,
+    val inCallQuietHoursMode: QuietHoursMode,
+    val inCallQuietHoursStartMinutes: Int?,
+    val inCallQuietHoursEndMinutes: Int?,
+    val inCallBrightness: Float,
+    val inCallSpeed: Float,
     val isNotificationsEnabled: Boolean,
     val notificationDurationSeconds: Int,
     val multiAlertMode: MultiAlertMode,
@@ -1031,6 +1091,18 @@ val DEFAULT_SETTINGS_SNAPSHOT = SettingsSnapshot(
     missedCallsQuietHoursEndMinutes = null,
     missedCallsBrightness = DEFAULT_BRIGHTNESS,
     missedCallsSpeed = DEFAULT_SPEED,
+    // Off until switched on; then a green breathe at full brightness and its own pace. A dim, slow
+    // fade only has a few levels to step through and shows them.
+    isInCallEnabled = false,
+    inCallColor = 0xFF00C853,
+    inCallPattern = PatternMode.BREATHE,
+    inCallFaceDownMode = FaceDownMode.INHERIT,
+    inCallDndMode = DndMode.INHERIT,
+    inCallQuietHoursMode = QuietHoursMode.INHERIT,
+    inCallQuietHoursStartMinutes = null,
+    inCallQuietHoursEndMinutes = null,
+    inCallBrightness = DEFAULT_BRIGHTNESS,
+    inCallSpeed = DEFAULT_SPEED,
     isNotificationsEnabled = true,
     notificationDurationSeconds = 30,
     multiAlertMode = MultiAlertMode.LATEST,

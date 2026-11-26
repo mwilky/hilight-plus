@@ -1,6 +1,6 @@
 # Privacy Policy for HiLight Plus
 
-**Last updated:** November 16, 2026
+**Last updated:** November 25, 2026
 
 **HiLight Plus** ("we", "our", or "the app") is developed by **mwilky**. We are committed to protecting your privacy. This Privacy Policy outlines how your information is handled when you use HiLight Plus.
 
@@ -23,7 +23,7 @@ HiLight Plus requests sensitive Android permissions solely to deliver real-time 
 - **Data Handling:** Contact data remains solely within Android's local contacts database on your device and is only accessed when matching an incoming caller or sender name or opening the contact picker.
 
 ### B. Notification Listener Access (`BIND_NOTIFICATION_LISTENER_SERVICE`)
-- **Purpose:** Used to detect incoming calls (from the phone dialer and from apps such as WhatsApp, Teams and Meet) and incoming notifications and chats from user-selected applications, to trigger corresponding LED light alerts. HiLight Plus does **not** request phone-state or call-log permissions; calls are recognised from the dialer's own call notification.
+- **Purpose:** Used to detect incoming calls and calls in progress (from the phone dialer and from apps such as WhatsApp, Teams and Meet) and incoming notifications and chats from user-selected applications, to trigger corresponding LED light alerts. HiLight Plus does **not** request phone-state or call-log permissions; calls are recognised from the dialer's own call notification.
 - **Data Handling:** Notification metadata (app package name, sender or caller title) is processed in real time to match your custom lighting rules. If you create a text rule, a notification's title and message text are also checked against it as the notification arrives. This happens in memory on your device only: notification text is never stored, logged, or sent anywhere, and attachments are never read. For an app rule that lights for progress, a notification's timer (how long it has left) or progress bar (how far along it is) is read the same way, in memory only. The name of each notification channel an app posts on (for example "Incoming messages") is kept on your device so app rules can list them; it is not included in backups and never leaves the device.
 
 ### C. Reaching the Rear Lights (`INTERNET`, `ACCESS_LOCAL_NETWORK`, `WRITE_SECURE_SETTINGS`)

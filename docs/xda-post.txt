@@ -5,12 +5,12 @@
 [/CENTER]
 [TABLE]
 [TR]
-[TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/calls.png?v=3[/IMG][/TD]
+[TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/calls.png?v=4[/IMG][/TD]
 [TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/rule-editor.png?v=4[/IMG][/TD]
-[TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/split-ring.png?v=3[/IMG][/TD]
-[TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/battery.png?v=4[/IMG][/TD]
-[TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/gemini.png?v=3[/IMG][/TD]
-[TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/dnd.png?v=2[/IMG][/TD]
+[TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/split-ring.png?v=4[/IMG][/TD]
+[TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/battery.png?v=5[/IMG][/TD]
+[TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/gemini.png?v=4[/IMG][/TD]
+[TD][IMG]https://raw.githubusercontent.com/mwilky/hilight-plus/main/docs/screenshots/dnd.png?v=3[/IMG][/TD]
 [/TR]
 [/TABLE]
 
@@ -36,6 +36,7 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 [*]Universal support: works across cellular calls and VoIP (WhatsApp, Teams, Google Meet, etc.).
 [*]Active render loop stays lit until the call is answered or rejected.
 [*]Optional missed-call style that stays lit until the missed-call notification is dismissed.
+[*]Optional [B]During a call[/B] look: an in-call indicator for phone and app calls, lit from the moment a call connects until it ends. It ignores pocket mode, so it stays lit at your ear, and has its own place in the Priority list.
 [/LIST]
 
 [B]Notifications[/B]
@@ -92,7 +93,7 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 [*]Automatic Do Not Disturb (DND) suppression.
 [*]Global quiet hours scheduler: the same every day, different at weekends, or set day by day. Per-rule override options.
 [*]Pocket mode (on by default): the lights stay dark in a pocket or bag and come on once the phone is out. Face down never counts as a pocket, so face-down rules are unaffected. Proximity sensor engages only when alerts are pending.
-[*][B]Priority:[/B] the lights show one thing at a time, and a drag-to-reorder list decides which. The default order is [I]Calls, Gemini, Notifications, Timers & progress, Battery, DND[/I]. If something higher is hidden by its own conditions (a face-down-only call while the phone is face up, say), the next one down shows instead.
+[*][B]Priority:[/B] the lights show one thing at a time, and a drag-to-reorder list decides which. The default order is [I]Incoming calls, During a call, Gemini, Notifications, Timers & progress, Battery, DND[/I]. If something higher is hidden by its own conditions (a face-down-only call while the phone is face up, say), the next one down shows instead.
 [/LIST]
 
 [B]Pause[/B]

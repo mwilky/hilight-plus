@@ -166,7 +166,7 @@
 
     <!-- Navigation Tabs -->
     <string name="nav_home">Home</string>
-    <string name="nav_conditions">Conditions</string>
+    <string name="nav_conditions">Settings</string>
     <string name="nav_about">About</string>
 
     <!-- Ring connection status card (built-in or Shizuku) -->
@@ -233,6 +233,8 @@
     <string name="calls_other_contacts_title">All other contacts</string>
     <string name="calls_unknown_numbers_title">Unknown numbers</string>
     <string name="calls_missed_calls_title">Missed calls</string>
+    <string name="calls_in_call_header">Active calls</string>
+    <string name="calls_in_call_title">During a call</string>
     <string name="calls_custom_rules_header">Caller rules (%1$d)</string>
     <string name="calls_no_rules">No caller rules.</string>
     <string name="calls_add_contact_btn">Add contact</string>
@@ -332,20 +334,20 @@
     <string name="rule_progress_only">Progress only</string>
     <string name="rule_pattern_and_progress">%1$s and progress</string>
     <string name="dialog_orientation_title">Phone position</string>
-    <string name="dialog_orientation_desc_default">Follows the face-down setting on the Conditions page.</string>
+    <string name="dialog_orientation_desc_default">Follows the face-down setting on the Settings page.</string>
     <string name="dialog_orientation_desc_always">Lights whether the phone is face down, face up or in your hand.</string>
     <string name="dialog_orientation_desc_face_down">Lights only while the phone is lying face down.</string>
     <string name="dialog_orientation_default">Default</string>
     <string name="dialog_orientation_always">Any position</string>
     <string name="dialog_orientation_face_down">Face down</string>
     <string name="dialog_dnd_title">Do Not Disturb</string>
-    <string name="dialog_dnd_desc_default">Follows the Do Not Disturb setting on the Conditions page.</string>
+    <string name="dialog_dnd_desc_default">Follows the Do Not Disturb setting on the Settings page.</string>
     <string name="dialog_dnd_desc_always">Lights even while Do Not Disturb is on.</string>
-    <string name="dialog_dnd_desc_skip">Stays dark while Do Not Disturb is on, even if the Conditions page allows it.</string>
+    <string name="dialog_dnd_desc_skip">Stays dark while Do Not Disturb is on, even if the Settings page allows it.</string>
     <string name="dialog_quiet_hours_title">Quiet hours</string>
-    <string name="dialog_quiet_hours_desc_default">Follows the quiet hours setting on the Conditions page.</string>
+    <string name="dialog_quiet_hours_desc_default">Follows the quiet hours setting on the Settings page.</string>
     <string name="dialog_quiet_hours_desc_always">Lights even during quiet hours.</string>
-    <string name="dialog_quiet_hours_desc_skip">Stays dark between the times below, even if quiet hours are off on the Conditions page.</string>
+    <string name="dialog_quiet_hours_desc_skip">Stays dark between the times below, even if quiet hours are off on the Settings page.</string>
     <string name="dialog_mode_default">Default</string>
     <string name="dialog_mode_always">Always light</string>
     <string name="dialog_mode_skip">Stay dark</string>
@@ -469,7 +471,8 @@
     <string name="rule_quiet_hours_skip">Dark in quiet hours</string>
 
     <!-- Conditions Screen -->
-    <string name="conditions_title">Conditions</string>
+    <string name="conditions_title">Settings</string>
+    <string name="conditions_header">Conditions</string>
     <string name="conditions_defaults_desc">These apply to every rule. Each rule can override them in its own settings.</string>
     <string name="conditions_face_down_title">Face down only</string>
     <string name="conditions_face_down_desc">Only light while the phone is lying face down.</string>
@@ -493,6 +496,8 @@
     <string name="conditions_priority_title">Priority</string>
     <string name="conditions_priority_desc">The lights show one thing at a time. If a notification arrives while a call is ringing, whichever is higher here is shown. Drag to reorder.</string>
     <string name="conditions_priority_progress">Timers &amp; progress</string>
+    <string name="conditions_priority_calls">Incoming calls</string>
+    <string name="conditions_priority_in_call">During a call</string>
     <string name="conditions_priority_move_up">Move up</string>
     <string name="conditions_priority_move_down">Move down</string>
     <string name="conditions_priority_drag">Drag to reorder</string>

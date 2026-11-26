@@ -7,6 +7,7 @@ package com.mwilky.hilight.plus.core
  */
 enum class LightChannel(val id: String) {
     CALLS("calls"),
+    IN_CALL("in_call"),
     GEMINI("gemini"),
     NOTIFICATIONS("notifications"),
     PROGRESS("progress"),
@@ -53,7 +54,7 @@ enum class LightChannel(val id: String) {
                 dndOverBattery -> listOf(NOTIFICATIONS, PROGRESS, DND, BATTERY)
                 else -> listOf(NOTIFICATIONS, PROGRESS, BATTERY, DND)
             }
-            return listOf(CALLS, GEMINI) + lower
+            return listOf(CALLS, IN_CALL, GEMINI) + lower
         }
     }
 }

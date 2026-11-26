@@ -26,6 +26,7 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.PhoneInTalk
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Notifications
@@ -167,24 +168,27 @@ fun ConditionsContent(
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                ListItem(
-                    leadingContent = {
-                        Icon(
-                            Icons.Outlined.Info,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSecondaryContainer
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    RuleGroupHeader(stringResource(R.string.conditions_header))
+                    ListItem(
+                        leadingContent = {
+                            Icon(
+                                Icons.Outlined.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        },
+                        colors = ListItemDefaults.colors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        ),
+                        shapes = ListItemDefaults.shapes(shape = MaterialTheme.shapes.large)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.conditions_defaults_desc),
+                            style = MaterialTheme.typography.bodyMedium
                         )
-                    },
-                    colors = ListItemDefaults.colors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                    ),
-                    shapes = ListItemDefaults.shapes(shape = MaterialTheme.shapes.large)
-                ) {
-                    Text(
-                        text = stringResource(R.string.conditions_defaults_desc),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    }
                 }
 
                 // One item on the page, so the gap above the quiet hours controls collapses with them
@@ -486,6 +490,7 @@ private fun ConditionIcon(icon: ImageVector, active: Boolean) {
 private val LightChannel.icon: ImageVector
     get() = when (this) {
         LightChannel.CALLS -> Icons.Rounded.Call
+        LightChannel.IN_CALL -> Icons.Rounded.PhoneInTalk
         LightChannel.GEMINI -> Icons.Rounded.AutoAwesome
         LightChannel.NOTIFICATIONS -> Icons.Rounded.Notifications
         LightChannel.PROGRESS -> Icons.Rounded.Timer
@@ -495,7 +500,8 @@ private val LightChannel.icon: ImageVector
 
 private val LightChannel.titleRes: Int
     get() = when (this) {
-        LightChannel.CALLS -> R.string.home_tab_calls
+        LightChannel.CALLS -> R.string.conditions_priority_calls
+        LightChannel.IN_CALL -> R.string.conditions_priority_in_call
         LightChannel.GEMINI -> R.string.home_tab_gemini
         LightChannel.NOTIFICATIONS -> R.string.home_tab_notifications
         LightChannel.PROGRESS -> R.string.conditions_priority_progress

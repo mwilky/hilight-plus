@@ -1148,6 +1148,37 @@ class DaemonBridge private constructor(private val app: Application) {
         runRemote("stopIncomingCall") { it.stopIncomingCall() }
     }
 
+    fun startInCall(
+        pattern: String,
+        color: Long,
+        brightness: Float,
+        speedMs: Long,
+        requiresFaceDown: Boolean,
+        dndMode: DndMode,
+        quietHoursMode: QuietHoursMode,
+        quietStartMinutes: Int,
+        quietEndMinutes: Int
+    ) {
+        runRemote("startInCall") {
+            it.startInCall(
+                pattern,
+                color,
+                brightness,
+                speedMs,
+                requiresFaceDown,
+                dndMode.id,
+                quietHoursMode.id,
+                quietStartMinutes,
+                quietEndMinutes
+            )
+        }
+    }
+
+    fun stopInCall() {
+        DebugLog.i("HiLightPlus", "stopInCall called")
+        runRemote("stopInCall") { it.stopInCall() }
+    }
+
     fun testAlert(pattern: String, color: Long, brightness: Float, speedMs: Long, durationMs: Long) {
         DebugLog.i("HiLightPlus", "testAlert: pattern=$pattern, color=$color, durationMs=$durationMs")
         runRemote("testAlert") { it.testAlert(pattern, color, brightness, speedMs, durationMs) }

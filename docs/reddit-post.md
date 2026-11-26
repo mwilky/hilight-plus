@@ -14,6 +14,7 @@ And best of all, no root and no Shizuku needed!
 * Starred contacts can share a favourites style if they don't have their own rule.
 * Works for normal calls and app calls (WhatsApp, Teams, Meet and so on).
 * Stays lit until you answer or reject. Optionally keeps going for a missed call until you clear the notification.
+* An optional During a call look, basically an in-call indicator, so people around you can see you're on the phone. It stays lit at your ear even with pocket mode on.
 
 **Notifications**
 
@@ -56,7 +57,7 @@ And best of all, no root and no Shizuku needed!
 * Stay dark during Do Not Disturb.
 * Quiet hours, with per-rule overrides. Weekends can have their own times, or you can set each day separately.
 * Pocket mode, on by default. No glowing through your jeans: the lights wait until the phone's out of your pocket. Face down on a table doesn't count, so face-down rules still work.
-* Priority. The lights only show one thing at a time, so there's a list of Calls, Gemini, Notifications, Timers & progress, Battery and DND that you drag into the order you want, and whichever is higher gets shown. That's the default order too. If something higher is hidden by its own conditions (say a face-down-only call while the phone's face up), the next one down shows instead.
+* Priority. The lights only show one thing at a time, so there's a list of Incoming calls, During a call, Gemini, Notifications, Timers & progress, Battery and DND that you drag into the order you want, and whichever is higher gets shown. That's the default order too. If something higher is hidden by its own conditions (say a face-down-only call while the phone's face up), the next one down shows instead.
 
 **Pause**
 

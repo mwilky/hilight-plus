@@ -280,6 +280,35 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
         engine.setChannelOrder(LightChannel.decode(channels))
     }
 
+    override fun startInCall(
+        pattern: String?,
+        color: Long,
+        brightness: Float,
+        speedMs: Long,
+        requiresFaceDown: Boolean,
+        dndMode: String?,
+        quietHoursMode: String?,
+        quietStartMinutes: Int,
+        quietEndMinutes: Int
+    ) {
+        if (!entitled) return
+        engine.startInCall(
+            pattern ?: "solid",
+            color,
+            brightness,
+            speedMs,
+            requiresFaceDown,
+            DndMode.fromId(dndMode),
+            QuietHoursMode.fromId(quietHoursMode),
+            quietStartMinutes.takeIf { it >= 0 },
+            quietEndMinutes.takeIf { it >= 0 }
+        )
+    }
+
+    override fun stopInCall() {
+        engine.stopInCall()
+    }
+
     override fun testSplitAtSpeed(
         colors: LongArray?,
         animation: String?,
@@ -508,6 +537,7 @@ class HiLightDaemonService(private val appUid: Int) : IHiLightService.Stub() {
         DebugLog.i(TAG, "setEntitled: $entitled")
         if (!entitled) {
             engine.stopIncomingCall()
+            engine.stopInCall()
             engine.clearAlert()
         }
         applyGemini()

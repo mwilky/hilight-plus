@@ -168,7 +168,10 @@ class LightController private constructor(private val app: Application) {
         }
         scope.launch {
             store.isCallLightsEnabled.collect { enabled ->
-                if (!enabled) daemon.stopIncomingCall()
+                if (!enabled) {
+                    daemon.stopIncomingCall()
+                    daemon.stopInCall()
+                }
             }
         }
         scope.launch {
@@ -627,6 +630,35 @@ class LightController private constructor(private val app: Application) {
      */
     fun stopIncomingCallAlert() {
         daemon.stopIncomingCall()
+    }
+
+    /** Shows (or repeats, as the heartbeat) the "on a call" look. */
+    fun startInCallLights(
+        pattern: PatternMode,
+        color: Long,
+        brightness: Float,
+        speed: Float,
+        requiresFaceDown: Boolean,
+        dndMode: DndMode,
+        quietHoursMode: QuietHoursMode,
+        quietStartMinutes: Int?,
+        quietEndMinutes: Int?
+    ) {
+        daemon.startInCall(
+            pattern = pattern.id,
+            color = color,
+            brightness = brightness,
+            speedMs = pattern.speedMs(speed, 1000L),
+            requiresFaceDown = requiresFaceDown,
+            dndMode = dndMode,
+            quietHoursMode = quietHoursMode,
+            quietStartMinutes = quietStartMinutes ?: -1,
+            quietEndMinutes = quietEndMinutes ?: -1
+        )
+    }
+
+    fun stopInCallLights() {
+        daemon.stopInCall()
     }
 
     /**

@@ -30,6 +30,10 @@ internal object VoipCallDetector {
         )
     }
 
+    /** Call screening is answering for the user: in progress to the dialer, but they aren't on the call. */
+    fun isScreening(notification: Notification): Boolean =
+        notification.extras?.getInt(Notification.EXTRA_CALL_TYPE, -1) == Notification.CallStyle.CALL_TYPE_SCREENING
+
     fun callState(
         category: String?,
         callType: Int?,

@@ -121,6 +121,7 @@ fun HomeScreen(
     var isConfiguringOtherContacts by remember { mutableStateOf(false) }
     var isConfiguringUnknownNumbers by remember { mutableStateOf(false) }
     var isConfiguringMissedCalls by remember { mutableStateOf(false) }
+    var isConfiguringInCall by remember { mutableStateOf(false) }
 
     var msgRuleBeingEdited by remember { mutableStateOf<MessageContactRule?>(null) }
     var appRuleBeingEdited by remember { mutableStateOf<AppNotificationRule?>(null) }
@@ -213,6 +214,8 @@ fun HomeScreen(
         onEditUnknownNumbers = { isConfiguringUnknownNumbers = true },
         onToggleMissedCalls = viewModel::setMissedCallsEnabled,
         onEditMissedCalls = { isConfiguringMissedCalls = true },
+        onToggleInCall = viewModel::setInCallEnabled,
+        onEditInCall = { isConfiguringInCall = true },
         onToggleCallContactRule = { rule, isEnabled ->
             viewModel.saveContactRule(rule.copy(isEnabled = isEnabled))
         },
@@ -504,6 +507,39 @@ fun HomeScreen(
         )
     }
 
+    // On a Call Dialog
+    if (isConfiguringInCall) {
+        CustomRuleDialog(
+            title = stringResource(R.string.calls_in_call_title),
+            initialColor = state.inCallColor,
+            initialPattern = state.inCallPattern,
+            initialFaceDown = state.inCallFaceDownMode,
+            initialDnd = state.inCallDndMode,
+            initialQuietHours = state.inCallQuietHoursMode,
+            initialQuietStart = state.inCallQuietHoursStartMinutes ?: state.quietHoursStartMinutes,
+            initialQuietEnd = state.inCallQuietHoursEndMinutes ?: state.quietHoursEndMinutes,
+            initialBrightness = state.inCallBrightness,
+            initialSpeed = state.inCallSpeed,
+            renderer = renderer,
+            controller = controller,
+            onDismiss = { isConfiguringInCall = false },
+            onSave = { result ->
+                viewModel.setInCallStyle(
+                    result.pattern,
+                    result.color,
+                    result.faceDown,
+                    result.dndMode,
+                    result.quietHoursMode,
+                    result.quietHoursStartMinutes,
+                    result.quietHoursEndMinutes,
+                    result.brightness,
+                    result.speed
+                )
+                isConfiguringInCall = false
+            }
+        )
+    }
+
     // App Picker Dialog (Android 11+ compliant launcher query + icons)
     if (isPickingApp) {
         AppPickerDialog(
@@ -760,6 +796,8 @@ fun HomeContent(
     onEditUnknownNumbers: () -> Unit,
     onToggleMissedCalls: (Boolean) -> Unit,
     onEditMissedCalls: () -> Unit,
+    onToggleInCall: (Boolean) -> Unit,
+    onEditInCall: () -> Unit,
     onToggleCallContactRule: (ContactRule, Boolean) -> Unit,
     onEditCallContactRule: (ContactRule) -> Unit,
     onDeleteCallContactRule: (String) -> Unit,
@@ -890,6 +928,8 @@ fun HomeContent(
                             onEditUnknownNumbers = onEditUnknownNumbers,
                             onToggleMissedCalls = onToggleMissedCalls,
                             onEditMissedCalls = onEditMissedCalls,
+                            onToggleInCall = onToggleInCall,
+                            onEditInCall = onEditInCall,
                             onToggleCallContactRule = onToggleCallContactRule,
                             onEditCallContactRule = onEditCallContactRule,
                             onDeleteCallContactRule = onDeleteCallContactRule,
@@ -1392,6 +1432,8 @@ fun HomeScreenPreviewContent(
             onEditUnknownNumbers = {},
             onToggleMissedCalls = {},
             onEditMissedCalls = {},
+            onToggleInCall = {},
+            onEditInCall = {},
             onToggleCallContactRule = { _, _ -> },
             onEditCallContactRule = {},
             onDeleteCallContactRule = {},

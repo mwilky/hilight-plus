@@ -11,6 +11,7 @@ import com.mwilky.hilight.plus.core.AppIconColorExtractor
 import com.mwilky.hilight.plus.core.DeviceOrientationDetector
 import com.mwilky.hilight.plus.core.NotificationSlotTracker
 import com.mwilky.hilight.plus.core.PocketDetector
+import com.mwilky.hilight.plus.telephony.InCallProcessor
 import com.mwilky.hilight.plus.telephony.IncomingCallProcessor
 import com.mwilky.hilight.plus.telephony.VoipCallDetector
 import kotlinx.coroutines.CoroutineScope
@@ -75,6 +76,7 @@ class NotificationTrigger : NotificationListenerService() {
             LightController.get(applicationContext).daemon.connections.collect {
                 enqueue(ListenerEvent.DaemonConnected)
                 IncomingCallProcessor.submitDaemonConnected(applicationContext)
+                InCallProcessor.submitDaemonConnected(applicationContext)
             }
         }
     }
@@ -83,6 +85,7 @@ class NotificationTrigger : NotificationListenerService() {
         super.onListenerConnected()
         DebugLog.i(TAG, "Notification listener connected")
         isListenerConnected = true
+        InCallProcessor.shadeKeys = { if (isListenerConnected) currentShadeKeys() else null }
         enqueue(ListenerEvent.Reconnect(currentShadeKeys()))
         // So an app's channel list already has whatever is in the shade, before anything new arrives.
         try {
@@ -113,12 +116,15 @@ class NotificationTrigger : NotificationListenerService() {
         LightController.get(applicationContext).clearAlert()
         LightController.get(applicationContext).clearProgress()
         IncomingCallProcessor.submitListenerGone(applicationContext)
+        InCallProcessor.shadeKeys = null
+        InCallProcessor.submitListenerGone(applicationContext)
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         if (sbn == null) return
         DebugLog.d(TAG, "Removed pkg=${sbn.packageName} key=${DebugLog.redactKey(sbn.key)}")
         IncomingCallProcessor.submitVoipRemoved(applicationContext, sbn.key)
+        InCallProcessor.submitRemoved(applicationContext, sbn.key)
         enqueue(ListenerEvent.Removed(sbn.key))
     }
 
@@ -141,10 +147,18 @@ class NotificationTrigger : NotificationListenerService() {
         val callState = posted?.let(VoipCallDetector::callState) ?: VoipCallDetector.CallState.NOT_A_CALL
         if (callState != VoipCallDetector.CallState.NOT_A_CALL) {
             when (callState) {
-                VoipCallDetector.CallState.RINGING ->
+                VoipCallDetector.CallState.RINGING -> {
+                    InCallProcessor.submitNotInProgress(applicationContext, sbn.key)
                     IncomingCallProcessor.submitVoipRinging(applicationContext, sbn.key, extractSenderName(posted))
-                VoipCallDetector.CallState.IN_PROGRESS ->
+                }
+                VoipCallDetector.CallState.IN_PROGRESS -> {
                     IncomingCallProcessor.submitVoipEnded(applicationContext, sbn.key)
+                    if (VoipCallDetector.isScreening(posted)) {
+                        InCallProcessor.submitNotInProgress(applicationContext, sbn.key)
+                    } else {
+                        InCallProcessor.submitInProgress(applicationContext, sbn.key)
+                    }
+                }
                 // Keep whatever state the key is in; removal still ends a ringing call.
                 else -> Unit
             }
@@ -153,6 +167,7 @@ class NotificationTrigger : NotificationListenerService() {
         // A ringing call's key re-posted as anything but a call (WhatsApp can turn it into its
         // missed-call notification in place) means it is no longer ringing. No-op for other keys.
         IncomingCallProcessor.submitVoipEnded(applicationContext, sbn.key)
+        InCallProcessor.submitNotInProgress(applicationContext, sbn.key)
 
         // A timer or progress bar may show as progress on the ring instead of an ordinary alert,
         // if its app rule says so; that is decided against the settings, off this thread.
@@ -204,6 +219,7 @@ class NotificationTrigger : NotificationListenerService() {
                 val shadeKeys = event.shadeKeys ?: return
                 if (progress.keys.retainAll(shadeKeys)) pushProgress()
                 IncomingCallProcessor.submitVoipShadeSync(applicationContext, shadeKeys)
+                InCallProcessor.submitShadeSync(applicationContext, shadeKeys)
                 applyRemovals(
                     tracker.pruneMissing(shadeKeys),
                     AppStore.get(applicationContext).snapshot().isCycleNotifications

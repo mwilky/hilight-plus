@@ -69,6 +69,8 @@ fun HomeCallsPage(
     onEditUnknownNumbers: () -> Unit,
     onToggleMissedCalls: (Boolean) -> Unit,
     onEditMissedCalls: () -> Unit,
+    onToggleInCall: (Boolean) -> Unit,
+    onEditInCall: () -> Unit,
     onToggleCallContactRule: (ContactRule, Boolean) -> Unit,
     onEditCallContactRule: (ContactRule) -> Unit,
     onDeleteCallContactRule: (String) -> Unit,
@@ -179,6 +181,25 @@ fun HomeCallsPage(
                         isEnabled = state.isMissedCallsEnabled,
                         onToggle = onToggleMissedCalls,
                         onEdit = onEditMissedCalls
+                    )
+                }
+
+                RuleGroupHeader(stringResource(R.string.calls_in_call_header))
+                Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+                    RuleListItem(
+                        index = 0,
+                        count = 1,
+                        title = stringResource(R.string.calls_in_call_title),
+                        pattern = state.inCallPattern,
+                        speed = state.inCallSpeed,
+                        color = state.inCallColor,
+                        faceDownMode = state.inCallFaceDownMode,
+                        dndMode = state.inCallDndMode,
+                        quietHoursMode = state.inCallQuietHoursMode,
+                        renderer = renderer,
+                        isEnabled = state.isInCallEnabled,
+                        onToggle = onToggleInCall,
+                        onEdit = onEditInCall
                     )
                 }
 
