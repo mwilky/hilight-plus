@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -34,6 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedListItem
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -60,6 +62,7 @@ import com.mwilky.hilight.plus.SPLIT_READABLE_FLOOR
 import com.mwilky.hilight.plus.SPLIT_SEPARATE_CEILING
 import com.mwilky.hilight.plus.MessageContactRule
 import com.mwilky.hilight.plus.MultiAlertMode
+import com.mwilky.hilight.plus.NOTIFICATION_DURATION_UNTIL_DISMISSED
 import com.mwilky.hilight.plus.R
 import com.mwilky.hilight.plus.RuleSort
 import com.mwilky.hilight.plus.SettingsSnapshot
@@ -317,14 +320,6 @@ fun HomeNotifsPage(
                     SegmentedListItem(
                         shapes = ListItemDefaults.segmentedShapes(index = 0, count = 2),
                         colors = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                        trailingContent = {
-                            Text(
-                                text = formatDurationLabel(state.notificationDurationSeconds),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.alpha(durationAlpha)
-                            )
-                        },
                         supportingContent = {
                             Column(modifier = Modifier.alpha(durationAlpha)) {
                                 AnimatedText(
@@ -332,22 +327,34 @@ fun HomeNotifsPage(
                                     else stringResource(R.string.settings_duration_desc)
                                 )
                                 Slider(
+                                    // One stop past 5m keeps the lights on until the notification is dismissed.
                                     state = rememberHeldSliderState(
-                                        state.notificationDurationSeconds.toFloat(),
-                                        30f..300f,
-                                        steps = 8
+                                        if (state.notificationDurationSeconds == NOTIFICATION_DURATION_UNTIL_DISMISSED) 330f
+                                        else state.notificationDurationSeconds.toFloat(),
+                                        30f..330f,
+                                        steps = 9
                                     ),
                                     enabled = !isCycle,
                                     onValueChange = { value ->
                                         val rounded = (value / 30f).roundToInt() * 30
-                                        onChangeDuration(rounded.coerceIn(30, 300))
+                                        onChangeDuration(
+                                            if (rounded > 300) NOTIFICATION_DURATION_UNTIL_DISMISSED else rounded.coerceIn(30, 300)
+                                        )
                                     },
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
                         }
                     ) {
-                        Text(stringResource(R.string.settings_duration_title), modifier = Modifier.alpha(durationAlpha))
+                        // The value sits on the title's line rather than in the trailing slot, so a
+                        // wider label like "Until dismissed" doesn't narrow the slider while dragging.
+                        Box(modifier = Modifier.alpha(durationAlpha)) {
+                            SliderHeader(
+                                title = stringResource(R.string.settings_duration_title),
+                                value = formatDurationLabel(state.notificationDurationSeconds),
+                                titleStyle = LocalTextStyle.current
+                            )
+                        }
                     }
                     SegmentedListItem(
                         shapes = ListItemDefaults.segmentedShapes(index = 1, count = 2),
@@ -626,7 +633,9 @@ private const val DISABLED_ALPHA = 0.38f
 
 @Composable
 private fun formatDurationLabel(seconds: Int): String {
-    return if (seconds < 60) {
+    return if (seconds == NOTIFICATION_DURATION_UNTIL_DISMISSED) {
+        stringResource(R.string.duration_until_dismissed)
+    } else if (seconds < 60) {
         stringResource(R.string.duration_seconds, seconds)
     } else {
         val minutes = seconds / 60

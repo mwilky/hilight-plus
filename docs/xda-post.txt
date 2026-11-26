@@ -53,7 +53,7 @@ It can take over Gemini's listening, thinking and replying lights too, in looks 
 [*]Every pattern, Gemini ones included, runs on the lights' own controller as a looping effect, the same way stock Gemini does it: smooth, and without the app redrawing them many times a second.
 [*]Multi-alert management:
 [LIST]
-[*][B]Newest only:[/B] Displays the most recent notification for a set duration.
+[*][B]Newest only:[/B] Displays the most recent notification for a set duration (30 seconds to 5 minutes) or until dismissed.
 [*][B]Take turns:[/B] Sequentially cycles through active notifications until dismissed.
 [*][B]Split the lights:[/B] Gives each waiting notification its own section of the 8 LEDs in its colour (up to 4 notifications concurrently). Sections can breathe, stay solid, brighten in turn (Spotlight) or move round the lights (Rotate), with their own brightness range (Breathe, Spotlight) or steady level (Solid, Rotate), a speed setting and a Test on LEDs button. Optionally, each new notification first plays its own rule's pattern once, then the sections come back.
 [/LIST]

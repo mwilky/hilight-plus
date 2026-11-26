@@ -26,7 +26,7 @@ And best of all, no root and no Shizuku needed!
 * Eight preset colours or anything from a colour wheel.
 * Brightness from a dim glow to full, and speed from half to double the pattern's normal pace, per rule.
 * Patterns run as looping effects on the lights' own controller, the same way stock Gemini does it, so they're smooth and the app isn't redrawing them many times a second.
-* When several notifications are waiting you can show the newest only, take turns through them, or split the lights into a section per notification (up to four). The sections can breathe, stay solid, spotlight in turn or rotate round the lights, and each new notification can optionally play its own pattern once before the sections come back.
+* When several notifications are waiting you can show the newest only (for a set time or until you dismiss it), take turns through them, or split the lights into a section per notification (up to four). The sections can breathe, stay solid, spotlight in turn or rotate round the lights, and each new notification can optionally play its own pattern once before the sections come back.
 * Lights go off the moment the notification is cleared from the shade.
 
 **Battery**

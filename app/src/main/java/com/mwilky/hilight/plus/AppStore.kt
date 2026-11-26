@@ -409,6 +409,7 @@ class AppStore private constructor(private val appContext: Context) {
         appContext.dataStore.edit { it[KEY_NOTIFICATIONS_ENABLED] = enabled }
     }
 
+    /** [seconds] of [NOTIFICATION_DURATION_UNTIL_DISMISSED] keeps the lights on until dismissal. */
     suspend fun setNotificationDurationSeconds(seconds: Int) {
         appContext.dataStore.edit { it[KEY_NOTIFICATION_DURATION_SEC] = seconds }
     }
@@ -909,6 +910,9 @@ class AppStore private constructor(private val appContext: Context) {
         return parsed
     }
 }
+
+/** Stored as the notification duration when Newest only should stay lit until dismissal. */
+const val NOTIFICATION_DURATION_UNTIL_DISMISSED = 0
 
 data class SettingsSnapshot(
     val isOnlyWhenFaceDown: Boolean,

@@ -613,7 +613,9 @@ class NotificationTrigger : NotificationListenerService() {
                 quietEndMinutes = slot.quietEndMinutes
             )
         } else {
-            val durationMs = snapshot.notificationDurationSeconds.coerceIn(5, 300) * 1000L
+            // 0 tells the daemon to keep the lights on until the notification is dismissed.
+            val seconds = snapshot.notificationDurationSeconds
+            val durationMs = if (seconds == NOTIFICATION_DURATION_UNTIL_DISMISSED) 0L else seconds.coerceIn(5, 300) * 1000L
             controller.triggerAlertEffect(
                 pattern = slot.pattern,
                 color = slot.color,

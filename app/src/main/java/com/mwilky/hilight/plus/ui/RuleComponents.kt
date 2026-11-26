@@ -717,7 +717,7 @@ private const val DISABLED_SLIDER_ALPHA = 0.38f
 private val SPEED_FORMAT = DecimalFormat("0.##")
 
 @Composable
-private fun SliderHeader(title: String, value: String, titleStyle: TextStyle) {
+internal fun SliderHeader(title: String, value: String, titleStyle: TextStyle) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween

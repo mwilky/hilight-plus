@@ -142,6 +142,8 @@ class LightEngine {
     // Standard-mode notification / transient alert state.
     private var directAlert: DirectAlert? = null
     private val directAlertTimer = PausableAlertTimer()
+    /** When an untimed latest-only alert began; it then lasts until cleared. Null for a timed one. */
+    private var directAlertSinceMs: Long? = null
 
     private data class TestAlert(
         val pattern: String,
@@ -425,7 +427,7 @@ class LightEngine {
 
     /**
      * Replaces the standard-mode notification / transient alert.
-     * Existing suppression remains in effect.
+     * Existing suppression remains in effect. A [durationMs] of 0 or less lasts until cleared.
      */
     fun triggerAlert(
         pattern: String,
@@ -445,11 +447,17 @@ class LightEngine {
                 pattern, color, brightness, speedMs,
                 requiresFaceDown, dndMode, quietHoursMode, quietStartOverride, quietEndOverride
             )
-            directAlertTimer.start(
-                durationMs = durationMs,
-                nowMs = now,
-                paused = !shouldRunNotificationTimer()
-            )
+            if (durationMs <= 0L) {
+                directAlertSinceMs = now
+                directAlertTimer.clear()
+            } else {
+                directAlertSinceMs = null
+                directAlertTimer.start(
+                    durationMs = durationMs,
+                    nowMs = now,
+                    paused = !shouldRunNotificationTimer()
+                )
+            }
             activeAlerts.clear()
             currentAlertIndex = 0
             needsSessionReset = true
@@ -906,6 +914,7 @@ class LightEngine {
             DebugLog.i(TAG, "clearAlert (queue=${activeAlerts.size}, latest=${directAlert != null})")
             wake()
             directAlert = null
+            directAlertSinceMs = null
             directAlertTimer.clear()
             activeAlerts.clear()
             currentAlertIndex = 0
@@ -924,6 +933,7 @@ class LightEngine {
             inCallAlert = null
             inCallUpdatedAtMs = 0L
             directAlert = null
+            directAlertSinceMs = null
             directAlertTimer.clear()
             activeAlerts.clear()
             currentAlertIndex = 0
@@ -985,7 +995,7 @@ class LightEngine {
     private fun idleWaitMs(now: Long): Long {
         var due = now + IDLE_TICK_MS
         testAlert?.let { due = minOf(due, it.expiresAtMs) }
-        if (directAlert != null) due = minOf(due, now + directAlertTimer.remainingMs(now))
+        if (directAlert != null && directAlertSinceMs == null) due = minOf(due, now + directAlertTimer.remainingMs(now))
         activeAlerts.forEach { if (it.expiresAtMs != Long.MAX_VALUE) due = minOf(due, it.expiresAtMs) }
         nextTurnAtMs?.let { due = minOf(due, it) }
         countdown?.let { due = minOf(due, it.endsAtMs) }
@@ -1124,7 +1134,7 @@ class LightEngine {
                     )
                 }
 
-            if (directAlert != null && directAlertTimer.remainingMs(now) == 0L) {
+            if (directAlert != null && directAlertSinceMs == null && directAlertTimer.remainingMs(now) == 0L) {
                 directAlert = null
                 directAlertTimer.clear()
                 DebugLog.i(TAG, "Latest-only alert timed out")
@@ -1269,9 +1279,11 @@ class LightEngine {
                                 currentColor = direct.color
                                 currentBrightness = direct.brightness
                                 currentSpeed = direct.speedMs
-                                elapsedMs = directAlertTimer.elapsedMs(now)
+                                val since = directAlertSinceMs
+                                elapsedMs = if (since != null) now - since else directAlertTimer.elapsedMs(now)
                                 effectKey = listOf("latest", directGeneration, direct)
-                                effectRemainingMs = directAlertTimer.remainingMs(now)
+                                // Untimed, the effect loops until the alert is cleared.
+                                effectRemainingMs = if (since != null) null else directAlertTimer.remainingMs(now)
                             } else if (eligibleStart == null) {
                                 continue@channels
                             } else {
@@ -1620,7 +1632,7 @@ class LightEngine {
             appendLine("dndIndicator=${dndIndicator?.let { "${it.pattern} ${hex(it.color)}, indicator=${it.showIndicator}, showFor=${it.showForMs}, flash=${it.flashOnChange}, overBattery=${it.overridesBattery}, faceDown=${it.requiresFaceDown}, quiet=${it.quietHoursMode}" } ?: "off"}, dnd on for ${if (dndActive) "${(now - dndActiveSinceMs) / 1000}s" else "-"}, updated $dndAge, flash=${dndFlash?.let { if (it.turningOn) "on" else "off" }}")
             appendLine("call=${incomingCallAlert?.let { "${it.pattern} ${hex(it.color)}, ringing ${(now - it.startedAtMs) / 1000}s, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}" }}")
             appendLine("inCall=${inCallAlert?.let { "${it.pattern} ${hex(it.color)}, for ${(now - it.startedAtMs) / 1000}s, updated ${(now - inCallUpdatedAtMs) / 1000}s ago, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}" }}")
-            appendLine("latestOnly=${directAlert?.let { "${it.pattern} ${hex(it.color)}, ${directAlertTimer.remainingMs(now)}ms left, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}" }}")
+            appendLine("latestOnly=${directAlert?.let { "${it.pattern} ${hex(it.color)}, ${if (directAlertSinceMs != null) "until cleared" else "${directAlertTimer.remainingMs(now)}ms left"}, faceDown=${it.requiresFaceDown}, dnd=${it.dndMode}, quiet=${it.quietHoursMode}" }}")
             appendLine("queue (${activeAlerts.size}):")
             activeAlerts.forEach {
                 val expiry = if (it.expiresAtMs == Long.MAX_VALUE) "until dismissed" else "${it.expiresAtMs - now}ms left"

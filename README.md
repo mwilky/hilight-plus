@@ -36,7 +36,7 @@ Pixel's built-in HiLight uses the rear lights for calls from favourites and Gemi
 - A speed setting, from half to twice each pattern's own pace, for every rule and each of Gemini's states.
 - Every pattern, including the Gemini ones, is handed to the lights' own controller as a looping effect, the same way stock Gemini does it. The lights animate by themselves instead of the app redrawing them many times a second.
 - Three ways to handle several notifications at once:
-  - *Newest only* lights the latest for a chosen duration.
+  - *Newest only* lights the latest for a chosen duration, from 30 seconds to 5 minutes, or until it is dismissed.
   - *Take turns* plays each waiting notification's pattern in turn until it is dismissed.
   - *Split the lights* gives each waiting notification its own section of the lights in its colour, up to four, newest at the top. The sections can breathe, stay solid, brighten in turn (*Spotlight*) or move round the lights (*Rotate*). Breathe and Spotlight move between a dimmest and brightest level you set; Solid and Rotate hold one steady level. A note appears when a setting may let neighbouring colours blend or a dim section look like spill from the next. Its animation speed can be set from half to twice its own pace. It has its own Test on LEDs button. Optionally, each new notification first plays its own rule's pattern once before the sections come back.
 - Lights stop when the notification is dismissed.
