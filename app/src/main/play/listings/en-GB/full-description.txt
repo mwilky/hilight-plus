@@ -6,6 +6,7 @@ CALLS
 • A colour and pattern for each contact, so you know who is ringing from across the room
 • Separate styles for favourites, other contacts and unknown numbers
 • An optional missed-call light that stays on until you dismiss the notification
+• An optional light while you're on a call, so people nearby can see you're busy
 • Works for phone calls and for app calls from WhatsApp, Teams, Google Meet and more
 
 NOTIFICATIONS
@@ -14,7 +15,7 @@ NOTIFICATIONS
 • Text rules: light up when a notification's title or message contains, or is exactly, some text, such as a delivery update or a verification code
 • Timers and downloads on the lights: a timer, such as Clock's, empties them as it counts down, and a download fills them up, for any app you choose
 • Auto colour that matches the app's own icon
-• Several alerts at once: show the newest, take turns, or split the lights between them
+• Several alerts at once: show the newest, for a set time or until dismissed, take turns, or split the lights between them
 • Lights stop as soon as you dismiss the notification
 
 THIRTEEN PATTERNS, ANY COLOUR

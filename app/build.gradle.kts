@@ -14,8 +14,8 @@ android {
         applicationId = "com.mwilky.hilight.plus"
         minSdk = 37
         targetSdk = 37
-        versionCode = 31
-        versionName = "1.3.6"
+        versionCode = 32
+        versionName = "1.3.7"
 
         // Only the Pixel 11 series is supported, and it's arm64 only; skips the other ABIs'
         // copies of Conscrypt's native library.

@@ -1,4 +1,5 @@
-• Priority list on the Conditions page: drag Calls, Gemini, Notifications, Timers & progress, Battery and DND into the order you want. If the top one is kept dark by its conditions, the next shows instead.
-• The lights behave as before until you reorder the list.
-• Warns you if the phone's motion sensors stop sending readings, which stops face-down rules lighting. A restart fixes it.
-• Clearer, shorter wording throughout.
+• During a call: the lights can show while you're on a phone or app call, so people nearby can see you're busy. Turn it on under Active calls on the Calls page.
+• Newest only can keep the lights on until you dismiss the notification.
+• The Conditions page is now called Settings.
+• New look: tinted page headers, a sliding navigation pill and smoother page and list animations.
+• Fixed the tapped tab flashing before its highlight arrived.
